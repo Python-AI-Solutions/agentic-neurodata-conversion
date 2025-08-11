@@ -1,0 +1,354 @@
+[submodule "etl/input-data/catalystneuro-conversions/IBL-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/IBL-to-nwb
+	url = https://github.com/catalystneuro/IBL-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/MICrONS-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/MICrONS-to-nwb
+	url = https://github.com/catalystneuro/MICrONS-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/ahrens-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/ahrens-lab-to-nwb
+	url = https://github.com/catalystneuro/ahrens-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/allen-oephys-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/allen-oephys-to-nwb
+	url = https://github.com/catalystneuro/allen-oephys-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/axel-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/axel-lab-to-nwb
+	url = https://github.com/catalystneuro/axel-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/brody-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/brody-lab-to-nwb
+	url = https://github.com/catalystneuro/brody-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/brunton-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/brunton-lab-to-nwb
+	url = https://github.com/catalystneuro/brunton-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/buffalo-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/buffalo-lab-to-nwb
+	url = https://github.com/catalystneuro/buffalo-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/buzsaki-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/buzsaki-lab-to-nwb
+	url = https://github.com/catalystneuro/buzsaki-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/cai-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/cai-lab-to-nwb
+	url = https://github.com/catalystneuro/cai-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/clandinin-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/clandinin-lab-to-nwb
+	url = https://github.com/catalystneuro/clandinin-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/cohen-u01-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/cohen-u01-to-nwb
+	url = https://github.com/catalystneuro/cohen-u01-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/constantinople-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/constantinople-lab-to-nwb
+	url = https://github.com/catalystneuro/constantinople-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/cookiecutter-my-lab-to-nwb-template"]
+	path = etl/input-data/catalystneuro-conversions/cookiecutter-my-lab-to-nwb-template
+	url = https://github.com/catalystneuro/cookiecutter-my-lab-to-nwb-template.git
+[submodule "etl/input-data/catalystneuro-conversions/dan-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/dan-lab-to-nwb
+	url = https://github.com/catalystneuro/dan-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/datta-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/datta-lab-to-nwb
+	url = https://github.com/catalystneuro/datta-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/dicarlo-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/dicarlo-lab-to-nwb
+	url = https://github.com/catalystneuro/dicarlo-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/dombeck-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/dombeck-lab-to-nwb
+	url = https://github.com/catalystneuro/dombeck-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/fee-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/fee-lab-to-nwb
+	url = https://github.com/catalystneuro/fee-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/feldman-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/feldman-lab-to-nwb
+	url = https://github.com/catalystneuro/feldman-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/froemke-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/froemke-lab-to-nwb
+	url = https://github.com/catalystneuro/froemke-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/giocomo-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/giocomo-lab-to-nwb
+	url = https://github.com/catalystneuro/giocomo-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/higley-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/higley-lab-to-nwb
+	url = https://github.com/catalystneuro/higley-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/hnasko-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/hnasko-lab-to-nwb
+	url = https://github.com/catalystneuro/hnasko-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/howe-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/howe-lab-to-nwb
+	url = https://github.com/catalystneuro/howe-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/hussaini-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/hussaini-lab-to-nwb
+	url = https://github.com/catalystneuro/hussaini-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/jadhav-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/jadhav-lab-to-nwb
+	url = https://github.com/catalystneuro/jadhav-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/jaeger-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/jaeger-lab-to-nwb
+	url = https://github.com/catalystneuro/jaeger-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/jazayeri-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/jazayeri-lab-to-nwb
+	url = https://github.com/catalystneuro/jazayeri-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/khaliq-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/khaliq-lab-to-nwb
+	url = https://github.com/catalystneuro/khaliq-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/kind-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/kind-lab-to-nwb
+	url = https://github.com/catalystneuro/kind-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/kriegstein-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/kriegstein-lab-to-nwb
+	url = https://github.com/catalystneuro/kriegstein-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/lerner-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/lerner-lab-to-nwb
+	url = https://github.com/catalystneuro/lerner-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/lin-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/lin-lab-to-nwb
+	url = https://github.com/catalystneuro/lin-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/mease-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/mease-lab-to-nwb
+	url = https://github.com/catalystneuro/mease-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/mousev1-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/mousev1-to-nwb
+	url = https://github.com/catalystneuro/mousev1-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/movshon-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/movshon-lab-to-nwb
+	url = https://github.com/catalystneuro/movshon-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/murthy-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/murthy-lab-to-nwb
+	url = https://github.com/catalystneuro/murthy-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/nelson-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/nelson-lab-to-nwb
+	url = https://github.com/catalystneuro/nelson-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/oconnor-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/oconnor-lab-to-nwb
+	url = https://github.com/catalystneuro/oconnor-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/pagan-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/pagan-lab-to-nwb
+	url = https://github.com/catalystneuro/pagan-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/pinto-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/pinto-lab-to-nwb
+	url = https://github.com/catalystneuro/pinto-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/reimer-arenkiel-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/reimer-arenkiel-lab-to-nwb
+	url = https://github.com/catalystneuro/reimer-arenkiel-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/sabes-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/sabes-lab-to-nwb
+	url = https://github.com/catalystneuro/sabes-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/sargolini-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/sargolini-to-nwb
+	url = https://github.com/catalystneuro/sargolini-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/schneider-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/schneider-lab-to-nwb
+	url = https://github.com/catalystneuro/schneider-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/schwerdt-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/schwerdt-lab-to-nwb
+	url = https://github.com/catalystneuro/schwerdt-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/seidemann-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/seidemann-lab-to-nwb
+	url = https://github.com/catalystneuro/seidemann-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/shenoy-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/shenoy-lab-to-nwb
+	url = https://github.com/catalystneuro/shenoy-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/shuler-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/shuler-lab-to-nwb
+	url = https://github.com/catalystneuro/shuler-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/soltesz-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/soltesz-lab-to-nwb
+	url = https://github.com/catalystneuro/soltesz-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/stavisky-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/stavisky-lab-to-nwb
+	url = https://github.com/catalystneuro/stavisky-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/surmeier-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/surmeier-lab-to-nwb
+	url = https://github.com/catalystneuro/surmeier-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/tank-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/tank-lab-to-nwb
+	url = https://github.com/catalystneuro/tank-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/tolias-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/tolias-lab-to-nwb
+	url = https://github.com/catalystneuro/tolias-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/turner-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/turner-lab-to-nwb
+	url = https://github.com/catalystneuro/turner-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/tye-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/tye-lab-to-nwb
+	url = https://github.com/catalystneuro/tye-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/visual-coding-to-nwb-v2"]
+	path = etl/input-data/catalystneuro-conversions/visual-coding-to-nwb-v2
+	url = https://github.com/catalystneuro/visual-coding-to-nwb-v2.git
+[submodule "etl/input-data/catalystneuro-conversions/x-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/x-to-nwb
+	url = https://github.com/catalystneuro/x-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/IBL-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/IBL-to-nwb
+	url = https://github.com/catalystneuro/IBL-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/MICrONS-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/MICrONS-to-nwb
+	url = https://github.com/catalystneuro/MICrONS-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/ahrens-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/ahrens-lab-to-nwb
+	url = https://github.com/catalystneuro/ahrens-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/allen-oephys-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/allen-oephys-to-nwb
+	url = https://github.com/catalystneuro/allen-oephys-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/axel-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/axel-lab-to-nwb
+	url = https://github.com/catalystneuro/axel-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/brody-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/brody-lab-to-nwb
+	url = https://github.com/catalystneuro/brody-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/brunton-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/brunton-lab-to-nwb
+	url = https://github.com/catalystneuro/brunton-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/buffalo-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/buffalo-lab-to-nwb
+	url = https://github.com/catalystneuro/buffalo-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/buzsaki-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/buzsaki-lab-to-nwb
+	url = https://github.com/catalystneuro/buzsaki-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/cai-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/cai-lab-to-nwb
+	url = https://github.com/catalystneuro/cai-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/clandinin-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/clandinin-lab-to-nwb
+	url = https://github.com/catalystneuro/clandinin-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/cohen-u01-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/cohen-u01-to-nwb
+	url = https://github.com/catalystneuro/cohen-u01-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/constantinople-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/constantinople-lab-to-nwb
+	url = https://github.com/catalystneuro/constantinople-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/cookiecutter-my-lab-to-nwb-template"]
+	path = etl/input-data/catalystneuro-conversions/cookiecutter-my-lab-to-nwb-template
+	url = https://github.com/catalystneuro/cookiecutter-my-lab-to-nwb-template.git
+[submodule "etl/input-data/catalystneuro-conversions/dan-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/dan-lab-to-nwb
+	url = https://github.com/catalystneuro/dan-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/datta-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/datta-lab-to-nwb
+	url = https://github.com/catalystneuro/datta-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/dicarlo-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/dicarlo-lab-to-nwb
+	url = https://github.com/catalystneuro/dicarlo-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/dombeck-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/dombeck-lab-to-nwb
+	url = https://github.com/catalystneuro/dombeck-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/fee-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/fee-lab-to-nwb
+	url = https://github.com/catalystneuro/fee-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/feldman-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/feldman-lab-to-nwb
+	url = https://github.com/catalystneuro/feldman-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/froemke-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/froemke-lab-to-nwb
+	url = https://github.com/catalystneuro/froemke-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/giocomo-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/giocomo-lab-to-nwb
+	url = https://github.com/catalystneuro/giocomo-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/higley-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/higley-lab-to-nwb
+	url = https://github.com/catalystneuro/higley-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/hnasko-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/hnasko-lab-to-nwb
+	url = https://github.com/catalystneuro/hnasko-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/howe-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/howe-lab-to-nwb
+	url = https://github.com/catalystneuro/howe-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/hussaini-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/hussaini-lab-to-nwb
+	url = https://github.com/catalystneuro/hussaini-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/jadhav-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/jadhav-lab-to-nwb
+	url = https://github.com/catalystneuro/jadhav-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/jaeger-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/jaeger-lab-to-nwb
+	url = https://github.com/catalystneuro/jaeger-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/jazayeri-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/jazayeri-lab-to-nwb
+	url = https://github.com/catalystneuro/jazayeri-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/khaliq-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/khaliq-lab-to-nwb
+	url = https://github.com/catalystneuro/khaliq-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/kind-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/kind-lab-to-nwb
+	url = https://github.com/catalystneuro/kind-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/kriegstein-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/kriegstein-lab-to-nwb
+	url = https://github.com/catalystneuro/kriegstein-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/lerner-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/lerner-lab-to-nwb
+	url = https://github.com/catalystneuro/lerner-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/lin-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/lin-lab-to-nwb
+	url = https://github.com/catalystneuro/lin-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/mease-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/mease-lab-to-nwb
+	url = https://github.com/catalystneuro/mease-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/mousev1-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/mousev1-to-nwb
+	url = https://github.com/catalystneuro/mousev1-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/movshon-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/movshon-lab-to-nwb
+	url = https://github.com/catalystneuro/movshon-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/murthy-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/murthy-lab-to-nwb
+	url = https://github.com/catalystneuro/murthy-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/nelson-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/nelson-lab-to-nwb
+	url = https://github.com/catalystneuro/nelson-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/oconnor-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/oconnor-lab-to-nwb
+	url = https://github.com/catalystneuro/oconnor-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/pagan-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/pagan-lab-to-nwb
+	url = https://github.com/catalystneuro/pagan-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/pinto-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/pinto-lab-to-nwb
+	url = https://github.com/catalystneuro/pinto-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/reimer-arenkiel-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/reimer-arenkiel-lab-to-nwb
+	url = https://github.com/catalystneuro/reimer-arenkiel-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/sabes-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/sabes-lab-to-nwb
+	url = https://github.com/catalystneuro/sabes-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/sargolini-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/sargolini-to-nwb
+	url = https://github.com/catalystneuro/sargolini-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/schneider-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/schneider-lab-to-nwb
+	url = https://github.com/catalystneuro/schneider-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/schwerdt-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/schwerdt-lab-to-nwb
+	url = https://github.com/catalystneuro/schwerdt-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/seidemann-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/seidemann-lab-to-nwb
+	url = https://github.com/catalystneuro/seidemann-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/shenoy-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/shenoy-lab-to-nwb
+	url = https://github.com/catalystneuro/shenoy-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/shuler-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/shuler-lab-to-nwb
+	url = https://github.com/catalystneuro/shuler-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/soltesz-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/soltesz-lab-to-nwb
+	url = https://github.com/catalystneuro/soltesz-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/stavisky-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/stavisky-lab-to-nwb
+	url = https://github.com/catalystneuro/stavisky-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/surmeier-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/surmeier-lab-to-nwb
+	url = https://github.com/catalystneuro/surmeier-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/tank-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/tank-lab-to-nwb
+	url = https://github.com/catalystneuro/tank-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/tolias-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/tolias-lab-to-nwb
+	url = https://github.com/catalystneuro/tolias-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/turner-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/turner-lab-to-nwb
+	url = https://github.com/catalystneuro/turner-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/tye-lab-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/tye-lab-to-nwb
+	url = https://github.com/catalystneuro/tye-lab-to-nwb.git
+[submodule "etl/input-data/catalystneuro-conversions/visual-coding-to-nwb-v2"]
+	path = etl/input-data/catalystneuro-conversions/visual-coding-to-nwb-v2
+	url = https://github.com/catalystneuro/visual-coding-to-nwb-v2.git
+[submodule "etl/input-data/catalystneuro-conversions/x-to-nwb"]
+	path = etl/input-data/catalystneuro-conversions/x-to-nwb
+	url = https://github.com/catalystneuro/x-to-nwb.git
