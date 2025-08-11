@@ -288,3 +288,23 @@ ls -la *.md *.toml *.py
 - Multi-user support architecture
 
 This document should evolve as the project develops and new best practices emerge.
+
+## Development Best Practices for Claude
+
+### Version Control & File Management
+- **Never use "_v2.ext" pattern**: Always overwrite files directly - git tracks history
+- **Script Management**: Always save utility scripts in the `scripts/` directory and keep them for future reference - do not delete scripts after use
+- **Bash Command Quoting**: When using `python -c` in bash, use single quotes for the outer command to safely contain double quotes in Python strings:
+  ```bash
+  # Correct - single quotes outside, double quotes inside
+  pixi run python -c 'print("Hello, world!")'
+  
+  # Avoid - double quotes outside require escaping
+  pixi run python -c "print(\"Hello, world!\")"
+  ```
+
+### File Creation Guidelines
+- Do what has been asked; nothing more, nothing less
+- NEVER create files unless they're absolutely necessary for achieving the goal
+- ALWAYS prefer editing an existing file to creating a new one
+- NEVER proactively create documentation files (*.md) or README files unless explicitly requested
