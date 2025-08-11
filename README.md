@@ -1,6 +1,6 @@
 # LLM-Guided Data Conversion Project
 
-An LLM-assisted tool for converting experimental neuroscience data to standardized formats (primarily NWB), leveraging AI to guide data conversion, prompt for metadata, and validate outputs.
+An LLM-assisted tool for converting  neuroscience data to standardized formats (initially NWB), leveraging AI to guide data conversion, prompt for metadata, and validate outputs.
 
 ## 🚀 Quick Start
 
@@ -12,10 +12,23 @@ An LLM-assisted tool for converting experimental neuroscience data to standardiz
 
 ### Installation & Setup
 
-1. **Clone the repository**:
+#### Option 1: Clone with DataLad (Recommended - includes data management)
 ```bash
-git clone <repository-url>
-cd llm-guided-conversion
+# Clone from GitHub (code only)
+datalad clone https://github.com/Python-AI-Solutions/agentic-neurodata-conversion.git
+cd agentic-neurodata-conversion
+
+# Or clone from GIN (includes annex capabilities)
+gin get leej3/agentic-neurodata-conversion
+# or
+datalad clone https://gin.g-node.org/leej3/agentic-neurodata-conversion.git
+cd agentic-neurodata-conversion
+```
+
+#### Option 2: Clone with git (basic)
+```bash
+git clone https://github.com/Python-AI-Solutions/agentic-neurodata-conversion.git
+cd agentic-neurodata-conversion
 ```
 
 2. **Install dependencies with pixi**:
@@ -23,122 +36,17 @@ cd llm-guided-conversion
 pixi install
 ```
 
-3. **Initialize as DataLad dataset** (for version control and data management):
-```bash
-# CRITICAL: Set up proper git-annex configuration FIRST
-cat > .gitattributes << 'EOF'
-# Only use annex for large data files (>10MB)
-* annex.backend=MD5E
-**/.git* annex.largefiles=nothing
+## 📦 DataLad Integration & Data Storage
 
-# Keep all development files in git (not annex)
-*.py annex.largefiles=nothing
-*.md annex.largefiles=nothing
-*.txt annex.largefiles=nothing
-*.yml annex.largefiles=nothing
-*.yaml annex.largefiles=nothing
-*.toml annex.largefiles=nothing
-*.json annex.largefiles=nothing
-*.sh annex.largefiles=nothing
-*.cfg annex.largefiles=nothing
-*.ini annex.largefiles=nothing
-*.rst annex.largefiles=nothing
-*.ipynb annex.largefiles=nothing
-.gitignore annex.largefiles=nothing
-.gitmodules annex.largefiles=nothing
-.pre-commit-config.yaml annex.largefiles=nothing
+This project uses DataLad for reproducible data management with dual repository setup:
+- **GitHub**: Code, documentation, and configuration files
+- **GIN (G-Node Infrastructure)**: Large data files and annex content
 
-# Default: only annex files larger than 10MB
-* annex.largefiles=(largerthan=10mb)
-EOF
+### Repository Locations
+- **GitHub**: https://github.com/Python-AI-Solutions/agentic-neurodata-conversion
+- **GIN**: https://gin.g-node.org/leej3/agentic-neurodata-conversion
 
-# Initialize DataLad dataset with text2git configuration
-pixi run python -c "
-import datalad.api as dl
-dl.create(
-    path='.',
-    cfg_proc='text2git',
-    description='LLM-guided conversion project',
-    force=True
-)
-dl.save(message='Initial DataLad setup', recursive=True)
-"
-
-# Verify files are not symlinks (should show regular files)
-ls -la *.md *.toml
-```
-
-4. **Install CatalystNeuro conversions** (optional):
-```bash
-pixi run python scripts/install_catalystneuro_conversions.py
-```
-
-## 📁 Project Structure
-
-```
-nwb-conversion-project/
-├── etl/                                    # ETL (Extract, Transform, Load) pipeline
-│   ├── workflows/                          # Data processing workflows
-│   │   ├── condense_nwb_spec/             # NWB specification condensation
-│   │   ├── condense_nwb_linkml_spec/      # LinkML specification condensation
-│   │   ├── create_synthetic_datasets/      # Synthetic test data generation
-│   │   └── create_evaluation_rubric/       # Evaluation criteria
-│   │
-│   ├── data/                               # DataLad-managed data repository
-│   │   ├── specifications/                 # Format specifications
-│   │   │   ├── nwb/                       # NWB core specifications
-│   │   │   └── nwb-linkml/                # LinkML representations
-│   │   │
-│   │   ├── conversions/                    # CatalystNeuro conversion tools
-│   │   │   ├── cookiecutter-my-lab-to-nwb-template/
-│   │   │   ├── IBL-to-nwb/
-│   │   │   ├── ahrens-lab-to-nwb/
-│   │   │   └── [50+ lab-specific conversions...]
-│   │   │
-│   │   └── pre-existing-conversions/       # Reference conversions
-│   │
-│   ├── prompt-input-data/                  # LLM prompt engineering data
-│   │   ├── condensed_nwb_spec/
-│   │   └── condensed_nwb_linkml_spec/
-│   │
-│   └── evaluation-data/                    # Test and benchmark datasets
-│       └── synthetic_messy_datasets/
-│
-├── llm-assisted-conversion-tool/           # AI-powered conversion assistant
-│   ├── prompt/                             # LLM prompts and templates
-│   └── cli/                                # Command-line interface
-│
-├── tests/                                   # Testing suite
-│   ├── unit/                               # Unit tests
-│   └── evaluation/                         # Integration and evaluation tests
-│
-├── pixi.toml                               # Pixi package configuration
-├── setup_project.sh                        # Main setup script
-├── install_catalystneuro_conversions.py   # Conversion installer
-└── conversions_summary.json               # Generated conversion inventory
-```
-
-## 🧠 Available CatalystNeuro Conversions
-
-The project includes 50+ lab-specific NWB conversion implementations:
-
-### Notable Conversions
-
-- **IBL-to-nwb**: International Brain Laboratory data
-- **buzsaki-lab-to-nwb**: Buzsáki Lab hippocampal recordings
-- **allen-institute-to-nwb**: Allen Institute datasets
-- **janelia-to-nwb**: Janelia Research Campus data
-
-### Conversion Categories
-
-1. **Electrophysiology**: Neuropixels, tetrodes, silicon probes
-2. **Calcium Imaging**: Two-photon, miniscope data
-3. **Behavior**: Video tracking, task events
-4. **Multimodal**: Combined ephys + imaging + behavior
-
-## 📦 DataLad Integration
-
-This project uses DataLad for reproducible data management. **Important**: Always use the Python API for DataLad operations, not CLI commands.
+**Important**: Always use the Python API for DataLad operations, not CLI commands.
 
 ```python
 # Using DataLad Python API (recommended)
@@ -179,36 +87,21 @@ for subds in subdatasets:
     dl.install(dataset=".", path=subds)
 ```
 
-## 🔧 Usage Examples
+### Working with Large Data Files
 
-### 1. Create a New Conversion
-
-Use the cookiecutter template:
-
-```bash
-cd etl/data/conversions
-pixi run cookiecutter cookiecutter-my-lab-to-nwb-template
-```
-
-### 2. Run an Existing Conversion
+Large files (>10MB) are managed via git-annex and stored on GIN:
 
 ```python
-from neuroconv import NWBConverter
+import datalad.api as dl
 
-# Import specific lab converter
-from ibl_to_nwb import IBLConverter
+# Get large files from GIN
+dl.get(path="path/to/large/file.nwb")
 
-# Configure and run
-converter = IBLConverter(source_data={...})
-converter.run_conversion(nwbfile_path="output.nwb")
-```
+# Push large files to GIN (requires write access)
+dl.push(to="gin", path="path/to/large/file.nwb")
 
-### 3. Install Specific Conversions
-
-```bash
-pixi run python install_catalystneuro_conversions.py \
-    --conversions IBL-to-nwb buzsaki-lab-to-nwb \
-    --install-deps
+# Or use git-annex directly
+# git annex copy --to gin path/to/large/file.nwb
 ```
 
 ## 🤖 LLM-Assisted Conversion
@@ -228,7 +121,7 @@ The project supports AI-powered data conversion assistance:
 - ImageSeries for imaging
 - SpatialSeries for tracking
 
-### LinkML Integration
+### LinkML Integration (stretch goal)
 - Generate JSON Schema from LinkML
 - Validate metadata structure
 - Type-safe conversions
@@ -248,30 +141,6 @@ pixi run pytest tests/evaluation/
 pixi run pytest tests/unit/test_ibl_conversion.py
 ```
 
-## 📝 Development Workflow
-
-1. **Setup Environment**
-   ```bash
-   ./setup_project.sh
-   ```
-
-2. **Explore Conversions**
-   ```bash
-   ls etl/data/conversions/
-   cat conversions_summary.json
-   ```
-
-3. **Start Jupyter Lab**
-   ```bash
-   pixi run jupyter
-   ```
-
-4. **Develop Conversion**
-   - Use cookiecutter template
-   - Implement interfaces
-   - Test with sample data
-   - Validate NWB output
-
 ## 🔗 Resources
 
 ### Documentation
@@ -284,25 +153,14 @@ pixi run pytest tests/unit/test_ibl_conversion.py
 - [NWB Tutorials](https://nwb.org/tutorials/)
 - [CatalystNeuro Examples](https://github.com/catalystneuro/neuroconv/tree/main/docs/conversion_examples_gallery)
 
-### Community
-- [NWB Help Desk](https://github.com/NeurodataWithoutBorders/helpdesk)
-- [NeuroConv Issues](https://github.com/catalystneuro/neuroconv/issues)
 
 ## 🎯 Project Goals
 
-1. **Standardization**: Convert diverse neuroscience data to NWB format
+1. **Standardization**: Prototype converting diverse neuroscience data to NWB format using agentic workflows.
 2. **Automation**: Reduce manual effort in data conversion
-3. **Validation**: Ensure data quality and compliance
-4. **Accessibility**: Make conversions easy for researchers
+3. **Validation**: Ensure data quality, standards and some. Valid NWB doesn't mean useful data.
+4. **Accessibility**: Make conversions easy for researchers and eventually try to catch omitted metadata early in the process.
 5. **Reproducibility**: Track data provenance with DataLad
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Implement your conversion
-4. Add tests
-5. Submit a pull request
 
 ## 📄 License
 
@@ -310,7 +168,6 @@ This project follows the licensing of the included CatalystNeuro tools (typicall
 
 ## 🙏 Acknowledgments
 
-- CatalystNeuro team for conversion tools
+- CatalystNeuro team for conversion tools, and open source conversions. This approach doesn't work without that openly shared expertise.
 - NWB community for the standard
 - DataLad team for data management tools
-- Contributors to individual lab conversions
