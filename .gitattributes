@@ -38,3 +38,4 @@ pixi.lock merge=binary linguist-language=YAML linguist-generated=true
 # Default: only annex files larger than 10MB
 * annex.largefiles=(largerthan=10mb)
 **/.git* annex.largefiles=nothing
+* annex.largefiles=((mimeencoding=binary)and(largerthan=0))
