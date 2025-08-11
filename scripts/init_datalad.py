@@ -12,7 +12,7 @@ def init_datalad_dataset():
     result = dl.create(
         path='.',
         cfg_proc='text2git',
-        description='LLM-guided conversion project',
+        description='Agentic neurodata conversion project',
         force=True
     )
     print('DataLad dataset created successfully')
@@ -21,7 +21,7 @@ def init_datalad_dataset():
     print('Saving all project files...')
     dl.save(
         dataset='.',
-        message='Initial commit: LLM-guided conversion project with proper git-annex configuration',
+        message='Initial commit: Agentic neurodata conversion project with proper git-annex configuration',
         recursive=True
     )
     print('All files saved successfully')

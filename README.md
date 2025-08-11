@@ -1,6 +1,6 @@
-# LLM-Guided Data Conversion Project
+# Agentic Neurodata Conversion Project
 
-An LLM-assisted tool for converting  neuroscience data to standardized formats (initially NWB), leveraging AI to guide data conversion, prompt for metadata, and validate outputs.
+An agentic tool for converting neuroscience data to standardized formats (initially NWB), leveraging LLMs and agentic workflows to guide data conversion, prompt for metadata, and validate outputs.
 
 ## 🚀 Quick Start
 
@@ -104,9 +104,9 @@ dl.push(to="gin", path="path/to/large/file.nwb")
 # git annex copy --to gin path/to/large/file.nwb
 ```
 
-## 🤖 LLM-Assisted Conversion
+## 🤖 Agentic Conversion
 
-The project supports AI-powered data conversion assistance:
+The project supports agentic AI-powered data conversion:
 
 1. **Automated Metadata Extraction**: Parse experimental protocols
 2. **Schema Mapping**: Map custom formats to NWB

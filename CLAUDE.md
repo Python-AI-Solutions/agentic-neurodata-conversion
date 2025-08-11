@@ -1,7 +1,7 @@
-# Claude Best Practices for LLM-Assisted Data Conversion Project
+# Claude Best Practices for Agentic Data Conversion Project
 
 ## Project Overview
-This project develops an LLM-assisted tool for converting experimental data to standardized formats (primarily NWB), leveraging LLMs to guide data conversion and prompt users for additional metadata while validating outputs.
+This project develops an agentic tool for converting experimental data to standardized formats (primarily NWB), leveraging LLMs and agentic workflows to guide data conversion and prompt users for additional metadata while validating outputs.
 
 ## Development Environment & Tools
 
@@ -52,7 +52,7 @@ import datalad.api as dl
 dl.create(
     path=".",
     cfg_proc="text2git",  # CRITICAL: Ensures text files stay in git
-    description="LLM-guided conversion project",
+    description="Agentic neurodata conversion project",
     force=True
 )
 ```
@@ -119,7 +119,7 @@ ls -la *.md *.toml *.py
    test = "pytest tests/"
    lint = "ruff check ."
    format = "ruff format ."
-   convert = "python -m llm_conversion_tool.cli"
+   convert = "python -m agentic_converter.cli"
    ```
 
 ### Dataset Management

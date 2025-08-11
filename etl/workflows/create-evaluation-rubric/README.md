@@ -1,6 +1,6 @@
 # Create Evaluation Rubric
 
-This workflow defines evaluation criteria and metrics for the LLM conversion tool.
+This workflow defines evaluation criteria and metrics for the agentic converter.
 
 ## Purpose
 - Define success metrics for conversion quality
@@ -54,5 +54,5 @@ pixi run python create_rubric.py
 ## Integration
 The rubric is used by:
 - `tests/evaluation-tests/` - Automated evaluation
-- `llm-conversion-tool/` - Runtime validation
+- `agentic-converter/` - Runtime validation
 - Benchmarking scripts for model comparison
