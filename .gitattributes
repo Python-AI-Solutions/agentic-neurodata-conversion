@@ -1,0 +1,40 @@
+# SCM syntax highlighting & preventing 3-way merges
+pixi.lock merge=binary linguist-language=YAML linguist-generated=true
+
+# Configure git-annex backend
+* annex.backend=MD5E
+
+# IMPORTANT: Only use annex for large data files (>10MB)
+# All code, documentation, and config files stay in regular git
+
+# Never annex git files
+**/.git* annex.largefiles=nothing
+
+# Keep all development files in git (not annex)
+*.py annex.largefiles=nothing
+*.md annex.largefiles=nothing
+*.txt annex.largefiles=nothing
+*.yml annex.largefiles=nothing
+*.yaml annex.largefiles=nothing
+*.toml annex.largefiles=nothing
+*.json annex.largefiles=nothing
+*.sh annex.largefiles=nothing
+*.bash annex.largefiles=nothing
+*.cfg annex.largefiles=nothing
+*.ini annex.largefiles=nothing
+*.conf annex.largefiles=nothing
+*.lock annex.largefiles=nothing
+*.rst annex.largefiles=nothing
+*.ipynb annex.largefiles=nothing
+*.html annex.largefiles=nothing
+*.css annex.largefiles=nothing
+*.js annex.largefiles=nothing
+*.xml annex.largefiles=nothing
+.gitignore annex.largefiles=nothing
+.gitmodules annex.largefiles=nothing
+.gitattributes annex.largefiles=nothing
+.pre-commit-config.yaml annex.largefiles=nothing
+
+# Default: only annex files larger than 10MB
+* annex.largefiles=(largerthan=10mb)
+**/.git* annex.largefiles=nothing
