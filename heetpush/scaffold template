@@ -1,0 +1,16 @@
+<lab-slug>-lab-to-nwb/
+  README.md
+  pyproject.toml
+  convert_session.py
+  config/
+    metadata.template.yaml
+    interfaces.template.yaml
+    channel_map.template.csv
+  src/<lab_slug>/
+    __init__.py
+    converter.py
+    preprocess.py
+    metadata.py
+    io_layout.py
+  tests/
+    test_smoke.py
