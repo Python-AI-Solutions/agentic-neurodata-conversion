@@ -1,0 +1,343 @@
+#!/usr/bin/env python3
+import argparse
+import subprocess
+import sys
+import shutil
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Optional, Tuple
+
+from nwbinspector import inspect_nwbfile, Importance, format_messages
+from rdflib import Graph as RDFGraph, URIRef
+from rdflib.namespace import RDFS
+
+
+WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
+VENV_PY = WORKSPACE_ROOT / "nwbkg" / "bin" / "python"
+# Project root (workspace root is the top-level 'nwbkg' directory)
+REPO_ROOT = WORKSPACE_ROOT.parent
+LT_SCRIPT = REPO_ROOT / "nlk2_old" / "linkmlnwb_to_ttl" / "lt.py"
+FS_SCRIPT = REPO_ROOT / "nlk2_old" / "final" / "fs.py"
+KG_SCRIPT = REPO_ROOT / "nlk2_old" / "kg" / "kg.py"
+N_SCRIPT = REPO_ROOT / "nlk2_old" / "nwb_to_linkml" / "n.py"
+# Save results inside evaltool/results by default
+DEFAULT_RESULTS_DIR = Path(__file__).resolve().parent / "results"
+
+
+@dataclass
+class EvalResult:
+    passed: bool
+    formatted_report: str
+    summary: str
+
+
+def _python_executable() -> str:
+    if VENV_PY.exists():
+        return str(VENV_PY)
+    return sys.executable
+
+
+def run_inspector(nwb_path: Path) -> EvalResult:
+    # Compute messages and formatted report in-memory; no report file persisted
+    messages = list(inspect_nwbfile(nwbfile_path=str(nwb_path)))
+    formatted = format_messages(messages=messages)
+    counts = {imp.name: 0 for imp in Importance}
+    for m in messages:
+        counts[m.importance.name] = counts.get(m.importance.name, 0) + 1
+    failing_levels = {Importance.CRITICAL.name, Importance.BEST_PRACTICE_VIOLATION.name, Importance.PYNWB_VALIDATION.name, Importance.ERROR.name}
+    failed = any(counts.get(level, 0) > 0 for level in failing_levels)
+    summary = ", ".join([f"{k}:{v}" for k, v in counts.items() if v > 0]) or "no issues"
+    return EvalResult(passed=not failed, formatted_report="\n".join(formatted), summary=summary)
+
+
+def run_lt_fs_kg_for_set(nwb_path: Path, out_dir: Path, set_name: str, ontology: str, data_mode: str, schema_dir: Optional[Path] = None) -> Tuple[Path, Path, Path, Path, Path]:
+    """Generate a TTL for a given set (data or ontology), convert via fs.py, build HTML via kg.py.
+
+    Returns (ttl_out, nt_out, jsonld_out, triples_out, html_out).
+    set_name: 'data' or 'owl' (used for filename stem suffix)
+    ontology: one of 'none', 'full'
+    data_mode: one of 'none', 'stats'
+    """
+    py = _python_executable()
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    ttl_out = out_dir / f"{nwb_path.stem}.{set_name}.ttl"
+
+    # Generate TTL non-interactively
+    if not LT_SCRIPT.exists():
+        raise RuntimeError(f"TTL generator not found: {LT_SCRIPT}")
+    lt_cmd = [
+        py,
+        str(LT_SCRIPT),
+        str(nwb_path),
+        "--ontology", ontology,
+        "--data", data_mode,
+        "--output",
+        str(ttl_out),
+    ]
+    if schema_dir is not None:
+        lt_cmd.extend(["--schema", str(schema_dir)])
+    subprocess.run(lt_cmd, check=True)
+
+    # Convert TTL via fs.py by piping the TTL path to stdin
+    if not FS_SCRIPT.exists():
+        raise RuntimeError(f"Postprocessor not found: {FS_SCRIPT}")
+    fs_proc = subprocess.run([py, str(FS_SCRIPT)], input=(str(ttl_out) + "\n"), text=True, capture_output=True)
+    # Do not fail hard if fs.py printed warnings; rely on files existence instead
+
+    base = ttl_out.with_suffix("")
+    nt_src = base.with_suffix(".nt")
+    jsonld_src = base.with_suffix(".jsonld")
+    triples_src = base.with_suffix(".triples.txt")
+    html_src = ttl_out.with_suffix(".html")
+
+    # Ensure all fs outputs live under out_dir; copy if they do not
+    ttl_dest = ttl_out  # already under out_dir by construction
+    nt_dest = out_dir / nt_src.name
+    jsonld_dest = out_dir / jsonld_src.name
+    triples_dest = out_dir / triples_src.name
+    html_dest = out_dir / html_src.name
+
+    def _ensure_copy(src: Path, dest: Path) -> Path:
+        try:
+            if src.exists():
+                if src.resolve() != dest.resolve():
+                    shutil.copy2(src, dest)
+                else:
+                    # Same path; already correct
+                    pass
+            else:
+                # Try variant without the set token (e.g., without .data/ .owl)
+                name = src.name
+                token = f".{set_name}."
+                if token in name:
+                    alt_name = name.replace(token, ".")
+                    alt_path = src.with_name(alt_name)
+                    if alt_path.exists():
+                        shutil.copy2(alt_path, dest)
+                        return dest
+        except Exception:
+            # Non-fatal copy failure; return src if exists else dest
+            if src.exists():
+                return src
+        return dest if dest.exists() else (src if src.exists() else dest)
+
+    # If fs.py did not produce outputs, fallback to generating them here
+    if not nt_src.exists() or not jsonld_src.exists() or not triples_src.exists():
+        try:
+            g = RDFGraph()
+            g.parse(str(ttl_out), format="turtle")
+            # Generate NT and JSON-LD
+            g.serialize(destination=str(nt_src), format="nt")
+            g.serialize(destination=str(jsonld_src), format="json-ld", indent=2)
+            # Generate triples.txt with labels
+            def _label_for(node) -> str:
+                try:
+                    if isinstance(node, URIRef):
+                        for o in g.objects(node, RDFS.label):
+                            return str(o)
+                        s = str(node)
+                        if "#" in s:
+                            return s.rsplit("#", 1)[-1]
+                        if "/" in s:
+                            return s.rstrip("/").rsplit("/", 1)[-1]
+                        return s
+                    return str(node)
+                except Exception:
+                    return str(node)
+            with open(triples_src, "w", encoding="utf-8") as f:
+                for s, p, o in g:
+                    f.write(f"{_label_for(s)}\t{_label_for(p)}\t{_label_for(o)}\n")
+        except Exception:
+            # Fallback failed; proceed with whatever exists
+            pass
+
+    nt_final = _ensure_copy(nt_src, nt_dest)
+    jsonld_final = _ensure_copy(jsonld_src, jsonld_dest)
+    triples_final = _ensure_copy(triples_src, triples_dest)
+
+    # Run KG to generate HTML visualization if available
+    try:
+        if KG_SCRIPT.exists():
+            # Call kg.py with --no-open to avoid auto-opening the browser
+            subprocess.run([py, str(KG_SCRIPT), str(ttl_out), "--no-open"], text=True, capture_output=True, check=False)
+    except Exception:
+        pass
+    html_final = _ensure_copy(html_src, html_dest)
+
+    # Remove .nt artifacts from results
+    try:
+        for candidate in (nt_final, nt_dest, nt_src):
+            if isinstance(candidate, Path) and candidate.exists():
+                candidate.unlink(missing_ok=True)  # type: ignore[arg-type]
+    except Exception:
+        pass
+
+    return ttl_dest, Path(""), jsonld_final, triples_final, html_final
+
+
+def run_all_outputs(nwb_path: Path, out_dir: Path) -> dict:
+    """Generate both data and ontology outputs (TTL + NT/JSONLD/triples + HTML) into out_dir.
+
+    Returns a mapping: {
+        'data': {'ttl', 'nt', 'jsonld', 'triples', 'html'},
+        'owl':  {'ttl', 'nt', 'jsonld', 'triples', 'html'}
+    }
+    """
+    results: dict[str, dict[str, Path]] = {}
+
+    # 0) Generate LinkML schema via n.py (split schema directory) into results for transparency
+    schema_out_dir = out_dir / f"{nwb_path.stem}.linkml"
+    try:
+        if N_SCRIPT.exists():
+            py = _python_executable()
+            n_cmd = [
+                py, str(N_SCRIPT),
+                "--cache-dir", str((out_dir / ".nwb_linkml_cache").resolve()),
+                "--output", str(schema_out_dir.resolve()),
+            ]
+            # n.py prompts for NWB path; provide via stdin
+            subprocess.run(n_cmd, input=(str(nwb_path) + "\n"), text=True, check=True)
+        else:
+            # If n.py is missing, proceed without explicit schema_dir
+            schema_out_dir = None  # type: ignore
+    except Exception:
+        # Best-effort; proceed without schema_dir on failure
+        schema_out_dir = None  # type: ignore
+
+    # Data instance graph
+    d_ttl, d_nt, d_jsonld, d_triples, d_html = run_lt_fs_kg_for_set(
+        nwb_path=nwb_path,
+        out_dir=out_dir,
+        set_name="data",
+        ontology="none",
+        data_mode="stats",
+        schema_dir=schema_out_dir if isinstance(schema_out_dir, Path) else None,
+    )
+    results["data"] = {
+        "ttl": d_ttl,
+        "nt": d_nt,
+        "jsonld": d_jsonld,
+        "triples": d_triples,
+        "html": d_html,
+    }
+
+    # Ontology graph
+    o_ttl, o_nt, o_jsonld, o_triples, o_html = run_lt_fs_kg_for_set(
+        nwb_path=nwb_path,
+        out_dir=out_dir,
+        set_name="owl",
+        ontology="full",
+        data_mode="none",
+        schema_dir=schema_out_dir if isinstance(schema_out_dir, Path) else None,
+    )
+    results["owl"] = {
+        "ttl": o_ttl,
+        "nt": o_nt,
+        "jsonld": o_jsonld,
+        "triples": o_triples,
+        "html": o_html,
+    }
+
+    # Also include the schema directory path if generated
+    if isinstance(schema_out_dir, Path) and schema_out_dir.exists():
+        results["schema_dir"] = {"path": schema_out_dir}
+    return results
+
+
+def write_context_file(
+    context_path: Path,
+    nwb_path: Path,
+    eval_result: EvalResult,
+    outputs: Optional[dict] = None,
+) -> None:
+    context_path.parent.mkdir(parents=True, exist_ok=True)
+    lines = []
+    lines.append(f"NWB Evaluation Context")
+    lines.append(f"File: {nwb_path}")
+    lines.append(f"Decision: {'PASS' if eval_result.passed else 'FAIL'}")
+    lines.append(f"Inspector counts: {eval_result.summary}")
+    if outputs is not None:
+        # Only include data.ttl, data.jsonld, data.triples.txt in context
+        data = outputs.get("data", {}) if isinstance(outputs, dict) else {}
+        if data:
+            lines.append("")
+            lines.append("Data outputs:")
+            lines.append(f" - TTL: {data.get('ttl')}")
+            lines.append(f" - JSON-LD: {data.get('jsonld')}")
+            lines.append(f" - triples.txt: {data.get('triples')}")
+    lines.append("")
+    lines.append("=== Inspector Report (verbatim) ===")
+    lines.extend((eval_result.formatted_report or "").splitlines())
+
+    context_path.write_text("\n".join(lines))
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description="NWB evaluation agent: inspect file; on fail, derive TTL and fs outputs; write context.")
+    ap.add_argument("--out-dir", default=str(DEFAULT_RESULTS_DIR), help="Directory to write outputs (reports and context). Defaults to evaltool/results.")
+    ap.add_argument("--overwrite", "-o", action="store_true", help="Overwrite existing report/context files where applicable.")
+    args = ap.parse_args()
+
+    nwb_path = input("Enter path to .nwb file: ").strip()
+    nwb_path = Path(nwb_path).expanduser().resolve()
+    if not nwb_path.exists():
+        sys.exit(f"Path not found: {nwb_path}")
+
+    out_dir = Path(args.out_dir).expanduser().resolve()
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    eval_result = run_inspector(nwb_path)
+
+    context_base = nwb_path.stem + ("_context.txt")
+    context_path = out_dir / context_base
+    if context_path.exists() and not args.overwrite:
+        # timestamped context file
+        from datetime import datetime
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        context_path = context_path.with_name(f"{nwb_path.stem}_context_{ts}.txt")
+
+    # Pre-clean any existing unwanted artifacts in results
+    try:
+        for p in out_dir.glob("*.nt"):
+            p.unlink(missing_ok=True)  # type: ignore[arg-type]
+        for p in out_dir.glob("*nwb_inspector_report*.txt"):
+            p.unlink(missing_ok=True)  # type: ignore[arg-type]
+    except Exception:
+        pass
+
+    # Always build data outputs so context lists data.ttl/jsonld/triples
+    try:
+        d_ttl, d_nt, d_jsonld, d_triples, _ = run_lt_fs_kg_for_set(
+            nwb_path=nwb_path,
+            out_dir=out_dir,
+            set_name="data",
+            ontology="none",
+            data_mode="stats",
+            schema_dir=None,
+        )
+        data_outputs = {"ttl": d_ttl, "jsonld": d_jsonld, "triples": d_triples}
+    except Exception as e:
+        data_outputs = {}
+        print(f"Warning: data outputs could not be generated: {e}")
+
+    if eval_result.passed:
+        write_context_file(context_path, nwb_path, eval_result, outputs={"data": data_outputs} if data_outputs else None)
+        print("✅ PASS: NWB file met inspector guidelines.")
+        print(f"Pass report saved: {context_path}")
+    else:
+        print("⚠️ FAIL: NWB file did not meet inspector guidelines; deriving additional outputs…")
+        try:
+            outputs = run_all_outputs(nwb_path, out_dir)
+            # Keep context limited to data outputs per requirement
+            write_context_file(context_path, nwb_path, eval_result, outputs={"data": outputs.get("data", {})})
+        except Exception as e:
+            write_context_file(context_path, nwb_path, eval_result, outputs={"data": data_outputs} if data_outputs else None)
+            print(f"Warning: full outputs could not be generated: {e}")
+        print(f"Fail context saved: {context_path}")
+
+
+if __name__ == "__main__":
+    main()
+
+

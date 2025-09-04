@@ -1,0 +1,47 @@
+NWB Evaluation Context
+File: /Users/adityapatane/Desktop/evaluation_agent/nlk2_old/001470/sub-M541/ses-M54120240831/ecephys/sub-M541_ses-M54120240831_ecephys.nwb
+Decision: FAIL
+Inspector counts: CRITICAL:2, BEST_PRACTICE_SUGGESTION:5
+
+Data outputs:
+ - TTL: /Users/adityapatane/Desktop/evaluation_agent/nwbkg/evalagent/evaltool/results/sub-M541_ses-M54120240831_ecephys.data.ttl
+ - JSON-LD: /Users/adityapatane/Desktop/evaluation_agent/nwbkg/evalagent/evaltool/results/sub-M541_ses-M54120240831_ecephys.jsonld
+ - triples.txt: /Users/adityapatane/Desktop/evaluation_agent/nwbkg/evalagent/evaltool/results/sub-M541_ses-M54120240831_ecephys.triples.txt
+
+=== Inspector Report (verbatim) ===
+**************************************************
+NWBInspector Report Summary
+
+Timestamp: 2025-09-04 17:37:24.481917+05:30
+Platform: macOS-15.6.1-arm64-arm-64bit
+NWBInspector version: 0.6.5
+
+Found 7 issues over 1 files:
+       2 - CRITICAL
+       5 - BEST_PRACTICE_SUGGESTION
+**************************************************
+
+
+0  /Users/adityapatane/Desktop/evaluation_agent/nlk2_old/001470/sub-M541/ses-M54120240831/ecephys/sub-M541_ses-M54120240831_ecephys.nwb
+=======================================================================================================================================
+
+0.0  Importance.CRITICAL: check_data_orientation - 'ElectricalSeries' object at location '/acquisition/ElectricalSeriesAPImec1'
+       Message: Data may be in the wrong orientation. Time should be in the first dimension, and is usually the longest dimension. Here, another dimension is longer.
+
+0.1  Importance.CRITICAL: check_data_orientation - 'ElectricalSeries' object at location '/acquisition/ElectricalSeriesAPImec0'
+       Message: Data may be in the wrong orientation. Time should be in the first dimension, and is usually the longest dimension. Here, another dimension is longer.
+
+0.2  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Subject' object at location '/general/subject'
+       Message: Description is missing.
+
+0.3  Importance.BEST_PRACTICE_SUGGESTION: check_experiment_description - 'NWBFile' object at location '/'
+       Message: Experiment description is missing.
+
+0.4  Importance.BEST_PRACTICE_SUGGESTION: check_institution - 'NWBFile' object at location '/'
+       Message: Metadata /general/institution is missing.
+
+0.5  Importance.BEST_PRACTICE_SUGGESTION: check_keywords - 'NWBFile' object at location '/'
+       Message: Metadata /general/keywords is missing.
+
+0.6  Importance.BEST_PRACTICE_SUGGESTION: check_subject_age - 'Subject' object at location '/general/subject'
+       Message: Subject is missing age and date_of_birth. Please specify at least one of these fields.
