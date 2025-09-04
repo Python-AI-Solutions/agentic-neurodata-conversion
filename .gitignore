@@ -365,3 +365,4 @@ etl/prompt-input-data/condensed-nwb-linkml-spec/pydantic/
 !setup.py
 !pyproject.toml
 !pixi.toml
+nlk/bin/bids-validator-deno
