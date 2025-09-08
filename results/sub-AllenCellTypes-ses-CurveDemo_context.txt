@@ -1,0 +1,43 @@
+NWB Evaluation Context
+File: /Users/eval_agent copy/evaluation_agent/001248/sub-AllenCellTypes-ses-CurveDemo/sub-AllenCellTypes-ses-CurveDemo.nwb
+Decision: PASS
+Inspector counts: BEST_PRACTICE_SUGGESTION:6
+
+Data outputs:
+ - TTL: /Users/eval_agent copy/evaluation_agent_final/results/sub-AllenCellTypes-ses-CurveDemo.data.ttl
+ - JSON-LD: /Users/eval_agent copy/evaluation_agent_final/results/sub-AllenCellTypes-ses-CurveDemo.data.jsonld
+ - triples.txt: /Users/eval_agent copy/evaluation_agent_final/results/sub-AllenCellTypes-ses-CurveDemo.data.triples.txt
+
+=== Inspector Report (verbatim) ===
+**************************************************
+NWBInspector Report Summary
+
+Timestamp: 2025-09-07 03:44:16.927228+05:30
+Platform: macOS-15.6.1-arm64-arm-64bit
+NWBInspector version: 0.6.5
+
+Found 6 issues over 1 files:
+       6 - BEST_PRACTICE_SUGGESTION
+**************************************************
+
+
+0  /Users/eval_agent copy/evaluation_agent/001248/sub-AllenCellTypes-ses-CurveDemo/sub-AllenCellTypes-ses-CurveDemo.nwb
+=======================================================================================================================
+
+0.0  Importance.BEST_PRACTICE_SUGGESTION: check_description - 'Device' object at location '/general/devices/device'
+       Message: Description is missing.
+
+0.1  Importance.BEST_PRACTICE_SUGGESTION: check_experimenter_exists - 'NWBFile' object at location '/'
+       Message: Experimenter is missing.
+
+0.2  Importance.BEST_PRACTICE_SUGGESTION: check_experiment_description - 'NWBFile' object at location '/'
+       Message: Experiment description is missing.
+
+0.3  Importance.BEST_PRACTICE_SUGGESTION: check_institution - 'NWBFile' object at location '/'
+       Message: Metadata /general/institution is missing.
+
+0.4  Importance.BEST_PRACTICE_SUGGESTION: check_keywords - 'NWBFile' object at location '/'
+       Message: Metadata /general/keywords is missing.
+
+0.5  Importance.BEST_PRACTICE_SUGGESTION: check_processing_module_name - 'ProcessingModule' object with name 'CurveData'
+       Message: Processing module is named CurveData. It is recommended to use the schema module names: ophys, ecephys, icephys, behavior, misc, ogen, retinotopy

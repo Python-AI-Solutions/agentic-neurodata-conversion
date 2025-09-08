@@ -1,0 +1,35 @@
+intents:
+  - id: convert_data
+    patterns:
+      - "convert this"
+      - "make nwb file"
+      - "transform dataset"
+    action: call_conversion_agent
+
+  - id: evaluate_file
+    patterns:
+      - "check this file"
+      - "validate"
+      - "is this NWB correct"
+    action: call_evaluation_agent
+
+  - id: ask_metadata
+    patterns:
+      - "what is the subject"
+      - "show me devices"
+      - "list sessions"
+    action: query_metadata
+
+  - id: ask_explanation
+    patterns:
+      - "explain the error"
+      - "summarize evaluation"
+      - "what does this warning mean"
+    action: explain_result
+
+  - id: smalltalk
+    patterns:
+      - "hello"
+      - "who are you"
+      - "thanks"
+    action: respond_friendly

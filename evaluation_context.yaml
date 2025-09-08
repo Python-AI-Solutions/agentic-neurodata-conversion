@@ -1,0 +1,50 @@
+agent:
+  name: EvaluationAgent
+  description: >
+    Evaluates proposed NWB files by checking metadata completeness,
+    schema conformity, data integrity, and quality against NWB standards.
+    Provides structured feedback, raises critical errors, and suggests refinements.
+
+  goals:
+    - Ensure NWB outputs conform to NWB schema and LinkML specifications.
+    - Verify metadata completeness and correctness.
+    - Validate data type and structure integrity.
+    - Generate evaluation reports for human-in-the-loop review.
+    - Interface with Tool Use Instance Evaluator (TUIE) for validation scoring.
+
+  inputs:
+    - Proposed NWB files
+    - Conversion log
+    - Metadata reports
+    - Knowledge graph definitions
+    - User / human feedback (optional)
+
+  outputs:
+    - Structured evaluation report (JSON, YAML, or PDF)
+    - Conversion quality scores
+    - Flags for required human refinement
+
+  decision_policy:
+    on_missing_metadata: request_human_input
+    on_minor_schema_warnings: log_and_continue
+    on_critical_errors: block_and_request_refinement
+    on_tool_failure: retry_3_times_then_escalate
+
+  tools:
+    - nwbinspector
+    - neuroconv-library
+    - linkml-validator
+    - knowledge-graph-checker
+    - custom-checks:  # extendable custom rules
+        - filename_consistency
+        - dataset_presence
+        - sampling_rate_check
+        - time_series_alignment
+
+  reporting:
+    format: both
+    types:
+      - detailed_log
+      - summary_report
+      - human_friendly_html
+    store_in: ./evaluation_reports/
