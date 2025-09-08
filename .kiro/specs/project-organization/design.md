@@ -47,77 +47,81 @@ The main package `src/` follows a layered architecture:
 
 ## Components and Interfaces
 
-### Core Components
+### Core Components (Based on Existing Implementation)
 
-#### 1. Conversion Engine (`src/core/`)
+#### 1. Core Processing (`src/core/`)
 
 **Purpose**: Central orchestration of data conversion workflows
 
-**Key Classes**:
-- `ConversionEngine`: Main orchestrator for conversion workflows
-- `ConversionPipeline`: Defines conversion steps and dependencies
-- `ConversionContext`: Maintains state and metadata throughout conversion
-- `ValidationEngine`: Handles NWB validation and quality checks
+**Key Classes** (refactored from existing modules):
+- `ConversionOrchestrator`: Main orchestrator (refactored from script-based logic)
+- `EvaluationAgent`: Validates outputs and generates reports (exists in `evaluation_agent_final.py`)
+- `FormatDetector`: Detects data formats (exists in `format_detector.py`)
+- `KnowledgeGraphBuilder`: Creates RDF representations (exists in `knowledge_graph.py`)
 
 **Interfaces**:
 ```python
-class ConversionEngine:
+class ConversionOrchestrator:
     def __init__(self, config: ConversionConfig)
-    def register_interface(self, name: str, interface_class: Type[DataInterface])
-    def run_conversion(self, source_data: Dict, metadata: Dict) -> ConversionResult
-    def validate_output(self, nwb_path: Path) -> ValidationResult
+    def detect_formats(self, dataset_path: Path) -> List[FormatMatch]
+    def run_conversion_pipeline(self, dataset_path: Path) -> ConversionResult
 
-class ConversionPipeline:
-    def add_step(self, step: ConversionStep)
-    def execute(self, context: ConversionContext) -> ConversionResult
-    def rollback(self, context: ConversionContext)
+class EvaluationAgent:  # Already implemented
+    def validate_nwb(self, nwb_path: str) -> Dict[str, Any]
+    def generate_ttl_and_outputs(self, nwb_path: str, **kwargs) -> Dict[str, Any]
+    def write_context_and_report(self, nwb_path: str, eval_results: Dict) -> Dict[str, Any]
+
+class FormatDetector:  # Already implemented
+    def detect_formats(self, root: Path) -> List[Dict[str, Any]]
 ```
 
 #### 2. Agent Framework (`src/agents/`)
 
 **Purpose**: LLM-powered agents for different aspects of conversion
 
-**Key Classes**:
-- `BaseAgent`: Abstract base class for all agents
-- `ConversationAgent`: Handles metadata extraction and user interaction
-- `ConversionAgent`: Generates conversion scripts and orchestrates conversion
-- `EvaluationAgent`: Validates outputs and generates quality reports
-- `KnowledgeGraphAgent`: Creates semantic representations of data
+**Key Classes** (refactored from existing modules):
+- `BaseAgent`: Abstract base class for all agents (to be created)
+- `ConversationAgent`: Handles metadata extraction (exists in `conversationAgent.py`)
+- `ConversionAgent`: Generates conversion scripts (exists in `conversionagent.py`)
+- `MetadataQuestioner`: Handles dynamic questioning (exists in `metadata_questioner.py`)
 
 **Interfaces**:
 ```python
-class BaseAgent:
-    def __init__(self, llm_config: LLMConfig)
-    async def process(self, input_data: Any) -> AgentResult
-    def get_capabilities(self) -> List[str]
+class ConversationAgent:  # Already implemented
+    def analyze_dataset(self, dataset_dir: str, out_report_json: Optional[str] = None) -> Dict[str, Any]
 
-class ConversationAgent(BaseAgent):
-    async def analyze_dataset(self, dataset_path: Path) -> AnalysisResult
-    async def extract_metadata(self, source_data: Dict) -> MetadataResult
-    async def ask_user_questions(self, questions: List[str]) -> Dict[str, str]
+class ConversionAgent:  # Already implemented  
+    def synthesize_conversion_script(self, normalized_metadata: Dict, files_map: Dict, output_nwb_path: str) -> str
+    def write_generated_script(self, code: str, out_path: str) -> str
+    def run_generated_script(self, script_path: str) -> int
+
+class MetadataQuestioner:  # Already implemented
+    def get_required_fields(self, kg_file: str, experiment_type: str) -> List[Tuple[str, str]]
+    def generate_dynamic_question(self, field: str, constraints: Dict, inferred: Any = None) -> str
 ```
 
-#### 3. Data Interfaces (`src/interfaces/`)
+#### 3. Integration Interfaces (`src/interfaces/`)
 
-**Purpose**: Standardized interfaces for different data formats
+**Purpose**: External system integrations and protocols
 
-**Key Classes**:
-- `DataInterface`: Base interface for all data sources
-- `NWBInterface`: Handles NWB file operations
-- `CSVInterface`: Processes CSV time series data
-- `EphysInterface`: Handles electrophysiology data formats
-- `BehaviorInterface`: Processes behavioral data
+**Key Classes** (based on existing integrations):
+- `MCPServer`: FastAPI-based MCP server (exists in `mcp_server.py`)
+- `DataladManager`: DataLad integration for data management
+- `LLMProvider`: Abstraction for different LLM providers (OpenRouter, Ollama)
 
 **Interfaces**:
 ```python
-class DataInterface:
-    def __init__(self, source_data: Dict[str, Any])
-    def get_metadata(self) -> Dict[str, Any]
-    def validate_source(self) -> ValidationResult
-    def run_conversion(self, nwbfile: NWBFile, metadata: Dict) -> None
+class MCPServer:  # Already implemented
+    def __init__(self)
+    async def initialize_pipeline(self, config: Optional[Dict] = None) -> Dict[str, Any]
+    async def analyze_dataset(self, dataset_dir: str, **kwargs) -> Dict[str, Any]
+    async def generate_conversion_script(self, normalized_metadata: Dict, files_map: Dict) -> Dict[str, Any]
+    async def evaluate_nwb_file(self, nwb_path: str, **kwargs) -> Dict[str, Any]
 
-class EphysInterface(DataInterface):
-    def detect_format(self) -> str
+class LLMProvider:  # To be abstracted from existing implementations
+    def __init__(self, provider: str, model: str, **kwargs)
+    async def generate_response(self, prompt: str, **kwargs) -> str
+    def get_available_models(self) -> List[str]
     def extract_timeseries(self) -> List[TimeSeries]
     def get_electrode_info(self) -> ElectrodeTable
 ```
@@ -343,6 +347,44 @@ class ConfigManager:
 3. **User Configuration File**: `~/.agentic-converter/config.yaml`
 4. **Project Configuration File**: `pyproject.toml` or `config.yaml`
 5. **Default Configuration**: Built-in defaults
+
+### LLM Provider Configuration
+
+```yaml
+# config.yaml
+default: &default
+  logging:
+    level: INFO
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  
+  conversion:
+    validation_level: strict
+    output_format: nwb
+    
+  agents:
+    llm_provider: openrouter  # 'openrouter' or 'ollama'
+    model: anthropic/claude-sonnet-4
+    temperature: 0.2
+    fallback_provider: ollama
+    fallback_model: llama3.2:3b
+    timeout: 30
+
+development:
+  <<: *default
+  logging:
+    level: DEBUG
+  agents:
+    llm_provider: ollama
+    model: llama3.2:3b
+
+production:
+  <<: *default
+  logging:
+    level: WARNING
+  agents:
+    llm_provider: openrouter
+    model: anthropic/claude-sonnet-4
+```
 
 ### Environment-Specific Configuration
 
@@ -585,8 +627,10 @@ services:
     environment:
       - ENVIRONMENT=production
       - LOG_LEVEL=INFO
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OLLAMA_ENDPOINT=http://ollama:11434/api/chat
+      - LLM_PROVIDER=${LLM_PROVIDER:-openrouter}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OLLAMA_ENDPOINT=${OLLAMA_ENDPOINT:-http://ollama:11434}
+      - LLM_MODEL=${LLM_MODEL:-anthropic/claude-sonnet-4}
     volumes:
       - ./data:/app/data
       - ./config:/app/config
@@ -604,6 +648,8 @@ services:
       - ollama_data:/root/.ollama
     environment:
       - OLLAMA_HOST=0.0.0.0
+    profiles:
+      - local-llm
 
 volumes:
   ollama_data:
@@ -619,8 +665,17 @@ The system is designed for simple deployment using Docker Compose, suitable for 
 # .env.production
 ENVIRONMENT=production
 LOG_LEVEL=INFO
-OPENAI_API_KEY=your_openai_key_here
-OLLAMA_MODEL=llama3.2:3b
+
+# LLM Provider Configuration (choose one)
+LLM_PROVIDER=openrouter  # or 'ollama' for local models
+OPENROUTER_API_KEY=your_openrouter_key_here
+LLM_MODEL=anthropic/claude-sonnet-4
+
+# For local Ollama deployment
+# LLM_PROVIDER=ollama
+# OLLAMA_ENDPOINT=http://localhost:11434
+# LLM_MODEL=mistral:7b
+
 MCP_SERVER_PORT=8000
 ```
 
