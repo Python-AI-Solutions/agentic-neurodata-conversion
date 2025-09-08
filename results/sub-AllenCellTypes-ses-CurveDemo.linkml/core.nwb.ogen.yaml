@@ -1,0 +1,81 @@
+name: core.nwb.ogen
+id: core.nwb.ogen
+imports:
+- core.nwb.base
+- nwb.language
+default_prefix: core.nwb.ogen/
+classes:
+  OptogeneticSeries:
+    name: OptogeneticSeries
+    description: An optogenetic stimulus.
+    is_a: TimeSeries
+    attributes:
+      data:
+        name: data
+        description: Applied power for optogenetic stimulus, in watts. Shape can be
+          1D or 2D. 2D data is meant to be used in an extension of OptogeneticSeries
+          that defines what the second dimension represents.
+        range: OptogeneticSeries_data
+        required: true
+        multivalued: false
+  OptogeneticSeries_data:
+    name: OptogeneticSeries_data
+    description: Applied power for optogenetic stimulus, in watts. Shape can be 1D
+      or 2D. 2D data is meant to be used in an extension of OptogeneticSeries that
+      defines what the second dimension represents.
+    attributes:
+      unit:
+        name: unit
+        description: Unit of measurement for data, which is fixed to 'watts'.
+        range: text
+      array:
+        name: array
+        range: OptogeneticSeries_data_Array
+  OptogeneticSeries_data_Array:
+    name: OptogeneticSeries_data_Array
+    is_a: Arraylike
+    attributes:
+      num_times:
+        name: num_times
+        range: numeric
+        required: true
+      num_rois:
+        name: num_rois
+        range: numeric
+        required: false
+  OptogeneticStimulusSite:
+    name: OptogeneticStimulusSite
+    description: A site of optogenetic stimulation.
+    is_a: NWBContainer
+    attributes:
+      description:
+        name: description
+        description: Description of stimulation site.
+        range: OptogeneticStimulusSite_description
+        required: true
+        multivalued: false
+      excitation_lambda:
+        name: excitation_lambda
+        description: Excitation wavelength, in nm.
+        range: OptogeneticStimulusSite_excitation_lambda
+        required: true
+        multivalued: false
+      location:
+        name: location
+        description: Location of the stimulation site. Specify the area, layer, comments
+          on estimation of area/layer, stereotaxic coordinates if in vivo, etc. Use
+          standard atlas names for anatomical regions when possible.
+        range: OptogeneticStimulusSite_location
+        required: true
+        multivalued: false
+  OptogeneticStimulusSite_description:
+    name: OptogeneticStimulusSite_description
+    description: Description of stimulation site.
+  OptogeneticStimulusSite_excitation_lambda:
+    name: OptogeneticStimulusSite_excitation_lambda
+    description: Excitation wavelength, in nm.
+  OptogeneticStimulusSite_location:
+    name: OptogeneticStimulusSite_location
+    description: Location of the stimulation site. Specify the area, layer, comments
+      on estimation of area/layer, stereotaxic coordinates if in vivo, etc. Use standard
+      atlas names for anatomical regions when possible.
