@@ -610,74 +610,31 @@ volumes:
   datalad_cache:
 ```
 
-### Cloud Deployment
+### Production Deployment
 
-#### Kubernetes Manifests
-```yaml
-# k8s/deployment.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: agentic-converter
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: agentic-converter
-  template:
-    metadata:
-      labels:
-        app: agentic-converter
-    spec:
-      containers:
-      - name: converter
-        image: agentic-converter:latest
-        ports:
-        - containerPort: 8000
-        env:
-        - name: ENVIRONMENT
-          value: "production"
-        resources:
-          requests:
-            memory: "512Mi"
-            cpu: "250m"
-          limits:
-            memory: "1Gi"
-            cpu: "500m"
+The system is designed for simple deployment using Docker Compose, suitable for single-server or small-scale deployments. For larger scale needs, the containerized services can be deployed to any container orchestration platform.
+
+#### Environment Configuration
+```bash
+# .env.production
+ENVIRONMENT=production
+LOG_LEVEL=INFO
+OPENAI_API_KEY=your_openai_key_here
+OLLAMA_MODEL=llama3.2:3b
+MCP_SERVER_PORT=8000
 ```
 
-### Infrastructure as Code
-
-#### Terraform Configuration
-```hcl
-# infrastructure/main.tf
-provider "aws" {
-  region = var.aws_region
-}
-
-module "vpc" {
-  source = "terraform-aws-modules/vpc/aws"
-  
-  name = "agentic-converter-vpc"
-  cidr = "10.0.0.0/16"
-  
-  azs             = ["${var.aws_region}a", "${var.aws_region}b"]
-  private_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
-  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24"]
-  
-  enable_nat_gateway = true
-  enable_vpn_gateway = true
-}
-
-module "eks" {
-  source = "terraform-aws-modules/eks/aws"
-  
-  cluster_name    = "agentic-converter"
-  cluster_version = "1.27"
-  
-  vpc_id     = module.vpc.vpc_id
-  subnet_ids = module.vpc.private_subnets
-}
+#### Health Checks and Monitoring
+```yaml
+# Additional health check configuration for docker-compose.yml
+services:
+  converter:
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 ```
 
 This comprehensive design provides a solid foundation for reorganizing the project while maintaining its sophisticated functionality and enabling collaborative development with AI assistance.
