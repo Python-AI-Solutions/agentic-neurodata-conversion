@@ -7,28 +7,128 @@ try:
 except Exception:
     OpenAI = None
 
+# 🔹 Extended NeuroConv context (condensed from docs, tutorials, and API references)
 NEUROCONV_CONTEXT = """
-NeuroConv quick notes (condensed):
-- Custom DataInterfaces subclass BaseDataInterface.
-- Register them with an NWBConverter.
-- Call run_conversion() with merged metadata.
+NeuroConv Overview
+------------------
+NeuroConv is a Python library for converting neuroscience data formats into the NWB (Neurodata Without Borders) standard.
+It provides:
+- Built-in DataInterfaces for many formats (SpikeGLX, OpenEphys, Intan, Blackrock, etc.)
+- Tools to define custom DataInterfaces when your format is not supported.
+- An NWBConverter class to register interfaces and merge metadata.
+
+Key Concepts
+------------
+1. DataInterface:
+   - Wraps one data source (e.g., ephys, ophys, behavior).
+   - Must define:
+       __init__(self, **source_data)
+       get_metadata(self)
+       run_conversion(self, nwbfile, metadata, stub=False, overwrite=False)
+
+2. NWBConverter:
+   - Holds a dict mapping names → DataInterface classes.
+   - Usage:
+       class MyConverter(NWBConverter):
+           data_interface_classes = dict(
+               ecephys=SpikeGLXRecordingInterface,
+               behavior=CSVTimeSeriesInterface,
+           )
+       converter = MyConverter(source_data={...})
+
+   - converter.get_metadata() merges all metadata from interfaces.
+   - converter.run_conversion("output.nwb", metadata, overwrite=True)
+
+3. Metadata merging:
+   - Always prefer user-provided metadata if conflicts with interface metadata.
+   - Ensure required fields: session_description, identifier, session_start_time, subject.species, general.lab/institution/experimenter.
+
+4. Example: Custom CSVTimeSeriesInterface
+   from neuroconv.datainterfaces import BaseDataInterface
+   from pynwb.base import TimeSeries
+
+   class CSVTimeSeriesInterface(BaseDataInterface):
+       def __init__(self, file_path: str):
+           super().__init__(extractor=None)
+           self.source_data = dict(file_path=file_path)
+
+       def get_metadata(self):
+           return dict(nwbfile=dict(session_description="CSV timeseries"), acquisition=[])
+
+       def run_conversion(self, nwbfile, metadata, stub=False, overwrite=False):
+           import csv
+           data, timestamps = [], []
+           with open(self.source_data["file_path"], "r", encoding="utf-8") as f:
+               r = csv.DictReader(f)
+               for row in r:
+                   timestamps.append(float(row["timestamp"]))
+                   data.append(float(row["value"]))
+           ts = TimeSeries(name="csv_signal", data=data, unit="a.u.", timestamps=timestamps)
+           nwbfile.add_acquisition(ts)
+
+5. Validation:
+   - Schema validation with pynwb.validate
+   - Best practices with NWB Inspector:
+       from nwbinspector import inspect_nwb
+       issues = list(inspect_nwb("output.nwb"))
+       for issue in issues:
+           print(issue["severity"], issue["message"])
+
+6. Supported Formats:
+   - Ephys: SpikeGLX, OpenEphys, Intan, TDT, Axona, Blackrock
+   - Ophys: TIF stacks, miniscope
+   - Behavior: videos, CSV logs
+
+Usage Summary
+-------------
+1. Define DataInterfaces.
+2. Define an NWBConverter with those interfaces.
+3. Merge metadata: user metadata + interface metadata.
+4. Run conversion: converter.run_conversion("output.nwb", metadata, overwrite=True).
+5. Validate the output.
 """
 
-SYSTEM_PROMPT = "You are a senior NeuroConv engineer. Generate a runnable Python script using NeuroConv given metadata and files_map."
-
+SYSTEM_PROMPT = """You are a senior NeuroConv engineer.
+Given (A) normalized NWB metadata and (B) a files map, generate a runnable Python script that:
+- Defines any needed DataInterfaces (e.g., CSVTimeSeriesInterface).
+- Defines an NWBConverter that registers them.
+- Merges user metadata with interface metadata.
+- Writes an NWB file to the output path.
+- Optionally validates with NWB Inspector.
+Output must be pure Python code.
+"""
 
 def synthesize_conversion_script(
-    normalized_metadata: Dict[str, Any], files_map: Dict[str, Any], output_nwb_path: str, model: Optional[str] = None
+    normalized_metadata: Dict[str, Any],
+    files_map: Dict[str, Any],
+    output_nwb_path: str,
+    model: Optional[str] = None,
 ) -> str:
     model = model or os.getenv("LLM_MODEL", "gpt-5")
     api_key = os.getenv("OPENAI_API_KEY")
     if OpenAI is None or not api_key:
         return _fallback_csv_only_script(normalized_metadata, files_map, output_nwb_path)
+
     client = OpenAI(api_key=api_key)
-    user = f"NEUROCONV_CONTEXT:\\n{NEUROCONV_CONTEXT}\\nMETADATA:\\n{json.dumps(normalized_metadata)}\\nFILES_MAP:\\n{json.dumps(files_map)}"
+    user_prompt = f"""
+NEUROCONV_CONTEXT:
+{NEUROCONV_CONTEXT}
+
+METADATA:
+{json.dumps(normalized_metadata, indent=2)}
+
+FILES_MAP:
+{json.dumps(files_map, indent=2)}
+
+OUTPUT_NWB_PATH:
+{output_nwb_path}
+"""
     resp = client.chat.completions.create(
         model=model,
-        messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": [{"type": "text", "text": user}]}],
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": [{"type": "text", "text": user_prompt}]},
+        ],
         temperature=0.2,
     )
     code = resp.choices[0].message.content or ""
@@ -36,7 +136,7 @@ def synthesize_conversion_script(
 
 
 def _fallback_csv_only_script(metadata: Dict[str, Any], files_map: Dict[str, Any], out_path: str) -> str:
-    return f'''# generated_conversion.py (fallback)
+    return f'''# generated_conversion.py (fallback CSV-only)
 import os, csv, json
 from datetime import datetime
 from pynwb import NWBFile, NWBHDF5IO
@@ -69,12 +169,10 @@ if __name__ == "__main__":
     make_nwb()
 '''
 
-
 def write_generated_script(code: str, out_path: str) -> str:
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(code)
     return out_path
-
 
 def run_generated_script(script_path: str) -> int:
     return subprocess.call([sys.executable, script_path])
