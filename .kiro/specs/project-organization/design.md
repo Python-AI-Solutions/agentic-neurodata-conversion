@@ -106,8 +106,9 @@ class MetadataQuestioner:  # Already implemented
 
 **Key Classes** (based on existing integrations):
 - `MCPServer`: FastAPI-based MCP server (exists in `mcp_server.py`)
-- `DataladManager`: DataLad integration for data management
+- `DataladManager`: DataLad integration for data management and provenance
 - `LLMProvider`: Abstraction for different LLM providers (OpenRouter, Ollama)
+- `ProvenanceTracker`: Tracks conversion history and data lineage
 
 **Interfaces**:
 ```python
@@ -118,6 +119,14 @@ class MCPServer:  # Already implemented
     async def generate_conversion_script(self, normalized_metadata: Dict, files_map: Dict) -> Dict[str, Any]
     async def evaluate_nwb_file(self, nwb_path: str, **kwargs) -> Dict[str, Any]
 
+class DataladManager:  # Critical for data management and provenance
+    def __init__(self, dataset_path: Path)
+    def create_dataset(self, path: Path, description: str) -> None
+    def save_conversion_result(self, nwb_path: Path, metadata: Dict, message: str) -> str
+    def track_provenance(self, input_files: List[Path], output_file: Path, conversion_metadata: Dict) -> None
+    def install_subdataset(self, source: str, path: Path) -> None
+    def get_file_history(self, file_path: Path) -> List[Dict[str, Any]]
+
 class LLMProvider:  # To be abstracted from existing implementations
     def __init__(self, provider: str, model: str, **kwargs)
     async def generate_response(self, prompt: str, **kwargs) -> str
@@ -125,6 +134,226 @@ class LLMProvider:  # To be abstracted from existing implementations
     def extract_timeseries(self) -> List[TimeSeries]
     def get_electrode_info(self) -> ElectrodeTable
 ```
+
+### DataLad Integration and Provenance Tracking
+
+#### DataLad Architecture
+
+DataLad serves two critical purposes in this project:
+
+1. **Development Data Management**: Managing test datasets, evaluation data, and conversion examples
+2. **Conversion Output Provenance**: Each conversion creates a DataLad repository tracking the iterative conversion process, decisions, and history
+
+#### Development Data Management
+
+**Dataset Structure**:
+```
+agentic-neurodata-conversion/  # Main DataLad dataset
+├── data/                      # Test and evaluation datasets
+│   ├── synthetic/             # Synthetic messy datasets
+│   ├── evaluation/            # Ground truth datasets
+│   └── samples/               # Small sample datasets
+├── etl/                       # ETL workflows and data
+│   ├── input-data/            # Subdatasets with conversion examples
+│   └── evaluation-data/       # Evaluation datasets
+└── results/                   # Conversion outputs (annexed for large files)
+```
+
+**Key Principles**:
+- **Python API Only**: Always use `import datalad.api as dl`, never CLI commands
+- **Proper Annexing**: Development files (.py, .md, .toml) stay in git, only large data files (>10MB) go to annex
+- **Subdataset Strategy**: External conversion repositories as subdatasets for examples and testing
+
+**DataLad Configuration**:
+```python
+class DataladManager:
+    def __init__(self, dataset_path: Path):
+        self.dataset_path = dataset_path
+        self.dl = datalad.api
+    
+    def initialize_development_dataset(self) -> None:
+        """Initialize project as DataLad dataset with proper configuration"""
+        # Set up .gitattributes FIRST
+        gitattributes_content = """
+# Only use annex for large data files (>10MB)
+* annex.backend=MD5E
+**/.git* annex.largefiles=nothing
+
+# Keep all development files in git (not annex)
+*.py annex.largefiles=nothing
+*.md annex.largefiles=nothing
+*.toml annex.largefiles=nothing
+*.json annex.largefiles=nothing
+*.yaml annex.largefiles=nothing
+
+# Default: only annex files larger than 10MB
+* annex.largefiles=(largerthan=10mb)
+"""
+        (self.dataset_path / ".gitattributes").write_text(gitattributes_content)
+        
+        # Create dataset with text2git configuration
+        self.dl.create(
+            path=str(self.dataset_path),
+            cfg_proc="text2git",
+            description="Agentic neurodata conversion project",
+            force=True
+        )
+    
+    def install_conversion_examples(self) -> None:
+        """Install CatalystNeuro conversion repositories as subdatasets"""
+        conversion_repos = [
+            ("https://github.com/catalystneuro/IBL-to-nwb", "etl/input-data/catalystneuro-conversions/IBL-to-nwb"),
+            ("https://github.com/catalystneuro/buzsaki-lab-to-nwb", "etl/input-data/catalystneuro-conversions/buzsaki-lab-to-nwb"),
+            # Add more as needed
+        ]
+        
+        for source, path in conversion_repos:
+            try:
+                self.dl.install(dataset=str(self.dataset_path), path=path, source=source)
+            except Exception as e:
+                logger.warning(f"Failed to install {source}: {e}")
+```
+
+#### Conversion Output Provenance Tracking
+
+**Each conversion creates its own DataLad repository** that leverages DataLad's natural git/git-annex history for provenance tracking. The repository contains the conversion outputs and DataLad automatically tracks all changes, versions, and history.
+
+**Simple Conversion Repository Structure**:
+```
+conversion-{dataset-name}-{timestamp}/  # DataLad repository for this conversion
+├── input_data/                         # Original input data (linked via DataLad)
+├── output.nwb                          # Final NWB output (annexed if large)
+├── conversion_script.py                # Final conversion script
+├── validation_report.json              # Validation results
+├── agent_log.jsonl                     # Agent interactions log
+└── README.md                           # Basic conversion info
+```
+
+**Provenance Implementation** (leveraging DataLad's natural capabilities):
+```python
+class ConversionProvenanceManager:
+    def __init__(self, output_dir: Path):
+        self.output_dir = output_dir
+        self.dl = datalad.api
+    
+    def create_conversion_repository(self, input_dataset: Path, dataset_name: str) -> Path:
+        """Create a new DataLad repository for this conversion"""
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        repo_name = f"conversion-{dataset_name}-{timestamp}"
+        repo_path = self.output_dir / repo_name
+        
+        # Create DataLad dataset
+        self.dl.create(
+            path=str(repo_path),
+            description=f"Agentic conversion of {dataset_name}",
+            cfg_proc="text2git"
+        )
+        
+        # Link input data (DataLad handles this efficiently)
+        if input_dataset.is_dir():
+            self.dl.install(
+                dataset=str(repo_path),
+                path="input_data",
+                source=str(input_dataset)
+            )
+        
+        # Initial commit
+        self.dl.save(
+            dataset=str(repo_path),
+            message=f"Initialize conversion of {dataset_name}"
+        )
+        
+        return repo_path
+    
+    def save_conversion_iteration(self, repo_path: Path, output_nwb: Optional[Path],
+                                conversion_script: str, validation_results: Dict,
+                                agent_interactions: List[Dict], message: str) -> None:
+        """Save a conversion iteration - DataLad handles the versioning"""
+        
+        # Update files
+        if output_nwb and output_nwb.exists():
+            shutil.copy2(output_nwb, repo_path / "output.nwb")
+        
+        (repo_path / "conversion_script.py").write_text(conversion_script)
+        
+        with open(repo_path / "validation_report.json", 'w') as f:
+            json.dump(validation_results, f, indent=2, default=str)
+        
+        # Append agent interactions to log
+        with open(repo_path / "agent_log.jsonl", 'a') as f:
+            for interaction in agent_interactions:
+                f.write(json.dumps(interaction, default=str) + '\n')
+        
+        # DataLad save - this creates the provenance automatically
+        self.dl.save(
+            dataset=str(repo_path),
+            message=message,
+            recursive=True
+        )
+    
+    def get_conversion_history(self, repo_path: Path) -> List[Dict[str, Any]]:
+        """Get conversion history from DataLad's git log"""
+        try:
+            # Use DataLad's git interface to get history
+            import subprocess
+            result = subprocess.run(
+                ["git", "log", "--oneline", "--all"],
+                cwd=repo_path,
+                capture_output=True,
+                text=True
+            )
+            
+            history = []
+            for line in result.stdout.strip().split('\n'):
+                if line:
+                    commit_hash, message = line.split(' ', 1)
+                    history.append({
+                        "commit": commit_hash,
+                        "message": message,
+                        "timestamp": None  # Could get from git log --format if needed
+                    })
+            
+            return history
+        except Exception:
+            return []
+    
+    def tag_successful_conversion(self, repo_path: Path) -> None:
+        """Tag a successful conversion"""
+        self.dl.save(
+            dataset=str(repo_path),
+            message="Mark successful conversion",
+            version_tag="success"
+        )
+```
+
+#### DataLad Best Practices for Development
+
+**Installation and Setup**:
+```python
+# Always use Python API, never CLI
+import datalad.api as dl
+
+# Check subdataset status
+def check_subdatasets():
+    subdatasets = dl.subdatasets(dataset=".", return_type='list')
+    for subds in subdatasets:
+        if subds['state'] == 'absent':
+            print(f"Missing subdataset: {subds['path']}")
+            # Install if needed
+            dl.install(dataset=".", path=subds['path'])
+
+# Handle large files selectively
+def get_evaluation_data():
+    # Get only specific files, not entire datasets
+    dl.get(path="data/evaluation/small_dataset.nwb")
+    # Avoid: dl.get(path="data/", recursive=True)  # Downloads everything
+```
+
+**Common Issues and Solutions**:
+1. **Subdataset not initialized**: Use `dl.install()` with proper paths
+2. **Files in annex when they shouldn't be**: Check `.gitattributes` configuration
+3. **Large file downloads**: Use selective `dl.get()` calls
+4. **Permission issues**: Files may be locked by git-annex, handle gracefully
 
 ### External Integrations
 
