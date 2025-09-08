@@ -1,0 +1,10 @@
+metadata_rules:
+  subject:
+    required_fields: ["subject_id", "species", "sex", "age"]
+    controlled_vocab:
+      species: ["Mus musculus", "Rattus norvegicus", "Homo sapiens"]
+      sex: ["M", "F", "U"]
+  session:
+    required_fields: ["session_start_time", "experiment_description"]
+  devices:
+    required_fields: ["device_name", "description", "manufacturer"]
