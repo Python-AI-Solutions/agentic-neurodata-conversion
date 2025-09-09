@@ -1026,6 +1026,737 @@ Use `datalad diff` to see changes between versions.
         return summary
 ```
 
+### Knowledge Graph and LinkML Schema Integration
+
+#### Knowledge Graph Architecture
+
+The knowledge graph system provides semantic representation of NWB data through RDF triples, enabling rich querying and metadata enrichment. The implementation is based on the existing `evaluation_agent_final.py` and LinkML tools.
+
+#### Core Knowledge Graph Components
+
+**KnowledgeGraphBuilder** (based on `evaluation_agent_final.py`):
+
+```python
+# agentic_neurodata_conversion/interfaces/knowledge_graph.py
+from pathlib import Path
+from typing import Optional, Dict, Any, List
+import logging
+from rdflib import Graph, URIRef, Literal, Namespace
+from rdflib.namespace import RDF, RDFS, XSD
+import h5py
+import re
+
+logger = logging.getLogger(__name__)
+
+class KnowledgeGraphBuilder:
+    """Builds RDF knowledge graphs from NWB files"""
+    
+    def __init__(self, base_uri: Optional[str] = None):
+        self.base_uri = base_uri
+    
+    def build_instance_graph(self, nwb_path: Path, 
+                           include_data: str = "stats",
+                           sample_limit: int = 200,
+                           max_bytes: int = 50_000_000,
+                           stats_inline_limit: int = 500) -> Graph:
+        """
+        Build RDF graph representing NWB file structure and data
+        
+        Args:
+            nwb_path: Path to NWB file
+            include_data: Data inclusion policy ("none", "stats", "sample", "full")
+            sample_limit: Maximum elements per dataset when sampling
+            max_bytes: Hard cap on bytes per dataset values
+            stats_inline_limit: Inline limit for 1D arrays in stats mode
+            
+        Returns:
+            RDF Graph with NWB instance data
+        """
+        if not nwb_path.exists():
+            raise FileNotFoundError(f"NWB file not found: {nwb_path}")
+        
+        g = Graph()
+        base_uri = self.base_uri or f"http://example.org/{self._sanitize(nwb_path.stem)}#"
+        BASE = Namespace(base_uri)
+        EX = BASE
+        
+        # Define predicates
+        Group = EX.Group
+        Dataset = EX.Dataset
+        hasChild = EX.hasChild
+        hasValue = EX.hasValue
+        hasDType = EX.hasDType
+        hasShape = EX.hasShape
+        hasChunks = EX.hasChunks
+        hasCompression = EX.hasCompression
+        
+        with h5py.File(str(nwb_path), "r") as f:
+            # Add root group
+            root_subj = self._path_to_uri(BASE, "/")
+            g.add((root_subj, RDF.type, Group))
+            
+            # Add root attributes
+            self._add_attributes(g, root_subj, f.attrs, EX)
+            
+            # Visit all objects in file
+            def visit(name, obj):
+                subj = self._path_to_uri(BASE, name)
+                
+                if isinstance(obj, h5py.Group):
+                    self._process_group(g, subj, obj, EX)
+                else:
+                    self._process_dataset(g, subj, obj, EX, include_data, 
+                                        sample_limit, max_bytes, stats_inline_limit)
+            
+            f.visititems(visit)
+            
+            # Add parent-child relationships
+            self._add_hierarchy(g, f, BASE, EX)
+        
+        return g
+    
+    def _sanitize(self, name: str) -> str:
+        """Sanitize names for URI fragments"""
+        return re.sub(r"[^A-Za-z0-9_\-]", "_", name)
+    
+    def _path_to_uri(self, base: Namespace, h5_path: str) -> URIRef:
+        """Convert HDF5 path to URI"""
+        if not h5_path or h5_path == "/":
+            return URIRef(str(base) + "root")
+        frag = self._sanitize(h5_path.strip("/")) or "root"
+        return URIRef(str(base) + frag)
+    
+    def _make_literal(self, value) -> Optional[Literal]:
+        """Convert Python value to RDF literal"""
+        try:
+            import numpy as np
+            if isinstance(value, (bytes, bytearray)):
+                try:
+                    return Literal(value.decode("utf-8"))
+                except Exception:
+                    return Literal(str(value))
+            if isinstance(value, np.generic):
+                return Literal(value.item())
+            if isinstance(value, (str, int, float, bool)):
+                return Literal(value)
+            if isinstance(value, (list, tuple)) and len(value) > 0:
+                if isinstance(value[0], (str, int, float, bool)):
+                    return Literal(str(list(value)))
+            s = str(value)
+            if len(s) > 0:
+                return Literal(s)
+        except Exception:
+            return None
+        return None
+    
+    def _add_attributes(self, g: Graph, subj: URIRef, attrs, EX: Namespace):
+        """Add HDF5 attributes as RDF properties"""
+        try:
+            for ak, av in attrs.items():
+                pred = URIRef(str(EX) + f"attr_{self._sanitize(str(ak))}")
+                lit = self._make_literal(av)
+                if lit is not None:
+                    g.add((subj, pred, lit))
+        except Exception as e:
+            logger.warning(f"Failed to add attributes for {subj}: {e}")
+    
+    def _process_group(self, g: Graph, subj: URIRef, group: h5py.Group, EX: Namespace):
+        """Process HDF5 group"""
+        g.add((subj, RDF.type, EX.Group))
+        self._add_attributes(g, subj, group.attrs, EX)
+    
+    def _process_dataset(self, g: Graph, subj: URIRef, dataset: h5py.Dataset, 
+                        EX: Namespace, include_data: str, sample_limit: int,
+                        max_bytes: int, stats_inline_limit: int):
+        """Process HDF5 dataset"""
+        g.add((subj, RDF.type, EX.Dataset))
+        
+        # Add dataset metadata
+        try:
+            g.add((subj, EX.hasDType, Literal(str(dataset.dtype))))
+            g.add((subj, EX.hasShape, Literal(str(tuple(dataset.shape)))))
+            
+            if dataset.chunks is not None:
+                g.add((subj, EX.hasChunks, Literal(str(dataset.chunks))))
+            if dataset.compression is not None:
+                g.add((subj, EX.hasCompression, Literal(str(dataset.compression))))
+        except Exception as e:
+            logger.warning(f"Failed to add dataset metadata for {subj}: {e}")
+        
+        # Add attributes
+        self._add_attributes(g, subj, dataset.attrs, EX)
+        
+        # Add data based on inclusion policy
+        if include_data == "stats":
+            self._add_stats(g, subj, dataset, EX, stats_inline_limit)
+        elif include_data == "sample":
+            self._add_sample_data(g, subj, dataset, EX, sample_limit, max_bytes)
+        elif include_data == "full":
+            self._add_full_data(g, subj, dataset, EX, max_bytes)
+    
+    def _add_stats(self, g: Graph, subj: URIRef, dataset: h5py.Dataset, 
+                  EX: Namespace, stats_inline_limit: int):
+        """Add statistical summary of dataset"""
+        try:
+            import numpy as np
+            data = dataset[()]
+            if data is None:
+                return
+            
+            arr = np.array(data)
+            
+            # Always include size
+            g.add((subj, EX.stat_size, Literal(int(arr.size))))
+            
+            # Numeric statistics
+            if np.issubdtype(arr.dtype, np.number):
+                g.add((subj, EX.stat_min, Literal(float(np.nanmin(arr)))))
+                g.add((subj, EX.stat_max, Literal(float(np.nanmax(arr)))))
+                g.add((subj, EX.stat_mean, Literal(float(np.nanmean(arr)))))
+                g.add((subj, EX.stat_std, Literal(float(np.nanstd(arr)))))
+            
+            # Inline small arrays
+            if arr.ndim == 0:  # Scalar
+                lit = self._make_literal(data)
+                if lit is not None:
+                    g.add((subj, EX.hasValue, lit))
+            elif arr.ndim == 1 and arr.size <= stats_inline_limit:
+                for v in arr.tolist()[:stats_inline_limit]:
+                    lit = self._make_literal(v)
+                    if lit is not None:
+                        g.add((subj, EX.hasValue, lit))
+                        
+        except Exception as e:
+            logger.warning(f"Failed to add stats for {subj}: {e}")
+    
+    def _add_sample_data(self, g: Graph, subj: URIRef, dataset: h5py.Dataset,
+                        EX: Namespace, sample_limit: int, max_bytes: int):
+        """Add sampled data values"""
+        try:
+            data = dataset[()]
+            if data is None:
+                return
+            
+            import numpy as np
+            flat = np.ravel(data)
+            values = flat[:sample_limit] if sample_limit else flat
+            
+            total_bytes = 0
+            for v in values:
+                lit = self._make_literal(v)
+                if lit is not None:
+                    g.add((subj, EX.hasValue, lit))
+                    total_bytes += len(str(lit))
+                    if max_bytes > 0 and total_bytes >= max_bytes:
+                        break
+                        
+        except Exception as e:
+            logger.warning(f"Failed to add sample data for {subj}: {e}")
+    
+    def _add_full_data(self, g: Graph, subj: URIRef, dataset: h5py.Dataset,
+                      EX: Namespace, max_bytes: int):
+        """Add full data values (with size limit)"""
+        try:
+            data = dataset[()]
+            if data is None:
+                return
+            
+            import numpy as np
+            
+            # Check size limit
+            if max_bytes > 0:
+                estimated_bytes = getattr(data, "nbytes", 0)
+                if estimated_bytes > max_bytes:
+                    logger.warning(f"Dataset {subj} too large ({estimated_bytes} bytes), skipping full data")
+                    return
+            
+            flat = np.ravel(data)
+            total_bytes = 0
+            
+            for v in flat:
+                lit = self._make_literal(v)
+                if lit is not None:
+                    g.add((subj, EX.hasValue, lit))
+                    total_bytes += len(str(lit))
+                    if max_bytes > 0 and total_bytes >= max_bytes:
+                        break
+                        
+        except Exception as e:
+            logger.warning(f"Failed to add full data for {subj}: {e}")
+    
+    def _add_hierarchy(self, g: Graph, f: h5py.File, BASE: Namespace, EX: Namespace):
+        """Add parent-child relationships"""
+        def visit_children(name, obj):
+            parent = self._path_to_uri(BASE, name)
+            if isinstance(obj, (h5py.Group, h5py.File)):
+                for child_name in obj.keys():
+                    child_path = name.rstrip("/") + "/" + child_name if name != "/" else "/" + child_name
+                    child_uri = self._path_to_uri(BASE, child_path)
+                    g.add((parent, EX.hasChild, child_uri))
+        
+        # Add root children
+        visit_children("/", f)
+        f.visititems(visit_children)
+
+class KnowledgeGraphExporter:
+    """Exports knowledge graphs to multiple formats"""
+    
+    def __init__(self, kg_builder: KnowledgeGraphBuilder):
+        self.kg_builder = kg_builder
+    
+    def export_all_formats(self, nwb_path: Path, output_dir: Path,
+                          include_data: str = "stats") -> Dict[str, Path]:
+        """
+        Export knowledge graph to all supported formats
+        
+        Returns:
+            Dictionary mapping format names to output file paths
+        """
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Build the graph
+        graph = self.kg_builder.build_instance_graph(nwb_path, include_data=include_data)
+        
+        stem = nwb_path.stem
+        outputs = {}
+        
+        # TTL (Turtle)
+        ttl_path = output_dir / f"{stem}.data.ttl"
+        graph.serialize(destination=str(ttl_path), format="turtle")
+        outputs["ttl"] = ttl_path
+        
+        # N-Triples
+        nt_path = output_dir / f"{stem}.data.nt"
+        graph.serialize(destination=str(nt_path), format="nt")
+        outputs["nt"] = nt_path
+        
+        # JSON-LD
+        jsonld_path = output_dir / f"{stem}.data.jsonld"
+        graph.serialize(destination=str(jsonld_path), format="json-ld", indent=2)
+        outputs["jsonld"] = jsonld_path
+        
+        # Human-readable triples
+        triples_path = output_dir / f"{stem}.data.triples.txt"
+        self._export_human_readable_triples(graph, triples_path)
+        outputs["triples"] = triples_path
+        
+        # HTML visualization (if pyvis available)
+        try:
+            html_path = self._generate_html_visualization(graph, output_dir / f"{stem}.data.html")
+            if html_path:
+                outputs["html"] = html_path
+        except ImportError:
+            logger.info("pyvis not available, skipping HTML visualization")
+        
+        return outputs
+    
+    def _export_human_readable_triples(self, graph: Graph, output_path: Path):
+        """Export human-readable triples with labels"""
+        from rdflib.namespace import RDFS
+        
+        def get_label(node):
+            if isinstance(node, URIRef):
+                # Try to get RDFS label
+                for o in graph.objects(node, RDFS.label):
+                    return str(o)
+                # Fall back to fragment or last path component
+                s = str(node)
+                if "#" in s:
+                    return s.rsplit("#", 1)[-1]
+                if "/" in s:
+                    return s.rstrip("/").rsplit("/", 1)[-1]
+                return s
+            return str(node)
+        
+        with open(output_path, "w", encoding="utf-8") as f:
+            for s, p, o in graph:
+                f.write(f"{get_label(s)}\t{get_label(p)}\t{get_label(o)}\n")
+    
+    def _generate_html_visualization(self, graph: Graph, output_path: Path,
+                                   max_triples: int = 12000) -> Optional[Path]:
+        """Generate interactive HTML visualization using pyvis"""
+        try:
+            from pyvis.network import Network
+        except ImportError:
+            return None
+        
+        # Build network from graph
+        edges = []
+        nodes = set()
+        
+        for s, p, o in graph:
+            if isinstance(s, URIRef) and isinstance(o, URIRef):
+                ss, oo, pp = str(s), str(o), str(p)
+                edges.append((ss, oo, pp))
+                nodes.add(ss)
+                nodes.add(oo)
+                if len(edges) >= max_triples:
+                    break
+        
+        # Create pyvis network
+        net = Network(height="900px", width="100%", notebook=False)
+        
+        # Add nodes with labels
+        for n in nodes:
+            label = n.rsplit("#", 1)[-1] if "#" in n else n.rsplit("/", 1)[-1] if "/" in n else n
+            net.add_node(n, label=label, title=n)
+        
+        # Add edges
+        for s, o, p in edges:
+            net.add_edge(s, o, title=p)
+        
+        # Save HTML
+        net.save_graph(str(output_path))
+        return output_path
+```
+
+#### LinkML Schema Management
+
+**LinkMLSchemaManager** (based on `nwb_to_linkml.py`):
+
+```python
+# agentic_neurodata_conversion/interfaces/linkml_schema.py
+from pathlib import Path
+from typing import List, Dict, Set, Optional, Any
+import logging
+import yaml
+import h5py
+import tempfile
+import subprocess
+from linkml_runtime.dumpers import yaml_dumper
+
+logger = logging.getLogger(__name__)
+
+class LinkMLSchemaManager:
+    """Manages LinkML schema generation and validation for NWB files"""
+    
+    def __init__(self, cache_dir: Optional[Path] = None):
+        self.cache_dir = cache_dir or Path.cwd() / ".nwb_linkml_cache"
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+    
+    def detect_namespaces(self, nwb_path: Path) -> Set[str]:
+        """
+        Detect all namespaces used in an NWB file
+        
+        Args:
+            nwb_path: Path to NWB file
+            
+        Returns:
+            Set of namespace names found in the file
+        """
+        namespaces = set()
+        
+        try:
+            with h5py.File(str(nwb_path), 'r') as f:
+                def visit(name, obj):
+                    if hasattr(obj, 'attrs'):
+                        for key, val in obj.attrs.items():
+                            if key == 'namespace':
+                                try:
+                                    if isinstance(val, bytes):
+                                        namespaces.add(val.decode('utf-8'))
+                                    elif isinstance(val, str):
+                                        namespaces.add(val)
+                                    elif isinstance(val, (list, tuple)):
+                                        for v in val:
+                                            if isinstance(v, bytes):
+                                                namespaces.add(v.decode('utf-8'))
+                                            elif isinstance(v, str):
+                                                namespaces.add(v)
+                                except Exception:
+                                    pass
+                
+                f.visititems(visit)
+        except Exception as e:
+            logger.error(f"Failed to detect namespaces in {nwb_path}: {e}")
+        
+        return namespaces
+    
+    def generate_schema(self, nwb_path: Path, 
+                       output_path: Optional[Path] = None,
+                       split_schema: bool = True,
+                       auto_fetch_extensions: bool = True,
+                       offline: bool = False) -> Path:
+        """
+        Generate LinkML schema for an NWB file
+        
+        Args:
+            nwb_path: Path to NWB file
+            output_path: Output path (file for monolithic, dir for split)
+            split_schema: Whether to generate split schema files
+            auto_fetch_extensions: Whether to auto-fetch extension schemas
+            offline: Whether to work offline only
+            
+        Returns:
+            Path to generated schema (file or directory)
+        """
+        if not nwb_path.exists():
+            raise FileNotFoundError(f"NWB file not found: {nwb_path}")
+        
+        # Determine output path
+        if output_path is None:
+            if split_schema:
+                output_path = nwb_path.with_suffix("").with_suffix(".linkml")
+            else:
+                output_path = nwb_path.with_suffix("").with_suffix(".linkml.yaml")
+        
+        # Detect namespaces in the file
+        detected_namespaces = self.detect_namespaces(nwb_path)
+        logger.info(f"Detected namespaces: {detected_namespaces}")
+        
+        # Resolve extension namespace files
+        extension_files = []
+        if not offline and auto_fetch_extensions:
+            extension_files = self._resolve_extension_namespaces(detected_namespaces)
+        
+        # Generate schema using nwb-linkml
+        try:
+            result = self._build_linkml_schema(extension_files)
+            
+            if split_schema:
+                output_path.mkdir(parents=True, exist_ok=True)
+                self._write_split_schema(result.schemas, output_path)
+            else:
+                self._write_monolithic_schema(result.schemas, output_path)
+            
+            logger.info(f"Generated LinkML schema: {output_path}")
+            return output_path
+            
+        except Exception as e:
+            logger.error(f"Failed to generate LinkML schema: {e}")
+            raise
+    
+    def validate_against_schema(self, nwb_path: Path, schema_path: Path) -> Dict[str, Any]:
+        """
+        Validate NWB file against LinkML schema
+        
+        Args:
+            nwb_path: Path to NWB file
+            schema_path: Path to LinkML schema
+            
+        Returns:
+            Validation results dictionary
+        """
+        # This would integrate with LinkML validation tools
+        # For now, return a placeholder structure
+        return {
+            "valid": True,
+            "errors": [],
+            "warnings": [],
+            "schema_path": str(schema_path),
+            "nwb_path": str(nwb_path)
+        }
+    
+    def _resolve_extension_namespaces(self, namespaces: Set[str]) -> List[Path]:
+        """Resolve extension namespace YAML files"""
+        extension_files = []
+        
+        for ns in namespaces:
+            if ns in {'core', 'hdmf-common'}:
+                continue
+            
+            # Check cache first
+            cached_file = self._find_namespace_in_cache(ns)
+            if cached_file:
+                extension_files.append(cached_file)
+                continue
+            
+            # Try to fetch from GitHub
+            try:
+                fetched_file = self._fetch_extension_namespace(ns)
+                if fetched_file:
+                    extension_files.append(fetched_file)
+            except Exception as e:
+                logger.warning(f"Failed to fetch extension {ns}: {e}")
+        
+        return extension_files
+    
+    def _find_namespace_in_cache(self, namespace: str) -> Optional[Path]:
+        """Find namespace YAML in cache directory"""
+        for yaml_file in self.cache_dir.rglob("*.yaml"):
+            try:
+                with open(yaml_file, 'r') as f:
+                    data = yaml.safe_load(f)
+                if isinstance(data, dict) and 'namespaces' in data:
+                    for ns in data.get('namespaces', []):
+                        if isinstance(ns, dict) and ns.get('name') == namespace:
+                            return yaml_file
+            except Exception:
+                continue
+        return None
+    
+    def _fetch_extension_namespace(self, namespace: str) -> Optional[Path]:
+        """Fetch extension namespace from GitHub"""
+        repo_url = f"https://github.com/nwb-extensions/{namespace}.git"
+        
+        with tempfile.TemporaryDirectory() as temp_dir:
+            try:
+                # Clone repository
+                subprocess.run([
+                    'git', 'clone', '--depth', '1', repo_url, 
+                    str(Path(temp_dir) / namespace)
+                ], check=True, capture_output=True)
+                
+                # Find namespace YAML
+                repo_path = Path(temp_dir) / namespace
+                yaml_file = self._find_namespace_yaml_in_dir(repo_path, namespace)
+                
+                if yaml_file:
+                    # Cache the file
+                    cache_ns_dir = self.cache_dir / namespace
+                    cache_ns_dir.mkdir(parents=True, exist_ok=True)
+                    cached_file = cache_ns_dir / yaml_file.name
+                    
+                    import shutil
+                    shutil.copy2(yaml_file, cached_file)
+                    return cached_file
+                    
+            except subprocess.CalledProcessError as e:
+                logger.warning(f"Failed to clone {repo_url}: {e}")
+        
+        return None
+    
+    def _find_namespace_yaml_in_dir(self, directory: Path, namespace: str) -> Optional[Path]:
+        """Find YAML file defining the given namespace in directory"""
+        for yaml_file in directory.rglob("*.yaml"):
+            try:
+                with open(yaml_file, 'r') as f:
+                    data = yaml.safe_load(f)
+                if isinstance(data, dict) and 'namespaces' in data:
+                    for ns in data.get('namespaces', []):
+                        if isinstance(ns, dict) and ns.get('name') == namespace:
+                            return yaml_file
+            except Exception:
+                continue
+        return None
+    
+    def _build_linkml_schema(self, extension_files: List[Path]):
+        """Build LinkML schema using nwb-linkml"""
+        # This would use the nwb-linkml library
+        # For now, return a mock result structure
+        class MockResult:
+            def __init__(self):
+                self.schemas = []
+        
+        return MockResult()
+    
+    def _write_split_schema(self, schemas: List, output_dir: Path):
+        """Write split schema files"""
+        output_dir.mkdir(parents=True, exist_ok=True)
+        for schema in schemas:
+            schema_file = output_dir / f"{schema.name}.yaml"
+            yaml_dumper.dump(schema, str(schema_file))
+    
+    def _write_monolithic_schema(self, schemas: List, output_file: Path):
+        """Write monolithic schema file"""
+        # Combine all schemas into one
+        # Implementation would merge schemas appropriately
+        combined_schema = {"name": output_file.stem, "schemas": schemas}
+        with open(output_file, 'w') as f:
+            yaml.dump(combined_schema, f)
+
+class OntologyManager:
+    """Manages NWB and domain ontologies for knowledge graph enrichment"""
+    
+    def __init__(self, ontology_cache_dir: Optional[Path] = None):
+        self.cache_dir = ontology_cache_dir or Path.cwd() / ".ontology_cache"
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+    
+    def load_nwb_ontology(self) -> Graph:
+        """Load NWB core ontology"""
+        # This would load the official NWB ontology
+        # For now, return empty graph
+        return Graph()
+    
+    def enrich_metadata(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Enrich metadata using ontological knowledge
+        
+        Args:
+            metadata: Raw metadata dictionary
+            
+        Returns:
+            Enriched metadata with additional semantic information
+        """
+        enriched = metadata.copy()
+        
+        # Example enrichments:
+        # - Species name -> taxonomy URI
+        # - Device name -> device ontology URI
+        # - Protocol -> protocol ontology URI
+        
+        if 'species' in metadata:
+            enriched['species_uri'] = self._resolve_species_uri(metadata['species'])
+        
+        if 'device' in metadata:
+            enriched['device_uri'] = self._resolve_device_uri(metadata['device'])
+        
+        return enriched
+    
+    def _resolve_species_uri(self, species_name: str) -> Optional[str]:
+        """Resolve species name to taxonomy URI"""
+        # This would use NCBI taxonomy or similar
+        species_mappings = {
+            'mouse': 'http://purl.obolibrary.org/obo/NCBITaxon_10090',
+            'rat': 'http://purl.obolibrary.org/obo/NCBITaxon_10116',
+            'human': 'http://purl.obolibrary.org/obo/NCBITaxon_9606'
+        }
+        return species_mappings.get(species_name.lower())
+    
+    def _resolve_device_uri(self, device_name: str) -> Optional[str]:
+        """Resolve device name to device ontology URI"""
+        # This would use device ontologies
+        return None
+
+class SPARQLInterface:
+    """Provides SPARQL query capabilities for knowledge graphs"""
+    
+    def __init__(self, graph: Graph):
+        self.graph = graph
+    
+    def query(self, sparql_query: str) -> List[Dict[str, Any]]:
+        """
+        Execute SPARQL query against the knowledge graph
+        
+        Args:
+            sparql_query: SPARQL query string
+            
+        Returns:
+            Query results as list of dictionaries
+        """
+        try:
+            results = self.graph.query(sparql_query)
+            return [dict(row.asdict()) for row in results]
+        except Exception as e:
+            logger.error(f"SPARQL query failed: {e}")
+            return []
+    
+    def get_dataset_summary(self) -> Dict[str, Any]:
+        """Get high-level summary of the dataset"""
+        query = """
+        PREFIX ex: <http://example.org/>
+        SELECT ?dataset ?dtype ?shape WHERE {
+            ?dataset a ex:Dataset .
+            ?dataset ex:hasDType ?dtype .
+            ?dataset ex:hasShape ?shape .
+        }
+        """
+        results = self.query(query)
+        return {"datasets": results}
+    
+    def find_timeseries_data(self) -> List[Dict[str, Any]]:
+        """Find all timeseries datasets"""
+        query = """
+        PREFIX ex: <http://example.org/>
+        SELECT ?dataset ?shape WHERE {
+            ?dataset a ex:Dataset .
+            ?dataset ex:hasShape ?shape .
+            FILTER(CONTAINS(?shape, ","))
+        }
+        """
+        return self.query(query)
+```
+
 ### External Integrations
 
 #### 1. MCP Server Integration
@@ -1051,9 +1782,10 @@ Use `datalad diff` to see changes between versions.
 **Purpose**: Semantic representation and querying of converted data
 
 **Components**:
-- `KnowledgeGraphBuilder`: Creates RDF representations
+- `KnowledgeGraphBuilder`: Creates RDF representations from NWB files
+- `LinkMLSchemaManager`: Manages LinkML schema generation and validation
 - `OntologyManager`: Manages NWB and domain ontologies
-- `SPARQLInterface`: Provides query capabilities
+- `SPARQLInterface`: Provides query capabilities for knowledge graphs
 
 ## Data Models
 
