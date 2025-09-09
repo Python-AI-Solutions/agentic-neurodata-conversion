@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This spec focuses on the foundational project structure, packaging, development tooling, and collaborative workflows for the agentic neurodata conversion project. The system is built around a central MCP (Model Context Protocol) server that orchestrates multi-agent workflows for converting neuroscience data to NWB format.
+This spec establishes the foundational project structure, packaging, development tooling, and collaborative workflows for the agentic neurodata conversion project. It provides the base infrastructure that other specialized specs build upon, including the MCP server architecture, agent implementations, validation systems, knowledge graphs, evaluation frameworks, data management, and testing infrastructure. The core organization supports a system built around a central MCP (Model Context Protocol) server that orchestrates multi-agent workflows for converting neuroscience data to NWB format.
 
 ## Requirements
 
@@ -63,33 +63,44 @@ This spec focuses on the foundational project structure, packaging, development 
 
 ### Requirement 6
 
-**User Story:** As a system architect, I want the MCP server to provide tool registration and discovery mechanisms, so that agents and functionality can be dynamically registered and discovered by clients.
+**User Story:** As a developer, I want the core project structure to support the specialized system components, so that the MCP server, agents, validation systems, and other components can be developed and integrated effectively.
 
 #### Acceptance Criteria
 
-1. WHEN registering tools THEN the MCP server SHALL provide a decorator-based registration system (@mcp.tool) for dynamic tool discovery
-2. WHEN clients query available tools THEN the MCP server SHALL expose endpoints for listing registered tools and their capabilities
-3. WHEN tools are executed THEN the MCP server SHALL route requests to registered tool functions with proper error handling
-4. WHEN managing tool state THEN the MCP server SHALL maintain lightweight state between tool executions within pipeline workflows
+1. WHEN organizing components THEN the system SHALL provide clear structure for MCP server implementation (detailed in mcp-server-architecture spec)
+2. WHEN implementing agents THEN the system SHALL provide foundation for agent development (detailed in agent-implementations spec)
+3. WHEN adding validation THEN the system SHALL support validation and quality assurance systems (detailed in validation-quality-assurance spec)
+4. WHEN managing data THEN the system SHALL provide foundation for data management and provenance tracking (detailed in data-management-provenance spec)
 
 ### Requirement 7
 
-**User Story:** As a third-party developer, I want example client implementations for consuming the MCP server, so that I can understand how to integrate the conversion pipeline into external tools and workflows.
+**User Story:** As a developer, I want the project structure to support documentation and examples for external developers, so that third-party integration is well-documented and accessible.
 
 #### Acceptance Criteria
 
-1. WHEN learning to integrate THEN the system SHALL provide Python client examples (like workflow.py) demonstrating MCP server interaction patterns
-2. WHEN reviewing examples THEN the documentation SHALL show proper error handling and status checking patterns for MCP server responses  
-3. WHEN understanding state management THEN examples SHALL demonstrate tracking conversion state across multiple tool calls
-4. WHEN implementing workflows THEN examples SHALL illustrate step-by-step pipeline execution with result validation
+1. WHEN providing examples THEN the system SHALL include a dedicated examples directory with client integration patterns (detailed in client-libraries-integrations spec)
+2. WHEN documenting integration THEN the system SHALL provide clear documentation structure for third-party developers
+3. WHEN organizing examples THEN the system SHALL separate core system code from third-party integration examples
+4. WHEN maintaining examples THEN the system SHALL ensure examples stay current with MCP server API changes
 
 ### Requirement 8
 
-**User Story:** As a developer, I want comprehensive testing infrastructure that covers MCP server functionality and client integration patterns, so that I can ensure system reliability.
+**User Story:** As a developer, I want basic testing infrastructure foundation, so that comprehensive testing can be built upon a solid base.
 
 #### Acceptance Criteria
 
-1. WHEN testing MCP tools THEN the system SHALL provide unit tests for individual tool registration and execution
-2. WHEN testing integration THEN the system SHALL include integration tests that validate end-to-end pipeline workflows using example client patterns
-3. WHEN testing with real data THEN the system SHALL make use of datalad to track datasets used in testing and consider datasets suggested in documents/possible-datasets
-4. WHEN running tests THEN the system SHALL provide test coverage reporting for MCP server tools and client library functionality
+1. WHEN setting up testing THEN the system SHALL provide basic test directory structure and configuration for pytest
+2. WHEN running tests THEN the system SHALL include basic CI/CD pipeline configuration that can be extended by comprehensive testing systems
+3. WHEN organizing tests THEN the system SHALL provide clear separation between unit tests, integration tests, and end-to-end tests (comprehensive testing detailed in testing-quality-assurance spec)
+4. WHEN managing test data THEN the system SHALL provide foundation for DataLad-based test data management (detailed in data-management-provenance spec)
+
+### Requirement 9
+
+**User Story:** As a system architect, I want the core project organization to establish the foundation that other specialized specs build upon, so that the overall system architecture is coherent and well-coordinated.
+
+#### Acceptance Criteria
+
+1. WHEN implementing specialized components THEN the core structure SHALL support the MCP server architecture (mcp-server-architecture spec), agent implementations (agent-implementations spec), and validation systems (validation-quality-assurance spec)
+2. WHEN adding advanced features THEN the core structure SHALL accommodate knowledge graph systems (knowledge-graph-systems spec), evaluation and reporting (evaluation-reporting spec), and data management (data-management-provenance spec)
+3. WHEN providing integration support THEN the core structure SHALL include foundation for client examples and third-party integrations (client-libraries-integrations spec)
+4. WHEN ensuring quality THEN the core structure SHALL support comprehensive testing and quality assurance frameworks (testing-quality-assurance spec)

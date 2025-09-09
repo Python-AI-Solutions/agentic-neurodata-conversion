@@ -2,33 +2,47 @@
 
 ## Overview
 
-This design document outlines the foundational project structure, packaging, development tooling, and collaborative workflows for the agentic neurodata conversion project. The system is built around a central MCP (Model Context Protocol) server that serves as the primary orchestration layer, managing all agent interactions internally while providing interfaces for external client integration.
+This design document outlines the foundational project structure, packaging, development tooling, and collaborative workflows for the agentic neurodata conversion project. It establishes the base infrastructure that supports all other system components detailed in specialized specs. The system is built around a central MCP (Model Context Protocol) server that serves as the primary orchestration layer, with this core organization providing the foundation for MCP server architecture, agent implementations, validation systems, knowledge graphs, evaluation frameworks, data management, and testing infrastructure.
+
+## Coordination with Other Specs
+
+This core project organization provides the foundation for specialized components:
+
+- **MCP Server Architecture** (`mcp-server-architecture` spec): Implemented in `agentic_neurodata_conversion/mcp_server/`
+- **Agent Implementations** (`agent-implementations` spec): Implemented in `agentic_neurodata_conversion/agents/`
+- **Validation Systems** (`validation-quality-assurance` spec): Implemented in `agentic_neurodata_conversion/validation/`
+- **Knowledge Graph Systems** (`knowledge-graph-systems` spec): Implemented in `agentic_neurodata_conversion/knowledge_graph/`
+- **Evaluation and Reporting** (`evaluation-reporting` spec): Implemented in `agentic_neurodata_conversion/evaluation/`
+- **Data Management** (`data-management-provenance` spec): Implemented in `agentic_neurodata_conversion/data_management/`
+- **Client Examples** (`client-libraries-integrations` spec): Provided in `examples/`
+- **Testing Framework** (`testing-quality-assurance` spec): Implemented in `tests/`
 
 ## Architecture
 
 ### High-Level Architecture
 
 ```
-Core Project Organization
-├── MCP Server (Primary Orchestration Layer)
-│   ├── Tool Registration System (@mcp.tool decorators)
-│   ├── Agent Management (Internal)
-│   ├── State Management (Lightweight)
-│   └── Interface Layer (FastAPI, stdin/stdout, etc.)
-├── Agent Implementations (Internal to MCP Server)
-│   ├── Conversation Agent
-│   ├── Conversion Agent
-│   ├── Evaluation Agent
-│   └── Knowledge Graph Agent
-├── Client Examples and Documentation
-│   ├── Python Client Examples (workflow.py pattern)
-│   ├── Integration Patterns
-│   └── Third-party Developer Guides
-└── Development Infrastructure
-    ├── Configuration Management (Pydantic-based)
-    ├── Testing Framework
-    ├── CI/CD Pipeline
-    └── Documentation System
+Core Project Organization (Foundation Layer)
+├── Package Structure
+│   ├── Main Package (agentic_neurodata_conversion/)
+│   ├── Specialized Component Directories
+│   ├── Examples Directory
+│   └── Testing Infrastructure
+├── Development Infrastructure
+│   ├── Configuration Management (Pydantic-based)
+│   ├── Dependency Management (Pixi)
+│   ├── Code Quality Tools (Ruff, Pre-commit)
+│   └── Basic CI/CD Pipeline
+├── Documentation Foundation
+│   ├── API Documentation Structure
+│   ├── Architecture Documentation
+│   ├── Development Guides
+│   └── Third-party Integration Docs
+└── Collaborative Workflows
+    ├── Git Workflow Patterns
+    ├── Code Review Processes
+    ├── Release Management
+    └── Team Onboarding
 ```
 
 ### Project Structure
