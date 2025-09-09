@@ -134,14 +134,17 @@ This project is a multi-agent AI pipeline for converting heterogeneous neuroscie
 
 ### Requirement 12
 
-**User Story:** As a system integrator, I want MCP (Model Context Protocol) server capabilities, so that the conversion pipeline can be accessed programmatically by external tools and workflows.
+**User Story:** As a system architect, I want the MCP (Model Context Protocol) server to be the primary orchestration layer, so that all conversion pipeline operations are centrally coordinated and accessible to multiple client interfaces.
 
 #### Acceptance Criteria
 
-1. WHEN external systems connect THEN the MCP server SHALL expose conversion tools through standardized FastAPI endpoints
-2. WHEN processing requests THEN the MCP server SHALL handle dataset analysis, conversion script generation, and NWB evaluation as discrete services
-3. WHEN managing state THEN the MCP server SHALL coordinate multi-step workflows and maintain conversion context across agent interactions
-4. WHEN providing responses THEN the MCP server SHALL return structured results with complete metadata and error handling
+1. WHEN the system starts THEN the MCP server SHALL serve as the central orchestration hub for all agent interactions and pipeline operations
+2. WHEN tools are registered THEN the MCP server SHALL provide a decorator-based tool registration system (@mcp.tool) for dynamic service discovery
+3. WHEN clients connect THEN the MCP server SHALL expose conversion tools through standardized FastAPI endpoints with HTTP-based loose coupling
+4. WHEN processing requests THEN the MCP server SHALL handle dataset analysis, conversion script generation, and NWB evaluation as discrete registered tools
+5. WHEN managing workflows THEN the MCP server SHALL coordinate multi-step pipelines and maintain lightweight state between tool executions
+6. WHEN providing tool discovery THEN the MCP server SHALL expose endpoints for listing available tools and their capabilities
+7. WHEN handling errors THEN the MCP server SHALL provide consistent error responses with proper HTTP status codes and detailed error messages
 
 ### Requirement 13
 
