@@ -43,7 +43,7 @@ ore Components
 
 #### RDF Store
 ```python
-# src/agentic_converter/knowledge_graph/rdf_store.py
+# agentic_neurodata_conversion/knowledge_graph/rdf_store.py
 from typing import Dict, Any, List, Optional, Union
 from rdflib import Graph, Namespace, URIRef, Literal, BNode
 from rdflib.plugins.stores import sparqlstore
@@ -228,7 +228,7 @@ class EntityManager:
 
 #### Entity Resolution and Relationship Inference
 ```python
-# src/agentic_converter/knowledge_graph/enrichment.py
+# agentic_neurodata_conversion/knowledge_graph/enrichment.py
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 import logging
@@ -534,7 +534,7 @@ Integration with MCP Server
 
 #### MCP Tools for Knowledge Graph Operations
 ```python
-# src/agentic_converter/mcp_server/tools/knowledge_graph.py
+# agentic_neurodata_conversion/mcp_server/tools/knowledge_graph.py
 from ..server import mcp
 from ...knowledge_graph.rdf_store import RDFStoreManager, EntityManager
 from ...knowledge_graph.enrichment import MetadataEnricher, ConfidenceScorer

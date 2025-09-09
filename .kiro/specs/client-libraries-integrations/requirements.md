@@ -8,25 +8,25 @@ This spec focuses on client libraries and external integrations that interact wi
 
 ### Requirement 1
 
-**User Story:** As a Python developer, I want a clean client library for interacting with the MCP server, so that I can integrate neuroscience data conversion into my workflows programmatically.
+**User Story:** As a third-party developer, I want example client implementations for interacting with the MCP server, so that I can understand how to integrate neuroscience data conversion into my workflows programmatically.
 
 #### Acceptance Criteria
 
-1. WHEN using the client library THEN it SHALL provide a simple Python interface that abstracts HTTP communication with the MCP server
-2. WHEN managing conversion state THEN the client SHALL track conversion progress and maintain context across multiple API calls
-3. WHEN handling errors THEN the client SHALL provide meaningful error messages and suggest corrective actions for common issues
-4. WHEN running pipelines THEN the client SHALL support both step-by-step execution and full pipeline automation
+1. WHEN learning integration THEN the system SHALL provide example Python client code that demonstrates MCP server communication
+2. WHEN understanding state management THEN examples SHALL show how to track conversion progress and maintain context across multiple tool calls
+3. WHEN handling errors THEN examples SHALL demonstrate meaningful error handling patterns and recovery strategies
+4. WHEN implementing workflows THEN examples SHALL show both step-by-step execution and full pipeline automation patterns
 
 ### Requirement 2
 
-**User Story:** As a researcher, I want the client library to handle the complete conversion workflow, so that I can convert datasets with minimal technical complexity.
+**User Story:** As a researcher, I want example client code that demonstrates the complete conversion workflow, so that I can understand how to convert datasets with minimal technical complexity.
 
 #### Acceptance Criteria
 
-1. WHEN starting conversions THEN the client SHALL initialize the pipeline with appropriate configuration and output directories
-2. WHEN analyzing datasets THEN the client SHALL coordinate with the MCP server to perform dataset analysis and metadata extraction
-3. WHEN generating conversions THEN the client SHALL handle conversion script generation and execution through the MCP server
-4. WHEN evaluating results THEN the client SHALL trigger NWB validation and knowledge graph generation automatically
+1. WHEN reviewing examples THEN the system SHALL provide sample code showing pipeline initialization with appropriate configuration
+2. WHEN learning workflows THEN examples SHALL demonstrate coordination with the MCP server for dataset analysis and metadata extraction
+3. WHEN understanding conversion THEN examples SHALL show how to handle conversion script generation and execution through the MCP server
+4. WHEN seeing evaluation THEN examples SHALL demonstrate triggering NWB validation and knowledge graph generation
 
 ### Requirement 3
 
@@ -85,14 +85,14 @@ This spec focuses on client libraries and external integrations that interact wi
 
 ### Requirement 8
 
-**User Story:** As a developer, I want the client library to be testable and maintainable, so that I can ensure reliability and contribute improvements.
+**User Story:** As a developer, I want example client code to be well-documented and testable, so that I can understand best practices and adapt them to my needs.
 
 #### Acceptance Criteria
 
-1. WHEN testing the client THEN it SHALL support mock modes that don't require a running MCP server
-2. WHEN running tests THEN the client SHALL provide test utilities for validating integration with the MCP server
-3. WHEN developing features THEN the client SHALL follow consistent patterns and provide clear extension points
-4. WHEN maintaining code THEN the client SHALL include comprehensive test coverage and clear documentation of internal architecture
+1. WHEN reviewing examples THEN they SHALL include mock modes that demonstrate testing without requiring a running MCP server
+2. WHEN learning testing THEN examples SHALL show test utilities for validating integration with the MCP server
+3. WHEN understanding patterns THEN examples SHALL follow consistent patterns and demonstrate clear extension points
+4. WHEN adapting code THEN examples SHALL include comprehensive documentation explaining the integration architecture
 
 ### Requirement 9
 

@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This spec focuses on the MCP (Model Context Protocol) server that serves as the central orchestration hub for the agentic neurodata conversion pipeline. The MCP server coordinates specialized agents through HTTP endpoints and manages the complete conversion workflow from dataset analysis to NWB file generation and evaluation.
+This spec focuses on the MCP (Model Context Protocol) server that serves as the central orchestration hub for the agentic neurodata conversion pipeline. The MCP server coordinates specialized agents through the MCP protocol and manages the complete conversion workflow from dataset analysis to NWB file generation and evaluation. Interface adapters (such as HTTP or stdin/stdout) provide optional access methods for different integration needs.
 
 ## Requirements
 
@@ -23,10 +23,10 @@ This spec focuses on the MCP (Model Context Protocol) server that serves as the 
 
 #### Acceptance Criteria
 
-1. WHEN external systems connect THEN the MCP server SHALL expose conversion tools through standardized FastAPI endpoints
-2. WHEN handling requests THEN the MCP server SHALL provide RESTful API with proper HTTP status codes and error responses
-3. WHEN managing sessions THEN the MCP server SHALL maintain conversion state and configuration across multiple API calls
-4. WHEN providing documentation THEN the MCP server SHALL expose OpenAPI/Swagger documentation for all endpoints
+1. WHEN external systems connect THEN the MCP server SHALL expose conversion tools through the MCP protocol with optional interface adapters
+2. WHEN handling requests THEN the MCP server SHALL provide structured responses with proper error handling
+3. WHEN managing sessions THEN the MCP server SHALL maintain conversion state and configuration across multiple tool calls
+4. WHEN providing interfaces THEN the MCP server SHALL support multiple interface options (stdin/stdout, HTTP as examples) for different integration needs
 
 ### Requirement 3
 

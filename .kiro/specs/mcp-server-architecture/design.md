@@ -10,11 +10,11 @@ This design document outlines the MCP (Model Context Protocol) server that serve
 
 ```
 MCP Server (Central Orchestration Hub)
-├── HTTP API Layer (FastAPI)
-│   ├── Conversion Endpoints
-│   ├── Agent Coordination Endpoints
-│   ├── Status and Monitoring Endpoints
-│   └── Configuration Management
+├── Interface Layer (Multiple Options)
+│   ├── Core MCP Protocol Interface
+│   ├── Optional HTTP Interface (Example)
+│   ├── Optional stdin/stdout Interface
+│   └── Interface Adapter Framework
 ├── Agent Management System
 │   ├── Agent Registry and Discovery
 │   ├── Agent Lifecycle Management
@@ -40,9 +40,11 @@ MCP Server (Central Orchestration Hub)
 ### Request Flow Architecture
 
 ```
-HTTP Request → API Validation → Tool Resolution → Agent Coordination → Workflow Execution → Response Assembly
+MCP Tool Call → Input Validation → Tool Resolution → Agent Coordination → Workflow Execution → Response Assembly
                      ↓
 State Management → Progress Tracking → Error Handling → Result Aggregation → Structured Response
+                     ↓
+Interface Adapters → HTTP (Example) → stdin/stdout (Example) → Custom Interfaces
 ```## 
 Core Components
 
@@ -50,7 +52,7 @@ Core Components
 
 #### Main Server Application
 ```python
-# src/agentic_converter/mcp_server/app.py
+# agentic_neurodata_conversion/mcp_server/app.py
 from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -147,7 +149,7 @@ app.openapi = custom_openapi
 
 #### Conversion Router
 ```python
-# src/agentic_converter/mcp_server/routers/conversion.py
+# agentic_neurodata_conversion/mcp_server/routers/conversion.py
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from pydantic import BaseModel, Field
 from typing import Dict, Any, Optional, List
@@ -364,7 +366,7 @@ gent Management System
 
 #### Agent Registry and Lifecycle Management
 ```python
-# src/agentic_converter/mcp_server/agent_manager.py
+# agentic_neurodata_conversion/mcp_server/agent_manager.py
 from typing import Dict, Any, Optional, List, Type
 from abc import ABC, abstractmethod
 import asyncio
@@ -731,7 +733,7 @@ class WorkflowOrchestrator:
 
 #### Enhanced Tool Registry System
 ```python
-# src/agentic_converter/mcp_server/tool_registry.py
+# agentic_neurodata_conversion/mcp_server/tool_registry.py
 from typing import Dict, Any, Callable, Optional, List
 from dataclasses import dataclass, field
 from enum import Enum

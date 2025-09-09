@@ -48,7 +48,7 @@ ore Components
 
 #### NWB Inspector Integration
 ```python
-# src/agentic_converter/validation/nwb_validation.py
+# agentic_neurodata_conversion/validation/nwb_validation.py
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 from enum import Enum
@@ -408,7 +408,7 @@ ality Assessment Engine
 
 #### Comprehensive Quality Assessment
 ```python
-# src/agentic_converter/validation/quality_assessment.py
+# agentic_neurodata_conversion/validation/quality_assessment.py
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 from enum import Enum

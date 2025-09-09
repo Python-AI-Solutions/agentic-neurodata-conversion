@@ -79,9 +79,9 @@ This spec focuses on the foundational project structure, packaging, development 
 #### Acceptance Criteria
 
 1. WHEN learning to integrate THEN the system SHALL provide Python client examples (like workflow.py) demonstrating MCP server interaction patterns
-2. WHEN reviewing examples THEN the documentation SHALL show proper error handling and status checking patterns for MCP server responses
-3. WHEN understanding state management THEN examples SHALL demonstrate tracking conversion state (normalized_metadata, nwb_path) across multiple tool calls
-4. WHEN implementing workflows THEN examples SHALL illustrate step-by-step pipeline execution with intermediate result validation
+2. WHEN reviewing examples THEN the documentation SHALL show proper error handling and status checking patterns for MCP server responses  
+3. WHEN understanding state management THEN examples SHALL demonstrate tracking conversion state across multiple tool calls
+4. WHEN implementing workflows THEN examples SHALL illustrate step-by-step pipeline execution with result validation
 
 ### Requirement 8
 
