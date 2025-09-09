@@ -51,7 +51,7 @@ MCP Server → Agent Decisions → Provenance Recording → DataLad Commits → 
 
 #### DataLad Repository Structure
 ```python
-# src/agentic_converter/data_management/repository_structure.py
+# agentic_neurodata_conversion/data_management/repository_structure.py
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 import datalad.api as dl
@@ -292,7 +292,7 @@ class TestDatasetManager:
 
 #### Conversion Repository Management
 ```python
-# src/agentic_converter/data_management/conversion_provenance.py
+# agentic_neurodata_conversion/data_management/conversion_provenance.py
 import time
 import json
 from pathlib import Path
@@ -757,7 +757,7 @@ class ProvenanceIntegration:
 
 #### Python API Wrapper
 ```python
-# src/agentic_converter/data_management/datalad_wrapper.py
+# agentic_neurodata_conversion/data_management/datalad_wrapper.py
 from typing import Dict, Any, List, Optional, Union
 from pathlib import Path
 import datalad.api as dl
@@ -1026,7 +1026,7 @@ def create_conversion_tracker(conversion_id: str, output_dir: str) -> Conversion
 
 #### MCP Server Provenance Integration
 ```python
-# src/agentic_converter/mcp_server/provenance_integration.py
+# agentic_neurodata_conversion/mcp_server/provenance_integration.py
 from typing import Dict, Any, Optional
 from ..data_management.conversion_provenance import ConversionProvenanceTracker, ProvenanceIntegration
 from ..data_management.datalad_wrapper import create_conversion_tracker

@@ -55,7 +55,7 @@ MCP Server Tool Call → Agent Selection → Agent Execution → Result Processi
 
 #### Abstract Agent Interface
 ```python
-# src/agentic_converter/agents/base.py
+# agentic_neurodata_conversion/agents/base.py
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
@@ -230,7 +230,7 @@ class BaseAgent(ABC):
 
 #### Dataset Analysis and Metadata Extraction
 ```python
-# src/agentic_converter/agents/conversation.py
+# agentic_neurodata_conversion/agents/conversation.py
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 import asyncio
@@ -561,7 +561,7 @@ Format your response as a JSON list of questions with this structure:
 
 #### NeuroConv Script Generation and Execution
 ```python
-# src/agentic_converter/agents/conversion.py
+# agentic_neurodata_conversion/agents/conversion.py
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 import tempfile
@@ -833,7 +833,7 @@ class ConversionAgent(BaseAgent):
 
 #### Validation and Quality Assessment Coordination
 ```python
-# src/agentic_converter/agents/evaluation.py
+# agentic_neurodata_conversion/agents/evaluation.py
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 from .base import BaseAgent, AgentResult

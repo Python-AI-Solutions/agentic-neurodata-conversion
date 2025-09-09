@@ -45,7 +45,7 @@ Provides APIs and integration with external systems.
 
 #### Technical Quality Evaluator
 ```python
-# src/agentic_converter/evaluation/quality_assessment.py
+# agentic_neurodata_conversion/evaluation/quality_assessment.py
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 from enum import Enum
@@ -385,7 +385,7 @@ port Generation System
 
 #### Executive Summary Generator
 ```python
-# src/agentic_converter/evaluation/report_generation.py
+# agentic_neurodata_conversion/evaluation/report_generation.py
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 import json
@@ -709,7 +709,7 @@ Visualization Framework
 
 #### Interactive Knowledge Graph Viewer
 ```python
-# src/agentic_converter/evaluation/visualization.py
+# agentic_neurodata_conversion/evaluation/visualization.py
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 import json
@@ -1150,7 +1150,7 @@ class VisualizationFramework:
 
 #### MCP Tools for Evaluation and Reporting
 ```python
-# src/agentic_converter/mcp_server/tools/evaluation_reporting.py
+# agentic_neurodata_conversion/mcp_server/tools/evaluation_reporting.py
 from ..server import mcp
 from ...evaluation.quality_assessment import QualityAssessmentEngine
 from ...evaluation.report_generation import MultiFormatOutputEngine
@@ -1441,7 +1441,7 @@ async def compare_conversion_quality(
 
 #### Expert Review Interface
 ```python
-# src/agentic_converter/evaluation/collaborative_review.py
+# agentic_neurodata_conversion/evaluation/collaborative_review.py
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 from enum import Enum

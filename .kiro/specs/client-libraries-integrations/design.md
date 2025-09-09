@@ -2,19 +2,19 @@
 
 ## Overview
 
-This design document outlines the client libraries and external integrations that interact with the MCP server. The primary focus is on a Python client library that provides a clean, robust interface for consuming the conversion pipeline, along with integration patterns for external tools and workflows.
+This design document outlines example client implementations and integration patterns that demonstrate how third-party developers can interact with the MCP server. The focus is on providing comprehensive examples and documentation rather than building client libraries as part of the core system.
 
 ## Architecture
 
 ### High-Level Client Architecture
 
 ```
-Client Libraries and Integrations
-├── Core Python Client Library
-│   ├── MCP Server Communication Layer
-│   ├── Pipeline State Management
-│   ├── Error Handling and Recovery
-│   └── Configuration Management
+Client Examples and Integration Patterns
+├── Example Python Client Implementation
+│   ├── MCP Server Communication Examples
+│   ├── Pipeline State Management Examples
+│   ├── Error Handling and Recovery Patterns
+│   └── Configuration Examples
 ├── Integration Utilities
 │   ├── Jupyter Notebook Integration
 │   ├── Workflow System Adapters
@@ -48,7 +48,7 @@ Client Application → Python Client Library → HTTP/API Layer → MCP Server
 
 #### Main Client Class
 ```python
-# src/agentic_converter/client/mcp_client.py
+# agentic_neurodata_conversion/client/mcp_client.py
 import asyncio
 import logging
 import time
@@ -509,7 +509,7 @@ class MCPClient:
 
 #### Jupyter Notebook Integration
 ```python
-# src/agentic_converter/client/jupyter_integration.py
+# agentic_neurodata_conversion/client/jupyter_integration.py
 from typing import Optional, Dict, Any
 from IPython.display import display, HTML, clear_output
 import ipywidgets as widgets
@@ -604,7 +604,7 @@ def create_notebook_client(api_url: str = "http://127.0.0.1:8000",
 
 #### Workflow System Adapters
 ```python
-# src/agentic_converter/client/workflow_adapters.py
+# agentic_neurodata_conversion/client/workflow_adapters.py
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 import yaml

@@ -40,7 +40,7 @@ agentic-neurodata-converter/
 ├── .env.example                   # Environment configuration template
 ├── README.md                      # Project overview and setup
 ├── 
-├── src/agentic_converter/         # Main package
+├── agentic_neurodata_conversion/         # Main package
 │   ├── __init__.py
 │   ├── core/                      # Core functionality
 │   │   ├── __init__.py
@@ -128,7 +128,7 @@ agentic-neurodata-converter/
 
 #### Server Implementation
 ```python
-# src/agentic_converter/mcp_server/server.py
+# agentic_neurodata_conversion/mcp_server/server.py
 from typing import Dict, Any, Optional, Callable
 from fastapi import FastAPI, HTTPException
 import logging
@@ -217,7 +217,7 @@ class MCPServer:
 
 #### Tool Registration Examples
 ```python
-# src/agentic_converter/mcp_server/tools/dataset_analysis.py
+# agentic_neurodata_conversion/mcp_server/tools/dataset_analysis.py
 from ..server import mcp
 from typing import Dict, Any
 
@@ -293,7 +293,7 @@ async def generate_conversion_script(
 
 #### Pydantic-based Configuration System
 ```python
-# src/agentic_converter/core/config.py
+# agentic_neurodata_conversion/core/config.py
 from pydantic import BaseModel, Field, validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Dict, Any, Optional, List
@@ -364,7 +364,7 @@ settings = Settings()
 
 #### FastAPI Interface Implementation
 ```python
-# src/agentic_converter/mcp_server/interfaces/fastapi_interface.py
+# agentic_neurodata_conversion/mcp_server/interfaces/fastapi_interface.py
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Dict, Any, Optional
