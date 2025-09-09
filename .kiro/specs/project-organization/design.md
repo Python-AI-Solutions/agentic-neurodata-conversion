@@ -139,12 +139,32 @@ class LLMProvider:  # To be abstracted from existing implementations
 
 ### DataLad Integration and Provenance Tracking
 
-#### DataLad Architecture
+#### DataLad Architecture Overview
 
-DataLad serves two critical purposes in this project:
+DataLad serves two critical and complementary purposes in this project:
 
-1. **Development Data Management**: Managing test datasets, evaluation data, and conversion examples
-2. **Conversion Output Provenance**: Each conversion creates a DataLad repository tracking the iterative conversion process, decisions, and history
+1. **Development Data Management**: Managing test datasets, evaluation data, and conversion examples for the development team
+2. **Conversion Output Provenance**: Each conversion creates a DataLad repository tracking the iterative conversion process, decisions, and history for end users
+
+This dual approach ensures both development efficiency and production transparency, with clear separation of concerns between development infrastructure and user-facing conversion outputs.
+
+#### Architectural Separation
+
+```
+Development Infrastructure (Team-Facing):
+agentic-neurodata-conversion/  # Main development DataLad dataset
+├── data/                      # Development and testing datasets
+├── etl/                       # ETL workflows and examples
+└── results/                   # Development conversion outputs
+
+User Conversion Outputs (User-Facing):
+user-specified-output-dir/
+└── conversion-{dataset-name}-{timestamp}/  # Individual conversion repositories
+    ├── input_data/            # Links to original data
+    ├── output.nwb            # Final NWB file
+    ├── conversion_script.py   # Generated conversion script
+    └── [evaluation outputs]   # Knowledge graphs, reports, etc.
+```
 
 #### Development Data Management
 
@@ -380,6 +400,632 @@ def get_evaluation_data():
 3. **Large file downloads**: Use selective `dl.get()` calls
 4. **Permission issues**: Files may be locked by git-annex, handle gracefully
 
+#### Complete DataLad Integration Implementation
+
+**Development Data Management Implementation**:
+
+```python
+# agentic_neurodata_conversion/interfaces/datalad_manager.py
+import datalad.api as dl
+from pathlib import Path
+import logging
+import shutil
+import json
+from typing import List, Dict, Any, Optional
+from datetime import datetime
+
+logger = logging.getLogger(__name__)
+
+class DevelopmentDataManager:
+    """Manages development datasets, test data, and conversion examples"""
+    
+    def __init__(self, project_root: Path):
+        self.project_root = project_root
+        self.data_dir = project_root / "data"
+        self.etl_dir = project_root / "etl"
+        self.results_dir = project_root / "results"
+        
+    def initialize_development_infrastructure(self) -> None:
+        """Initialize the complete development DataLad infrastructure"""
+        
+        # Ensure project is a DataLad dataset
+        if not (self.project_root / ".datalad").exists():
+            self._create_main_dataset()
+        
+        # Set up directory structure
+        self._create_directory_structure()
+        
+        # Install conversion example subdatasets
+        self._install_conversion_examples()
+        
+        # Set up evaluation datasets
+        self._setup_evaluation_datasets()
+        
+        logger.info("Development DataLad infrastructure initialized")
+    
+    def _create_main_dataset(self) -> None:
+        """Create main project DataLad dataset with proper configuration"""
+        
+        # Create .gitattributes FIRST (critical for proper annexing)
+        gitattributes_content = """
+# DataLad configuration for development project
+* annex.backend=MD5E
+
+# Never annex development files - keep in git
+*.py annex.largefiles=nothing
+*.md annex.largefiles=nothing
+*.toml annex.largefiles=nothing
+*.json annex.largefiles=nothing
+*.yaml annex.largefiles=nothing
+*.yml annex.largefiles=nothing
+*.txt annex.largefiles=nothing
+*.cfg annex.largefiles=nothing
+*.ini annex.largefiles=nothing
+.env* annex.largefiles=nothing
+.git* annex.largefiles=nothing
+Dockerfile* annex.largefiles=nothing
+requirements*.txt annex.largefiles=nothing
+
+# Only annex large data files (>10MB)
+* annex.largefiles=(largerthan=10mb)
+
+# Specific data file patterns that should always be annexed
+*.nwb annex.largefiles=anything
+*.dat annex.largefiles=anything
+*.bin annex.largefiles=anything
+*.h5 annex.largefiles=anything
+*.hdf5 annex.largefiles=anything
+"""
+        (self.project_root / ".gitattributes").write_text(gitattributes_content)
+        
+        # Create dataset with text2git configuration
+        dl.create(
+            path=str(self.project_root),
+            cfg_proc="text2git",
+            description="Agentic neurodata conversion project - development infrastructure",
+            force=True
+        )
+        
+        # Initial commit of configuration
+        dl.save(
+            dataset=str(self.project_root),
+            message="Initialize development DataLad infrastructure",
+            path=[".gitattributes"]
+        )
+    
+    def _create_directory_structure(self) -> None:
+        """Create and document directory structure"""
+        
+        directories = {
+            "data": "Test and evaluation datasets",
+            "data/synthetic": "Synthetic messy datasets for testing",
+            "data/evaluation": "Ground truth datasets for validation",
+            "data/samples": "Small sample datasets for quick testing",
+            "etl": "ETL workflows and data processing",
+            "etl/input-data": "Conversion examples and reference implementations",
+            "etl/evaluation-data": "Evaluation datasets and benchmarks",
+            "results": "Development conversion outputs and experiments",
+            "results/benchmarks": "Performance and quality benchmarks",
+            "results/experiments": "Experimental conversion attempts"
+        }
+        
+        for dir_path, description in directories.items():
+            full_path = self.project_root / dir_path
+            full_path.mkdir(parents=True, exist_ok=True)
+            
+            # Create README for each directory
+            readme_path = full_path / "README.md"
+            if not readme_path.exists():
+                readme_content = f"# {dir_path.replace('/', ' / ').title()}\n\n{description}\n"
+                readme_path.write_text(readme_content)
+        
+        # Save directory structure
+        dl.save(
+            dataset=str(self.project_root),
+            message="Create development directory structure",
+            recursive=True
+        )
+    
+    def _install_conversion_examples(self) -> None:
+        """Install CatalystNeuro and other conversion repositories as subdatasets"""
+        
+        conversion_repos = [
+            {
+                "source": "https://github.com/catalystneuro/IBL-to-nwb",
+                "path": "etl/input-data/catalystneuro/IBL-to-nwb",
+                "description": "International Brain Laboratory conversion examples"
+            },
+            {
+                "source": "https://github.com/catalystneuro/buzsaki-lab-to-nwb", 
+                "path": "etl/input-data/catalystneuro/buzsaki-lab-to-nwb",
+                "description": "Buzsaki Lab conversion examples"
+            },
+            {
+                "source": "https://github.com/catalystneuro/allen-institute-to-nwb",
+                "path": "etl/input-data/catalystneuro/allen-institute-to-nwb", 
+                "description": "Allen Institute conversion examples"
+            }
+        ]
+        
+        installed_repos = []
+        for repo in conversion_repos:
+            try:
+                logger.info(f"Installing conversion example: {repo['source']}")
+                dl.install(
+                    dataset=str(self.project_root),
+                    path=repo["path"],
+                    source=repo["source"],
+                    description=repo["description"]
+                )
+                installed_repos.append(repo)
+                logger.info(f"Successfully installed: {repo['path']}")
+                
+            except Exception as e:
+                logger.warning(f"Failed to install {repo['source']}: {e}")
+                # Continue with other repositories
+        
+        # Document installed repositories
+        if installed_repos:
+            repo_index = self.etl_dir / "input-data" / "installed_repositories.json"
+            repo_index.write_text(json.dumps(installed_repos, indent=2))
+            
+            dl.save(
+                dataset=str(self.project_root),
+                message=f"Install {len(installed_repos)} conversion example repositories",
+                path=["etl/input-data"]
+            )
+    
+    def _setup_evaluation_datasets(self) -> None:
+        """Set up evaluation datasets from documents/possible-datasets"""
+        
+        # Check if possible-datasets document exists
+        possible_datasets_doc = self.project_root / "documents" / "possible-datasets.md"
+        if not possible_datasets_doc.exists():
+            logger.warning("documents/possible-datasets.md not found, skipping evaluation dataset setup")
+            return
+        
+        # Create evaluation dataset registry
+        eval_registry = {
+            "description": "Evaluation datasets for testing conversion quality",
+            "datasets": [],
+            "setup_date": datetime.now().isoformat(),
+            "source_document": "documents/possible-datasets.md"
+        }
+        
+        # Save registry
+        registry_path = self.data_dir / "evaluation" / "dataset_registry.json"
+        registry_path.write_text(json.dumps(eval_registry, indent=2))
+        
+        # Create instructions for manual dataset addition
+        instructions = """# Evaluation Dataset Setup
+
+This directory contains datasets used for evaluating conversion quality.
+
+## Adding Datasets
+
+1. For public datasets, add as DataLad subdatasets:
+   ```bash
+   datalad install -d . -s <dataset_url> <local_path>
+   ```
+
+2. For private datasets, create symbolic links or copy data:
+   ```bash
+   ln -s /path/to/dataset ./private_dataset_name
+   datalad save -m "Add private dataset link"
+   ```
+
+3. Update dataset_registry.json with dataset information
+
+## Dataset Requirements
+
+- Each dataset should have clear provenance information
+- Include expected conversion outputs for validation
+- Document any special handling requirements
+- Provide metadata about experimental setup
+
+See documents/possible-datasets.md for candidate datasets.
+"""
+        
+        instructions_path = self.data_dir / "evaluation" / "SETUP_INSTRUCTIONS.md"
+        instructions_path.write_text(instructions)
+        
+        dl.save(
+            dataset=str(self.project_root),
+            message="Set up evaluation dataset infrastructure",
+            path=["data/evaluation"]
+        )
+    
+    def add_test_dataset(self, dataset_path: Path, name: str, description: str) -> None:
+        """Add a test dataset to the development infrastructure"""
+        
+        target_path = self.data_dir / "samples" / name
+        
+        if dataset_path.is_dir():
+            # For directories, create as subdataset if it's a DataLad dataset
+            if (dataset_path / ".datalad").exists():
+                dl.install(
+                    dataset=str(self.project_root),
+                    path=str(target_path),
+                    source=str(dataset_path),
+                    description=description
+                )
+            else:
+                # Copy directory
+                shutil.copytree(dataset_path, target_path)
+        else:
+            # For files, copy directly
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(dataset_path, target_path)
+        
+        # Save addition
+        dl.save(
+            dataset=str(self.project_root),
+            message=f"Add test dataset: {name}",
+            path=[str(target_path)]
+        )
+        
+        logger.info(f"Added test dataset: {name} at {target_path}")
+    
+    def get_available_datasets(self) -> Dict[str, List[Path]]:
+        """Get list of available datasets for testing"""
+        
+        datasets = {
+            "synthetic": list((self.data_dir / "synthetic").glob("*")) if (self.data_dir / "synthetic").exists() else [],
+            "evaluation": list((self.data_dir / "evaluation").glob("*")) if (self.data_dir / "evaluation").exists() else [],
+            "samples": list((self.data_dir / "samples").glob("*")) if (self.data_dir / "samples").exists() else [],
+            "conversion_examples": []
+        }
+        
+        # Get conversion examples from subdatasets
+        try:
+            subdatasets = dl.subdatasets(dataset=str(self.project_root), return_type='list')
+            for subds in subdatasets:
+                if "etl/input-data" in subds.get('path', ''):
+                    datasets["conversion_examples"].append(Path(subds['path']))
+        except Exception as e:
+            logger.warning(f"Failed to get subdatasets: {e}")
+        
+        return datasets
+    
+    def ensure_dataset_available(self, dataset_path: Path) -> bool:
+        """Ensure a dataset is available for use (install/get if needed)"""
+        
+        if not dataset_path.exists():
+            # Try to install if it's a known subdataset
+            try:
+                dl.install(dataset=str(self.project_root), path=str(dataset_path))
+                return True
+            except Exception:
+                logger.error(f"Failed to install dataset: {dataset_path}")
+                return False
+        
+        # If it exists but files might be in annex, try to get them
+        try:
+            dl.get(path=str(dataset_path), dataset=str(self.project_root))
+            return True
+        except Exception as e:
+            logger.warning(f"Failed to get dataset files: {e}")
+            # Dataset exists but some files might not be available
+            return dataset_path.exists()
+```
+
+**User Conversion Provenance Implementation**:
+
+```python
+# agentic_neurodata_conversion/interfaces/conversion_provenance.py
+class UserConversionProvenanceManager:
+    """Manages provenance tracking for individual user conversions"""
+    
+    def __init__(self, output_base_dir: Path):
+        self.output_base_dir = output_base_dir
+        self.output_base_dir.mkdir(parents=True, exist_ok=True)
+    
+    def create_conversion_repository(self, input_dataset: Path, dataset_name: str, 
+                                   user_metadata: Optional[Dict] = None) -> Path:
+        """Create a new DataLad repository for tracking this specific conversion"""
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        repo_name = f"conversion-{dataset_name}-{timestamp}"
+        repo_path = self.output_base_dir / repo_name
+        
+        # Create DataLad dataset for this conversion
+        dl.create(
+            path=str(repo_path),
+            description=f"Agentic conversion of {dataset_name} dataset",
+            cfg_proc="text2git"  # Keep small files in git, large files in annex
+        )
+        
+        # Set up .gitattributes for conversion outputs
+        gitattributes_content = """
+# Conversion output configuration
+* annex.backend=MD5E
+
+# Keep conversion metadata and scripts in git
+*.py annex.largefiles=nothing
+*.json annex.largefiles=nothing
+*.jsonl annex.largefiles=nothing
+*.txt annex.largefiles=nothing
+*.md annex.largefiles=nothing
+*.ttl annex.largefiles=nothing
+*.nt annex.largefiles=nothing
+*.jsonld annex.largefiles=nothing
+*.html annex.largefiles=nothing
+
+# Annex large data files
+*.nwb annex.largefiles=anything
+*.dat annex.largefiles=anything
+*.bin annex.largefiles=anything
+"""
+        (repo_path / ".gitattributes").write_text(gitattributes_content)
+        
+        # Create initial README with conversion information
+        readme_content = f"""# Conversion of {dataset_name}
+
+**Conversion Date:** {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+**Input Dataset:** {input_dataset}
+**Conversion Repository:** {repo_name}
+
+## Contents
+
+- `input_data/` - Links to original input data
+- `output.nwb` - Final NWB output file
+- `conversion_script.py` - Generated conversion script
+- `validation_report.json` - NWB validation results
+- `agent_log.jsonl` - Complete agent interaction log
+- Knowledge graph outputs:
+  - `{dataset_name}.data.ttl` - RDF in Turtle format
+  - `{dataset_name}.data.nt` - RDF in N-Triples format
+  - `{dataset_name}.data.jsonld` - RDF in JSON-LD format
+  - `{dataset_name}.data.triples.txt` - Human-readable triples
+  - `{dataset_name}.data.html` - Interactive visualization
+- Quality reports:
+  - `{dataset_name}_context.txt` - Human-readable context
+  - `{dataset_name}_quality_report.txt` - Quality assessment
+
+## Provenance
+
+This repository tracks the complete conversion process using DataLad's
+built-in version control. Each save operation creates a commit with
+full provenance information.
+
+Use `git log` to see the conversion history.
+Use `datalad diff` to see changes between versions.
+"""
+        (repo_path / "README.md").write_text(readme_content)
+        
+        # Link to input data (DataLad handles this efficiently)
+        if input_dataset.exists():
+            if input_dataset.is_dir():
+                # For directories, create subdataset or symlink
+                try:
+                    if (input_dataset / ".datalad").exists():
+                        # Input is a DataLad dataset - install as subdataset
+                        dl.install(
+                            dataset=str(repo_path),
+                            path="input_data",
+                            source=str(input_dataset)
+                        )
+                    else:
+                        # Regular directory - create symlink
+                        (repo_path / "input_data").symlink_to(input_dataset.resolve())
+                except Exception as e:
+                    logger.warning(f"Failed to link input data: {e}")
+                    # Fallback: copy small files, link large ones
+                    self._smart_copy_input_data(input_dataset, repo_path / "input_data")
+            else:
+                # Single file - create symlink
+                (repo_path / "input_data").symlink_to(input_dataset.resolve())
+        
+        # Save initial state
+        dl.save(
+            dataset=str(repo_path),
+            message=f"Initialize conversion repository for {dataset_name}",
+            recursive=True
+        )
+        
+        logger.info(f"Created conversion repository: {repo_path}")
+        return repo_path
+    
+    def _smart_copy_input_data(self, source: Path, target: Path) -> None:
+        """Smart copy that links large files and copies small ones"""
+        target.mkdir(parents=True, exist_ok=True)
+        
+        for item in source.rglob("*"):
+            if item.is_file():
+                rel_path = item.relative_to(source)
+                target_file = target / rel_path
+                target_file.parent.mkdir(parents=True, exist_ok=True)
+                
+                # Link large files (>10MB), copy small ones
+                if item.stat().st_size > 10 * 1024 * 1024:
+                    target_file.symlink_to(item.resolve())
+                else:
+                    shutil.copy2(item, target_file)
+    
+    def save_conversion_iteration(self, repo_path: Path, 
+                                conversion_outputs: Dict[str, Any],
+                                agent_interactions: List[Dict],
+                                iteration_message: str) -> str:
+        """Save a conversion iteration with full provenance tracking"""
+        
+        # Update conversion outputs
+        self._update_conversion_files(repo_path, conversion_outputs)
+        
+        # Append agent interactions to log
+        self._append_agent_log(repo_path, agent_interactions)
+        
+        # Update conversion metadata
+        self._update_conversion_metadata(repo_path, conversion_outputs)
+        
+        # DataLad save - this creates automatic provenance
+        result = dl.save(
+            dataset=str(repo_path),
+            message=iteration_message,
+            recursive=True,
+            return_type='item-or-list'
+        )
+        
+        # Extract commit hash for reference
+        commit_hash = result.get('commit', 'unknown') if isinstance(result, dict) else 'unknown'
+        
+        logger.info(f"Saved conversion iteration: {iteration_message} (commit: {commit_hash})")
+        return commit_hash
+    
+    def _update_conversion_files(self, repo_path: Path, outputs: Dict[str, Any]) -> None:
+        """Update all conversion output files"""
+        
+        # Copy NWB output if provided
+        if 'nwb_file' in outputs and outputs['nwb_file']:
+            nwb_source = Path(outputs['nwb_file'])
+            if nwb_source.exists():
+                shutil.copy2(nwb_source, repo_path / "output.nwb")
+        
+        # Save conversion script
+        if 'conversion_script' in outputs:
+            (repo_path / "conversion_script.py").write_text(outputs['conversion_script'])
+        
+        # Save validation results
+        if 'validation_results' in outputs:
+            with open(repo_path / "validation_report.json", 'w') as f:
+                json.dump(outputs['validation_results'], f, indent=2, default=str)
+        
+        # Copy knowledge graph files (generated by EvaluationAgent)
+        if 'knowledge_graph_files' in outputs:
+            for kg_file in outputs['knowledge_graph_files']:
+                source_path = Path(kg_file)
+                if source_path.exists():
+                    shutil.copy2(source_path, repo_path / source_path.name)
+        
+        # Copy quality reports
+        if 'quality_reports' in outputs:
+            for report_file in outputs['quality_reports']:
+                source_path = Path(report_file)
+                if source_path.exists():
+                    shutil.copy2(source_path, repo_path / source_path.name)
+    
+    def _append_agent_log(self, repo_path: Path, interactions: List[Dict]) -> None:
+        """Append agent interactions to the log file"""
+        log_file = repo_path / "agent_log.jsonl"
+        
+        with open(log_file, 'a') as f:
+            for interaction in interactions:
+                # Add timestamp if not present
+                if 'timestamp' not in interaction:
+                    interaction['timestamp'] = datetime.now().isoformat()
+                f.write(json.dumps(interaction, default=str) + '\n')
+    
+    def _update_conversion_metadata(self, repo_path: Path, outputs: Dict[str, Any]) -> None:
+        """Update conversion metadata file"""
+        metadata_file = repo_path / "conversion_metadata.json"
+        
+        # Load existing metadata or create new
+        if metadata_file.exists():
+            with open(metadata_file, 'r') as f:
+                metadata = json.load(f)
+        else:
+            metadata = {
+                "conversion_id": repo_path.name,
+                "created": datetime.now().isoformat(),
+                "iterations": []
+            }
+        
+        # Add current iteration
+        iteration_data = {
+            "timestamp": datetime.now().isoformat(),
+            "outputs": {k: str(v) if not isinstance(v, (dict, list)) else v 
+                       for k, v in outputs.items()},
+            "status": outputs.get('status', 'in_progress')
+        }
+        metadata["iterations"].append(iteration_data)
+        metadata["last_updated"] = datetime.now().isoformat()
+        
+        # Save updated metadata
+        with open(metadata_file, 'w') as f:
+            json.dump(metadata, f, indent=2, default=str)
+    
+    def get_conversion_history(self, repo_path: Path) -> List[Dict[str, Any]]:
+        """Get complete conversion history from DataLad/git log"""
+        try:
+            import subprocess
+            
+            # Get git log with detailed information
+            result = subprocess.run([
+                "git", "log", 
+                "--pretty=format:%H|%ai|%s|%an|%ae",
+                "--all"
+            ], cwd=repo_path, capture_output=True, text=True)
+            
+            history = []
+            for line in result.stdout.strip().split('\n'):
+                if line:
+                    parts = line.split('|')
+                    if len(parts) >= 3:
+                        history.append({
+                            "commit_hash": parts[0],
+                            "timestamp": parts[1] if len(parts) > 1 else None,
+                            "message": parts[2] if len(parts) > 2 else None,
+                            "author_name": parts[3] if len(parts) > 3 else None,
+                            "author_email": parts[4] if len(parts) > 4 else None
+                        })
+            
+            return history
+            
+        except Exception as e:
+            logger.error(f"Failed to get conversion history: {e}")
+            return []
+    
+    def tag_successful_conversion(self, repo_path: Path, version: str = None) -> None:
+        """Tag a successful conversion for easy reference"""
+        
+        if version is None:
+            version = f"success-{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        
+        try:
+            dl.save(
+                dataset=str(repo_path),
+                message=f"Mark successful conversion - {version}",
+                version_tag=version
+            )
+            logger.info(f"Tagged successful conversion: {version}")
+            
+        except Exception as e:
+            logger.error(f"Failed to tag conversion: {e}")
+    
+    def export_conversion_summary(self, repo_path: Path) -> Dict[str, Any]:
+        """Export a comprehensive summary of the conversion"""
+        
+        summary = {
+            "repository": str(repo_path),
+            "conversion_id": repo_path.name,
+            "created": None,
+            "status": "unknown",
+            "history": self.get_conversion_history(repo_path),
+            "files": [],
+            "metadata": {}
+        }
+        
+        # Load conversion metadata if available
+        metadata_file = repo_path / "conversion_metadata.json"
+        if metadata_file.exists():
+            with open(metadata_file, 'r') as f:
+                summary["metadata"] = json.load(f)
+                summary["created"] = summary["metadata"].get("created")
+                if summary["metadata"].get("iterations"):
+                    last_iteration = summary["metadata"]["iterations"][-1]
+                    summary["status"] = last_iteration.get("status", "unknown")
+        
+        # List all files in repository
+        for item in repo_path.rglob("*"):
+            if item.is_file() and not item.name.startswith('.'):
+                summary["files"].append({
+                    "path": str(item.relative_to(repo_path)),
+                    "size": item.stat().st_size,
+                    "modified": datetime.fromtimestamp(item.stat().st_mtime).isoformat()
+                })
+        
+        return summary
+```
+
 ### External Integrations
 
 #### 1. MCP Server Integration
@@ -558,7 +1204,27 @@ class LoggingConfig(BaseModel):
     backup_count: int = 5
 
 class Settings(BaseSettings):
-    """Main settings container with nested configuration"""
+    """Main settings container with nested configuration
+    
+    Agent-Specific LLM Configuration Rationale:
+    
+    Each agent has different performance requirements and cost sensitivities:
+    
+    - ConversationAgent: Needs strong reasoning for metadata extraction and user interaction.
+      High accuracy is critical for understanding experimental context.
+      Cost: Medium (frequent use, but shorter interactions)
+      
+    - ConversionAgent: Requires excellent code generation capabilities for NeuroConv scripts.
+      Accuracy is critical as errors break the conversion pipeline.
+      Cost: High (complex code generation, longer contexts)
+      
+    - EvaluationAgent: Performs validation and quality assessment tasks.
+      Can use smaller/cheaper models as tasks are more structured.
+      Cost: Low (structured validation tasks, can use local models)
+      
+    This flexibility allows optimization for both performance and cost across different
+    deployment scenarios (development, CI, production).
+    """
     model_config = SettingsConfigDict(
         env_nested_delimiter="__",
         env_file=".env",
@@ -594,9 +1260,17 @@ class Settings(BaseSettings):
     def validate_openrouter_key(cls, v: Optional[str], info) -> Optional[str]:
         """Validate OpenRouter API key when required"""
         # Check if any agent is configured to use OpenRouter
-        if hasattr(info.data, 'conversation_agent') and info.data.get('conversation_agent', {}).get('llm_provider') == 'openrouter':
-            if not v:
-                raise ValueError("OpenRouter API key required when using OpenRouter provider")
+        agents_to_check = ['conversation_agent', 'conversion_agent', 'evaluation_agent']
+        
+        for agent_name in agents_to_check:
+            agent_config = info.data.get(agent_name, {})
+            if isinstance(agent_config, dict) and agent_config.get('llm_provider') == 'openrouter':
+                if not v:
+                    raise ValueError(f"OpenRouter API key required when {agent_name} uses OpenRouter provider")
+            elif hasattr(agent_config, 'llm_provider') and agent_config.llm_provider == 'openrouter':
+                if not v:
+                    raise ValueError(f"OpenRouter API key required when {agent_name} uses OpenRouter provider")
+        
         return v
 
 # Global settings instance
@@ -615,25 +1289,37 @@ ENVIRONMENT=development
 LOGGING__LEVEL=DEBUG
 LOGGING__FILE_PATH=logs/development.log
 
-# Conversation Agent (using local model for development)
+# Agent LLM Configuration - Development Optimized
+# Rationale: Balance between cost, speed, and accuracy for development
+
+# Conversation Agent: Local model for fast iteration during development
+# Reasoning: Frequent use during development, local model reduces API costs
 CONVERSATION_AGENT__LLM_PROVIDER=ollama
 CONVERSATION_AGENT__MODEL=llama3.2:3b
 CONVERSATION_AGENT__TEMPERATURE=0.2
+CONVERSATION_AGENT__TIMEOUT=30
+CONVERSATION_AGENT__MAX_RETRIES=3
 
-# Conversion Agent (using cloud model for better code generation)
+# Conversion Agent: Cloud model for reliable code generation
+# Reasoning: Code generation quality is critical, worth the API cost
 CONVERSION_AGENT__LLM_PROVIDER=openrouter
 CONVERSION_AGENT__MODEL=anthropic/claude-3.5-sonnet
 CONVERSION_AGENT__TEMPERATURE=0.1
+CONVERSION_AGENT__TIMEOUT=60
+CONVERSION_AGENT__MAX_RETRIES=3
 
-# Evaluation Agent (local model is sufficient)
+# Evaluation Agent: Local model for structured validation tasks
+# Reasoning: Validation tasks are more structured, local model sufficient
 EVALUATION_AGENT__LLM_PROVIDER=ollama
 EVALUATION_AGENT__MODEL=llama3.2:3b
+EVALUATION_AGENT__TEMPERATURE=0.0
+EVALUATION_AGENT__TIMEOUT=30
 
 # LLM Provider Settings
 OPENROUTER_API_KEY=your_key_here
 OLLAMA_ENDPOINT=http://localhost:11434
 
-# DataLad Settings (required)
+# DataLad Settings (required for all conversions)
 DATALAD__AUTO_CREATE_REPOS=true
 DATALAD__CACHE_DIR=.datalad_cache
 DATALAD__DEFAULT_REMOTE=gin
@@ -655,20 +1341,36 @@ LOGGING__FILE_PATH=logs/production.log
 LOGGING__MAX_FILE_SIZE=50MB
 LOGGING__BACKUP_COUNT=10
 
-# All agents use cloud models in production
+# Agent LLM Configuration - Production Optimized
+# Rationale: Prioritize reliability and consistency over cost
+
+# Conversation Agent: High-quality model for accurate metadata extraction
+# Reasoning: User interactions must be accurate, worth premium model cost
 CONVERSATION_AGENT__LLM_PROVIDER=openrouter
 CONVERSATION_AGENT__MODEL=anthropic/claude-3.5-sonnet
+CONVERSATION_AGENT__TEMPERATURE=0.2
+CONVERSATION_AGENT__TIMEOUT=45
+CONVERSATION_AGENT__MAX_RETRIES=5
 
+# Conversion Agent: Premium model for critical code generation
+# Reasoning: Conversion failures are expensive, use best available model
 CONVERSION_AGENT__LLM_PROVIDER=openrouter
 CONVERSION_AGENT__MODEL=anthropic/claude-3.5-sonnet
+CONVERSION_AGENT__TEMPERATURE=0.1
+CONVERSION_AGENT__TIMEOUT=90
+CONVERSION_AGENT__MAX_RETRIES=5
 
+# Evaluation Agent: Cost-optimized model for structured validation
+# Reasoning: Validation tasks are structured, cheaper model acceptable
 EVALUATION_AGENT__LLM_PROVIDER=openrouter
-EVALUATION_AGENT__MODEL=anthropic/claude-3.5-haiku  # Cheaper model for evaluation
+EVALUATION_AGENT__MODEL=anthropic/claude-3.5-haiku
+EVALUATION_AGENT__TEMPERATURE=0.0
+EVALUATION_AGENT__TIMEOUT=45
 
-# Required in production
-OPENROUTER_API_KEY=  # Must be set - will raise error if missing
+# Required in production - will raise error if missing
+OPENROUTER_API_KEY=  # Must be set
 
-# DataLad Settings (required)
+# DataLad Settings (required for all conversions)
 DATALAD__AUTO_CREATE_REPOS=true
 DATALAD__DEFAULT_REMOTE=gin
 DATALAD__CACHE_DIR=/var/cache/datalad
@@ -676,6 +1378,226 @@ DATALAD__CACHE_DIR=/var/cache/datalad
 # MCP Server
 MCP_SERVER_HOST=0.0.0.0
 MCP_SERVER_PORT=8000
+```
+
+### Agent-Specific LLM Provider Implementation
+
+```python
+# agentic_neurodata_conversion/interfaces/llm_provider.py
+from abc import ABC, abstractmethod
+from typing import Dict, Any, Optional, List
+import asyncio
+import httpx
+import ollama
+from agentic_neurodata_conversion.config import settings
+
+class LLMProvider(ABC):
+    """Abstract base class for LLM providers"""
+    
+    @abstractmethod
+    async def generate_response(self, prompt: str, **kwargs) -> str:
+        pass
+    
+    @abstractmethod
+    def get_available_models(self) -> List[str]:
+        pass
+
+class OpenRouterProvider(LLMProvider):
+    """OpenRouter API provider for cloud models"""
+    
+    def __init__(self, api_key: str, model: str, temperature: float = 0.1, 
+                 timeout: int = 30, max_retries: int = 3):
+        self.api_key = api_key
+        self.model = model
+        self.temperature = temperature
+        self.timeout = timeout
+        self.max_retries = max_retries
+        self.base_url = "https://openrouter.ai/api/v1"
+    
+    async def generate_response(self, prompt: str, **kwargs) -> str:
+        """Generate response using OpenRouter API"""
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": kwargs.get("temperature", self.temperature),
+            **kwargs
+        }
+        
+        for attempt in range(self.max_retries):
+            try:
+                async with httpx.AsyncClient(timeout=self.timeout) as client:
+                    response = await client.post(
+                        f"{self.base_url}/chat/completions",
+                        headers=headers,
+                        json=payload
+                    )
+                    response.raise_for_status()
+                    result = response.json()
+                    return result["choices"][0]["message"]["content"]
+                    
+            except Exception as e:
+                if attempt == self.max_retries - 1:
+                    raise e
+                await asyncio.sleep(2 ** attempt)  # Exponential backoff
+    
+    def get_available_models(self) -> List[str]:
+        """Get available models from OpenRouter"""
+        # This would typically make an API call to get current models
+        return [
+            "anthropic/claude-3.5-sonnet",
+            "anthropic/claude-3.5-haiku", 
+            "openai/gpt-4o",
+            "openai/gpt-4o-mini"
+        ]
+
+class OllamaProvider(LLMProvider):
+    """Ollama provider for local models"""
+    
+    def __init__(self, endpoint: str, model: str, temperature: float = 0.1, timeout: int = 30):
+        self.endpoint = endpoint
+        self.model = model
+        self.temperature = temperature
+        self.timeout = timeout
+        self.client = ollama.Client(host=endpoint)
+    
+    async def generate_response(self, prompt: str, **kwargs) -> str:
+        """Generate response using Ollama"""
+        try:
+            response = await asyncio.to_thread(
+                self.client.generate,
+                model=self.model,
+                prompt=prompt,
+                options={
+                    "temperature": kwargs.get("temperature", self.temperature),
+                    "timeout": self.timeout
+                }
+            )
+            return response["response"]
+            
+        except Exception as e:
+            raise RuntimeError(f"Ollama generation failed: {e}")
+    
+    def get_available_models(self) -> List[str]:
+        """Get available local models"""
+        try:
+            models = self.client.list()
+            return [model["name"] for model in models["models"]]
+        except Exception:
+            return []
+
+class LLMProviderFactory:
+    """Factory for creating LLM providers based on configuration"""
+    
+    @staticmethod
+    def create_provider(provider_type: str, config: Dict[str, Any]) -> LLMProvider:
+        """Create appropriate LLM provider based on configuration"""
+        
+        if provider_type == "openrouter":
+            if not settings.openrouter_api_key:
+                raise ValueError("OpenRouter API key required but not configured")
+            
+            return OpenRouterProvider(
+                api_key=settings.openrouter_api_key,
+                model=config["model"],
+                temperature=config.get("temperature", 0.1),
+                timeout=config.get("timeout", 30),
+                max_retries=config.get("max_retries", 3)
+            )
+        
+        elif provider_type == "ollama":
+            return OllamaProvider(
+                endpoint=settings.ollama_endpoint,
+                model=config["model"],
+                temperature=config.get("temperature", 0.1),
+                timeout=config.get("timeout", 30)
+            )
+        
+        else:
+            raise ValueError(f"Unsupported LLM provider: {provider_type}")
+
+# Agent-specific provider creation
+def get_conversation_agent_provider() -> LLMProvider:
+    """Get LLM provider configured for conversation agent"""
+    config = settings.conversation_agent.dict()
+    return LLMProviderFactory.create_provider(
+        settings.conversation_agent.llm_provider, 
+        config
+    )
+
+def get_conversion_agent_provider() -> LLMProvider:
+    """Get LLM provider configured for conversion agent"""
+    config = settings.conversion_agent.dict()
+    return LLMProviderFactory.create_provider(
+        settings.conversion_agent.llm_provider,
+        config
+    )
+
+def get_evaluation_agent_provider() -> LLMProvider:
+    """Get LLM provider configured for evaluation agent"""
+    config = settings.evaluation_agent.dict()
+    return LLMProviderFactory.create_provider(
+        settings.evaluation_agent.llm_provider,
+        config
+    )
+```
+
+### Configuration Usage Examples
+
+**Scenario 1: Development with Mixed Providers**
+```bash
+# .env.development
+CONVERSATION_AGENT__LLM_PROVIDER=ollama
+CONVERSATION_AGENT__MODEL=llama3.2:3b
+
+CONVERSION_AGENT__LLM_PROVIDER=openrouter  
+CONVERSION_AGENT__MODEL=anthropic/claude-3.5-sonnet
+
+EVALUATION_AGENT__LLM_PROVIDER=ollama
+EVALUATION_AGENT__MODEL=llama3.2:3b
+```
+
+**Scenario 2: CI/Testing with All Local Models**
+```bash
+# .env.ci
+CONVERSATION_AGENT__LLM_PROVIDER=ollama
+CONVERSATION_AGENT__MODEL=llama3.2:3b
+
+CONVERSION_AGENT__LLM_PROVIDER=ollama
+CONVERSION_AGENT__MODEL=codellama:7b
+
+EVALUATION_AGENT__LLM_PROVIDER=ollama
+EVALUATION_AGENT__MODEL=llama3.2:3b
+```
+
+**Scenario 3: Production with All Cloud Models**
+```bash
+# .env.production
+CONVERSATION_AGENT__LLM_PROVIDER=openrouter
+CONVERSATION_AGENT__MODEL=anthropic/claude-3.5-sonnet
+
+CONVERSION_AGENT__LLM_PROVIDER=openrouter
+CONVERSION_AGENT__MODEL=anthropic/claude-3.5-sonnet
+
+EVALUATION_AGENT__LLM_PROVIDER=openrouter
+EVALUATION_AGENT__MODEL=anthropic/claude-3.5-haiku
+```
+
+**Scenario 4: Cost-Optimized Production**
+```bash
+# .env.production-budget
+CONVERSATION_AGENT__LLM_PROVIDER=openrouter
+CONVERSATION_AGENT__MODEL=openai/gpt-4o-mini
+
+CONVERSION_AGENT__LLM_PROVIDER=openrouter
+CONVERSION_AGENT__MODEL=anthropic/claude-3.5-sonnet  # Keep premium for code
+
+EVALUATION_AGENT__LLM_PROVIDER=ollama  # Use local for validation
+EVALUATION_AGENT__MODEL=llama3.2:3b
 ```
 
 ### Configuration Loading
@@ -811,6 +1733,8 @@ from pathlib import Path
 import tempfile
 import datalad.api as dl
 from agentic_neurodata_conversion.config import settings
+from unittest.mock import Mock, AsyncMock
+import json
 
 @pytest.fixture
 def temp_datalad_repo():
@@ -825,6 +1749,252 @@ def temp_datalad_repo():
 def mock_llm_responses():
     """Provide mock LLM responses for testing"""
     return {
+        "conversation_agent": {
+            "analyze_dataset": {
+                "detected_formats": ["open_ephys", "spikeglx"],
+                "missing_metadata": ["subject_id", "session_description"],
+                "questions": [
+                    "What is the subject ID for this recording?",
+                    "Please describe the experimental session."
+                ]
+            }
+        },
+        "conversion_agent": {
+            "synthesize_conversion_script": """
+import neuroconv
+from pathlib import Path
+
+# Generated conversion script
+def convert_data():
+    # Mock conversion implementation
+    pass
+""",
+            "validation_result": {"success": True, "errors": []}
+        },
+        "evaluation_agent": {
+            "validate_nwb": {
+                "passed": True,
+                "inspector_results": {"errors": [], "warnings": []},
+                "quality_metrics": {"completeness": 0.95, "compliance": 1.0}
+            }
+        }
+    }
+
+@pytest.fixture
+def mock_agents(mock_llm_responses):
+    """Create mock agent instances for testing"""
+    conversation_agent = Mock()
+    conversation_agent.analyze_dataset.return_value = mock_llm_responses["conversation_agent"]["analyze_dataset"]
+    
+    conversion_agent = Mock()
+    conversion_agent.synthesize_conversion_script.return_value = mock_llm_responses["conversion_agent"]["synthesize_conversion_script"]
+    
+    evaluation_agent = Mock()
+    evaluation_agent.validate_nwb.return_value = mock_llm_responses["evaluation_agent"]["validate_nwb"]
+    
+    return {
+        "conversation": conversation_agent,
+        "conversion": conversion_agent,
+        "evaluation": evaluation_agent
+    }
+
+@pytest.fixture
+def sample_dataset_structure():
+    """Create sample dataset structure for testing"""
+    return {
+        "root": "test_dataset",
+        "files": [
+            "continuous.dat",
+            "structure.oebin",
+            "sync_messages.txt",
+            "experiment1/recording1/continuous/Neuropix-PXI-100.0/continuous.dat"
+        ],
+        "metadata": {
+            "subject_id": "mouse_001",
+            "session_description": "Test recording session",
+            "experimenter": "Test User"
+        }
+    }
+
+@pytest.fixture
+def test_config():
+    """Provide test configuration"""
+    return {
+        "conversation_agent": {
+            "llm_provider": "mock",
+            "model": "test_model",
+            "temperature": 0.0
+        },
+        "conversion_agent": {
+            "llm_provider": "mock", 
+            "model": "test_model",
+            "temperature": 0.0
+        },
+        "evaluation_agent": {
+            "llm_provider": "mock",
+            "model": "test_model", 
+            "temperature": 0.0
+        }
+    }
+```
+
+#### Test Execution Strategy
+
+**Pytest Marks Configuration** (`pytest.ini`):
+```ini
+[tool:pytest]
+markers =
+    unit: Unit tests with no external dependencies
+    mock_llm: Tests using mocked LLM responses
+    small_model: Tests using small local models (<3B parameters)
+    large_model_minimal: Tests using 7B models with minimal context
+    large_model_extended: Tests using 7B models with full context
+    cheap_api: Tests using inexpensive cloud models
+    frontier_api: Tests using latest/expensive models
+    integration: Integration tests requiring multiple components
+    evaluation: Evaluation and benchmarking tests
+    slow: Tests that take significant time to run
+    requires_datalad: Tests requiring DataLad installation
+    requires_ollama: Tests requiring Ollama installation
+```
+
+**Test Execution Commands**:
+```bash
+# Run only unit tests (fastest)
+pytest -m "unit"
+
+# Run tests with mocked LLMs (development)
+pytest -m "unit or mock_llm"
+
+# Run tests with small local models (CI)
+pytest -m "unit or mock_llm or small_model"
+
+# Run comprehensive tests (pre-release)
+pytest -m "not frontier_api"
+
+# Run all tests including expensive ones (release validation)
+pytest
+```
+
+#### Test Categories and Examples
+
+**Unit Tests** (`tests/unit/`):
+```python
+# tests/unit/test_core/test_format_detector.py
+import pytest
+from agentic_neurodata_conversion.core import FormatDetector
+
+@pytest.mark.unit
+def test_format_detector_open_ephys(sample_dataset_structure):
+    detector = FormatDetector()
+    formats = detector.detect_formats(sample_dataset_structure["files"])
+    assert "open_ephys" in [f["format"] for f in formats]
+
+@pytest.mark.unit
+def test_conversion_config_validation():
+    from agentic_neurodata_conversion.config import ConversionConfig
+    config = ConversionConfig(
+        output_dir="/tmp/test",
+        validation_level="strict"
+    )
+    assert config.output_dir == "/tmp/test"
+```
+
+**Mock LLM Tests** (`tests/integration/`):
+```python
+# tests/integration/test_agent_workflows.py
+import pytest
+from agentic_neurodata_conversion.core import ConversionOrchestrator
+
+@pytest.mark.mock_llm
+def test_full_conversion_workflow(mock_agents, temp_datalad_repo, test_config):
+    orchestrator = ConversionOrchestrator(config=test_config)
+    orchestrator.conversation_agent = mock_agents["conversation"]
+    orchestrator.conversion_agent = mock_agents["conversion"]
+    orchestrator.evaluation_agent = mock_agents["evaluation"]
+    
+    result = orchestrator.run_conversion_pipeline(temp_datalad_repo)
+    assert result.success is True
+    assert result.output_path is not None
+```
+
+**Small Model Tests** (`tests/evaluation/`):
+```python
+# tests/evaluation/test_agent_accuracy.py
+import pytest
+from agentic_neurodata_conversion.agents import ConversationAgent
+
+@pytest.mark.small_model
+@pytest.mark.requires_ollama
+def test_conversation_agent_basic_analysis():
+    agent = ConversationAgent(
+        llm_provider="ollama",
+        model="llama3.2:3b",
+        temperature=0.0
+    )
+    
+    # Test with simple dataset
+    result = agent.analyze_dataset("tests/fixtures/simple_dataset")
+    assert "detected_formats" in result
+    assert len(result["detected_formats"]) > 0
+```
+
+#### Continuous Integration Integration
+
+**GitHub Actions Workflow** (`.github/workflows/test.yml`):
+```yaml
+name: Test Suite
+
+on: [push, pull_request]
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.8.1
+      - run: pixi run pytest -m "unit"
+  
+  mock-llm-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.8.1
+      - run: pixi run pytest -m "unit or mock_llm"
+  
+  small-model-tests:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.8.1
+      - name: Install Ollama
+        run: |
+          curl -fsSL https://ollama.ai/install.sh | sh
+          ollama serve &
+          sleep 10
+          ollama pull llama3.2:3b
+      - run: pixi run pytest -m "unit or mock_llm or small_model"
+```
+
+#### Performance and Quality Metrics
+
+**Test Coverage Requirements**:
+- Unit tests: >90% coverage for core modules
+- Integration tests: >80% coverage for agent workflows  
+- End-to-end tests: >70% coverage for complete pipelines
+
+**Performance Benchmarks**:
+- Unit tests: <30 seconds total
+- Mock LLM tests: <2 minutes total
+- Small model tests: <10 minutes total
+- Integration tests: <30 minutes total
+
+**Quality Gates**:
+- All unit and mock_llm tests must pass for merge
+- Small model tests must pass for release candidates
+- Performance regression tests for conversion speed
+- Memory usage monitoring for large dataset processing
         "analyze_dataset": {"status": "success", "result": {"metadata": "test"}},
         "generate_script": {"status": "success", "script": "# test script"},
         "evaluate_nwb": {"status": "success", "validation": {"passed": True}}
