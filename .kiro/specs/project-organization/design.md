@@ -47,6 +47,14 @@ The main package `agentic_neurodata_conversion/` follows a layered architecture:
 - **Adapter Pattern**: For integrating with different data formats and external systems
 - **Command Pattern**: For implementing reversible operations and workflow steps
 
+#### Agentic Design Patterns
+
+- **Reflection Pattern**: Agents analyze their own performance and learn from outcomes
+- **Planning Pattern**: Multi-step reasoning for complex conversion workflows
+- **Hierarchical Agent Pattern**: Meta-agents coordinate and monitor other agents
+- **Tool Use Pattern**: Structured approach to tool selection and execution
+- **Human-in-the-Loop Pattern**: Seamless integration of human expertise and oversight
+
 ## Components and Interfaces
 
 ### Core Components (Based on Existing Implementation)
@@ -82,24 +90,40 @@ class FormatDetector:  # Already implemented
 **Purpose**: LLM-powered agents for different aspects of conversion
 
 **Key Classes** (refactored from existing modules):
-- `BaseAgent`: Abstract base class for all agents (to be created)
+- `BaseAgent`: Abstract base class for all agents with reflection capabilities (to be created)
 - `ConversationAgent`: Handles metadata extraction (exists in `conversationAgent.py`)
 - `ConversionAgent`: Generates conversion scripts (exists in `conversionagent.py`)
 - `MetadataQuestioner`: Handles dynamic questioning (exists in `metadata_questioner.py`)
+- `ReflectiveAgent`: Mixin for self-assessment and learning capabilities
+- `PlanningAgent`: Enhanced planning and reasoning for complex workflows
 
 **Interfaces**:
 ```python
-class ConversationAgent:  # Already implemented
-    def analyze_dataset(self, dataset_dir: str, out_report_json: Optional[str] = None) -> Dict[str, Any]
+class BaseAgent:  # New base class with reflection capabilities
+    def execute_task(self, task: Task) -> TaskResult
+    def reflect_on_performance(self, result: TaskResult) -> ReflectionReport
+    def learn_from_feedback(self, feedback: HumanFeedback) -> None
+    def get_performance_metrics(self) -> Dict[str, float]
 
-class ConversionAgent:  # Already implemented  
+class ConversationAgent(BaseAgent):  # Already implemented, enhanced with reflection
+    def analyze_dataset(self, dataset_dir: str, out_report_json: Optional[str] = None) -> Dict[str, Any]
+    def assess_analysis_quality(self, analysis_result: Dict) -> QualityScore
+
+class ConversionAgent(BaseAgent):  # Already implemented, enhanced with planning
     def synthesize_conversion_script(self, normalized_metadata: Dict, files_map: Dict, output_nwb_path: str) -> str
+    def create_conversion_plan(self, dataset_analysis: Dict) -> ConversionPlan
+    def adapt_plan_on_failure(self, failed_step: str, error: Exception) -> ConversionPlan
     def write_generated_script(self, code: str, out_path: str) -> str
     def run_generated_script(self, script_path: str) -> int
 
-class MetadataQuestioner:  # Already implemented
+class MetadataQuestioner(BaseAgent):  # Already implemented
     def get_required_fields(self, kg_file: str, experiment_type: str) -> List[Tuple[str, str]]
     def generate_dynamic_question(self, field: str, constraints: Dict, inferred: Any = None) -> str
+
+class MetaAgent:  # New meta-agent for coordination
+    def monitor_agent_performance(self, agent_id: str, metrics: Dict) -> PerformanceReport
+    def coordinate_workflow(self, agents: List[BaseAgent], workflow: Workflow) -> WorkflowResult
+    def optimize_agent_interactions(self, interaction_history: List[Dict]) -> OptimizationPlan
 ```
 
 #### 3. Integration Interfaces (`agentic_neurodata_conversion/interfaces/`)
@@ -400,7 +424,116 @@ def get_evaluation_data():
 3. **Large file downloads**: Use selective `dl.get()` calls
 4. **Permission issues**: Files may be locked by git-annex, handle gracefully
 
-#### Complete DataLad Integration Implementation
+#### Agent Performance and Learning Framework
+
+#### Reflection and Learning Architecture
+
+The system implements sophisticated reflection and learning capabilities that allow agents to improve over time:
+
+**Core Components**:
+- **Performance Monitoring**: Continuous tracking of agent success rates, error patterns, and efficiency metrics
+- **Reflection Engine**: Agents analyze their own outputs and decision-making processes
+- **Learning Integration**: Feedback loops that incorporate human corrections and domain expert input
+- **Meta-Evaluation**: Higher-level assessment of agent coordination and workflow optimization
+
+**Implementation**:
+```python
+# agentic_neurodata_conversion/agents/reflection.py
+class ReflectionEngine:
+    def __init__(self, agent_id: str):
+        self.agent_id = agent_id
+        self.performance_history = []
+        self.learning_database = LearningDatabase()
+    
+    def reflect_on_task(self, task: Task, result: TaskResult) -> ReflectionReport:
+        """Analyze task performance and identify improvement opportunities"""
+        reflection = {
+            "task_complexity": self._assess_task_complexity(task),
+            "result_quality": self._assess_result_quality(result),
+            "decision_points": self._identify_decision_points(task, result),
+            "improvement_areas": self._identify_improvements(task, result),
+            "confidence_calibration": self._assess_confidence_accuracy(result)
+        }
+        
+        self.performance_history.append(reflection)
+        return ReflectionReport(reflection)
+    
+    def learn_from_human_feedback(self, feedback: HumanFeedback) -> None:
+        """Incorporate human corrections and preferences"""
+        learning_update = {
+            "feedback_type": feedback.type,
+            "correction": feedback.correction,
+            "context": feedback.context,
+            "confidence_adjustment": feedback.confidence_impact
+        }
+        
+        self.learning_database.update(learning_update)
+        self._adjust_decision_patterns(learning_update)
+    
+    def get_performance_trends(self) -> Dict[str, List[float]]:
+        """Analyze performance trends over time"""
+        return {
+            "success_rate": self._calculate_success_trend(),
+            "efficiency": self._calculate_efficiency_trend(),
+            "confidence_calibration": self._calculate_calibration_trend()
+        }
+
+class MetaLearningCoordinator:
+    """Coordinates learning across multiple agents"""
+    
+    def __init__(self):
+        self.agent_performances = {}
+        self.interaction_patterns = []
+        self.workflow_optimizations = []
+    
+    def analyze_multi_agent_performance(self, workflow_result: WorkflowResult) -> MetaAnalysis:
+        """Analyze how agents work together and identify optimization opportunities"""
+        analysis = {
+            "coordination_efficiency": self._assess_coordination(workflow_result),
+            "bottlenecks": self._identify_bottlenecks(workflow_result),
+            "redundancies": self._find_redundant_work(workflow_result),
+            "optimization_opportunities": self._suggest_optimizations(workflow_result)
+        }
+        
+        return MetaAnalysis(analysis)
+    
+    def optimize_agent_allocation(self, task_queue: List[Task]) -> AllocationPlan:
+        """Optimize which agents handle which tasks based on performance history"""
+        return self._create_optimal_allocation(task_queue, self.agent_performances)
+```
+
+#### Human-in-the-Loop Learning Integration
+
+**Enhanced Human Feedback Loop**:
+```python
+class HumanFeedbackIntegrator:
+    def __init__(self):
+        self.feedback_patterns = FeedbackPatternAnalyzer()
+        self.expert_preferences = ExpertPreferenceModel()
+    
+    def process_expert_correction(self, agent_output: Dict, expert_correction: Dict) -> LearningUpdate:
+        """Process expert corrections and extract learning patterns"""
+        correction_analysis = {
+            "error_type": self._classify_error(agent_output, expert_correction),
+            "context_factors": self._extract_context(agent_output),
+            "correction_pattern": self._analyze_correction_pattern(expert_correction),
+            "generalization_scope": self._assess_generalization(correction_analysis)
+        }
+        
+        return LearningUpdate(correction_analysis)
+    
+    def suggest_proactive_questions(self, uncertain_decisions: List[Dict]) -> List[str]:
+        """Generate targeted questions for human experts based on uncertainty"""
+        questions = []
+        for decision in uncertain_decisions:
+            if decision['confidence'] < 0.7:  # Low confidence threshold
+                question = self._generate_clarification_question(decision)
+                questions.append(question)
+        
+        return questions
+```
+
+### Complete DataLad Integration Implementation
 
 **Development Data Management Implementation**:
 
