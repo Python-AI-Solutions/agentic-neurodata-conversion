@@ -12,24 +12,26 @@ The design follows modern Python project patterns with clear separation of conce
 
 ```
 agentic-neurodata-conversion/
-├── src/
+├── agentic_neurodata_conversion/    # Main package (no src/ directory)
 │   ├── core/                        # Core business logic
 │   ├── agents/                      # Agent implementations
 │   ├── interfaces/                  # Data interfaces and protocols
 │   ├── utils/                       # Utility functions
 │   └── config/                      # Configuration management
 ├── tests/                           # Test suite
-├── docs/                            # Markdown Documentation
-├── documents/                       # Documents relevant to the project
+├── docs/                            # Documentation
+├── documents/                       # Reference documents for development
 ├── scripts/                         # Development and deployment scripts
 ├── examples/                        # Usage examples
 ├── data/                            # Sample data and fixtures
+├── .env.dev.template                # Development environment template
+├── .env.production.template         # Production environment template
 └── deployment/                      # Containerization and deployment
 ```
 
 ### Package Structure
 
-The main package `src/` follows a layered architecture:
+The main package `agentic_neurodata_conversion/` follows a layered architecture:
 
 1. **Core Layer**: Contains fundamental business logic and domain models
 2. **Agent Layer**: Implements LLM-powered agents for different tasks
@@ -497,6 +499,220 @@ class ConfigurationError(AgenticConverterError):
     pass
 ```
 
+## Configuration Management
+
+**Pydantic-Settings Based Configuration**: All configuration uses pydantic-settings with `.env` files for environment-specific overrides, following the pattern established in the config-example.
+
+### Configuration Architecture
+
+```python
+# agentic_neurodata_conversion/config.py
+from pydantic import BaseModel, Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Optional, Dict, Any, List
+from pathlib import Path
+
+class ConversationAgentConfig(BaseModel):
+    """Configuration for conversation agent"""
+    llm_provider: str = "openrouter"
+    model: str = "anthropic/claude-3.5-sonnet"
+    temperature: float = 0.2
+    timeout: int = 30
+    max_retries: int = 3
+
+class ConversionAgentConfig(BaseModel):
+    """Configuration for conversion agent"""
+    llm_provider: str = "openrouter"
+    model: str = "anthropic/claude-3.5-sonnet"
+    temperature: float = 0.1  # Lower temperature for code generation
+    timeout: int = 60
+    max_retries: int = 3
+
+class EvaluationAgentConfig(BaseModel):
+    """Configuration for evaluation agent"""
+    llm_provider: str = "ollama"  # Can use local model for evaluation
+    model: str = "llama3.2:3b"
+    temperature: float = 0.0
+    timeout: int = 30
+
+class DataladConfig(BaseModel):
+    """DataLad configuration"""
+    auto_create_repos: bool = True
+    default_remote: str = "gin"
+    cache_dir: str = ".datalad_cache"
+    
+    @field_validator("cache_dir")
+    @classmethod
+    def validate_cache_dir(cls, v: str) -> str:
+        """Ensure cache directory is valid"""
+        path = Path(v)
+        if path.is_absolute():
+            raise ValueError("Cache directory should be relative to project root")
+        return v
+
+class LoggingConfig(BaseModel):
+    """Logging configuration"""
+    level: str = "INFO"
+    format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    file_path: Optional[str] = None
+    max_file_size: str = "10MB"
+    backup_count: int = 5
+
+class Settings(BaseSettings):
+    """Main settings container with nested configuration"""
+    model_config = SettingsConfigDict(
+        env_nested_delimiter="__",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
+    
+    # Core settings
+    debug: bool = False
+    environment: str = "development"
+    
+    # Logging
+    logging: LoggingConfig = LoggingConfig()
+    
+    # Agent configurations (agent-specific LLM settings)
+    conversation_agent: ConversationAgentConfig = ConversationAgentConfig()
+    conversion_agent: ConversionAgentConfig = ConversionAgentConfig()
+    evaluation_agent: EvaluationAgentConfig = EvaluationAgentConfig()
+    
+    # DataLad configuration (required for all conversions)
+    datalad: DataladConfig = DataladConfig()
+    
+    # LLM Provider settings
+    openrouter_api_key: Optional[str] = Field(None, description="Required when using OpenRouter")
+    ollama_endpoint: str = "http://localhost:11434"
+    
+    # MCP Server settings
+    mcp_server_host: str = "127.0.0.1"
+    mcp_server_port: int = 8000
+    
+    @field_validator("openrouter_api_key")
+    @classmethod
+    def validate_openrouter_key(cls, v: Optional[str], info) -> Optional[str]:
+        """Validate OpenRouter API key when required"""
+        # Check if any agent is configured to use OpenRouter
+        if hasattr(info.data, 'conversation_agent') and info.data.get('conversation_agent', {}).get('llm_provider') == 'openrouter':
+            if not v:
+                raise ValueError("OpenRouter API key required when using OpenRouter provider")
+        return v
+
+# Global settings instance
+settings = Settings()
+```
+
+### Environment Configuration Templates
+
+**.env.dev.template**:
+```bash
+# Development Configuration
+DEBUG=true
+ENVIRONMENT=development
+
+# Logging
+LOGGING__LEVEL=DEBUG
+LOGGING__FILE_PATH=logs/development.log
+
+# Conversation Agent (using local model for development)
+CONVERSATION_AGENT__LLM_PROVIDER=ollama
+CONVERSATION_AGENT__MODEL=llama3.2:3b
+CONVERSATION_AGENT__TEMPERATURE=0.2
+
+# Conversion Agent (using cloud model for better code generation)
+CONVERSION_AGENT__LLM_PROVIDER=openrouter
+CONVERSION_AGENT__MODEL=anthropic/claude-3.5-sonnet
+CONVERSION_AGENT__TEMPERATURE=0.1
+
+# Evaluation Agent (local model is sufficient)
+EVALUATION_AGENT__LLM_PROVIDER=ollama
+EVALUATION_AGENT__MODEL=llama3.2:3b
+
+# LLM Provider Settings
+OPENROUTER_API_KEY=your_key_here
+OLLAMA_ENDPOINT=http://localhost:11434
+
+# DataLad Settings (required)
+DATALAD__AUTO_CREATE_REPOS=true
+DATALAD__CACHE_DIR=.datalad_cache
+DATALAD__DEFAULT_REMOTE=gin
+
+# MCP Server
+MCP_SERVER_HOST=127.0.0.1
+MCP_SERVER_PORT=8000
+```
+
+**.env.production.template**:
+```bash
+# Production Configuration
+DEBUG=false
+ENVIRONMENT=production
+
+# Logging
+LOGGING__LEVEL=INFO
+LOGGING__FILE_PATH=logs/production.log
+LOGGING__MAX_FILE_SIZE=50MB
+LOGGING__BACKUP_COUNT=10
+
+# All agents use cloud models in production
+CONVERSATION_AGENT__LLM_PROVIDER=openrouter
+CONVERSATION_AGENT__MODEL=anthropic/claude-3.5-sonnet
+
+CONVERSION_AGENT__LLM_PROVIDER=openrouter
+CONVERSION_AGENT__MODEL=anthropic/claude-3.5-sonnet
+
+EVALUATION_AGENT__LLM_PROVIDER=openrouter
+EVALUATION_AGENT__MODEL=anthropic/claude-3.5-haiku  # Cheaper model for evaluation
+
+# Required in production
+OPENROUTER_API_KEY=  # Must be set - will raise error if missing
+
+# DataLad Settings (required)
+DATALAD__AUTO_CREATE_REPOS=true
+DATALAD__DEFAULT_REMOTE=gin
+DATALAD__CACHE_DIR=/var/cache/datalad
+
+# MCP Server
+MCP_SERVER_HOST=0.0.0.0
+MCP_SERVER_PORT=8000
+```
+
+### Configuration Loading
+
+```python
+# agentic_neurodata_conversion/config/__init__.py
+from .config import settings, Settings
+from .find_env_file import find_envfile
+
+__all__ = ["settings", "Settings", "find_envfile"]
+```
+
+```python
+# agentic_neurodata_conversion/config/find_env_file.py
+import logging
+from pathlib import Path
+import dotenv
+
+logger = logging.getLogger(__name__)
+
+def find_envfile():
+    """Find .env file following the config-example pattern"""
+    env_file = dotenv.find_dotenv()
+    if not env_file:
+        # Look for template files
+        project_root = Path(__file__).resolve().parent.parent.parent
+        dev_template = project_root / '.env.dev.template'
+        if dev_template.exists():
+            logger.warning(f"No .env found, copy {dev_template} to .env to get started")
+        raise ValueError("Failed to find .env file")
+
+    env_file = Path(env_file).resolve()
+    logger.info(f"Loading environment variables from {env_file}")
+    return env_file
+```
+
 ### Error Handling Strategy
 
 1. **Graceful Degradation**: System continues operation when non-critical components fail
@@ -544,23 +760,116 @@ tests/
 
 ### Testing Approaches
 
-#### 1. Unit Testing
-- **Coverage Target**: 90%+ line coverage
-- **Mocking Strategy**: Mock external dependencies (LLMs, file systems, networks)
-- **Property-Based Testing**: Use Hypothesis for testing data conversion properties
-- **Parameterized Tests**: Test multiple data formats and edge cases
+#### Resource-Based Test Clusters (using pytest marks)
 
-#### 2. Integration Testing
-- **Workflow Testing**: Test complete conversion workflows
-- **Agent Interaction Testing**: Test agent communication and coordination
-- **External System Testing**: Test integrations with DataLad, MCP, etc.
-- **Performance Testing**: Measure conversion times and resource usage
+**Priority Order** (from lowest to highest cost):
 
-#### 3. Evaluation Testing
-- **Conversion Quality**: Compare outputs against known good conversions
-- **Agent Accuracy**: Measure LLM agent performance on standardized tasks
-- **Regression Testing**: Ensure changes don't break existing functionality
-- **Benchmark Testing**: Track performance metrics over time
+1. **Direct Functionality Tests** (`@pytest.mark.unit`)
+   - No external dependencies
+   - Pure function testing
+   - Data model validation
+   - Configuration loading
+
+2. **Mocked LLM Tests** (`@pytest.mark.mock_llm`)
+   - Mock LLM responses for deterministic testing
+   - Agent workflow testing with predictable outputs
+   - Low maintenance burden
+   - Based on existing `testing_pipeline_pytest.py` pattern
+
+3. **Small Local Model Tests** (`@pytest.mark.small_model`)
+   - 1-3B parameter models (e.g., llama3.2:3b)
+   - Basic agent functionality validation
+   - Requires local Ollama installation
+
+4. **Large Local Model Tests** (`@pytest.mark.large_model_minimal`)
+   - 7B parameter models with minimal context
+   - More complex reasoning tests
+   - Requires significant RAM
+
+5. **Large Local Model Extended Tests** (`@pytest.mark.large_model_extended`)
+   - 7B parameter models with full context
+   - End-to-end workflow testing
+   - Requires high RAM availability
+
+6. **Cheap API Tests** (`@pytest.mark.cheap_api`)
+   - Inexpensive cloud models
+   - Integration testing with real APIs
+   - Rate-limited execution
+
+7. **Frontier API Tests** (`@pytest.mark.frontier_api`)
+   - Latest/most expensive models
+   - Final validation and benchmarking
+   - Minimal usage, high confidence tests
+
+#### Integration with Existing Test Infrastructure
+
+Building on the existing `testing_pipeline_pytest.py`:
+
+```python
+# tests/conftest.py
+import pytest
+from pathlib import Path
+import tempfile
+import datalad.api as dl
+from agentic_neurodata_conversion.config import settings
+
+@pytest.fixture
+def temp_datalad_repo():
+    """Create temporary DataLad repository for testing"""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        repo_path = Path(temp_dir) / "test_repo"
+        dl.create(path=str(repo_path), description="Test repository")
+        yield repo_path
+        # Cleanup handled by tempfile
+
+@pytest.fixture
+def mock_llm_responses():
+    """Provide mock LLM responses for testing"""
+    return {
+        "analyze_dataset": {"status": "success", "result": {"metadata": "test"}},
+        "generate_script": {"status": "success", "script": "# test script"},
+        "evaluate_nwb": {"status": "success", "validation": {"passed": True}}
+    }
+
+# Pytest marks for resource-based testing
+pytest.mark.unit = pytest.mark.unit
+pytest.mark.mock_llm = pytest.mark.mock_llm
+pytest.mark.small_model = pytest.mark.small_model
+pytest.mark.large_model_minimal = pytest.mark.large_model_minimal
+pytest.mark.large_model_extended = pytest.mark.large_model_extended
+pytest.mark.cheap_api = pytest.mark.cheap_api
+pytest.mark.frontier_api = pytest.mark.frontier_api
+```
+
+#### DataLad Testing Strategy
+
+Following DataLad project patterns for temporary repository testing:
+
+```python
+# tests/test_datalad_integration.py
+import pytest
+import tempfile
+from pathlib import Path
+import datalad.api as dl
+from agentic_neurodata_conversion.core.provenance import ConversionProvenanceManager
+
+@pytest.mark.unit
+def test_datalad_repo_creation():
+    """Test DataLad repository creation without external dependencies"""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        manager = ConversionProvenanceManager(Path(temp_dir))
+        repo_path = manager.create_conversion_repository(
+            Path("test_input"), "test_dataset"
+        )
+        assert repo_path.exists()
+        assert (repo_path / ".datalad").exists()
+
+@pytest.mark.mock_llm
+def test_conversion_with_mocked_agents(temp_datalad_repo, mock_llm_responses):
+    """Test full conversion workflow with mocked LLM responses"""
+    # Test implementation using existing testing_pipeline_pytest.py pattern
+    pass
+```
 
 ### Test Data Management
 
@@ -944,3 +1253,66 @@ services:
       retries: 3
       start_period: 40s
 ```
+
+## Design Decisions and Migration Strategy
+
+### 1. Interface Strategy
+- **Current Interfaces**: Maintain existing script interfaces during refactoring
+- **MCP Integration**: Each agent requires MCP interface for AI tool integration
+- **Chat Interface**: Conversation agent provides user-facing chat interface
+- **Pipeline Scripts**: Maintain current pipeline scripts (including final_script.py) as part of iterative agentic system
+
+### 2. Package Structure Migration
+- **Target**: `agentic_neurodata_conversion/` package structure (no src/ directory)
+- **Migration**: Complete refactoring with no backward compatibility considerations
+- **Approach**: All-at-once migration, reusing current working implementation
+- **Imports**: Follow standard Python package best practices, avoid circular imports
+
+### 3. Configuration Management
+- **Implementation**: Pydantic-settings with nested configuration classes
+- **Environment Files**: `.env.dev.template` and `.env.production.template` for easy setup
+- **Agent-Specific Config**: Each agent has its own configuration section
+- **Validation**: Required settings raise errors when missing, sensible defaults for optional settings
+
+### 4. DataLad Integration Scope
+- **Development**: Required for project development and testing
+- **Conversion Output**: Required - every conversion starts by creating DataLad repository
+- **DANDI Integration**: Essential for eventual upload to DANDI (DataLad-backed data store)
+- **Status**: Hard requirement, not optional
+
+### 5. LLM Provider Flexibility
+- **Agent-Specific Configuration**: Each agent configured independently via pydantic-settings
+- **Registration Pattern**: Each agent registers its own MCP tools
+- **Provider Interface**: Abstract interface with wrapping classes for provider-specific features
+- **Fallback Strategy**: Single implementation when abstraction breaks, prioritizing working system
+
+### 6. Testing Strategy
+- **Existing Integration**: Build on current `testing_pipeline_pytest.py` infrastructure
+- **Resource-Based Clusters**: Pytest marks for different resource availability levels
+- **DataLad Testing**: Temporary repositories using DataLad project patterns
+- **Priority Order**: Unit → Mock → Small Models → Large Models → APIs (cheap to expensive)
+
+### 7. Migration Approach
+- **No Backward Compatibility**: Complete refactoring prioritizing future maintainability
+- **Reuse Working Code**: Leverage current implementation as it represents complete working system
+- **Modular Design**: Restructure for testability and maintainability
+- **Standard Practices**: Follow Python packaging best practices
+
+### 8. Interface Coexistence and Entry Points
+- **Preserve Current Interfaces**: Maintain existing script entry points during refactoring
+- **Script Renaming**: Rename scripts for clarity (e.g., `final_script.py` → `pipeline_runner.py`)
+- **Shared Functionality**: All interfaces import from common package modules
+- **DataLad Repository Creation**: Idempotent function callable from any interface
+- **MCP Tool Registration**: Each agent registers its own tools independently
+
+### 9. Documentation and Reference Materials
+- **Documents Directory**: Contains reference documents for development (may not be included in final package)
+- **Architecture Documents**: Moved from `various-documents/` to `documents/architecture-documents/`
+- **Development Reference**: Documents serve as reference during refactoring but are not part of the runtime package
+
+### 10. Error Handling Standardization
+- **Unified Hierarchy**: Implement the proposed error hierarchy across all modules
+- **Current Logic Integration**: Incorporate existing error handling patterns where appropriate
+- **Consistent Patterns**: Standardize error handling, logging, and recovery mechanisms
+
+This design provides a clear foundation for refactoring the existing working prototype into a maintainable, modular package while preserving all current functionality and enabling future development.
