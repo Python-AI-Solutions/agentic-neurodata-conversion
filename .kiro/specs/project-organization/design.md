@@ -12,7 +12,7 @@ The design follows modern Python project patterns with clear separation of conce
 
 ```
 agentic-neurodata-conversion/
-├── agentic_neurodata_conversion/    # Main package (no src/ directory)
+├── agentic_neurodata_conversion/    # Main package 
 │   ├── core/                        # Core business logic
 │   ├── agents/                      # Agent implementations
 │   ├── interfaces/                  # Data interfaces and protocols
@@ -51,7 +51,7 @@ The main package `agentic_neurodata_conversion/` follows a layered architecture:
 
 ### Core Components (Based on Existing Implementation)
 
-#### 1. Core Processing (`src/core/`)
+#### 1. Core Processing (`agentic_neurodata_conversion/core/`)
 
 **Purpose**: Central orchestration of data conversion workflows
 
@@ -77,7 +77,7 @@ class FormatDetector:  # Already implemented
     def detect_formats(self, root: Path) -> List[Dict[str, Any]]
 ```
 
-#### 2. Agent Framework (`src/agents/`)
+#### 2. Agent Framework (`agentic_neurodata_conversion/agents/`)
 
 **Purpose**: LLM-powered agents for different aspects of conversion
 
@@ -102,7 +102,7 @@ class MetadataQuestioner:  # Already implemented
     def generate_dynamic_question(self, field: str, constraints: Dict, inferred: Any = None) -> str
 ```
 
-#### 3. Integration Interfaces (`src/interfaces/`)
+#### 3. Integration Interfaces (`agentic_neurodata_conversion/interfaces/`)
 
 **Purpose**: External system integrations and protocols
 
@@ -354,7 +354,6 @@ class ConversionProvenanceManager:
 
 #### DataLad Best Practices for Development
 
-**Installation and Setup**:
 ```python
 # Always use Python API, never CLI
 import datalad.api as dl
@@ -777,7 +776,7 @@ tests/
    - Based on existing `testing_pipeline_pytest.py` pattern
 
 3. **Small Local Model Tests** (`@pytest.mark.small_model`)
-   - 1-3B parameter models (e.g., llama3.2:3b)
+   - <3B parameter models (e.g., Ministral 3B, llama3.2:3b, OLMo-2-1B, Gemma 270M)
    - Basic agent functionality validation
    - Requires local Ollama installation
 
@@ -787,17 +786,17 @@ tests/
    - Requires significant RAM
 
 5. **Large Local Model Extended Tests** (`@pytest.mark.large_model_extended`)
-   - 7B parameter models with full context
+   - ~7B parameter models with full context (e.g. gpt-oss-20B , NVIDIA Nemotron Nano 9B V2, Mistral 7B, Gemma 7B)
    - End-to-end workflow testing
    - Requires high RAM availability
 
 6. **Cheap API Tests** (`@pytest.mark.cheap_api`)
-   - Inexpensive cloud models
+   - Inexpensive cloud models (gpt-oss-120B (high), GPT-5 mini (medium), Grok 3 mini Reasoning (high), Gemini 2.5 Flash )
    - Integration testing with real APIs
    - Rate-limited execution
 
 7. **Frontier API Tests** (`@pytest.mark.frontier_api`)
-   - Latest/most expensive models
+   - Latest/most expensive models (Claude 4.1 Opus, Claude 4 Sonnet, GPT-5 (high), Gemini 2.5 Pro)
    - Final validation and benchmarking
    - Minimal usage, high confidence tests
 
@@ -1163,7 +1162,7 @@ COPY pyproject.toml pixi.toml ./
 RUN pip install pixi && pixi install --frozen
 
 # Copy application code
-COPY src/ src/
+COPY agentic_neurodata_conversion/ agentic_neurodata_conversion/
 COPY scripts/ scripts/
 
 # Set up entrypoint
@@ -1263,7 +1262,7 @@ services:
 - **Pipeline Scripts**: Maintain current pipeline scripts (including final_script.py) as part of iterative agentic system
 
 ### 2. Package Structure Migration
-- **Target**: `agentic_neurodata_conversion/` package structure (no src/ directory)
+- **Target**: `agentic_neurodata_conversion/` package structure 
 - **Migration**: Complete refactoring with no backward compatibility considerations
 - **Approach**: All-at-once migration, reusing current working implementation
 - **Imports**: Follow standard Python package best practices, avoid circular imports
