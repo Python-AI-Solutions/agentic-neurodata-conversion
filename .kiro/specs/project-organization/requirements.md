@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This project is a multi-agent AI pipeline for converting heterogeneous neuroscience data into the Neurodata Without Borders (NWB) format. The system integrates specialized agents (Conversation, Conversion, Evaluation, and TUIE), leveraging NeuroConv, Knowledge Graphs, LinkML schemas, and LLM-powered decision making to automate complex data standardization while maintaining transparency and human oversight. The codebase has grown organically with significant functionality already developed, but now requires proper project organization, development patterns, testing infrastructure, documentation, and collaborative workflows to support the sophisticated multi-agent architecture and team collaboration.
+This project is a multi-agent AI pipeline for converting heterogeneous neuroscience data into the Neurodata Without Borders (NWB) format. The system integrates specialized agents (Conversation, Conversion, Evaluation, and TUIE), leveraging NeuroConv, Knowledge Graphs, LinkML schemas, and LLM-powered decision making to automate complex data standardization while maintaining transparency and human oversight. The current implementation in python modules has grown organically with significant functionality already developed, but now requires proper project organization, development patterns, testing infrastructure, documentation, and collaborative workflows to support the sophisticated multi-agent architecture and team collaboration.
 
 ## Requirements
 
@@ -110,7 +110,7 @@ This project is a multi-agent AI pipeline for converting heterogeneous neuroscie
 
 ### Requirement 10
 
-**User Story:** As a researcher, I want a conversion agent that can automatically generate and execute NeuroConv scripts, so that my data is converted to NWB format without requiring deep technical knowledge.
+**User Story:** As a researcher, I want a conversion agent that can automatically generate and execute NeuroConv scripts, so that my data is converted to NWB format with minimal input from me where I help to resolve ambiguities and provide any missing metadata.
 
 #### Acceptance Criteria
 
@@ -122,26 +122,26 @@ This project is a multi-agent AI pipeline for converting heterogeneous neuroscie
 
 ### Requirement 11
 
-**User Story:** As a data quality manager, I want an evaluation agent that validates NWB outputs against standards and best practices, so that converted files meet community requirements before archival or sharing.
+**User Story:** As a data quality manager, I want an evaluation agent that validates NWB outputs against standards and best practices, so that converted files meet community requirements before archival or sharing and maximise the value of the data shared given an arbitrary input dataset.
 
 #### Acceptance Criteria
 
 1. WHEN an NWB file is generated THEN the evaluation agent SHALL run NWB Inspector validation to check schema compliance and best practices
 2. WHEN validation issues are found THEN the evaluation agent SHALL categorize errors by severity and provide specific remediation guidance
 3. WHEN generating quality reports THEN the evaluation agent SHALL create comprehensive assessments including metadata completeness, data integrity, and structural compliance
-4. WHEN validation passes THEN the evaluation agent SHALL generate knowledge graph representations in multiple formats (TTL, JSON-LD, N-Triples)
+4. WHEN validation passes THEN the evaluation agent SHALL generate knowledge graph representations in the most useful format (TTL, JSON-LD, N-Triples)
 5. WHEN creating outputs THEN the evaluation agent SHALL produce human-readable context summaries and interactive visualizations
 
 ### Requirement 12
 
-**User Story:** As a system administrator, I want a Tool Use Instance Evaluator (TUIE) that monitors agent performance and tool usage, so that the pipeline operates efficiently and makes appropriate decisions.
+**User Story:** As a system integrator, I want MCP (Model Context Protocol) server capabilities, so that the conversion pipeline can be accessed programmatically by external tools and workflows.
 
 #### Acceptance Criteria
 
-1. WHEN agents invoke tools THEN TUIE SHALL monitor whether tool usage is appropriate and efficient for the given context
-2. WHEN evaluating tool calls THEN TUIE SHALL verify that NeuroConv is invoked with correct parameters and optimal configurations
-3. WHEN assessing pipeline performance THEN TUIE SHALL flag inefficiencies, missed opportunities, or suboptimal tool usage patterns
-4. WHEN generating meta-evaluations THEN TUIE SHALL provide recommendations for improving agent decision-making and workflow optimization
+1. WHEN external systems connect THEN the MCP server SHALL expose conversion tools through standardized FastAPI endpoints
+2. WHEN processing requests THEN the MCP server SHALL handle dataset analysis, conversion script generation, and NWB evaluation as discrete services
+3. WHEN managing state THEN the MCP server SHALL coordinate multi-step workflows and maintain conversion context across agent interactions
+4. WHEN providing responses THEN the MCP server SHALL return structured results with complete metadata and error handling
 
 ### Requirement 13
 
@@ -188,13 +188,3 @@ This project is a multi-agent AI pipeline for converting heterogeneous neuroscie
 3. WHEN human feedback is provided THEN the system SHALL incorporate corrections and learn from expert input for future improvements
 4. WHEN finalizing conversions THEN the system SHALL require explicit approval for any AI-generated content affecting data interpretation
 
-### Requirement 17
-
-**User Story:** As a system integrator, I want MCP (Model Context Protocol) server capabilities, so that the conversion pipeline can be accessed programmatically by external tools and workflows.
-
-#### Acceptance Criteria
-
-1. WHEN external systems connect THEN the MCP server SHALL expose conversion tools through standardized FastAPI endpoints
-2. WHEN processing requests THEN the MCP server SHALL handle dataset analysis, conversion script generation, and NWB evaluation as discrete services
-3. WHEN managing state THEN the MCP server SHALL coordinate multi-step workflows and maintain conversion context across agent interactions
-4. WHEN providing responses THEN the MCP server SHALL return structured results with complete metadata and error handling
