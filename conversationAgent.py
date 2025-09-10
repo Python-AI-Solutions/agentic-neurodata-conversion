@@ -9,6 +9,7 @@ try:
 except Exception:
     OpenAI = None
 
+# Required and recommended fields
 NWB_REQUIRED_FIELDS = {
     "nwbfile": ["session_description", "identifier", "session_start_time"],
     "subject": ["species"],
@@ -18,6 +19,29 @@ NWB_REQUIRED_FIELDS = {
 NWB_RECOMMENDED_FIELDS = {
     "subject": ["age", "sex", "description", "weight"],
     "general": ["device", "notes"],
+}
+
+# Field weights for conversational threshold
+FIELD_WEIGHTS = {
+    "nwbfile": {
+        "session_description": 3,
+        "identifier": 3,
+        "session_start_time": 3,
+    },
+    "subject": {
+        "species": 3,
+        "age": 2,
+        "sex": 2,
+        "description": 1,
+        "weight": 1,
+    },
+    "general": {
+        "lab": 2,
+        "institution": 2,
+        "experimenter": 2,
+        "device": 1,
+        "notes": 1,
+    },
 }
 
 PROVENANCE_USER = "user"
@@ -91,7 +115,15 @@ def _call_llm_map_and_infer(hints: Dict[str, Any], model: Optional[str] = None) 
         }
 
 
-def analyze_dataset(dataset_dir: str, out_report_json: Optional[str] = None) -> Dict[str, Any]:
+def _calculate_missing_score(missing: Dict[str, list]) -> int:
+    score = 0
+    for section, fields in missing.items():
+        for field in fields:
+            score += FIELD_WEIGHTS.get(section, {}).get(field, 1)  # default weight=1
+    return score
+
+
+def analyze_dataset(dataset_dir: str, out_report_json: Optional[str] = None, threshold: int = 3) -> Dict[str, Any]:
     if not os.path.isdir(dataset_dir):
         raise FileNotFoundError(f"Dataset folder not found: {dataset_dir}")
     sidecar = _load_sidecar_metadata(dataset_dir)
@@ -110,6 +142,14 @@ def analyze_dataset(dataset_dir: str, out_report_json: Optional[str] = None) -> 
     else:
         missing["nwbfile"].append("session_description")
 
+    if "session_start_time" in sidecar:
+        present["nwbfile"]["session_start_time"] = {
+            "value": sidecar["session_start_time"],
+            "source": PROVENANCE_SOURCE,
+        }
+    else:
+        missing["nwbfile"].append("session_start_time")
+
     if "subject" not in sidecar or "species" not in sidecar.get("subject", {}):
         missing["subject"].append("species")
 
@@ -118,9 +158,17 @@ def analyze_dataset(dataset_dir: str, out_report_json: Optional[str] = None) -> 
     suggested = llm_out.get("suggested", {})
     questions = llm_out.get("questions", [])
 
+    # -----------------------------
+    # Apply weighted conversational threshold
+    # -----------------------------
+    missing_score = _calculate_missing_score(missing)
+    if missing_score < threshold:
+        questions = []
+
     analysis = {
         "present": present,
         "missing": missing,
+        "missing_score": missing_score,
         "questions": questions,
         "normalized_metadata": normalized,
         "suggested_metadata": suggested,
@@ -138,6 +186,7 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("dataset_dir")
     p.add_argument("--out", default="metadata_analysis.json")
+    p.add_argument("--threshold", type=int, default=3, help="Conversational threshold based on weighted missing fields")
     args = p.parse_args()
-    result = analyze_dataset(args.dataset_dir, out_report_json=args.out)
+    result = analyze_dataset(args.dataset_dir, out_report_json=args.out, threshold=args.threshold)
     print(json.dumps(result, indent=2))
