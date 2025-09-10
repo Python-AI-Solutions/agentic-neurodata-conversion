@@ -306,6 +306,54 @@ class TestExceptionHierarchy:
         assert "message" in error_dict
 
 
+class TestLoggingSettingsIntegration:
+    """Test integration between logging and settings system."""
+    
+    @pytest.mark.unit
+    def test_setup_logging_from_settings(self):
+        """Test logging setup from settings configuration."""
+        from agentic_neurodata_conversion.core.config import Settings
+        from agentic_neurodata_conversion.core.logging import setup_logging_from_settings
+        
+        # Create test settings
+        test_settings = Settings(
+            environment="development",
+            debug=True,
+            verbose=True
+        )
+        test_settings.mcp_server.log_level = "DEBUG"
+        
+        # Should set up logging without errors
+        setup_logging_from_settings(test_settings)
+        
+        # Verify logger configuration
+        logger = get_logger("test_settings_integration")
+        assert logger.level <= logging.DEBUG  # Should be at DEBUG level or lower
+    
+    @pytest.mark.unit
+    def test_production_logging_setup(self):
+        """Test production logging configuration."""
+        from agentic_neurodata_conversion.core.config import Settings, SecurityConfig
+        from agentic_neurodata_conversion.core.logging import setup_logging_from_settings
+        
+        # Create production settings with required secret key
+        security_config = SecurityConfig(secret_key="test_secret_key_for_production")
+        prod_settings = Settings(
+            environment="production",
+            debug=False,
+            verbose=False,
+            security=security_config
+        )
+        prod_settings.mcp_server.log_level = "INFO"
+        
+        # Should set up production logging
+        setup_logging_from_settings(prod_settings)
+        
+        # Verify configuration
+        logger = get_logger("test_production")
+        assert logger.level <= logging.INFO
+
+
 class TestLoggingExceptionIntegration:
     """Test integration between logging and exception handling."""
     
@@ -409,7 +457,10 @@ class TestErrorHandlingPatterns:
                 return unreliable_operation()
             except AgentError as e:
                 logger = get_logger("fallback")
-                logger.warning("Primary operation failed, using fallback", extra=e.to_dict())
+                error_dict = e.to_dict()
+                # Rename 'message' to avoid conflict with logging system
+                error_dict['error_message'] = error_dict.pop('message', None)
+                logger.warning("Primary operation failed, using fallback", extra=error_dict)
                 return "fallback_result"
         
         result = operation_with_fallback()

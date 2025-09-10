@@ -293,8 +293,8 @@ def log_function_call(logger: Optional[logging.Logger] = None):
                 f"Calling {func.__name__}",
                 extra={
                     'function': func.__name__,
-                    'args': str(args) if args else None,
-                    'kwargs': kwargs if kwargs else None
+                    'function_args': str(args) if args else None,
+                    'function_kwargs': kwargs if kwargs else None
                 }
             )
             
@@ -376,6 +376,56 @@ def setup_testing_logging() -> None:
     setup_logging(config)
 
 
+def setup_logging_from_settings(settings_instance=None) -> None:
+    """Set up logging based on application settings.
+    
+    Args:
+        settings_instance: Settings instance to use. If None, imports and uses global settings.
+    """
+    if settings_instance is None:
+        from .config import settings
+        settings_instance = settings
+    
+    log_config = settings_instance.get_log_config()
+    
+    # Determine log file path based on environment
+    log_file = None
+    if settings_instance.environment == "production":
+        log_file = "logs/agentic_converter.log"
+    elif settings_instance.environment == "staging":
+        log_file = "logs/agentic_converter_staging.log"
+    # Development and testing don't use log files by default
+    
+    # Create logging configuration
+    config = LoggingConfig(
+        level=log_config["level"],
+        format_type="structured" if log_config["format"] == "json" else "development",
+        log_file=log_file,
+        enable_console=True,
+        logger_levels={
+            "agentic_neurodata_conversion": log_config["level"],
+            "uvicorn": "INFO" if settings_instance.debug else "WARNING",
+            "fastapi": "INFO" if settings_instance.debug else "WARNING",
+            "sqlalchemy": "INFO" if settings_instance.database.echo else "WARNING"
+        }
+    )
+    
+    setup_logging(config)
+    
+    # Log the configuration setup
+    logger = get_logger(__name__)
+    logger.info(
+        "Logging configured",
+        extra={
+            "environment": settings_instance.environment,
+            "log_level": log_config["level"],
+            "format_type": log_config["format"],
+            "debug_mode": settings_instance.debug,
+            "verbose_mode": settings_instance.verbose
+        }
+    )
+
+
 # Export main functions
 __all__ = [
     'LoggingConfig',
@@ -386,6 +436,7 @@ __all__ = [
     'setup_development_logging',
     'setup_production_logging', 
     'setup_testing_logging',
+    'setup_logging_from_settings',
     'StructuredFormatter',
     'DevelopmentFormatter'
 ]
