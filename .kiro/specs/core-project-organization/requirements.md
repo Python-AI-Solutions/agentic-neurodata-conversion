@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This spec establishes the foundational project structure, packaging, development tooling, and collaborative workflows for the agentic neurodata conversion project. It provides the base infrastructure that other specialized specs build upon, including the MCP server architecture, agent implementations, validation systems, knowledge graphs, evaluation frameworks, data management, and testing infrastructure. The core organization supports a system built around a central MCP (Model Context Protocol) server that orchestrates multi-agent workflows for converting neuroscience data to NWB format. The MCP server exposes tools such as analyze_data, convert_to_nwb, and handoff, which delegate tasks to internal agent
+This spec establishes the foundational project structure, packaging, development tooling, and collaborative workflows for the agentic neurodata conversion project. It provides the base infrastructure that other specialized specs build upon, including the MCP server architecture, agent implementations, validation systems, knowledge graphs, evaluation frameworks, data management, and testing infrastructure. The core organization supports a system built around a central MCP (Model Context Protocol) server that orchestrates multi-agent workflows for converting neuroscience data to NWB format. The MCP server exposes dataset analysis capabilities, conversion orchestration tools, and workflow handoff mechanisms, which delegate tasks to internal agent modules.
 
 ## Requirements
 
@@ -13,7 +13,7 @@ This spec establishes the foundational project structure, packaging, development
 #### Acceptance Criteria
 
 1. WHEN examining the project structure THEN the system SHALL organize code into logical modules (etl for data creation and a package with dependencies managed in pyproject.toml using pixi containing core, agents, interfaces, utils etc.)
-2. WHEN looking for functionality THEN the system SHALL provide clear separation between MCP server (primary orchestration exposing tools like analyze_data, convert_to_nwb, and handoff), internal agent modules (conversation agent, conversion agent), client interface implementations, and external client libraries
+2. WHEN looking for functionality THEN the system SHALL provide clear separation between MCP server (primary orchestration exposing dataset analysis, conversion orchestration, and workflow handoff capabilities), internal agent modules (conversation and conversion agents), client interface implementations, and external client libraries
 3. WHEN adding new features THEN the system SHALL have designated directories for MCP tools, agent modules, and third-party client integrations
 4. WHEN working with configuration THEN the system SHALL use pydantic-settings based configuration with nested classes and environment variable support
 
@@ -25,7 +25,7 @@ This spec establishes the foundational project structure, packaging, development
 
 1. WHEN writing new code THEN the system SHALL enforce consistent coding standards through automated tools (ruff SHALL be used)
 2. WHEN committing changes THEN the system SHALL validate code quality through pre-commit hooks
-3. WHEN developing features THEN the system SHALL follow established patterns for MCP tool implementation (using @mcp.tool decorators with structured JSON in/out), agent interfaces, and error handling
+3. WHEN developing features THEN the system SHALL follow established patterns for MCP tool implementation (using decorator-based registration with structured JSON interfaces), agent interfaces, and error handling
 4. WHEN creating new modules THEN the system SHALL provide templates for MCP tools, agents, and client libraries
 
 ### Requirement 3
@@ -34,9 +34,9 @@ This spec establishes the foundational project structure, packaging, development
 
 #### Acceptance Criteria
 
-1. WHEN developing MCP tools THEN the system SHALL provide decorator-based tool registration (@mcp.tool, as in the current server implementation using fastmcp) and testing utilities for MCP server development
+1. WHEN developing MCP tools THEN the system SHALL provide decorator-based tool registration with standardized patterns and testing utilities for MCP server development
 2. WHEN managing dependencies THEN the system SHALL use modern package management with pixi with clear dependency specifications
-3. WHEN debugging THEN the system SHALL provide comprehensive logging for MCP server operations, tool executions, and agent interactions, including end-to-end handoff flows (dataset analyzed → normalized metadata → conversion executed).
+3. WHEN debugging THEN the system SHALL provide comprehensive logging for MCP server operations, tool executions, and agent interactions, including end-to-end pipeline flows from dataset analysis through metadata normalization to conversion execution.
 4. WHEN deploying THEN the system SHALL include containerization for the MCP server with configurable host/port settings via environment variables
 
 ### Requirement 4
