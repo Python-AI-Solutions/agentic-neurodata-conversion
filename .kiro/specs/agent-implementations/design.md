@@ -2,7 +2,7 @@
 
 ## Overview
 
-This design document outlines the specialized agents that are orchestrated by the MCP server to perform specific aspects of neuroscience data conversion. The agents are designed as internal components of the MCP server, each with distinct responsibilities: conversation agents analyze datasets and extract metadata, conversion agents generate and execute NeuroConv scripts, evaluation agents coordinate validation processes, and metadata questioners handle dynamic user interaction.
+This design document outlines the specialized agent modules that are orchestrated by the MCP server to perform specific aspects of neuroscience data conversion. The agents are designed as internal components of the MCP server, each with distinct responsibilities: conversation agents provide dataset analysis capabilities, conversion agents handle conversion orchestration, evaluation agents coordinate validation processes, and metadata questioners manage workflow handoff mechanisms through dynamic user interaction.
 
 ## Architecture
 

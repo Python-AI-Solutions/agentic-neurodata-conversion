@@ -224,7 +224,7 @@ class MCPClient:
         self.logger.info(f"Analyzing dataset: {dataset_dir}")
         self._report_progress("Analyzing dataset", 0.1)
         
-        result = await self.call_tool("analyze_dataset", {
+        result = await self.call_tool("dataset_analysis", {
             "dataset_dir": dataset_dir,
             "use_llm": use_llm
         })
@@ -254,7 +254,7 @@ class MCPClient:
         self.logger.info("Generating conversion script")
         self._report_progress("Generating conversion script", 0.4)
         
-        result = await self.call_tool("generate_conversion_script", {
+        result = await self.call_tool("conversion_orchestration", {
             "normalized_metadata": self.pipeline_state["normalized_metadata"],
             "files_map": files_map,
             "output_nwb_path": output_nwb_path
@@ -1181,8 +1181,8 @@ class TestMCPClient:
         # Mock all tool responses
         mock_responses = {
             "initialize_pipeline": {"status": "success", "config": {}},
-            "analyze_dataset": {"status": "success", "result": {"metadata": "test"}},
-            "generate_conversion_script": {"status": "success", "output_nwb_path": "/test/output.nwb"},
+            "dataset_analysis": {"status": "success", "result": {"metadata": "test"}},
+            "conversion_orchestration": {"status": "success", "output_nwb_path": "/test/output.nwb"},
             "evaluate_nwb_file": {"status": "success", "evaluation": "passed"},
             "generate_knowledge_graph": {"status": "success", "kg_data": "test"}
         }
@@ -1209,7 +1209,7 @@ class TestMCPClient:
         """Test pipeline failure and recovery."""
         # Mock analysis failure
         async def mock_call_tool(tool_name, payload=None):
-            if tool_name == "analyze_dataset":
+            if tool_name == "dataset_analysis":
                 return ConversionResult(
                     success=False,
                     status=PipelineStatus.ERROR,
@@ -1291,8 +1291,8 @@ class MockMCPServer:
     def __init__(self):
         self.tools = {
             "initialize_pipeline": self._mock_initialize,
-            "analyze_dataset": self._mock_analyze,
-            "generate_conversion_script": self._mock_convert,
+            "dataset_analysis": self._mock_analyze,
+            "conversion_orchestration": self._mock_convert,
             "evaluate_nwb_file": self._mock_evaluate,
             "generate_knowledge_graph": self._mock_kg
         }
