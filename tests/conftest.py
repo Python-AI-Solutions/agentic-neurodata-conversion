@@ -201,6 +201,13 @@ def mock_neuroconv_interface():
     return interface
 
 
+# Import dataset fixtures
+try:
+    from tests.datasets.fixtures import *
+    DATASET_FIXTURES_AVAILABLE = True
+except ImportError:
+    DATASET_FIXTURES_AVAILABLE = False
+
 # Test markers for conditional test execution
 def pytest_configure(config):
     """Configure pytest with custom markers."""
@@ -211,6 +218,14 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers",
         "requires_network: mark test as requiring network access"
+    )
+    config.addinivalue_line(
+        "markers",
+        "requires_datasets: mark test as requiring test datasets"
+    )
+    config.addinivalue_line(
+        "markers",
+        "requires_datalad: mark test as requiring DataLad"
     )
 
 

@@ -71,6 +71,7 @@ pre-commit = ">=3.0.0"
 ipython = ">=8.0.0"
 jupyter = ">=1.0.0"
 notebook = ">=7.0.0"
+datalad = ">=0.9.3,<2"
 
 # Documentation environment
 [feature.docs.dependencies]
