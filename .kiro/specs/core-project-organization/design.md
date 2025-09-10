@@ -2,14 +2,14 @@
 
 ## Overview
 
-This design document outlines the foundational project structure, packaging, development tooling, and collaborative workflows for the agentic neurodata conversion project. It establishes the base infrastructure that supports all other system components detailed in specialized specs. The system is built around a central MCP (Model Context Protocol) server that serves as the primary orchestration layer, with this core organization providing the foundation for MCP server architecture, agent implementations, validation systems, knowledge graphs, evaluation frameworks, data management, and testing infrastructure.
+This design document outlines the foundational project structure, packaging, development tooling, and collaborative workflows for the agentic neurodata conversion project. It establishes the base infrastructure that supports all other system components detailed in specialized specs. The system is built around a central MCP (Model Context Protocol) server that serves as the primary orchestration layer, exposing dataset analysis capabilities, conversion orchestration tools, and workflow handoff mechanisms, which delegate tasks to internal agent modules (conversation and conversion agents). This core organization provides the foundation for MCP server architecture, agent implementations, validation systems, knowledge graphs, evaluation frameworks, data management, and testing infrastructure.
 
 ## Coordination with Other Specs
 
 This core project organization provides the foundation for specialized components:
 
-- **MCP Server Architecture** (`mcp-server-architecture` spec): Implemented in `agentic_neurodata_conversion/mcp_server/`
-- **Agent Implementations** (`agent-implementations` spec): Implemented in `agentic_neurodata_conversion/agents/`
+- **MCP Server Architecture** (`mcp-server-architecture` spec): Implemented in `agentic_neurodata_conversion/mcp_server/` with dataset analysis, conversion orchestration, and workflow handoff capabilities
+- **Agent Implementations** (`agent-implementations` spec): Implemented in `agentic_neurodata_conversion/agents/` including conversation and conversion agent modules
 - **Validation Systems** (`validation-quality-assurance` spec): Implemented in `agentic_neurodata_conversion/validation/`
 - **Knowledge Graph Systems** (`knowledge-graph-systems` spec): Implemented in `agentic_neurodata_conversion/knowledge_graph/`
 - **Evaluation and Reporting** (`evaluation-reporting` spec): Implemented in `agentic_neurodata_conversion/evaluation/`
@@ -236,10 +236,10 @@ from ..server import mcp
 from typing import Dict, Any
 
 @mcp.tool(
-    name="analyze_dataset",
+    name="dataset_analysis",
     description="Analyze dataset structure and extract metadata"
 )
-async def analyze_dataset(
+async def dataset_analysis(
     dataset_dir: str, 
     use_llm: bool = False,
     server=None
@@ -268,10 +268,10 @@ async def analyze_dataset(
         }
 
 @mcp.tool(
-    name="generate_conversion_script",
+    name="conversion_orchestration",
     description="Generate and execute NeuroConv conversion script"
 )
-async def generate_conversion_script(
+async def conversion_orchestration(
     normalized_metadata: Dict[str, Any],
     files_map: Dict[str, str],
     output_nwb_path: str = None,
@@ -501,7 +501,7 @@ class MCPClient:
     
     def analyze_dataset(self, dataset_dir: str, use_llm: bool = False) -> Dict[str, Any]:
         """Analyze dataset structure and metadata."""
-        result = self._call_tool("analyze_dataset", {
+        result = self._call_tool("dataset_analysis", {
             "dataset_dir": dataset_dir,
             "use_llm": use_llm
         })
@@ -516,7 +516,7 @@ class MCPClient:
         if "normalized_metadata" not in self.pipeline_state:
             return {"status": "error", "message": "No metadata available. Run analyze_dataset first."}
         
-        result = self._call_tool("generate_conversion_script", {
+        result = self._call_tool("conversion_orchestration", {
             "normalized_metadata": self.pipeline_state["normalized_metadata"],
             "files_map": files_map
         })
@@ -663,8 +663,8 @@ from examples.python_client.workflow_example import MCPClient
 def mock_server_response():
     """Mock server responses for testing."""
     return {
-        "analyze_dataset": {"status": "success", "result": {"metadata": "test"}},
-        "generate_conversion_script": {"status": "success", "output_nwb_path": "/test/path.nwb"},
+        "dataset_analysis": {"status": "success", "result": {"metadata": "test"}},
+        "conversion_orchestration": {"status": "success", "output_nwb_path": "/test/path.nwb"},
         "evaluate_nwb_file": {"status": "success", "evaluation": "passed"}
     }
 
@@ -674,7 +674,7 @@ class TestMCPClient:
     @patch('requests.post')
     def test_analyze_dataset(self, mock_post, mock_server_response):
         """Test dataset analysis through client."""
-        mock_post.return_value.json.return_value = mock_server_response["analyze_dataset"]
+        mock_post.return_value.json.return_value = mock_server_response["dataset_analysis"]
         mock_post.return_value.raise_for_status.return_value = None
         
         client = MCPClient()
@@ -688,8 +688,8 @@ class TestMCPClient:
         """Test complete pipeline execution."""
         # Mock sequential responses
         mock_post.return_value.json.side_effect = [
-            mock_server_response["analyze_dataset"],
-            mock_server_response["generate_conversion_script"],
+            mock_server_response["dataset_analysis"],
+            mock_server_response["conversion_orchestration"],
             mock_server_response["evaluate_nwb_file"]
         ]
         mock_post.return_value.raise_for_status.return_value = None

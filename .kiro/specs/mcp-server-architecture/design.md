@@ -2,7 +2,7 @@
 
 ## Overview
 
-This design document outlines the MCP (Model Context Protocol) server that serves as the central orchestration hub for the agentic neurodata conversion pipeline. The MCP server coordinates specialized agents through HTTP endpoints and manages the complete conversion workflow from dataset analysis to NWB file generation and evaluation.
+This design document outlines the MCP (Model Context Protocol) server that serves as the central orchestration hub for the agentic neurodata conversion pipeline. The MCP server exposes dataset analysis capabilities, conversion orchestration tools, and workflow handoff mechanisms through standardized interfaces, coordinating specialized agents and managing the complete conversion workflow from dataset analysis to NWB file generation and evaluation.
 
 ## Architecture
 
@@ -25,10 +25,10 @@ This design document outlines the MCP (Model Context Protocol) server that serve
 ├─────────────────────────────────────────────────────────────────┤
 │ ┌─────────────────────────────────────────────────────────────┐ │
 │ │                 ConversionService                           │ │
-│ │  • analyze_dataset()                                        │ │
-│ │  • generate_conversion_script()                             │ │
-│ │  • evaluate_nwb_file()                                      │ │
-│ │  • run_full_pipeline()                                      │ │
+│ │  • dataset_analysis()                                       │ │
+│ │  • conversion_orchestration()                               │ │
+│ │  • workflow_handoff()                                       │ │
+│ │  • pipeline_execution()                                     │ │
 │ └─────────────────────────────────────────────────────────────┘ │
 │ ┌─────────────────────────────────────────────────────────────┐ │
 │ │                 Agent Management                            │ │
@@ -123,13 +123,13 @@ class ConversionService:
         self.workflow_orchestrator = WorkflowOrchestrator(self.agent_manager)
         self.logger = logging.getLogger(__name__)
     
-    async def analyze_dataset(self, dataset_dir: str, use_llm: bool = False, 
+    async def dataset_analysis(self, dataset_dir: str, use_llm: bool = False, 
                             session_id: Optional[str] = None) -> ConversionResponse:
         """Analyze dataset structure and extract metadata."""
         # Core business logic implementation
         pass
     
-    async def generate_conversion_script(self, normalized_metadata: Dict[str, Any],
+    async def conversion_orchestration(self, normalized_metadata: Dict[str, Any],
                                        files_map: Dict[str, str],
                                        output_nwb_path: Optional[str] = None,
                                        session_id: Optional[str] = None) -> ConversionResponse:
@@ -179,9 +179,9 @@ class MCPAdapter:
         """Register MCP tools that call core service methods."""
         
         @self.server.call_tool()
-        async def analyze_dataset(arguments: Dict[str, Any]) -> List[TextContent]:
+        async def dataset_analysis(arguments: Dict[str, Any]) -> List[TextContent]:
             """Analyze dataset - calls core service method."""
-            response = await self.service.analyze_dataset(
+            response = await self.service.dataset_analysis(
                 dataset_dir=arguments["dataset_dir"],
                 use_llm=arguments.get("use_llm", False),
                 session_id=arguments.get("session_id")
@@ -189,9 +189,9 @@ class MCPAdapter:
             return [TextContent(type="text", text=json.dumps(response.__dict__, default=str))]
         
         @self.server.call_tool()
-        async def generate_conversion_script(arguments: Dict[str, Any]) -> List[TextContent]:
+        async def conversion_orchestration(arguments: Dict[str, Any]) -> List[TextContent]:
             """Generate conversion script - calls core service method."""
-            response = await self.service.generate_conversion_script(
+            response = await self.service.conversion_orchestration(
                 normalized_metadata=arguments["normalized_metadata"],
                 files_map=arguments["files_map"],
                 output_nwb_path=arguments.get("output_nwb_path"),
@@ -346,7 +346,7 @@ class EvaluationRequest(BaseModel):
     session_id: Optional[str] = Field(None, description="Session ID for tracking")
 
 @router.post("/analyze", response_model=ConversionResponse)
-async def analyze_dataset(
+async def dataset_analysis(
     request: DatasetAnalysisRequest,
     background_tasks: BackgroundTasks,
     mcp_server = Depends(get_mcp_server)
@@ -359,7 +359,7 @@ async def analyze_dataset(
         
         # Execute analysis through MCP server
         result = await mcp_server.execute_tool(
-            "analyze_dataset",
+            "dataset_analysis",
             dataset_dir=request.dataset_dir,
             use_llm=request.use_llm,
             session_id=session_id
@@ -384,7 +384,7 @@ async def analyze_dataset(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/generate-script", response_model=ConversionResponse)
-async def generate_conversion_script(
+async def conversion_orchestration(
     request: ConversionScriptRequest,
     background_tasks: BackgroundTasks,
     mcp_server = Depends(get_mcp_server)
@@ -395,7 +395,7 @@ async def generate_conversion_script(
         session_id = request.session_id or str(uuid.uuid4())
         
         result = await mcp_server.execute_tool(
-            "generate_conversion_script",
+            "conversion_orchestration",
             normalized_metadata=request.normalized_metadata,
             files_map=request.files_map,
             output_nwb_path=request.output_nwb_path,
@@ -1191,23 +1191,23 @@ class MCPServerCore:
         """Register built-in MCP tools."""
         
         @self.tool_registry.register_tool(
-            name="analyze_dataset",
+            name="dataset_analysis",
             description="Analyze dataset structure and extract metadata",
             category=ToolCategory.ANALYSIS,
             timeout=600
         )
-        async def analyze_dataset(dataset_dir: str, use_llm: bool = False, server=None):
+        async def dataset_analysis(dataset_dir: str, use_llm: bool = False, server=None):
             return await self.agent_manager.execute_agent_task(
                 "conversation", dataset_dir=dataset_dir, use_llm=use_llm
             )
         
         @self.tool_registry.register_tool(
-            name="generate_conversion_script",
+            name="conversion_orchestration",
             description="Generate and execute NeuroConv conversion script",
             category=ToolCategory.CONVERSION,
             timeout=1800
         )
-        async def generate_conversion_script(
+        async def conversion_orchestration(
             normalized_metadata: Dict[str, Any],
             files_map: Dict[str, str],
             output_nwb_path: Optional[str] = None,
