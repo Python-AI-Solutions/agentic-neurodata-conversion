@@ -44,7 +44,7 @@
 
 - [ ] 7. Implement MCP tool definitions and resource mappings
   - Create MCP tool definitions that call core service methods
-  - Map conversion operations to MCP tool calls (analyze_dataset, generate_conversion_script, evaluate_nwb_file)
+  - Map conversion operations to MCP tool calls (dataset_analysis, conversion_orchestration, evaluate_nwb_file)
   - Implement MCP resource definitions for conversion artifacts
   - Add MCP-specific error handling and response formatting
   - _Requirements: 1.1, 1.2, 2.4_
