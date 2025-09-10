@@ -21,7 +21,7 @@
   - Add logging configuration to settings system
   - _Requirements: 3.3, 5.1_
 
-- [ ] 4. Create basic MCP server foundation
+- [x] 4. Create basic MCP server foundation
   - Create `agentic_neurodata_conversion/mcp_server/` directory structure
   - Implement basic `server.py` with MCPRegistry class and tool decorator
   - Create tool registration system with @mcp.tool decorator
