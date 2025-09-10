@@ -8,25 +8,25 @@ This spec focuses on the MCP (Model Context Protocol) server that serves as the 
 
 ### Requirement 1
 
-**User Story:** As a researcher, I want a reliable MCP server that orchestrates multi-agent data conversion workflows, so that I can convert neuroscience data to NWB format through coordinated agent interactions.
+**User Story:** As a researcher, I want a reliable MCP server that orchestrates multi-agent data conversion workflows, so that I can convert neuroscience data to NWB format through coordinated agent interactions regardless of the transport protocol used.
 
 #### Acceptance Criteria
 
-1. WHEN converting data THEN the MCP server SHALL orchestrate conversation, conversion, and evaluation agents in coordinated workflows with error handling
-2. WHEN processing requests THEN the MCP server SHALL handle dataset analysis, conversion script generation, and NWB evaluation as discrete HTTP endpoints
-3. WHEN managing state THEN the MCP server SHALL coordinate multi-step workflows and maintain conversion context across agent interactions
-4. WHEN providing responses THEN the MCP server SHALL return structured results with complete metadata and error handling
+1. WHEN converting data THEN the core service layer SHALL orchestrate conversation, conversion, and evaluation agents in coordinated workflows with error handling, independent of transport protocol
+2. WHEN processing requests THEN the server SHALL handle dataset analysis, conversion script generation, and NWB evaluation through a core service layer that contains all business logic without transport dependencies
+3. WHEN managing state THEN the core service SHALL coordinate multi-step workflows and maintain conversion context across agent interactions, accessible through any transport adapter
+4. WHEN providing responses THEN the core service SHALL return structured results with complete metadata and error handling, formatted appropriately by transport-specific adapters
 
 ### Requirement 2
 
-**User Story:** As a system integrator, I want MCP server capabilities that expose the conversion pipeline programmatically, so that external tools and workflows can access the conversion functionality.
+**User Story:** As a system integrator, I want MCP server capabilities that expose the conversion pipeline programmatically through multiple transport protocols, so that external tools and workflows can access the conversion functionality using their preferred integration method.
 
 #### Acceptance Criteria
 
-1. WHEN external systems connect THEN the MCP server SHALL expose conversion tools through the MCP protocol with optional interface adapters
-2. WHEN handling requests THEN the MCP server SHALL provide structured responses with proper error handling
-3. WHEN managing sessions THEN the MCP server SHALL maintain conversion state and configuration across multiple tool calls
-4. WHEN providing interfaces THEN the MCP server SHALL support multiple interface options (stdin/stdout, HTTP as examples) for different integration needs
+1. WHEN external systems connect THEN the MCP server SHALL expose conversion tools through a transport-agnostic core service layer with thin adapter layers for different protocols
+2. WHEN handling requests THEN the MCP server SHALL provide structured responses with proper error handling through both MCP and HTTP adapters that call identical core service methods
+3. WHEN managing sessions THEN the MCP server SHALL maintain conversion state and configuration in the core service layer, accessible through any transport adapter
+4. WHEN providing interfaces THEN the MCP server SHALL support MCP protocol (stdin/stdout, local socket) and HTTP/WebSocket interfaces through separate adapter layers that ensure functional parity
 
 ### Requirement 3
 
@@ -82,3 +82,14 @@ This spec focuses on the MCP (Model Context Protocol) server that serves as the 
 2. WHEN customizing behavior THEN the MCP server SHALL allow configuration of agent parameters, timeouts, and retry policies
 3. WHEN deploying THEN the MCP server SHALL support containerization and different deployment configurations
 4. WHEN integrating THEN the MCP server SHALL provide configuration options for different LLM providers and external services
+
+### Requirement 8
+
+**User Story:** As a developer, I want the MCP server to follow clean architecture principles with proper separation of concerns, so that the system is maintainable, testable, and extensible.
+
+#### Acceptance Criteria
+
+1. WHEN implementing the server THEN the system SHALL separate business logic into a transport-agnostic core service layer with no MCP or HTTP dependencies
+2. WHEN adding transport protocols THEN the system SHALL implement thin adapter layers that map protocol-specific methods to core service functions
+3. WHEN testing the system THEN the system SHALL provide contract tests that verify both MCP and HTTP adapters call identical core service methods and produce equivalent results
+4. WHEN extending functionality THEN the system SHALL ensure new features are implemented in the core service layer and automatically available through all transport adapters

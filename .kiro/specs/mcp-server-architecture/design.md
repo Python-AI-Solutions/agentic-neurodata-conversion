@@ -6,49 +6,215 @@ This design document outlines the MCP (Model Context Protocol) server that serve
 
 ## Architecture
 
-### High-Level MCP Server Architecture
+### High-Level Layered Architecture
 
 ```
-MCP Server (Central Orchestration Hub)
-├── Interface Layer (Multiple Options)
-│   ├── Core MCP Protocol Interface
-│   ├── Optional HTTP Interface (Example)
-│   ├── Optional stdin/stdout Interface
-│   └── Interface Adapter Framework
-├── Agent Management System
-│   ├── Agent Registry and Discovery
-│   ├── Agent Lifecycle Management
-│   ├── Inter-Agent Communication
-│   └── Error Handling and Recovery
-├── Workflow Orchestration Engine
-│   ├── Pipeline State Management
-│   ├── Step Dependencies and Sequencing
-│   ├── Progress Tracking
-│   └── Result Aggregation
-├── Tool Registry and Execution
-│   ├── Tool Registration (@mcp.tool decorators)
-│   ├── Dynamic Tool Discovery
-│   ├── Tool Execution Engine
-│   └── Result Processing
-└── Infrastructure Services
-    ├── Configuration Management
-    ├── Logging and Monitoring
-    ├── Error Tracking
-    └── Performance Metrics
+┌─────────────────────────────────────────────────────────────────┐
+│                        Transport Adapters                       │
+├─────────────────────────────┬───────────────────────────────────┤
+│         MCP Adapter         │         HTTP Adapter              │
+│  ┌─────────────────────────┐│  ┌─────────────────────────────────┐│
+│  │ • list_resources()      ││  │ • FastAPI endpoints             ││
+│  │ • read_resource()       ││  │ • WebSocket support             ││
+│  │ • call_tool()           ││  │ • HTTP request/response         ││
+│  │ • MCP protocol handling ││  │ • OpenAPI documentation        ││
+│  └─────────────────────────┘│  └─────────────────────────────────┘│
+└─────────────────────────────┴───────────────────────────────────┤
+│                    Core Service Layer                           │
+│                  (Transport Agnostic)                           │
+├─────────────────────────────────────────────────────────────────┤
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │                 ConversionService                           │ │
+│ │  • analyze_dataset()                                        │ │
+│ │  • generate_conversion_script()                             │ │
+│ │  • evaluate_nwb_file()                                      │ │
+│ │  • run_full_pipeline()                                      │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │                 Agent Management                            │ │
+│ │  • Agent lifecycle management                               │ │
+│ │  • Agent coordination and execution                         │ │
+│ │  • Error handling and recovery                              │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │              Workflow Orchestration                         │ │
+│ │  • Pipeline state management                                │ │
+│ │  • Step dependencies and sequencing                         │ │
+│ │  • Progress tracking and monitoring                         │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │                Data Models & Business Logic                 │ │
+│ │  • Request/Response models                                  │ │
+│ │  • Session management                                       │ │
+│ │  • Configuration and settings                              │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ### Request Flow Architecture
 
 ```
-MCP Tool Call → Input Validation → Tool Resolution → Agent Coordination → Workflow Execution → Response Assembly
-                     ↓
-State Management → Progress Tracking → Error Handling → Result Aggregation → Structured Response
-                     ↓
-Interface Adapters → HTTP (Example) → stdin/stdout (Example) → Custom Interfaces
+┌─────────────────┐    ┌─────────────────┐
+│   MCP Client    │    │  HTTP Client    │
+└─────────┬───────┘    └─────────┬───────┘
+          │                      │
+          ▼                      ▼
+┌─────────────────┐    ┌─────────────────┐
+│   MCP Adapter   │    │  HTTP Adapter   │
+│ • Protocol      │    │ • REST API      │
+│   handling      │    │ • WebSocket     │
+│ • Message       │    │ • Middleware    │
+│   validation    │    │ • Serialization │
+└─────────┬───────┘    └─────────┬───────┘
+          │                      │
+          └──────────┬───────────┘
+                     ▼
+          ┌─────────────────────┐
+          │   Core Service      │
+          │ • Business logic    │
+          │ • Agent management  │
+          │ • Workflow control  │
+          │ • State management  │
+          └─────────────────────┘
 ```## 
-Core Components
+## Core Components
 
-### 1. HTTP API Layer (FastAPI)
+### 1. Core Service Layer (Transport Agnostic)
+
+The core service layer contains all business logic and has no dependencies on transport protocols (no MCP or FastAPI imports).
+
+#### ConversionService - Main Business Logic
+```python
+# agentic_neurodata_conversion/core/service.py
+from typing import Dict, Any, Optional, List
+from dataclasses import dataclass
+from enum import Enum
+import logging
+import asyncio
+import uuid
+from datetime import datetime
+
+# No transport-specific imports (no FastAPI, no MCP imports)
+
+@dataclass
+class ConversionRequest:
+    """Transport-agnostic conversion request."""
+    dataset_dir: str
+    files_map: Optional[Dict[str, str]] = None
+    use_llm: bool = False
+    output_nwb_path: Optional[str] = None
+    session_id: Optional[str] = None
+
+@dataclass
+class ConversionResponse:
+    """Transport-agnostic conversion response."""
+    status: str
+    data: Dict[str, Any]
+    session_id: str
+    timestamp: datetime
+    error: Optional[str] = None
+
+class ConversionService:
+    """Core conversion service with all business logic."""
+    
+    def __init__(self, config):
+        self.config = config
+        self.agent_manager = AgentManager(config)
+        self.workflow_orchestrator = WorkflowOrchestrator(self.agent_manager)
+        self.logger = logging.getLogger(__name__)
+    
+    async def analyze_dataset(self, dataset_dir: str, use_llm: bool = False, 
+                            session_id: Optional[str] = None) -> ConversionResponse:
+        """Analyze dataset structure and extract metadata."""
+        # Core business logic implementation
+        pass
+    
+    async def generate_conversion_script(self, normalized_metadata: Dict[str, Any],
+                                       files_map: Dict[str, str],
+                                       output_nwb_path: Optional[str] = None,
+                                       session_id: Optional[str] = None) -> ConversionResponse:
+        """Generate and execute NeuroConv conversion script."""
+        # Core business logic implementation
+        pass
+    
+    async def evaluate_nwb_file(self, nwb_path: str, generate_report: bool = True,
+                              include_visualizations: bool = True,
+                              session_id: Optional[str] = None) -> ConversionResponse:
+        """Evaluate NWB file quality and generate reports."""
+        # Core business logic implementation
+        pass
+    
+    async def run_full_pipeline(self, request: ConversionRequest) -> ConversionResponse:
+        """Run complete conversion pipeline."""
+        # Core business logic implementation
+        pass
+```
+
+### 2. MCP Adapter Layer
+
+Thin adapter that maps MCP protocol methods to core service layer functions.
+
+#### MCP Protocol Adapter
+```python
+# agentic_neurodata_conversion/mcp_server/mcp_adapter.py
+from mcp.server import Server
+from mcp.types import Resource, Tool, TextContent
+from typing import Dict, Any, List, Optional
+import json
+import logging
+
+from ..core.service import ConversionService, ConversionRequest
+
+class MCPAdapter:
+    """Thin adapter that maps MCP methods to core service layer."""
+    
+    def __init__(self, conversion_service: ConversionService):
+        self.service = conversion_service
+        self.server = Server("agentic-neurodata-converter")
+        self.logger = logging.getLogger(__name__)
+        self._register_tools()
+        self._register_resources()
+    
+    def _register_tools(self):
+        """Register MCP tools that call core service methods."""
+        
+        @self.server.call_tool()
+        async def analyze_dataset(arguments: Dict[str, Any]) -> List[TextContent]:
+            """Analyze dataset - calls core service method."""
+            response = await self.service.analyze_dataset(
+                dataset_dir=arguments["dataset_dir"],
+                use_llm=arguments.get("use_llm", False),
+                session_id=arguments.get("session_id")
+            )
+            return [TextContent(type="text", text=json.dumps(response.__dict__, default=str))]
+        
+        @self.server.call_tool()
+        async def generate_conversion_script(arguments: Dict[str, Any]) -> List[TextContent]:
+            """Generate conversion script - calls core service method."""
+            response = await self.service.generate_conversion_script(
+                normalized_metadata=arguments["normalized_metadata"],
+                files_map=arguments["files_map"],
+                output_nwb_path=arguments.get("output_nwb_path"),
+                session_id=arguments.get("session_id")
+            )
+            return [TextContent(type="text", text=json.dumps(response.__dict__, default=str))]
+        
+        # Additional MCP tools...
+    
+    async def run_stdio(self):
+        """Run MCP server with stdio transport."""
+        from mcp.server.stdio import stdio_server
+        
+        async with stdio_server() as (read_stream, write_stream):
+            await self.server.run(read_stream, write_stream, 
+                                self.server.create_initialization_options())
+```
+
+### 3. HTTP Adapter Layer
+
+Thin adapter that maps HTTP endpoints to the same core service layer functions.
+
+### 4. HTTP API Layer (FastAPI)
 
 #### Main Server Application
 ```python
