@@ -7,14 +7,14 @@
   - Create `.env.example` template for environment configuration
   - _Requirements: 1.1, 1.4_
 
-- [ ] 2. Implement core configuration system
+- [-] 2. Implement core configuration system
   - Create `agentic_neurodata_conversion/core/config.py` with pydantic-settings based configuration
   - Implement nested configuration classes (ServerConfig, AgentConfig, DataConfig, DatabaseConfig)
   - Add environment variable support with proper validation
   - Create global settings instance for application use
   - _Requirements: 1.4, 2.3_
 
-- [ ] 3. Set up logging and exception handling infrastructure
+- [-] 3. Set up logging and exception handling infrastructure
   - Create `agentic_neurodata_conversion/core/logging.py` with centralized logging setup
   - Implement `agentic_neurodata_conversion/core/exceptions.py` with custom exception classes
   - Configure structured logging with proper formatters and handlers
