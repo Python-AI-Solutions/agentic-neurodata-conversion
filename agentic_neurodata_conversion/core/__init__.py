@@ -17,7 +17,7 @@ from .config import (
     validate_settings
 )
 from .exceptions import *
-from .logging import setup_logging, get_logger
+from .logging import setup_logging, get_logger, setup_logging_from_settings
 
 __all__ = [
     # Configuration
@@ -37,6 +37,7 @@ __all__ = [
     "validate_settings",
     # Logging
     "setup_logging",
+    "setup_logging_from_settings",
     "get_logger",
     # Exceptions
     "AgenticConverterError",
