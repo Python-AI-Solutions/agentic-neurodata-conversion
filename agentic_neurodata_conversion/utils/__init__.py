@@ -11,6 +11,6 @@ from .metadata_utils import MetadataUtils
 
 __all__ = [
     "FileUtils",
-    "FormatDetector", 
+    "FormatDetector",
     "MetadataUtils",
 ]
