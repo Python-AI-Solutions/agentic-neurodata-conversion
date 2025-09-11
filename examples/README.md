@@ -1,6 +1,8 @@
 # Examples Directory
 
-This directory contains client examples and integration patterns for the Agentic Neurodata Conversion MCP Server. These examples demonstrate how to interact with the MCP server from various client environments.
+This directory contains client examples and integration patterns for the Agentic
+Neurodata Conversion MCP Server. These examples demonstrate how to interact with
+the MCP server from various client environments.
 
 ## Directory Structure
 
@@ -34,12 +36,14 @@ For more advanced use cases, see the integration patterns:
 ## Requirements
 
 All examples require:
+
 - The MCP server to be running (`pixi run server`)
 - Python environment set up with pixi (`pixi install`)
 
 ## Development
 
 When developing new examples:
+
 1. Follow the patterns established in existing examples
 2. Include comprehensive error handling
 3. Add documentation and usage instructions
@@ -49,6 +53,7 @@ When developing new examples:
 ## Support
 
 For questions about these examples or integration patterns, please refer to:
+
 - Project documentation in `docs/`
 - MCP server API documentation
 - GitHub issues for bug reports and feature requests

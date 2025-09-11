@@ -33,8 +33,12 @@ from .core.exceptions import (
 )
 
 # Interface and utility imports
-from .interfaces import LinkMLValidator, NeuroConvWrapper, NWBInspector
-from .utils import FileUtils, FormatDetector, MetadataUtils
+from .interfaces import (
+    LinkMLValidatorInterface,
+    NeuroConvInterface,
+    NWBInspectorInterface,
+)
+from .utils import FileUtils, FormatDetector, MetadataProcessor
 
 __all__ = [
     # Core functionality
@@ -44,13 +48,13 @@ __all__ = [
     "ConversionError",
     "ValidationError",
     # Interfaces
-    "NeuroConvWrapper",
-    "NWBInspector",
-    "LinkMLValidator",
+    "NeuroConvInterface",
+    "NWBInspectorInterface",
+    "LinkMLValidatorInterface",
     # Utilities
     "FileUtils",
     "FormatDetector",
-    "MetadataUtils",
+    "MetadataProcessor",
     # Package metadata
     "__version__",
 ]

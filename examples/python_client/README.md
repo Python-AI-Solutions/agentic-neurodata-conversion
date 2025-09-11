@@ -1,13 +1,18 @@
 # Python Client Examples
 
-This directory contains Python client examples for interacting with the Agentic Neurodata Conversion MCP Server.
+This directory contains Python client examples for interacting with the Agentic
+Neurodata Conversion MCP Server.
 
 ## Examples
 
 ### workflow_example.py
-A comprehensive example based on the original workflow.py pattern. Demonstrates the complete pipeline from dataset analysis through NWB conversion and evaluation.
+
+A comprehensive example based on the original workflow.py pattern. Demonstrates
+the complete pipeline from dataset analysis through NWB conversion and
+evaluation.
 
 **Usage:**
+
 ```bash
 # Start MCP server first
 pixi run server
@@ -17,9 +22,12 @@ pixi run python workflow_example.py
 ```
 
 ### simple_client.py
-A minimal example showing basic MCP server interaction patterns. Good starting point for new integrations.
+
+A minimal example showing basic MCP server interaction patterns. Good starting
+point for new integrations.
 
 **Usage:**
+
 ```bash
 # Start MCP server first
 pixi run server
@@ -41,7 +49,7 @@ from typing import Dict, Any, Optional
 class MCPClient:
     def __init__(self, api_url: str = "http://127.0.0.1:8000"):
         self.api_url = api_url.rstrip("/")
-    
+
     def _call_tool(self, tool_name: str, payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Call MCP server tool with error handling."""
         url = f"{self.api_url}/tool/{tool_name}"
@@ -79,7 +87,7 @@ class StatefulMCPClient(MCPClient):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.pipeline_state = {}
-    
+
     def analyze_dataset(self, dataset_dir: str) -> Dict[str, Any]:
         result = self._call_tool("dataset_analysis", {"dataset_dir": dataset_dir})
         if result.get("status") == "success":
@@ -132,16 +140,19 @@ def list_available_tools(self) -> Dict[str, Any]:
 ## Troubleshooting
 
 ### Server Connection Issues
+
 - Ensure MCP server is running: `pixi run server`
 - Check server status: `curl http://127.0.0.1:8000/status`
 - Verify port configuration matches client settings
 
 ### Tool Execution Failures
+
 - Check tool availability: `curl http://127.0.0.1:8000/tools`
 - Validate input parameters match tool requirements
 - Check server logs for detailed error messages
 
 ### Pipeline State Issues
+
 - Reset pipeline state if needed: `POST /reset`
 - Verify each step completes successfully before proceeding
 - Save intermediate results for debugging
