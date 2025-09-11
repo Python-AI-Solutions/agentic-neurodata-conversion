@@ -1,16 +1,18 @@
 """
 Unit tests for the base agent framework.
 
-Tests the BaseAgent abstract class, AgentResult dataclass, and AgentConfig.
+Tests the BaseAgent abstract class, AgentStatus, AgentCapability, and AgentRegistry.
 """
+
+from typing import Any
 
 import pytest
 
 # Import the actual components that should be implemented
 try:
     from agentic_neurodata_conversion.agents.base import (
-        AgentConfig,
-        AgentResult,
+        AgentCapability,
+        AgentRegistry,
         AgentStatus,
         BaseAgent,
     )
@@ -19,9 +21,9 @@ try:
 except ImportError:
     # These should fail until implemented
     BaseAgent = None
-    AgentResult = None
     AgentStatus = None
-    AgentConfig = None
+    AgentCapability = None
+    AgentRegistry = None
     COMPONENTS_AVAILABLE = False
 
 # Skip all tests if components are not implemented
@@ -30,282 +32,339 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-class TestAgentConfig:
-    """Test the AgentConfig class."""
-
-    @pytest.mark.unit
-    def test_agent_config_initialization(self):
-        """Test AgentConfig initialization with default values."""
-        config = AgentConfig()
-
-        assert config.version == "1.0"
-        assert config.llm_config == {}
-        assert config.use_llm is False
-        assert config.conversion_timeout == 300
-
-    @pytest.mark.unit
-    def test_agent_config_custom_values(self):
-        """Test AgentConfig initialization with custom values."""
-        llm_config = {"model": "gpt-4", "temperature": 0.7}
-        config = AgentConfig(
-            version="2.0",
-            llm_config=llm_config,
-            use_llm=True,
-            conversion_timeout=600,
-            custom_param="test_value",
-        )
-
-        assert config.version == "2.0"
-        assert config.llm_config == llm_config
-        assert config.use_llm is True
-        assert config.conversion_timeout == 600
-        assert config.custom_param == "test_value"
-
-
-class TestAgentResult:
-    """Test the AgentResult dataclass."""
-
-    @pytest.mark.unit
-    def test_agent_result_initialization(self):
-        """Test AgentResult initialization."""
-        result = AgentResult(
-            status=AgentStatus.COMPLETED,
-            data={"key": "value"},
-            metadata={"agent_type": "test"},
-            provenance={"source": "test"},
-            execution_time=1.5,
-            agent_id="test_agent_123",
-        )
-
-        assert result.status == AgentStatus.COMPLETED
-        assert result.data == {"key": "value"}
-        assert result.metadata == {"agent_type": "test"}
-        assert result.provenance == {"source": "test"}
-        assert result.execution_time == 1.5
-        assert result.agent_id == "test_agent_123"
-        assert result.error is None
-        assert result.warnings == []
-
-    @pytest.mark.unit
-    def test_agent_result_with_error(self):
-        """Test AgentResult with error information."""
-        result = AgentResult(
-            status=AgentStatus.ERROR,
-            data={},
-            metadata={},
-            provenance={},
-            execution_time=0.5,
-            agent_id="test_agent_123",
-            error="Test error message",
-            warnings=["Warning 1", "Warning 2"],
-        )
-
-        assert result.status == AgentStatus.ERROR
-        assert result.error == "Test error message"
-        assert result.warnings == ["Warning 1", "Warning 2"]
-
-    @pytest.mark.unit
-    def test_agent_result_warnings_default(self):
-        """Test that warnings defaults to empty list."""
-        result = AgentResult(
-            status=AgentStatus.COMPLETED,
-            data={},
-            metadata={},
-            provenance={},
-            execution_time=1.0,
-            agent_id="test_agent_123",
-        )
-
-        assert result.warnings == []
-
-
-class ConcreteTestAgent(BaseAgent):
-    """Concrete implementation of BaseAgent for testing."""
-
-    def __init__(self, config: AgentConfig):
-        super().__init__(config, "test_agent")
-        self.validate_inputs_called = False
-        self.execute_internal_called = False
-        self.process_results_called = False
-
-    async def _validate_inputs(self, **kwargs):
-        """Test implementation of input validation."""
-        self.validate_inputs_called = True
-        if "invalid" in kwargs:
-            raise ValueError("Invalid input provided")
-        return kwargs
-
-    async def _execute_internal(self, **kwargs):
-        """Test implementation of internal execution."""
-        self.execute_internal_called = True
-        if "fail" in kwargs:
-            raise RuntimeError("Execution failed")
-        return {"result": "success", "input_count": len(kwargs)}
-
-    async def _process_results(self, result_data, **kwargs):
-        """Test implementation of result processing."""
-        self.process_results_called = True
-        result_data["processed"] = True
-        return result_data
-
-
-class TestBaseAgent:
-    """Test the BaseAgent abstract class."""
-
-    @pytest.fixture
-    def agent_config(self):
-        """Create a test agent configuration."""
-        return AgentConfig(version="test", use_llm=False)
-
-    @pytest.fixture
-    def test_agent(self, agent_config):
-        """Create a test agent instance."""
-        return ConcreteTestAgent(agent_config)
-
-    @pytest.mark.unit
-    def test_agent_initialization(self, test_agent):
-        """Test agent initialization."""
-        assert test_agent.agent_type == "test_agent"
-        assert test_agent.agent_id.startswith("test_agent_")
-        assert test_agent.status == AgentStatus.IDLE
-        assert test_agent.metrics["total_executions"] == 0
-        assert test_agent.metrics["successful_executions"] == 0
-        assert test_agent.metrics["failed_executions"] == 0
-        assert test_agent.metrics["average_execution_time"] == 0.0
-
-    @pytest.mark.unit
-    async def test_successful_execution(self, test_agent):
-        """Test successful agent execution."""
-        result = await test_agent.execute(test_param="value")
-
-        assert isinstance(result, AgentResult)
-        assert result.status == AgentStatus.COMPLETED
-        assert result.data["result"] == "success"
-        assert result.data["input_count"] == 1
-        assert result.data["processed"] is True
-        assert result.agent_id == test_agent.agent_id
-        assert result.error is None
-        assert result.execution_time >= 0  # Allow for very fast execution
-
-        # Check that all methods were called
-        assert test_agent.validate_inputs_called
-        assert test_agent.execute_internal_called
-        assert test_agent.process_results_called
-
-        # Check metrics were updated
-        assert test_agent.metrics["total_executions"] == 1
-        assert test_agent.metrics["successful_executions"] == 1
-        assert test_agent.metrics["failed_executions"] == 0
-        assert (
-            test_agent.metrics["average_execution_time"] >= 0
-        )  # Allow for very fast execution
-
-    @pytest.mark.unit
-    async def test_execution_with_validation_error(self, test_agent):
-        """Test agent execution with validation error."""
-        result = await test_agent.execute(invalid="value")
-
-        assert isinstance(result, AgentResult)
-        assert result.status == AgentStatus.ERROR
-        assert result.error == "Invalid input provided"
-        assert result.data == {}
-
-        # Check that validation was called but execution was not
-        assert test_agent.validate_inputs_called
-        assert not test_agent.execute_internal_called
-        assert not test_agent.process_results_called
-
-        # Check metrics were updated
-        assert test_agent.metrics["total_executions"] == 1
-        assert test_agent.metrics["successful_executions"] == 0
-        assert test_agent.metrics["failed_executions"] == 1
-
-    @pytest.mark.unit
-    async def test_execution_with_internal_error(self, test_agent):
-        """Test agent execution with internal execution error."""
-        result = await test_agent.execute(fail="value")
-
-        assert isinstance(result, AgentResult)
-        assert result.status == AgentStatus.ERROR
-        assert result.error == "Execution failed"
-        assert result.data == {}
-
-        # Check that validation and execution were called but processing was not
-        assert test_agent.validate_inputs_called
-        assert test_agent.execute_internal_called
-        assert not test_agent.process_results_called
-
-        # Check metrics were updated
-        assert test_agent.metrics["total_executions"] == 1
-        assert test_agent.metrics["successful_executions"] == 0
-        assert test_agent.metrics["failed_executions"] == 1
-
-    @pytest.mark.unit
-    def test_get_metrics(self, test_agent):
-        """Test getting agent metrics."""
-        metrics = test_agent.get_metrics()
-
-        assert "total_executions" in metrics
-        assert "successful_executions" in metrics
-        assert "failed_executions" in metrics
-        assert "average_execution_time" in metrics
-        assert "success_rate" in metrics
-        assert "current_status" in metrics
-
-        assert metrics["success_rate"] == 0.0  # No executions yet
-        assert metrics["current_status"] == "idle"
-
-    @pytest.mark.unit
-    async def test_metrics_calculation(self, test_agent):
-        """Test metrics calculation after multiple executions."""
-        # Execute successful task
-        await test_agent.execute(test_param="value1")
-
-        # Execute failed task
-        await test_agent.execute(invalid="value")
-
-        # Execute another successful task
-        await test_agent.execute(test_param="value2")
-
-        metrics = test_agent.get_metrics()
-
-        assert metrics["total_executions"] == 3
-        assert metrics["successful_executions"] == 2
-        assert metrics["failed_executions"] == 1
-        assert metrics["success_rate"] == 2 / 3
-        assert metrics["average_execution_time"] >= 0  # Allow for very fast execution
-
-    @pytest.mark.unit
-    def test_metadata_generation(self, test_agent):
-        """Test metadata generation."""
-        metadata = test_agent._generate_metadata(param1="value1", param2=123)
-
-        assert metadata["agent_type"] == "test_agent"
-        assert metadata["agent_id"] == test_agent.agent_id
-        assert "timestamp" in metadata
-        assert metadata["config_version"] == "test"
-        assert metadata["inputs"] == {"param1": "str", "param2": "int"}
-
-    @pytest.mark.unit
-    def test_provenance_generation(self, test_agent):
-        """Test provenance generation."""
-        provenance = test_agent._generate_provenance(param1="value1")
-
-        assert provenance["agent"] == "test_agent"
-        assert provenance["agent_id"] == test_agent.agent_id
-        assert "execution_timestamp" in provenance
-        assert provenance["input_sources"] == {"param1": "user_provided"}
-        assert provenance["processing_steps"] == ["test_agent_processing"]
-        assert provenance["external_services"] == []
-
-
 class TestAgentStatus:
     """Test the AgentStatus enum."""
 
     @pytest.mark.unit
     def test_agent_status_values(self):
         """Test AgentStatus enum values."""
-        assert AgentStatus.IDLE.value == "idle"
-        assert AgentStatus.PROCESSING.value == "processing"
-        assert AgentStatus.COMPLETED.value == "completed"
+        assert AgentStatus.INITIALIZING.value == "initializing"
+        assert AgentStatus.READY.value == "ready"
+        assert AgentStatus.BUSY.value == "busy"
         assert AgentStatus.ERROR.value == "error"
+        assert AgentStatus.STOPPED.value == "stopped"
+
+
+class TestAgentCapability:
+    """Test the AgentCapability enum."""
+
+    @pytest.mark.unit
+    def test_agent_capability_values(self):
+        """Test AgentCapability enum values."""
+        assert AgentCapability.DATASET_ANALYSIS.value == "dataset_analysis"
+        assert AgentCapability.METADATA_EXTRACTION.value == "metadata_extraction"
+        assert AgentCapability.FORMAT_DETECTION.value == "format_detection"
+        assert AgentCapability.CONVERSATION.value == "conversation"
+
+
+class ConcreteTestAgent(BaseAgent):
+    """Concrete implementation of BaseAgent for testing."""
+
+    def __init__(self, config=None, agent_id=None):
+        self.process_called = False
+        self.test_capabilities = {
+            AgentCapability.DATASET_ANALYSIS,
+            AgentCapability.CONVERSATION,
+        }
+        super().__init__(config, agent_id)
+
+    def _initialize(self) -> None:
+        """Initialize test agent capabilities."""
+        for capability in self.test_capabilities:
+            self.add_capability(capability)
+
+    async def process(self, task: dict[str, Any]) -> dict[str, Any]:
+        """Test implementation of task processing."""
+        self.process_called = True
+
+        task_type = task.get("type")
+        if task_type == "fail":
+            raise RuntimeError("Task processing failed")
+
+        return {
+            "result": "success",
+            "task_type": task_type,
+            "processed": True,
+            "agent_id": self.agent_id,
+        }
+
+    def get_capabilities(self) -> set[AgentCapability]:
+        """Return test agent capabilities."""
+        return self.test_capabilities.copy()
+
+
+class TestBaseAgent:
+    """Test the BaseAgent abstract class."""
+
+    @pytest.fixture
+    def test_agent(self):
+        """Create a test agent instance."""
+        return ConcreteTestAgent(config={"test": True}, agent_id="test_agent_123")
+
+    @pytest.mark.unit
+    def test_agent_initialization(self, test_agent):
+        """Test agent initialization."""
+        assert test_agent.agent_id == "test_agent_123"
+        assert test_agent.status == AgentStatus.READY
+        assert test_agent.success_count == 0
+        assert test_agent.error_count == 0
+        assert len(test_agent.capabilities) == 2
+        assert AgentCapability.DATASET_ANALYSIS in test_agent.capabilities
+        assert AgentCapability.CONVERSATION in test_agent.capabilities
+
+    @pytest.mark.unit
+    def test_capability_management(self, test_agent):
+        """Test capability management methods."""
+        # Test has_capability
+        assert test_agent.has_capability(AgentCapability.DATASET_ANALYSIS)
+        assert test_agent.has_capability(AgentCapability.CONVERSATION)
+        assert not test_agent.has_capability(AgentCapability.FORMAT_DETECTION)
+
+        # Test add_capability
+        test_agent.add_capability(AgentCapability.FORMAT_DETECTION)
+        assert test_agent.has_capability(AgentCapability.FORMAT_DETECTION)
+
+        # Test remove_capability
+        test_agent.remove_capability(AgentCapability.CONVERSATION)
+        assert not test_agent.has_capability(AgentCapability.CONVERSATION)
+
+    @pytest.mark.unit
+    def test_can_handle_task(self, test_agent):
+        """Test task handling capability check."""
+        # Should handle dataset analysis
+        task1 = {"type": "dataset_analysis", "params": {}}
+        assert test_agent.can_handle_task(task1)
+
+        # Should handle conversation
+        task2 = {"type": "conversation", "params": {}}
+        assert test_agent.can_handle_task(task2)
+
+        # Should not handle format detection (not in capabilities)
+        task3 = {"type": "format_detection", "params": {}}
+        assert not test_agent.can_handle_task(task3)
+
+        # Should not handle unknown task type
+        task4 = {"type": "unknown_task", "params": {}}
+        assert not test_agent.can_handle_task(task4)
+
+    @pytest.mark.unit
+    async def test_successful_task_execution(self, test_agent):
+        """Test successful task execution."""
+        task = {"type": "dataset_analysis", "params": {"test": "value"}}
+
+        result = await test_agent.execute_task(task)
+
+        assert result["result"] == "success"
+        assert result["task_type"] == "dataset_analysis"
+        assert result["processed"] is True
+        assert result["agent_id"] == test_agent.agent_id
+        assert test_agent.process_called
+        assert test_agent.status == AgentStatus.READY
+        assert test_agent.success_count == 1
+        assert test_agent.error_count == 0
+
+    @pytest.mark.unit
+    async def test_task_execution_failure(self, test_agent):
+        """Test task execution failure."""
+        task = {"type": "fail", "params": {}}
+
+        with pytest.raises(RuntimeError, match="Task processing failed"):
+            await test_agent.execute_task(task)
+
+        assert test_agent.status == AgentStatus.ERROR
+        assert test_agent.success_count == 0
+        assert test_agent.error_count == 1
+
+    @pytest.mark.unit
+    async def test_unsupported_task_execution(self, test_agent):
+        """Test execution of unsupported task."""
+        task = {"type": "format_detection", "params": {}}
+
+        with pytest.raises(ValueError, match="cannot handle task type"):
+            await test_agent.execute_task(task)
+
+    @pytest.mark.unit
+    async def test_execution_when_not_ready(self, test_agent):
+        """Test execution when agent is not ready."""
+        test_agent.status = AgentStatus.BUSY
+        task = {"type": "dataset_analysis", "params": {}}
+
+        with pytest.raises(RuntimeError, match="is not ready"):
+            await test_agent.execute_task(task)
+
+    @pytest.mark.unit
+    def test_get_status(self, test_agent):
+        """Test getting agent status."""
+        status = test_agent.get_status()
+
+        assert status["agent_id"] == "test_agent_123"
+        assert status["agent_type"] == "ConcreteTestAgent"
+        assert status["status"] == "ready"
+        assert len(status["capabilities"]) == 2
+        assert "dataset_analysis" in status["capabilities"]
+        assert "conversation" in status["capabilities"]
+        assert status["success_count"] == 0
+        assert status["error_count"] == 0
+        assert "created_at" in status
+        assert "last_activity" in status
+
+    @pytest.mark.unit
+    def test_metadata_management(self, test_agent):
+        """Test metadata management."""
+        # Update metadata
+        test_agent.update_metadata({"test_key": "test_value", "number": 42})
+
+        status = test_agent.get_status()
+        assert status["metadata"]["test_key"] == "test_value"
+        assert status["metadata"]["number"] == 42
+
+    @pytest.mark.unit
+    def test_metrics_reset(self, test_agent):
+        """Test metrics reset."""
+        # Set some metrics
+        test_agent.success_count = 5
+        test_agent.error_count = 2
+
+        # Reset metrics
+        test_agent.reset_metrics()
+
+        assert test_agent.success_count == 0
+        assert test_agent.error_count == 0
+
+    @pytest.mark.unit
+    async def test_agent_shutdown(self, test_agent):
+        """Test agent shutdown."""
+        await test_agent.shutdown()
+        assert test_agent.status == AgentStatus.STOPPED
+
+
+class TestAgentRegistry:
+    """Test the AgentRegistry functionality."""
+
+    @pytest.fixture
+    def registry(self):
+        """Create an agent registry."""
+        return AgentRegistry()
+
+    @pytest.fixture
+    def test_agents(self):
+        """Create test agents."""
+        agent1 = ConcreteTestAgent(agent_id="agent_1")
+        agent2 = ConcreteTestAgent(agent_id="agent_2")
+        return agent1, agent2
+
+    @pytest.mark.unit
+    def test_registry_initialization(self, registry):
+        """Test registry initialization."""
+        assert len(registry) == 0
+        assert len(registry.agents) == 0
+        assert len(registry.agents_by_type) == 0
+        assert len(registry.agents_by_capability) == 0
+
+    @pytest.mark.unit
+    def test_agent_registration(self, registry, test_agents):
+        """Test agent registration."""
+        agent1, agent2 = test_agents
+
+        registry.register_agent(agent1)
+        registry.register_agent(agent2)
+
+        assert len(registry) == 2
+        assert "agent_1" in registry
+        assert "agent_2" in registry
+        assert registry.get_agent("agent_1") == agent1
+        assert registry.get_agent("agent_2") == agent2
+
+    @pytest.mark.unit
+    def test_duplicate_registration_error(self, registry, test_agents):
+        """Test error on duplicate agent registration."""
+        agent1, _ = test_agents
+
+        registry.register_agent(agent1)
+
+        with pytest.raises(ValueError, match="already registered"):
+            registry.register_agent(agent1)
+
+    @pytest.mark.unit
+    def test_agent_unregistration(self, registry, test_agents):
+        """Test agent unregistration."""
+        agent1, agent2 = test_agents
+
+        registry.register_agent(agent1)
+        registry.register_agent(agent2)
+
+        unregistered = registry.unregister_agent("agent_1")
+
+        assert unregistered == agent1
+        assert len(registry) == 1
+        assert "agent_1" not in registry
+        assert "agent_2" in registry
+
+    @pytest.mark.unit
+    def test_get_agents_by_type(self, registry, test_agents):
+        """Test getting agents by type."""
+        agent1, agent2 = test_agents
+
+        registry.register_agent(agent1)
+        registry.register_agent(agent2)
+
+        agents = registry.get_agents_by_type("ConcreteTestAgent")
+        assert len(agents) == 2
+        assert agent1 in agents
+        assert agent2 in agents
+
+    @pytest.mark.unit
+    def test_get_agents_by_capability(self, registry, test_agents):
+        """Test getting agents by capability."""
+        agent1, agent2 = test_agents
+
+        registry.register_agent(agent1)
+        registry.register_agent(agent2)
+
+        agents = registry.get_agents_by_capability(AgentCapability.DATASET_ANALYSIS)
+        assert len(agents) == 2
+        assert agent1 in agents
+        assert agent2 in agents
+
+    @pytest.mark.unit
+    def test_find_agent_for_task(self, registry, test_agents):
+        """Test finding agent for task."""
+        agent1, agent2 = test_agents
+
+        registry.register_agent(agent1)
+        registry.register_agent(agent2)
+
+        task = {"type": "dataset_analysis", "params": {}}
+        found_agent = registry.find_agent_for_task(task)
+
+        assert found_agent is not None
+        assert found_agent in [agent1, agent2]
+
+    @pytest.mark.unit
+    def test_registry_status(self, registry, test_agents):
+        """Test registry status reporting."""
+        agent1, agent2 = test_agents
+
+        registry.register_agent(agent1)
+        registry.register_agent(agent2)
+
+        status = registry.get_registry_status()
+
+        assert status["total_agents"] == 2
+        assert status["agents_by_status"]["ready"] == 2
+        assert status["agents_by_type"]["ConcreteTestAgent"] == 2
+        assert len(status["agent_ids"]) == 2
+
+    @pytest.mark.unit
+    async def test_shutdown_all_agents(self, registry, test_agents):
+        """Test shutting down all agents."""
+        agent1, agent2 = test_agents
+
+        registry.register_agent(agent1)
+        registry.register_agent(agent2)
+
+        await registry.shutdown_all_agents()
+
+        assert len(registry) == 0
+        assert agent1.status == AgentStatus.STOPPED
+        assert agent2.status == AgentStatus.STOPPED
