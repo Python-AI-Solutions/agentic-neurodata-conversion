@@ -54,7 +54,7 @@
   - Add README files with usage instructions and development guides
   - _Requirements: 7.1, 7.2_
 
-- [ ] 8. Set up ETL directory structure
+- [x] 8. Set up ETL directory structure
   - Create `etl/` directory with subdirectories for input-data, workflows,
     evaluation-data
   - Add README files explaining directory purposes
