@@ -325,7 +325,7 @@ userNotes=Synthetic test data generated for testing
         }
 
 
-class TestDatasetFactory:
+class DatasetFactory:
     """Factory for creating test datasets with different characteristics."""
 
     def __init__(self, generator: Optional[SyntheticDataGenerator] = None):

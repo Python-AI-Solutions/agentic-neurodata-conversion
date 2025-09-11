@@ -18,7 +18,7 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 
-class TestCleanupManager:
+class CleanupManager:
     """Manages cleanup of test artifacts and temporary resources."""
 
     def __init__(self):
@@ -153,7 +153,7 @@ class TestCleanupManager:
         self.cleanup_all()
 
 
-class TestEnvironmentCleaner:
+class EnvironmentCleaner:
     """Cleans up test environment and restores original state."""
 
     def __init__(self):
@@ -215,8 +215,8 @@ class TestEnvironmentCleaner:
 @contextmanager
 def isolated_test_environment(temp_dir: Optional[Path] = None):
     """Context manager for isolated test environment."""
-    cleanup_manager = TestCleanupManager()
-    env_cleaner = TestEnvironmentCleaner()
+    cleanup_manager = CleanupManager()
+    env_cleaner = EnvironmentCleaner()
 
     # Set up test environment
     env_cleaner.set_env_var("AGENTIC_CONVERTER_ENV", "test")

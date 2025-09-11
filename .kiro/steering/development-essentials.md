@@ -4,6 +4,10 @@ inclusion: always
 
 # Development Essentials
 
+## Response Guidelines
+
+**Do not create summary documents** - Avoid creating files like `summary.md` or `task_completion_summary.md` that describe what was done in a conversation. Focus on updating actual project documentation (README files, code comments, etc.) instead.
+
 ## Environment & Dependencies
 
 ### Pixi-Only Development
