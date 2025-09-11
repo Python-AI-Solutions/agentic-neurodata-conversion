@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [ ] 1. Create evaluation framework foundation
+- [x] 1. Create evaluation framework foundation
   - Implement `EvaluationFramework` class in
     `agentic_neurodata_conversion/evaluation/framework.py`
   - Create `EvaluationResult` and `QualityMetrics` dataclasses for structured

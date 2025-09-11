@@ -1,10 +1,13 @@
 # Conversion Examples
 
-This directory contains specific conversion workflow examples demonstrating how to convert various types of neuroscience data to NWB format using the Agentic Neurodata Conversion MCP Server.
+This directory contains specific conversion workflow examples demonstrating how
+to convert various types of neuroscience data to NWB format using the Agentic
+Neurodata Conversion MCP Server.
 
 ## Overview
 
-These examples show real-world conversion scenarios with different data formats, experimental setups, and conversion requirements. Each example includes:
+These examples show real-world conversion scenarios with different data formats,
+experimental setups, and conversion requirements. Each example includes:
 
 - Dataset description and structure
 - Required file mappings
@@ -14,17 +17,20 @@ These examples show real-world conversion scenarios with different data formats,
 ## Example Categories
 
 ### Electrophysiology Examples
+
 - **SpikeGLX Recordings**: Converting Neuropixels data from SpikeGLX format
 - **Open Ephys**: Converting Open Ephys recording sessions
 - **Blackrock**: Converting Blackrock Microsystems data
 - **Neuralynx**: Converting Neuralynx acquisition system data
 
 ### Behavioral Examples
+
 - **Video Tracking**: Converting behavioral video and tracking data
 - **Task Events**: Converting behavioral task events and trial structure
 - **Stimulus Presentation**: Converting stimulus timing and parameters
 
 ### Imaging Examples
+
 - **Two-Photon Calcium Imaging**: Converting calcium imaging data
 - **Widefield Imaging**: Converting widefield optical imaging
 - **Fiber Photometry**: Converting fiber photometry recordings
@@ -45,20 +51,22 @@ example_name/
 ### Running Examples
 
 1. **Start MCP Server**:
+
    ```bash
    pixi run server
    ```
 
 2. **Use Python Client**:
+
    ```python
    from examples.python_client.workflow_example import MCPWorkflowClient
-   
+
    client = MCPWorkflowClient()
-   
+
    # Load example configuration
    with open("examples/conversion-examples/spikeglx_example/files_mapping.json") as f:
        files_map = json.load(f)
-   
+
    # Run conversion
    result = client.run_full_pipeline(
        dataset_dir="path/to/spikeglx/data",
@@ -97,12 +105,17 @@ These examples are designed to work with the MCP server tools:
 
 Common issues and solutions:
 
-1. **File Path Issues**: Ensure all file paths in mappings are correct and accessible
-2. **Format Detection**: Verify that data formats are supported and properly detected
-3. **Metadata Extraction**: Check that required metadata is available in source files
-4. **Validation Errors**: Review NWB validation results and fix data structure issues
+1. **File Path Issues**: Ensure all file paths in mappings are correct and
+   accessible
+2. **Format Detection**: Verify that data formats are supported and properly
+   detected
+3. **Metadata Extraction**: Check that required metadata is available in source
+   files
+4. **Validation Errors**: Review NWB validation results and fix data structure
+   issues
 
 For more help, see:
+
 - Main examples documentation: `examples/README.md`
 - Python client guide: `examples/python_client/README.md`
 - Integration patterns: `examples/integration_patterns/README.md`
