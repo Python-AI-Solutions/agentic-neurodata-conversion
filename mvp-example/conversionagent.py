@@ -1,6 +1,9 @@
 # conversion_agent.py
-import os, json, subprocess, sys
-from typing import Dict, Any, Optional
+import json
+import os
+import subprocess
+import sys
+from typing import Any, Optional
 
 try:
     from openai import OpenAI
@@ -98,16 +101,19 @@ Given (A) normalized NWB metadata and (B) a files map, generate a runnable Pytho
 Output must be pure Python code.
 """
 
+
 def synthesize_conversion_script(
-    normalized_metadata: Dict[str, Any],
-    files_map: Dict[str, Any],
+    normalized_metadata: dict[str, Any],
+    files_map: dict[str, Any],
     output_nwb_path: str,
     model: Optional[str] = None,
 ) -> str:
     model = model or os.getenv("LLM_MODEL", "gpt-5")
     api_key = os.getenv("OPENAI_API_KEY")
     if OpenAI is None or not api_key:
-        return _fallback_csv_only_script(normalized_metadata, files_map, output_nwb_path)
+        return _fallback_csv_only_script(
+            normalized_metadata, files_map, output_nwb_path
+        )
 
     client = OpenAI(api_key=api_key)
     user_prompt = f"""
@@ -135,8 +141,10 @@ OUTPUT_NWB_PATH:
     return code
 
 
-def _fallback_csv_only_script(metadata: Dict[str, Any], files_map: Dict[str, Any], out_path: str) -> str:
-    return f'''# generated_conversion.py (fallback CSV-only)
+def _fallback_csv_only_script(
+    metadata: dict[str, Any], files_map: dict[str, Any], out_path: str
+) -> str:
+    return f"""# generated_conversion.py (fallback CSV-only)
 import os, csv, json
 from datetime import datetime
 from pynwb import NWBFile, NWBHDF5IO
@@ -167,12 +175,14 @@ def make_nwb():
 
 if __name__ == "__main__":
     make_nwb()
-'''
+"""
+
 
 def write_generated_script(code: str, out_path: str) -> str:
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(code)
     return out_path
+
 
 def run_generated_script(script_path: str) -> int:
     return subprocess.call([sys.executable, script_path])

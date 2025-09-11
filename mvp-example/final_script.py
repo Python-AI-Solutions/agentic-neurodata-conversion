@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import argparse
-import subprocess
 from pathlib import Path
+import subprocess
 import sys
 
 from rdflib import Graph, URIRef
@@ -15,7 +15,9 @@ def run_cmd(cmd, input_text: str | None = None) -> None:
         else:
             subprocess.run(cmd, input=input_text.encode("utf-8"), check=True)
     except subprocess.CalledProcessError as e:
-        raise SystemExit(f"Command failed ({e.returncode}): {' '.join(map(str, cmd))}")
+        raise SystemExit(
+            f"Command failed ({e.returncode}): {' '.join(map(str, cmd))}"
+        ) from e
 
 
 def label_for(g: Graph, node) -> str:
@@ -34,7 +36,7 @@ def label_for(g: Graph, node) -> str:
 def emit_llm_files(ttl_path: Path) -> None:
     target_dir = ttl_path.parent
     stem = ttl_path.stem  # preserves multi-part stems like *.data and *.owl
-    base = target_dir / stem
+    target_dir / stem
     g = Graph()
     g.parse(str(ttl_path), format="turtle")
     print(f"  Triples in {ttl_path.name}: {len(g)}")
@@ -43,7 +45,9 @@ def emit_llm_files(ttl_path: Path) -> None:
     g.serialize(destination=str(target_dir / f"{stem}.nt"), format="nt")
 
     # 2) JSON-LD
-    g.serialize(destination=str(target_dir / f"{stem}.jsonld"), format="json-ld", indent=2)
+    g.serialize(
+        destination=str(target_dir / f"{stem}.jsonld"), format="json-ld", indent=2
+    )
 
     # 3) LLM-friendly triples.txt (labels where available)
     with open(target_dir / f"{stem}.triples.txt", "w", encoding="utf-8") as f:
@@ -52,12 +56,37 @@ def emit_llm_files(ttl_path: Path) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Full pipeline: NWB -> LinkML -> TTL -> LLM KG files")
-    parser.add_argument("nwb", nargs="?", default="", help="Path to NWB file (.nwb). If omitted, you will be prompted.")
-    parser.add_argument("--cache-dir", default=str((Path(__file__).resolve().parent.parent / ".nwb_linkml_cache").resolve()), help="Cache directory for NDX resolution")
-    parser.add_argument("--data", choices=["none", "stats", "sample", "full"], default="stats", help="Data inclusion policy for TTL")
-    parser.add_argument("--sample-limit", type=int, default=200, help="Sample size when --data=sample")
-    parser.add_argument("--max-bytes", type=int, default=50_000_000, help="Max bytes per dataset when embedding values")
+    parser = argparse.ArgumentParser(
+        description="Full pipeline: NWB -> LinkML -> TTL -> LLM KG files"
+    )
+    parser.add_argument(
+        "nwb",
+        nargs="?",
+        default="",
+        help="Path to NWB file (.nwb). If omitted, you will be prompted.",
+    )
+    parser.add_argument(
+        "--cache-dir",
+        default=str(
+            (Path(__file__).resolve().parent.parent / ".nwb_linkml_cache").resolve()
+        ),
+        help="Cache directory for NDX resolution",
+    )
+    parser.add_argument(
+        "--data",
+        choices=["none", "stats", "sample", "full"],
+        default="stats",
+        help="Data inclusion policy for TTL",
+    )
+    parser.add_argument(
+        "--sample-limit", type=int, default=200, help="Sample size when --data=sample"
+    )
+    parser.add_argument(
+        "--max-bytes",
+        type=int,
+        default=50_000_000,
+        help="Max bytes per dataset when embedding values",
+    )
     args = parser.parse_args()
 
     nwb_str = args.nwb.strip() or input("Enter path to NWB file (.nwb): ").strip()
@@ -89,9 +118,12 @@ def main() -> None:
     if n_script.exists():
         linkml_out_dir = final_dir / f"{base_stem}.linkml"
         cmd_n = [
-            str(py_n), str(n_script),
-            "--cache-dir", str(Path(args.cache_dir).expanduser()),
-            "--output", str(linkml_out_dir),
+            str(py_n),
+            str(n_script),
+            "--cache-dir",
+            str(Path(args.cache_dir).expanduser()),
+            "--output",
+            str(linkml_out_dir),
         ]
         print("[1/3] Generating LinkML via:", " ".join(cmd_n))
         run_cmd(cmd_n, input_text=str(nwb_path) + "\n")
@@ -102,12 +134,19 @@ def main() -> None:
     ttl_out = final_dir / f"{base_stem}.data.ttl"
     if lt_script.exists():
         cmd_lt = [
-            str(py_ttl), str(lt_script), str(nwb_path),
-            "--ontology", "none",
-            "--data", args.data,
-            "--sample-limit", str(args.sample_limit),
-            "--max-bytes", str(args.max_bytes),
-            "--output", str(ttl_out),
+            str(py_ttl),
+            str(lt_script),
+            str(nwb_path),
+            "--ontology",
+            "none",
+            "--data",
+            args.data,
+            "--sample-limit",
+            str(args.sample_limit),
+            "--max-bytes",
+            str(args.max_bytes),
+            "--output",
+            str(ttl_out),
         ]
         print("[2/3] Generating TTL via:", " ".join(cmd_lt))
         run_cmd(cmd_lt)
@@ -121,10 +160,15 @@ def main() -> None:
     owl_out = final_dir / f"{base_stem}.owl.ttl"
     if lt_script.exists():
         cmd_owl = [
-            str(py_ttl), str(lt_script), str(nwb_path),
-            "--ontology", "full",
-            "--data", "none",
-            "--output", str(owl_out),
+            str(py_ttl),
+            str(lt_script),
+            str(nwb_path),
+            "--ontology",
+            "full",
+            "--data",
+            "none",
+            "--output",
+            str(owl_out),
         ]
         print("[3/4] Generating OWL TTL via:", " ".join(cmd_owl))
         run_cmd(cmd_owl)
@@ -136,7 +180,6 @@ def main() -> None:
     emit_llm_files(ttl_out)
     emit_llm_files(owl_out)
     if ttl_out.exists():
-       
         print("Done:")
         print(" -", ttl_out, "(data)")
         print(" -", ttl_out.with_suffix(".nt"))
@@ -151,5 +194,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-

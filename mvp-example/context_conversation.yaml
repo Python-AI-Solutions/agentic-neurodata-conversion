@@ -1,9 +1,9 @@
 agent:
   name: ConversationAgent
   description: >
-    User-facing natural language interface for the NWB pipeline.
-    Converts human queries into structured actions (conversion, evaluation, explanation).
-    Acts as the orchestrator and helps humans navigate results.
+    User-facing natural language interface for the NWB pipeline. Converts human
+    queries into structured actions (conversion, evaluation, explanation). Acts
+    as the orchestrator and helps humans navigate results.
 
   goals:
     - Translate natural language questions into system actions.

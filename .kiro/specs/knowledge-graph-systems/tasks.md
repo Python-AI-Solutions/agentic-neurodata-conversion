@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [ ] 1. Create knowledge graph foundation and data models
+- [x] 1. Create knowledge graph foundation and data models
   - Implement `KnowledgeGraph` class in
     `agentic_neurodata_conversion/knowledge_graph/graph.py`
   - Create entity classes (Dataset, Session, Subject, Device, Lab, Protocol)
@@ -9,19 +9,25 @@
   - Implement basic graph storage and retrieval using RDFLib or similar
   - _Requirements: 1.3, 3.1_
 
-- [ ] 2. Build metadata enrichment engine
-  - Create `MetadataEnricher` class for automatic metadata enhancement
-  - Implement strain-to-species mapping with confidence scoring
-  - Add device specification lookup and protocol enrichment capabilities
-  - Create enrichment suggestion system with provenance tracking
+- [ ] 2. Build metadata enrichment engine with evidence-based confidence
+  - Create `MetadataEnricher` class for automatic metadata enhancement with reasoning chain tracking
+  - Implement strain-to-species mapping with evidence quality assessment and conflict detection
+  - Add device specification lookup and protocol enrichment with cross-validation capabilities
+  - Create enrichment suggestion system with evidence hierarchy and human override support
+  - Implement iterative refinement workflows for improving low-confidence metadata over time
+  - Add evidence presentation system for human review of conflicting or uncertain enrichments
   - _Requirements: 1.1, 1.2, 1.4_
+  - _Integration: data-management-provenance Task 4, Task 7_
 
-- [ ] 3. Implement provenance tracking and source attribution
-  - Create `ProvenanceTracker` class for data source differentiation
-  - Add source classification system (User, AI, External) with audit trails
-  - Implement confidence scoring and reliability assessment for enrichments
-  - Create provenance query and reporting capabilities
+- [ ] 3. Implement semantic provenance tracking with DataLad integration
+  - Create `SemanticProvenanceTracker` class using PROV-O ontology for decision chains and evidence hierarchy
+  - Add enhanced confidence levels (definitive, high_evidence, human_confirmed, human_override, cross_validated, heuristic_strong, medium_evidence, conflicting_evidence, low_evidence, placeholder, unknown)
+  - Implement evidence conflict detection with SPARQL queries and human override tracking with evidence presentation records
+  - Create reasoning chain representation in RDF with evidence quality assessment and source attribution
+  - Integrate with DataLad conversion repositories for file-level provenance correlation
+  - Add decision provenance queries for transparency and reproducibility validation
   - _Requirements: 1.2, 1.4_
+  - _Integration: data-management-provenance Task 4_
 
 - [ ] 4. Build SPARQL query engine and validation system
   - Implement SPARQL endpoint using rdflib or Apache Jena
@@ -51,12 +57,14 @@
   - Create format validation and quality checking
   - _Requirements: 3.1, 3.2_
 
-- [ ] 8. Build human-readable output generation
-  - Create triple summary generation with entity labels and descriptions
-  - Implement natural language description generation for relationships
-  - Add visualization-friendly output formats for graph exploration
-  - Create summary statistics and knowledge graph metrics
+- [ ] 8. Build human-readable provenance and decision chain output generation
+  - Create triple summary generation with entity labels, descriptions, and confidence levels
+  - Implement natural language description generation for decision chains and evidence reasoning
+  - Add visualization-friendly output formats for provenance graph exploration and evidence conflict display
+  - Create summary statistics including confidence distributions, evidence quality metrics, and human override rates
+  - Generate human-readable provenance reports showing reasoning paths and evidence hierarchy
   - _Requirements: 3.2, 3.4_
+  - _Integration: data-management-provenance Task 10_
 
 - [ ] 9. Create SPARQL endpoint and API services
   - Implement standard SPARQL endpoint with HTTP protocol support
@@ -79,12 +87,14 @@
   - Create migration tools for knowledge graph schema changes
   - _Requirements: 1.4, 2.3_
 
-- [ ] 12. Build MCP server integration for knowledge graph tools
-  - Create MCP tools for knowledge graph generation and querying
-  - Implement metadata enrichment tools accessible through MCP interface
-  - Add knowledge graph export and format conversion tools
-  - Create knowledge graph validation and quality assessment tools
+- [ ] 12. Build MCP server integration for semantic provenance and enrichment tools
+  - Create MCP tools for knowledge graph generation with provenance tracking and decision chain recording
+  - Implement metadata enrichment tools with evidence conflict detection and human override capabilities
+  - Add knowledge graph export tools including provenance information and confidence levels
+  - Create semantic provenance validation and evidence quality assessment tools
+  - Integrate with DataLad provenance system for complete audit trail generation
   - _Requirements: 1.1, 1.2, 3.1_
+  - _Integration: data-management-provenance Task 7_
 
 - [ ] 13. Create knowledge graph visualization and exploration tools
   - Implement interactive knowledge graph visualization

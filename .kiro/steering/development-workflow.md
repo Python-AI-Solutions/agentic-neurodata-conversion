@@ -1,351 +1,340 @@
----
-inclusion: always
----
+# Development Workflow Guidelines
 
-# Development Workflow with Pixi
+## Daily Development Workflow
 
-## Project Setup
+This document outlines the complete development workflow for the Agentic Neurodata Conversion project, integrating TDD, pre-commit hooks, and quality assurance.
 
-### Initial Setup
+### 1. Setup (One-time)
 
 ```bash
-# Clone the repository
+# Clone and setup project
 git clone <repository-url>
 cd agentic-neurodata-conversion
 
-# Install all dependencies (including dev and test features)
+# Install dependencies and setup environment
 pixi install
-
-# Verify installation
-pixi run python --version
-pixi list
-```
-
-### Environment Activation
-
-```bash
-# For interactive development
-pixi shell
-
-# For running single commands
-pixi run <command>
-```
-
-## Development Commands
-
-### Code Quality
-
-```bash
-# Lint code
-pixi run lint
-
-# Format code
-pixi run format
-
-# Type checking
-pixi run type-check
-
-# Run all quality checks
-pixi run lint && pixi run format && pixi run type-check
-```
-
-### Testing
-
-```bash
-# Run all tests
-pixi run test
-
-# Run with coverage
-pixi run test-cov
-
-# Run specific test types
-pixi run test-unit
-pixi run test-integration
-pixi run test-e2e
-pixi run test-fast
-
-# Run tests in parallel
-pixi run test-parallel
-
-# Run performance tests
-pixi run test-benchmark
-```
-
-### Server Development
-
-```bash
-# Run production server
-pixi run run-server
-
-# Run development server with reload
-pixi run run-server-dev
-```
-
-### Documentation
-
-```bash
-# Serve documentation locally
-pixi run docs-serve
-
-# Build documentation
-pixi run docs-build
-```
-
-### Utility Tasks
-
-```bash
-# Clean build artifacts
-pixi run clean
 
 # Install pre-commit hooks
-pixi run pre-commit-install
-
-# Run pre-commit on all files
-pixi run pre-commit-run
+pixi run setup-hooks
 ```
 
-## Adding Dependencies
+### 2. Feature Development Workflow
 
-### Runtime Dependencies
-
+#### Step 1: Write Failing Tests (TDD)
 ```bash
-# Add a new runtime dependency
-pixi add numpy>=1.24.0
+# Create test file in appropriate directory
+# tests/unit/ for unit tests
+# tests/integration/ for integration tests
+# tests/e2e/ for end-to-end tests
 
-# Add with specific version
-pixi add "pydantic>=2.0.0,<3.0.0"
+# Write failing tests that define expected behavior
+pixi run test-unit  # Should show failing tests (expected)
 ```
 
-### Development Dependencies
-
+#### Step 2: Check Code Quality Early
 ```bash
-# Add development dependency
-pixi add --feature dev black
+# Run pre-commit to catch style issues early
+pixi run pre-commit
 
-# Add test dependency
-pixi add --feature test pytest-xdist
+# Fix any issues and run again
+pixi run pre-commit
 ```
 
-### Checking Dependencies
-
+#### Step 3: Implement Minimal Code
 ```bash
-# List all installed packages
-pixi list
+# Write just enough code to make tests pass
+# Follow TDD red-green-refactor cycle
 
-# Show dependency tree
-pixi tree
-
-# Check for updates
-pixi update --dry-run
+# Run tests to see progress
+pixi run test-unit
 ```
 
-## Python Execution
-
-### Running Scripts
-
+#### Step 4: Refactor and Improve
 ```bash
-# Run Python scripts
-pixi run python script.py
-pixi run python -m module_name
-
-# Run with arguments
-pixi run python script.py --arg1 value1 --arg2 value2
+# Improve implementation while keeping tests passing
+# Run quality checks frequently
+pixi run format      # Format code
+pixi run lint        # Check linting
+pixi run type-check  # Check types
+pixi run test-unit   # Ensure tests still pass
 ```
 
-### Interactive Python
-
+#### Step 5: Final Quality Check
 ```bash
-# Start Python REPL
-pixi run python
+# Run comprehensive pre-commit check
+pixi run pre-commit
 
-# Start IPython (if installed)
-pixi run ipython
-
-# Start Jupyter
-pixi run jupyter notebook
+# Run full test suite for affected areas
+pixi run test-fast   # Quick tests
+pixi run test-unit   # Unit tests
 ```
 
-## Environment Management
+### 3. Code Quality Standards
 
-### Environment Information
+#### Pre-commit Integration
+All code must pass pre-commit hooks:
+- **Ruff linter**: Comprehensive Python linting
+- **Ruff formatter**: Code formatting (88 character line length)
+- **Import sorting**: Automatic import organization
+- **File quality**: Trailing whitespace, end-of-file fixes
+- **Documentation**: YAML/JSON/Markdown formatting
+- **Security**: Private key and credential detection
 
+#### Common Quality Patterns
+
+##### Function Arguments
+```python
+# ✅ GOOD - Prefix unused arguments with underscore
+def my_function(used_param: str, _unused_param: int = 42) -> str:
+    return used_param
+
+# ✅ GOOD - Test functions with unused parameters
+@pytest.mark.unit
+def test_feature(_config, items):
+    assert len(items) > 0
+
+# ✅ GOOD - MCP tool functions
+async def mcp_tool(param1: str, _server=None):
+    return {"result": param1}
+```
+
+##### Import Handling
+```python
+# ✅ GOOD - Let ruff handle import sorting automatically
+import json
+import logging
+from pathlib import Path
+from typing import Any, Optional
+
+from .types import MyType
+
+# ✅ GOOD - Conditional imports with noqa when needed
+try:
+    import optional_dependency  # noqa: F401
+    DEPENDENCY_AVAILABLE = True
+except ImportError:
+    DEPENDENCY_AVAILABLE = False
+```
+
+##### Line Length and Formatting
+```python
+# ✅ GOOD - Break long lines appropriately
+def long_function_name_that_processes_data(
+    input_parameter: str,
+    output_parameter: Path,
+    configuration_options: Dict[str, Any],
+) -> ProcessingResult:
+    """Process data with proper line breaks."""
+    return ProcessingResult()
+
+# ✅ GOOD - String formatting
+message = (
+    f"Processing {input_file.name} with configuration "
+    f"{config.name} and output to {output_file}"
+)
+```
+
+### 4. Testing Workflow
+
+#### Test-Driven Development
 ```bash
-# Show environment info
-pixi info
+# 1. Write failing test
+pixi run test-unit  # Should fail (red)
 
-# Show environment path
-pixi run python -c "import sys; print(sys.executable)"
+# 2. Write minimal implementation
+pixi run test-unit  # Should pass (green)
 
-# Show installed packages location
-pixi run python -c "import site; print(site.getsitepackages())"
+# 3. Refactor and improve
+pixi run test-unit  # Should still pass
+pixi run pre-commit # Ensure quality
 ```
 
-### Environment Cleanup
-
+#### Test Categories by Resource Usage
 ```bash
-# Remove environment and reinstall
-rm -rf .pixi
-pixi install
+# Fast tests (run frequently)
+pixi run test-unit           # Unit tests only
+pixi run test-fast           # Unit + mock tests
 
-# Update all dependencies
-pixi update
+# Medium tests (run before commits)
+pixi run test-integration    # Integration tests
+pixi run test-e2e           # End-to-end tests
+
+# Expensive tests (run sparingly)
+pixi run test-benchmark     # Performance tests
+# API tests run in CI only
 ```
 
-## IDE Configuration
+#### Test Quality Standards
+```python
+# ✅ GOOD - Test real components, not mocks
+def test_component_functionality(component_instance):
+    result = component_instance.process_data(test_data)
+    assert result.status == "success"
 
-### VS Code
+# ✅ GOOD - Skip tests until implementation exists
+pytestmark = pytest.mark.skipif(
+    not COMPONENT_AVAILABLE,
+    reason="Component not implemented yet"
+)
 
-Add to `.vscode/settings.json`:
+# ✅ GOOD - Proper test markers
+@pytest.mark.unit
+def test_pure_logic():
+    pass
 
+@pytest.mark.integration  
+def test_component_interaction():
+    pass
+```
+
+### 5. Git Workflow Integration
+
+#### Before Committing
+```bash
+# 1. Run comprehensive checks
+pixi run pre-commit
+
+# 2. Run relevant tests
+pixi run test-unit
+pixi run test-integration  # if applicable
+
+# 3. Commit only if everything passes
+git add .
+git commit -m "feat: implement feature with tests"
+```
+
+#### Commit Message Standards
+```bash
+# Use conventional commits
+git commit -m "feat: add new MCP tool for data processing"
+git commit -m "fix: resolve import sorting issue in tests"
+git commit -m "test: add unit tests for conversion module"
+git commit -m "docs: update development workflow guidelines"
+```
+
+### 6. IDE Configuration
+
+#### VS Code Settings
 ```json
 {
-  "python.defaultInterpreterPath": "./.pixi/envs/default/bin/python",
-  "python.terminal.activateEnvironment": false,
+  "python.formatting.provider": "ruff",
+  "python.linting.ruffEnabled": true,
+  "editor.formatOnSave": true,
+  "editor.rulers": [88],
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
   "python.testing.pytestEnabled": true,
   "python.testing.pytestArgs": ["tests/"],
-  "python.linting.enabled": true,
-  "python.linting.ruffEnabled": true,
-  "python.formatting.provider": "ruff"
+  "python.defaultInterpreterPath": "./.pixi/envs/default/bin/python"
 }
 ```
 
-### PyCharm
+#### PyCharm Configuration
+- Set Python interpreter to `.pixi/envs/default/bin/python`
+- Enable "Reformat code" on save
+- Set right margin to 88 characters
+- Configure pytest as test runner
 
-1. Go to Settings → Project → Python Interpreter
-2. Add New Interpreter → Existing Environment
-3. Select `.pixi/envs/default/bin/python`
+### 7. Troubleshooting Common Issues
 
-## Troubleshooting
-
-### Common Issues
-
-#### Import Errors
-
+#### Pre-commit Failures
 ```bash
-# Check if package is installed
+# If pre-commit fails:
+# 1. Read error messages carefully
+# 2. Fix issues manually (unused arguments, imports, etc.)
+# 3. Run individual tools to debug
+pixi run format      # Fix formatting
+pixi run lint        # Check specific linting issues
+# 4. Run pre-commit again
+pixi run pre-commit
+```
+
+#### Test Failures
+```bash
+# If tests fail:
+# 1. Run specific test categories
+pixi run test-unit -v           # Verbose unit tests
+pixi run test-integration -v    # Verbose integration tests
+
+# 2. Run specific test files
+pixi run pytest tests/unit/test_specific.py -v
+
+# 3. Debug with pytest options
+pixi run pytest tests/unit/test_specific.py::test_function -v -s
+```
+
+#### Import Issues
+```bash
+# If imports fail:
+# 1. Ensure pixi environment is active
+pixi run python -c "import agentic_neurodata_conversion"
+
+# 2. Check if packages are installed
 pixi list | grep package_name
 
-# Add missing package
-pixi add package_name
-
-# Reinstall environment (DO NOT modify PYTHONPATH)
-rm -rf .pixi && pixi install
-
-# Verify local package is available (via pypi-dependencies editable=true)
-pixi run python -c "import agentic_neurodata_conversion; print('Local package imports work')"
-```
-
-#### PYTHONPATH Issues
-
-**If you see PYTHONPATH-related problems:**
-
-```bash
-# NEVER do this - it breaks pixi isolation
-# export PYTHONPATH=/some/path:$PYTHONPATH  # ❌ WRONG
-
-# Instead, ensure proper pixi installation
-pixi install                                # ✅ CORRECT
-pixi run python -c "import sys; print(sys.path)"  # Check paths
-
-# If imports still fail, check if local package is installed
-pixi run pip show agentic-neurodata-conversion
-```
-
-#### Version Conflicts
-
-```bash
-# Check dependency conflicts
-pixi tree
-
-# Update specific package
-pixi update package_name
-
-# Check for available versions
-pixi search package_name
-```
-
-#### Environment Issues
-
-```bash
-# Verify pixi environment is active
-pixi run which python
-
-# Check environment variables
-pixi run env | grep CONDA
-
-# Reset environment
+# 3. Reinstall if needed
 rm -rf .pixi
 pixi install
 ```
 
-### Performance Issues
+### 8. Performance and Efficiency
 
+#### Fast Development Cycle
 ```bash
-# Use parallel installation
-pixi install --parallel
+# Quick quality check during development
+pixi run format && pixi run lint && pixi run test-unit
 
-# Clear cache
-pixi clean cache
-
-# Use local solver
-pixi install --solver=local
+# Full quality check before commit
+pixi run pre-commit && pixi run test-fast
 ```
 
-## Best Practices
-
-1. **Always use pixi commands**: Never use system Python or pip directly
-2. **Keep pixi.toml updated**: All dependencies should be declared
-3. **Use pixi tasks**: Prefer predefined tasks over manual commands
-4. **Never manipulate PYTHONPATH**: Pixi handles imports automatically
-5. **Test in clean environment**: Regularly test with fresh `pixi install`
-6. **Document new tasks**: Add new development tasks to pixi.toml
-7. **Version pin important deps**: Pin versions for critical dependencies
-8. **Use features for organization**: Separate dev, test, and docs dependencies
-9. **Trust pixi's dependency resolution**: No manual path management needed
-
-## Git Integration
-
-### Pre-commit Setup
-
+#### Parallel Testing
 ```bash
-# Install pre-commit hooks
-pixi run pre-commit-install
+# Run tests in parallel for speed
+pixi run test-parallel
 
-# Run on all files
-pixi run pre-commit-run
-
-# Update hooks
-pixi run pre-commit autoupdate
+# Run specific test markers in parallel
+pixi run pytest -m "unit" -n auto
 ```
 
-### Ignore Files
+### 9. Documentation Integration
 
-Ensure `.gitignore` includes:
+#### Code Documentation
+- Use NumPy style docstrings
+- Document all public functions and classes
+- Include type hints for all parameters and returns
 
+#### Workflow Documentation
+- Update this workflow as processes evolve
+- Document new testing patterns
+- Share knowledge through steering files
+
+### 10. Continuous Improvement
+
+#### Regular Maintenance
+```bash
+# Update pre-commit hooks
+pixi run pre-commit-update
+
+# Update dependencies
+pixi update
+
+# Clean build artifacts
+pixi run clean
 ```
-.pixi/
-*.pyc
-__pycache__/
-.pytest_cache/
-.coverage
-htmlcov/
-```
 
-## Continuous Integration
+#### Quality Metrics
+- Monitor test coverage with `pixi run test-cov`
+- Review pre-commit hook effectiveness
+- Gather team feedback on workflow efficiency
 
-For CI/CD, use pixi in your workflows:
+## Summary
 
-```yaml
-# GitHub Actions example
-- name: Setup Pixi
-  uses: prefix-dev/setup-pixi@v0.4.1
+This workflow ensures:
+1. **Quality**: Pre-commit hooks catch issues early
+2. **Reliability**: TDD ensures robust implementations
+3. **Consistency**: Automated formatting and linting
+4. **Efficiency**: Fast feedback loops and parallel testing
+5. **Maintainability**: Clear patterns and documentation
 
-- name: Install dependencies
-  run: pixi install
-
-- name: Run tests
-  run: pixi run test-cov
-
-- name: Run linting
-  run: pixi run lint
-```
+Remember: The goal is sustainable, high-quality development with minimal friction and maximum confidence in the codebase.

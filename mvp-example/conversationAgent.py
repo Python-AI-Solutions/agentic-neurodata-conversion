@@ -1,7 +1,12 @@
 # conversation_agent.py
 from __future__ import annotations
-import os, re, json, glob, uuid
-from typing import Dict, Any, Optional
+
+import glob
+import json
+import os
+from typing import Any
+import uuid
+
 import yaml
 
 try:
@@ -25,7 +30,7 @@ PROVENANCE_SOURCE = "source"
 PROVENANCE_LLM = "llm-suggested"
 
 
-def _load_sidecar_metadata(dataset_dir: str) -> Dict[str, Any]:
+def _load_sidecar_metadata(dataset_dir: str) -> dict[str, Any]:
     meta = {}
     for pattern in (
         "*metadata*.json",
@@ -39,7 +44,7 @@ def _load_sidecar_metadata(dataset_dir: str) -> Dict[str, Any]:
     ):
         for path in glob.glob(os.path.join(dataset_dir, pattern)):
             try:
-                with open(path, "r", encoding="utf-8") as f:
+                with open(path, encoding="utf-8") as f:
                     if path.endswith((".yml", ".yaml")):
                         doc = yaml.safe_load(f)
                     else:
@@ -51,7 +56,7 @@ def _load_sidecar_metadata(dataset_dir: str) -> Dict[str, Any]:
     return meta
 
 
-def _coerce_identifier(candidate: Dict[str, Any]) -> str:
+def _coerce_identifier(candidate: dict[str, Any]) -> str:
     for k in ("identifier", "session_id", "id"):
         v = candidate.get(k)
         if isinstance(v, str) and v.strip():
@@ -62,7 +67,9 @@ def _coerce_identifier(candidate: Dict[str, Any]) -> str:
 SYSTEM_PROMPT = "You are a meticulous NWB metadata auditor. Output compact JSON with keys: 'normalized','suggested','questions'."
 
 
-def _call_llm_map_and_infer(hints: Dict[str, Any], model: Optional[str] = None) -> Dict[str, Any]:
+def _call_llm_map_and_infer(
+    hints: dict[str, Any], model: str | None = None
+) -> dict[str, Any]:
     model = model or os.getenv("LLM_MODEL", "gpt-5")
     api_key = os.getenv("OPENAI_API_KEY")
     if OpenAI is None or not api_key:
@@ -91,7 +98,9 @@ def _call_llm_map_and_infer(hints: Dict[str, Any], model: Optional[str] = None) 
         }
 
 
-def analyze_dataset(dataset_dir: str, out_report_json: Optional[str] = None) -> Dict[str, Any]:
+def analyze_dataset(
+    dataset_dir: str, out_report_json: str | None = None
+) -> dict[str, Any]:
     if not os.path.isdir(dataset_dir):
         raise FileNotFoundError(f"Dataset folder not found: {dataset_dir}")
     sidecar = _load_sidecar_metadata(dataset_dir)
@@ -100,7 +109,10 @@ def analyze_dataset(dataset_dir: str, out_report_json: Optional[str] = None) -> 
     missing = {"nwbfile": [], "subject": [], "general": []}
 
     identifier = _coerce_identifier(sidecar)
-    present["nwbfile"]["identifier"] = {"value": identifier, "source": PROVENANCE_SOURCE}
+    present["nwbfile"]["identifier"] = {
+        "value": identifier,
+        "source": PROVENANCE_SOURCE,
+    }
 
     if "session_description" in sidecar:
         present["nwbfile"]["session_description"] = {
