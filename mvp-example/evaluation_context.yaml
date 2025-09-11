@@ -1,9 +1,9 @@
 agent:
   name: EvaluationAgent
   description: >
-    Evaluates proposed NWB files by checking metadata completeness,
-    schema conformity, data integrity, and quality against NWB standards.
-    Provides structured feedback, raises critical errors, and suggests refinements.
+    Evaluates proposed NWB files by checking metadata completeness, schema
+    conformity, data integrity, and quality against NWB standards. Provides
+    structured feedback, raises critical errors, and suggests refinements.
 
   goals:
     - Ensure NWB outputs conform to NWB schema and LinkML specifications.
@@ -35,7 +35,7 @@ agent:
     - neuroconv-library
     - linkml-validator
     - knowledge-graph-checker
-    - custom-checks:  # extendable custom rules
+    - custom-checks: # extendable custom rules
         - filename_consistency
         - dataset_presence
         - sampling_rate_check

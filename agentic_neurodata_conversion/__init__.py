@@ -24,7 +24,7 @@ __author__ = "Agentic Neurodata Conversion Team"
 __email__ = "contact@example.com"
 
 # Core imports for package-level access
-from .core.config import settings
+from .core.config import get_config
 from .core.exceptions import (
     AgenticConverterError,
     ConfigurationError,
@@ -33,7 +33,7 @@ from .core.exceptions import (
 )
 
 __all__ = [
-    "settings",
+    "get_config",
     "AgenticConverterError",
     "ConfigurationError",
     "ConversionError",

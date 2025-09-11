@@ -1,19 +1,16 @@
 #!/usr/bin/env python3
 import argparse
+import contextlib
 from pathlib import Path
+import re
 import subprocess
 import sys
-import shutil
-import os
-
-import yaml
 import tempfile
-import re
-import math
 from typing import Optional
 
-from rdflib import Graph, Namespace, URIRef, Literal
-from rdflib.namespace import RDF, RDFS, XSD
+from rdflib import Graph, Literal, Namespace, URIRef
+from rdflib.namespace import RDF, RDFS
+import yaml
 
 
 def sanitize(name: str) -> str:
@@ -22,10 +19,7 @@ def sanitize(name: str) -> str:
 
 def make_base_uri(schema_dict: dict, nwb_path: Path) -> str:
     name = schema_dict.get("name") if isinstance(schema_dict, dict) else None
-    if isinstance(name, str) and name:
-        stem = sanitize(name)
-    else:
-        stem = sanitize(nwb_path.stem)
+    stem = sanitize(name) if isinstance(name, str) and name else sanitize(nwb_path.stem)
     return f"http://example.org/{stem}#"
 
 
@@ -39,6 +33,7 @@ def path_to_uri(base: Namespace, h5_path: str) -> URIRef:
 def make_literal(value) -> Optional[Literal]:
     try:
         import numpy as np
+
         if isinstance(value, (bytes, bytearray)):
             try:
                 return Literal(value.decode("utf-8"))
@@ -48,7 +43,11 @@ def make_literal(value) -> Optional[Literal]:
             return Literal(value.item())
         if isinstance(value, (str, int, float, bool)):
             return Literal(value)
-        if isinstance(value, (list, tuple)) and len(value) > 0 and isinstance(value[0], (str, int, float, bool)):
+        if (
+            isinstance(value, (list, tuple))
+            and len(value) > 0
+            and isinstance(value[0], (str, int, float, bool))
+        ):
             return Literal(str(list(value)))
         s = str(value)
         if len(s) > 0:
@@ -61,23 +60,29 @@ def make_literal(value) -> Optional[Literal]:
 def estimate_nbytes(arr) -> int:
     try:
         import numpy as np  # noqa: F401
+
         return int(getattr(arr, "nbytes", 0) or 0)
     except Exception:
         return 0
 
 
-def add_values(g: Graph, subj: URIRef, pred: URIRef, arr, sample_limit: Optional[int], max_bytes: Optional[int] = None):
+def add_values(
+    g: Graph,
+    subj: URIRef,
+    pred: URIRef,
+    arr,
+    sample_limit: Optional[int],
+    max_bytes: Optional[int] = None,
+):
     import numpy as np
+
     try:
         flat = np.ravel(arr)
     except Exception:
         flat = arr
     values = []
     if hasattr(flat, "__len__") and not isinstance(flat, (bytes, str)):
-        if sample_limit is not None:
-            values = flat[:sample_limit]
-        else:
-            values = flat
+        values = flat[:sample_limit] if sample_limit is not None else flat
     else:
         values = [flat]
     total = 0
@@ -92,18 +97,19 @@ def add_values(g: Graph, subj: URIRef, pred: URIRef, arr, sample_limit: Optional
                 break
 
 
-def add_stats(g: Graph, subj: URIRef, EX: Namespace, dset, stats_inline_limit: int) -> None:
+def add_stats(
+    g: Graph, subj: URIRef, EX: Namespace, dset, stats_inline_limit: int
+) -> None:
     import numpy as np
+
     try:
         data = dset[()]  # may be array-like
         if data is None:
             return
         arr = np.array(data)
         # Always include size when available
-        try:
+        with contextlib.suppress(Exception):
             g.add((subj, EX.stat_size, Literal(int(arr.size))))
-        except Exception:
-            pass
         # Numeric summary statistics
         try:
             if np.issubdtype(arr.dtype, np.number):
@@ -121,7 +127,9 @@ def add_stats(g: Graph, subj: URIRef, EX: Namespace, dset, stats_inline_limit: i
                 if lit is not None:
                     g.add((subj, EX.hasValue, lit))
             # 1D arrays: inline up to stats_inline_limit elements
-            elif getattr(arr, "ndim", 0) == 1 and int(arr.size) <= int(stats_inline_limit):
+            elif getattr(arr, "ndim", 0) == 1 and int(arr.size) <= int(
+                stats_inline_limit
+            ):
                 count = 0
                 for v in arr.tolist():
                     lit = make_literal(v)
@@ -218,7 +226,13 @@ def build_instance_graph(
                     pass
                 try:
                     if getattr(obj, "compression_opts", None) is not None:
-                        g.add((subj, hasCompressionOpts, Literal(str(obj.compression_opts))))
+                        g.add(
+                            (
+                                subj,
+                                hasCompressionOpts,
+                                Literal(str(obj.compression_opts)),
+                            )
+                        )
                 except Exception:
                     pass
                 try:
@@ -261,15 +275,33 @@ def build_instance_graph(
                         for axis_index, dim in enumerate(obj.dims):
                             try:
                                 label = getattr(dim, "label", None)
-                                if isinstance(label, (str, bytes)) and len(str(label)) > 0:
-                                    g.add((subj, hasDimLabel, Literal(f"{axis_index}:{str(label)}")))
+                                if (
+                                    isinstance(label, (str, bytes))
+                                    and len(str(label)) > 0
+                                ):
+                                    g.add(
+                                        (
+                                            subj,
+                                            hasDimLabel,
+                                            Literal(f"{axis_index}:{str(label)}"),
+                                        )
+                                    )
                             except Exception:
                                 pass
                             try:
                                 for scale in dim:
                                     scale_name = getattr(scale, "name", None)
-                                    if isinstance(scale_name, str) and len(scale_name) > 0:
-                                        g.add((subj, hasDimScale, path_to_uri(BASE, scale_name)))
+                                    if (
+                                        isinstance(scale_name, str)
+                                        and len(scale_name) > 0
+                                    ):
+                                        g.add(
+                                            (
+                                                subj,
+                                                hasDimScale,
+                                                path_to_uri(BASE, scale_name),
+                                            )
+                                        )
                             except Exception:
                                 pass
                 except Exception:
@@ -277,12 +309,23 @@ def build_instance_graph(
                 try:
                     if include_data == "full":
                         arr = obj[()]
-                        if arr is not None and (max_bytes is None or max_bytes <= 0 or estimate_nbytes(arr) <= max_bytes):
+                        if arr is not None and (
+                            max_bytes is None
+                            or max_bytes <= 0
+                            or estimate_nbytes(arr) <= max_bytes
+                        ):
                             add_values(g, subj, hasValue, arr, sample_limit=None)
                     elif include_data == "sample":
                         arr = obj[()]
                         if arr is not None:
-                            add_values(g, subj, hasValue, arr, sample_limit=sample_limit, max_bytes=max_bytes)
+                            add_values(
+                                g,
+                                subj,
+                                hasValue,
+                                arr,
+                                sample_limit=sample_limit,
+                                max_bytes=max_bytes,
+                            )
                     elif include_data == "stats":
                         add_stats(g, subj, EX, obj, stats_inline_limit)
                 except Exception:
@@ -290,8 +333,9 @@ def build_instance_graph(
 
                 # Extract object and region references
                 try:
-                    import numpy as np
                     import h5py as _h5
+                    import numpy as np
+
                     ref_dtype = _h5.check_dtype(ref=obj.dtype)
                     reg_dtype = _h5.check_dtype(regionref=obj.dtype)
                     if ref_dtype is not None or reg_dtype is not None:
@@ -300,35 +344,66 @@ def build_instance_graph(
                         for r in flat:
                             try:
                                 # Object reference
-                                if ref_dtype is not None and isinstance(r, _h5.Reference) and r:
+                                if (
+                                    ref_dtype is not None
+                                    and isinstance(r, _h5.Reference)
+                                    and r
+                                ):
                                     target = obj.file[r].name
-                                    g.add((subj, hasReferenceTo, path_to_uri(BASE, target)))
+                                    g.add(
+                                        (
+                                            subj,
+                                            hasReferenceTo,
+                                            path_to_uri(BASE, target),
+                                        )
+                                    )
                                 # Region reference
-                                elif reg_dtype is not None and isinstance(r, _h5.RegionReference) and r:
+                                elif (
+                                    reg_dtype is not None
+                                    and isinstance(r, _h5.RegionReference)
+                                    and r
+                                ):
                                     # dataset that the region refers to
                                     dset = obj.file[r]
-                                    g.add((subj, hasRegionReferenceTo, path_to_uri(BASE, dset.name)))
+                                    g.add(
+                                        (
+                                            subj,
+                                            hasRegionReferenceTo,
+                                            path_to_uri(BASE, dset.name),
+                                        )
+                                    )
                             except Exception:
                                 continue
                 except Exception:
                     pass
+
         def visit_children(name, obj):
             parent = path_to_uri(BASE, name)
             if isinstance(obj, (h5py.Group, h5py.File)):
-                for child in obj.keys():
-                    child_path = name.rstrip("/") + "/" + child if name != "/" else "/" + child
+                for child in obj:
+                    child_path = (
+                        name.rstrip("/") + "/" + child if name != "/" else "/" + child
+                    )
                     child_uri = path_to_uri(BASE, child_path)
                     g.add((parent, hasChild, child_uri))
                     # Capture link types (soft/external)
                     try:
                         link = obj.get(child, getlink=True)
                         import h5py as _h5
+
                         if isinstance(link, _h5.SoftLink):
                             g.add((parent, hasSoftLinkTo, path_to_uri(BASE, link.path)))
                         elif isinstance(link, _h5.ExternalLink):
-                            g.add((parent, hasExternalLinkTo, Literal(f"{link.filename}::{link.path}")))
+                            g.add(
+                                (
+                                    parent,
+                                    hasExternalLinkTo,
+                                    Literal(f"{link.filename}::{link.path}"),
+                                )
+                            )
                     except Exception:
                         pass
+
         f.visititems(visit)
         # Add root -> first-level children edges
         visit_children("/", f)
@@ -337,15 +412,59 @@ def build_instance_graph(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate an OWL TTL from a LinkML YAML schema derived from an NWB file.")
-    parser.add_argument("input", nargs="?", default="", help="Path to NWB file (.nwb). If omitted, you will be prompted.")
-    parser.add_argument("--schema", type=str, default="", help="Path to LinkML YAML schema. Defaults to <input>.linkml.yaml; will be auto-generated if missing.")
-    parser.add_argument("--output", type=str, default="", help="Output TTL path. Defaults to <input>.ttl")
-    parser.add_argument("--data", type=str, choices=["none","stats","sample","full"], default="stats", help="How much dataset data to embed as triples.")
-    parser.add_argument("--ontology", type=str, choices=["full","used","none"], default="none", help="Ontology to include: full LinkML OWL, used-only terms, or none (default: none).")
-    parser.add_argument("--sample-limit", type=int, default=50, help="Max number of elements per dataset when --data=sample.")
-    parser.add_argument("--max-bytes", type=int, default=100_000_000_000, help="Hard cap on bytes per dataset values (<=0 means unlimited).")
-    parser.add_argument("--stats-inline-limit", type=int, default=500, help="In stats mode, inline up to N elements for 1D arrays.")
+    parser = argparse.ArgumentParser(
+        description="Generate an OWL TTL from a LinkML YAML schema derived from an NWB file."
+    )
+    parser.add_argument(
+        "input",
+        nargs="?",
+        default="",
+        help="Path to NWB file (.nwb). If omitted, you will be prompted.",
+    )
+    parser.add_argument(
+        "--schema",
+        type=str,
+        default="",
+        help="Path to LinkML YAML schema. Defaults to <input>.linkml.yaml; will be auto-generated if missing.",
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default="",
+        help="Output TTL path. Defaults to <input>.ttl",
+    )
+    parser.add_argument(
+        "--data",
+        type=str,
+        choices=["none", "stats", "sample", "full"],
+        default="stats",
+        help="How much dataset data to embed as triples.",
+    )
+    parser.add_argument(
+        "--ontology",
+        type=str,
+        choices=["full", "used", "none"],
+        default="none",
+        help="Ontology to include: full LinkML OWL, used-only terms, or none (default: none).",
+    )
+    parser.add_argument(
+        "--sample-limit",
+        type=int,
+        default=50,
+        help="Max number of elements per dataset when --data=sample.",
+    )
+    parser.add_argument(
+        "--max-bytes",
+        type=int,
+        default=100_000_000_000,
+        help="Hard cap on bytes per dataset values (<=0 means unlimited).",
+    )
+    parser.add_argument(
+        "--stats-inline-limit",
+        type=int,
+        default=500,
+        help="In stats mode, inline up to N elements for 1D arrays.",
+    )
     args = parser.parse_args()
 
     # Resolve NWB input (prompt if missing)
@@ -402,13 +521,22 @@ def main() -> None:
             # Let generator produce split schema by default; then use core.yaml
             out_dir = nwb_path.with_suffix("").with_suffix(".linkml")
             out_dir.mkdir(parents=True, exist_ok=True)
-            cmd = [str(gen_python), str(gen_script), "--cache-dir", str((repo_root / ".nwb_linkml_cache").resolve()), "--output", str(out_dir)]
+            cmd = [
+                str(gen_python),
+                str(gen_script),
+                "--cache-dir",
+                str((repo_root / ".nwb_linkml_cache").resolve()),
+                "--output",
+                str(out_dir),
+            ]
             print("Generating LinkML schema via:", " ".join(cmd))
             # Generator prompts for the NWB path; provide via stdin
             subprocess.run(cmd, input=(str(nwb_path) + "\n"), text=True, check=True)
             schema_path = out_dir / "core.yaml"
         else:
-            raise SystemExit(f"Schema not found and generator unavailable: expected {schema_path} or split dir {nwb_path.with_suffix('').with_suffix('.linkml')}")
+            raise SystemExit(
+                f"Schema not found and generator unavailable: expected {schema_path} or split dir {nwb_path.with_suffix('').with_suffix('.linkml')}"
+            )
 
     # Resolve output TTL path
     if args.output:
@@ -418,7 +546,9 @@ def main() -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Decide whether we are working with a split schema (core.yaml + parts)
-    is_split_schema = schema_path.name == "core.yaml" or (schema_path.parent.is_dir() and len(list(schema_path.parent.glob("*.yaml"))) > 1)
+    is_split_schema = schema_path.name == "core.yaml" or (
+        schema_path.parent.is_dir() and len(list(schema_path.parent.glob("*.yaml"))) > 1
+    )
 
     def sanitize_schema_dict(schema_dict: dict) -> dict:
         # Sanitize slot and attribute names to be URI-safe
@@ -439,9 +569,13 @@ def main() -> None:
                 if isinstance(attrs, dict):
                     candidate_names.update(attrs.keys())
                     for abody in attrs.values():
-                        if isinstance(abody, dict) and isinstance(abody.get("name"), str):
+                        if isinstance(abody, dict) and isinstance(
+                            abody.get("name"), str
+                        ):
                             candidate_names.add(abody["name"])
-                        if isinstance(abody, dict) and isinstance(abody.get("slot"), str):
+                        if isinstance(abody, dict) and isinstance(
+                            abody.get("slot"), str
+                        ):
                             candidate_names.add(abody["slot"])
                 s_list = cbody.get("slots")
                 if isinstance(s_list, list):
@@ -452,7 +586,9 @@ def main() -> None:
                 if isinstance(su, dict):
                     candidate_names.update(su.keys())
                     for sbody in su.values():
-                        if isinstance(sbody, dict) and isinstance(sbody.get("slot"), str):
+                        if isinstance(sbody, dict) and isinstance(
+                            sbody.get("slot"), str
+                        ):
                             candidate_names.add(sbody["slot"])
 
         # Build rename map
@@ -490,30 +626,40 @@ def main() -> None:
                             abody["name"] = aname
                             if isinstance(abody.get("slot"), str):
                                 sname = abody["slot"]
-                                abody["slot"] = slot_renames.get(sname, sanitize_local(sname))
+                                abody["slot"] = slot_renames.get(
+                                    sname, sanitize_local(sname)
+                                )
                     cbody["attributes"] = new_attrs
 
                 s_list = cbody.get("slots")
                 if isinstance(s_list, list):
-                    cbody["slots"] = [slot_renames.get(s, sanitize_local(s)) if isinstance(s, str) else s for s in s_list]
+                    cbody["slots"] = [
+                        slot_renames.get(s, sanitize_local(s))
+                        if isinstance(s, str)
+                        else s
+                        for s in s_list
+                    ]
 
                 su = cbody.get("slot_usage")
                 if isinstance(su, dict):
                     new_su = rename_keys(su)
-                    for sk, sbody in list(new_su.items()):
-                        if isinstance(sbody, dict) and isinstance(sbody.get("slot"), str):
+                    for _sk, sbody in list(new_su.items()):
+                        if isinstance(sbody, dict) and isinstance(
+                            sbody.get("slot"), str
+                        ):
                             sname = sbody["slot"]
-                            sbody["slot"] = slot_renames.get(sname, sanitize_local(sname))
+                            sbody["slot"] = slot_renames.get(
+                                sname, sanitize_local(sname)
+                            )
                     cbody["slot_usage"] = new_su
         return schema_dict
 
     # Prepare sanitized schema input for OWL generator
     if is_split_schema:
         # Sanitize all YAML files into a persistent temporary directory to keep imports consistent
-        import shutil as _shutil
         sanitized_dir = Path(tempfile.mkdtemp(prefix="linkml_split_"))
         for yml in schema_path.parent.glob("*.yaml"):
-            with open(yml, "r", encoding="utf-8") as fh:
+            with open(yml, encoding="utf-8") as fh:
                 d = yaml.safe_load(fh)
             if isinstance(d, dict):
                 d = sanitize_schema_dict(d)
@@ -522,18 +668,21 @@ def main() -> None:
         tmp_schema_path = str(sanitized_dir / schema_path.name)
         # Load sanitized core schema to seed base_uri name
         try:
-            with open(sanitized_dir / schema_path.name, "r", encoding="utf-8") as _fh:
+            with open(sanitized_dir / schema_path.name, encoding="utf-8") as _fh:
                 schema_dict = yaml.safe_load(_fh) or {}
         except Exception:
             schema_dict = {"name": nwb_path.stem}
         # Generate OWL TTL from the adjusted LinkML schema (split)
         from linkml.generators.owlgen import OwlSchemaGenerator
+
         gen = OwlSchemaGenerator(tmp_schema_path)
         gen.serialize(destination=str(out_path), format="turtle")
         if not out_path.exists():
             try:
                 g = gen.as_graph()
-                with tempfile.NamedTemporaryFile("wb", suffix=".ttl", delete=False) as tf:
+                with tempfile.NamedTemporaryFile(
+                    "wb", suffix=".ttl", delete=False
+                ) as tf:
                     tmp_out = Path(tf.name)
                     g.serialize(destination=str(tmp_out), format="turtle")
                 tmp_out.replace(out_path)
@@ -541,8 +690,8 @@ def main() -> None:
                 pass
     else:
         sanitized_dir = None
-    # Monolithic path
-        with open(schema_path, "r", encoding="utf-8") as fh:
+        # Monolithic path
+        with open(schema_path, encoding="utf-8") as fh:
             schema_dict = yaml.safe_load(fh)
         if isinstance(schema_dict, dict):
             schema_dict = sanitize_schema_dict(schema_dict)
@@ -555,6 +704,7 @@ def main() -> None:
         # Generate OWL TTL from the adjusted LinkML schema
         # Lazy import to avoid environment issues until needed
         from linkml.generators.owlgen import OwlSchemaGenerator
+
         gen = OwlSchemaGenerator(tmp_schema_path)
         # Try direct serialize
         gen.serialize(destination=str(out_path), format="turtle")
@@ -562,7 +712,9 @@ def main() -> None:
         if not out_path.exists():
             try:
                 g = gen.as_graph()
-                with tempfile.NamedTemporaryFile("wb", suffix=".ttl", delete=False) as tf:
+                with tempfile.NamedTemporaryFile(
+                    "wb", suffix=".ttl", delete=False
+                ) as tf:
                     tmp_out = Path(tf.name)
                     g.serialize(destination=str(tmp_out), format="turtle")
                 tmp_out.replace(out_path)
@@ -613,12 +765,18 @@ def main() -> None:
             return result
 
         # Terms used in data
-        used_classes = {str(o) for _s, _p, o in data_graph.triples((None, RDF.type, None)) if isinstance(o, URIRef)}
+        used_classes = {
+            str(o)
+            for _s, _p, o in data_graph.triples((None, RDF.type, None))
+            if isinstance(o, URIRef)
+        }
         used_properties = {str(p) for _s, p, _o in data_graph if isinstance(p, URIRef)}
 
         # Expand with ancestors and property domain/range classes
         used_classes = expand_ancestors(full_onto, used_classes, RDFS.subClassOf)
-        used_properties = expand_ancestors(full_onto, used_properties, RDFS.subPropertyOf)
+        used_properties = expand_ancestors(
+            full_onto, used_properties, RDFS.subPropertyOf
+        )
 
         # Domains/ranges of properties
         for pid in list(used_properties):
@@ -636,6 +794,7 @@ def main() -> None:
         seeds = {URIRef(u) for u in used_classes.union(used_properties)}
         visited = set()
         from collections import deque
+
         dq = deque([(s, 0) for s in seeds])
         max_depth = 2
         while dq:
@@ -646,7 +805,7 @@ def main() -> None:
             for s, p, o in full_onto.triples((node, None, None)):
                 onto_graph.add((s, p, o))
                 if depth < max_depth:
-                    if hasattr(o, 'startswith'):
+                    if hasattr(o, "startswith"):
                         # not reliable for URIRef; fall through
                         pass
                     dq.append((o, depth + 1))
@@ -668,5 +827,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-

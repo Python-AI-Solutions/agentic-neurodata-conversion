@@ -1,6 +1,7 @@
+from pathlib import Path
+
 import pytest
 import requests
-from pathlib import Path
 
 API_URL = "http://127.0.0.1:8000"
 
@@ -52,7 +53,9 @@ def test_evaluate_nwb_file():
     nwb_path = getattr(pytest, "nwb_path", None)
     if not nwb_path or not Path(nwb_path).exists():
         pytest.skip("No NWB file available to evaluate")
-    res = call_tool("evaluate_nwb_file", {"nwb_path": nwb_path, "generate_report": True})
+    res = call_tool(
+        "evaluate_nwb_file", {"nwb_path": nwb_path, "generate_report": True}
+    )
     assert res["status"] == "success"
     assert "validation" in res
 

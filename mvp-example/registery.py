@@ -1,6 +1,7 @@
 # tools/interface_registry.py
-import inspect
 import importlib
+import inspect
+
 
 def discover_neuroconv_interfaces():
     ndi = importlib.import_module("neuroconv.datainterfaces")
@@ -18,6 +19,8 @@ def discover_neuroconv_interfaces():
                 }
     return registry
 
+
 if __name__ == "__main__":
     import json
+
     print(json.dumps(discover_neuroconv_interfaces(), indent=2))
