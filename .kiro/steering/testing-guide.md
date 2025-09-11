@@ -11,33 +11,55 @@ inclusion: always
 1. **Write failing tests first** - Define expected behavior before
    implementation
 2. **Test real interfaces** - Avoid mocking actual components you're building
-3. **Skip until implemented** - Use `pytest.mark.skipif` when components don't
-   exist
+3. **Fail fast when missing** - Let tests fail clearly when components don't
+   exist to provide immediate feedback
 4. **Drive design through tests** - Let test requirements inform component
    design
 
 ### Implementation Pattern
 
 ```python
-# Import real components
-try:
-    from agentic_neurodata_conversion.module import ComponentClass
-    COMPONENT_AVAILABLE = True
-except ImportError:
-    ComponentClass = None
-    COMPONENT_AVAILABLE = False
-
-# Skip tests until implementation exists
-pytestmark = pytest.mark.skipif(
-    not COMPONENT_AVAILABLE,
-    reason="Component not implemented yet"
-)
+# Import real components - fail fast if not implemented
+from agentic_neurodata_conversion.module import ComponentClass
 
 class TestComponentClass:
     def test_expected_behavior(self, component_fixture):
-        # Test will be skipped until ComponentClass is implemented
+        # Test will fail clearly if ComponentClass is not implemented
+        # This provides immediate feedback about missing dependencies
         result = component_fixture.some_method()
         assert result.status == "success"
+```
+
+### Defensive Testing Approach
+
+**✅ CORRECT - Fail Fast Testing**
+```python
+# Direct imports that fail immediately with clear error messages
+from agentic_neurodata_conversion.core.service import ConversionService
+from agentic_neurodata_conversion.evaluation.quality import QualityAssessment
+
+class TestConversionService:
+    def test_conversion_workflow(self):
+        # Test fails immediately if dependencies are missing
+        service = ConversionService()
+        result = service.convert_data("test.nwb")
+        assert result.success
+```
+
+**❌ WRONG - Graceful Degradation in Tests**
+```python
+# Don't do this - hides real dependency issues
+try:
+    from agentic_neurodata_conversion.module import ComponentClass
+    AVAILABLE = True
+except ImportError:
+    ComponentClass = None
+    AVAILABLE = False
+
+@pytest.mark.skipif(not AVAILABLE, reason="Component not available")
+def test_component():
+    # This silently skips tests and hides missing dependencies
+    pass
 ```
 
 ## Test Categories by Resource Cost

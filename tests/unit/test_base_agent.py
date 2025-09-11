@@ -9,26 +9,11 @@ from typing import Any
 import pytest
 
 # Import the actual components that should be implemented
-try:
-    from agentic_neurodata_conversion.agents.base import (
-        AgentCapability,
-        AgentRegistry,
-        AgentStatus,
-        BaseAgent,
-    )
-
-    COMPONENTS_AVAILABLE = True
-except ImportError:
-    # These should fail until implemented
-    BaseAgent = None
-    AgentStatus = None
-    AgentCapability = None
-    AgentRegistry = None
-    COMPONENTS_AVAILABLE = False
-
-# Skip all tests if components are not implemented
-pytestmark = pytest.mark.skipif(
-    not COMPONENTS_AVAILABLE, reason="Base agent components not implemented yet"
+from agentic_neurodata_conversion.agents.base import (
+    AgentCapability,
+    AgentRegistry,
+    AgentStatus,
+    BaseAgent,
 )
 
 

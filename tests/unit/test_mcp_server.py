@@ -10,34 +10,18 @@ from unittest.mock import Mock
 import pytest
 
 # Import components to test
-try:
-    from agentic_neurodata_conversion.mcp_server.server import (
-        MCPRegistry,
-        MCPServer,
-        create_mcp_server,
-        mcp,
-    )
+from agentic_neurodata_conversion.mcp_server.server import (
+    MCPRegistry,
+    MCPServer,
+    create_mcp_server,
+)
 
-    # Import basic tools for testing (currently unused but may be needed for future tests)
-    from agentic_neurodata_conversion.mcp_server.tools.basic_tools import (  # noqa: F401
-        echo_tool,
-        get_server_status,
-        list_registered_tools,
-        manage_pipeline_state,
-    )
-
-    MCP_COMPONENTS_AVAILABLE = True
-except ImportError:
-    # Components not implemented yet
-    MCPServer = None
-    MCPRegistry = None
-    mcp = None
-    create_mcp_server = None
-    MCP_COMPONENTS_AVAILABLE = False
-
-# Skip all tests if components are not implemented
-pytestmark = pytest.mark.skipif(
-    not MCP_COMPONENTS_AVAILABLE, reason="MCP server components not implemented yet"
+# Import basic tools for testing (currently unused but may be needed for future tests)
+from agentic_neurodata_conversion.mcp_server.tools.basic_tools import (  # noqa: F401
+    echo_tool,
+    get_server_status,
+    list_registered_tools,
+    manage_pipeline_state,
 )
 
 

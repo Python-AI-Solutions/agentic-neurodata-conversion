@@ -388,6 +388,10 @@ class ConfigurationManager:
         Returns:
             CoreConfig object.
         """
+        # Convert string enums to proper enum types
+        if "environment" in config_dict and isinstance(config_dict["environment"], str):
+            config_dict["environment"] = Environment(config_dict["environment"])
+
         # Convert nested dictionaries to dataclass objects
         if "agents" in config_dict:
             config_dict["agents"] = AgentConfig(**config_dict["agents"])
@@ -396,7 +400,11 @@ class ConfigurationManager:
         if "sessions" in config_dict:
             config_dict["sessions"] = SessionConfig(**config_dict["sessions"])
         if "logging" in config_dict:
-            config_dict["logging"] = LoggingConfig(**config_dict["logging"])
+            # Handle LogLevel enum conversion
+            logging_dict = config_dict["logging"].copy()
+            if "level" in logging_dict and isinstance(logging_dict["level"], str):
+                logging_dict["level"] = LogLevel(logging_dict["level"])
+            config_dict["logging"] = LoggingConfig(**logging_dict)
         if "security" in config_dict:
             config_dict["security"] = SecurityConfig(**config_dict["security"])
         if "performance" in config_dict:

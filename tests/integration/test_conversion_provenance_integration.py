@@ -7,21 +7,11 @@ import tempfile
 import pytest
 
 # Import the actual components
-try:
-    from agentic_neurodata_conversion.data_management import (
-        ConversionProvenanceTracker,
-        DataLadRepositoryManager,
-        ProvenanceSource,
-        TestDatasetManager,
-    )
-
-    COMPONENTS_AVAILABLE = True
-except ImportError:
-    COMPONENTS_AVAILABLE = False
-
-# Skip all tests if components are not implemented
-pytestmark = pytest.mark.skipif(
-    not COMPONENTS_AVAILABLE, reason="Data management components not implemented yet"
+from agentic_neurodata_conversion.data_management import (
+    ConversionProvenanceTracker,
+    DataLadRepositoryManager,
+    ProvenanceSource,
+    TestDatasetManager,
 )
 
 

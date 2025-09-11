@@ -3,43 +3,16 @@
 import pytest
 
 # Import components to test
-try:
-    from agentic_neurodata_conversion.knowledge_graph import (
-        ConfidenceScorer,
-        Dataset,
-        Device,
-        EnrichmentResult,
-        EntityManager,
-        KnowledgeGraph,
-        Lab,
-        MetadataEnricher,
-        Protocol,
-        RDFStoreManager,
-        Session,
-        Subject,
-    )
-
-    KNOWLEDGE_GRAPH_AVAILABLE = True
-except ImportError:
-    # Components not implemented yet
-    KnowledgeGraph = None
-    Dataset = None
-    Subject = None
-    Device = None
-    Session = None
-    Lab = None
-    Protocol = None
-    RDFStoreManager = None
-    EntityManager = None
-    MetadataEnricher = None
-    ConfidenceScorer = None
-    EnrichmentResult = None
-    KNOWLEDGE_GRAPH_AVAILABLE = False
-
-# Skip all tests if components are not implemented
-pytestmark = pytest.mark.skipif(
-    not KNOWLEDGE_GRAPH_AVAILABLE,
-    reason="Knowledge graph components not implemented yet",
+from agentic_neurodata_conversion.knowledge_graph import (
+    ConfidenceScorer,
+    Dataset,
+    Device,
+    EnrichmentResult,
+    EntityManager,
+    KnowledgeGraph,
+    MetadataEnricher,
+    RDFStoreManager,
+    Subject,
 )
 
 

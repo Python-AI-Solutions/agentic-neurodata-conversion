@@ -12,25 +12,11 @@ import tempfile
 import pytest
 
 # Import the actual components that should be implemented
-try:
-    from agentic_neurodata_conversion.agents.base import (
-        AgentCapability,
-        AgentStatus,
-    )
-    from agentic_neurodata_conversion.agents.conversation import ConversationAgent
-
-    COMPONENTS_AVAILABLE = True
-except ImportError:
-    # These should fail until implemented
-    ConversationAgent = None
-    AgentCapability = None
-    AgentStatus = None
-    COMPONENTS_AVAILABLE = False
-
-# Skip all tests if components are not implemented
-pytestmark = pytest.mark.skipif(
-    not COMPONENTS_AVAILABLE, reason="Conversation agent components not implemented yet"
+from agentic_neurodata_conversion.agents.base import (
+    AgentCapability,
+    AgentStatus,
 )
+from agentic_neurodata_conversion.agents.conversation import ConversationAgent
 
 
 class TestConversationAgent:

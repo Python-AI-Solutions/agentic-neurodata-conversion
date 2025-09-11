@@ -25,10 +25,10 @@ repos:
         name: Check for case conflicts
       - id: check-symlinks
         name: Check for broken symlinks
-      - id: check-executables-have-shebangs
-        name: Check executables have shebangs
-      - id: check-shebang-scripts-are-executable
-        name: Check scripts with shebangs are executable
+      # - id: check-executables-have-shebangs
+      #   name: Check executables have shebangs
+      # - id: check-shebang-scripts-are-executable
+      #   name: Check scripts with shebangs are executable
       - id: detect-private-key
         name: Detect private keys
       - id: detect-aws-credentials

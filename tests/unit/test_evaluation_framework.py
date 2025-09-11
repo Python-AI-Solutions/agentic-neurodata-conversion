@@ -5,23 +5,14 @@ from pathlib import Path
 
 import pytest
 
-try:
-    from agentic_neurodata_conversion.evaluation.framework import (
-        EvaluationConfig,
-        EvaluationCriteria,
-        EvaluationFramework,
-        EvaluationResult,
-        EvaluationStatus,
-        QualityDimension,
-        QualityMetrics,
-    )
-
-    EVALUATION_AVAILABLE = True
-except ImportError:
-    EVALUATION_AVAILABLE = False
-
-pytestmark = pytest.mark.skipif(
-    not EVALUATION_AVAILABLE, reason="Evaluation framework not implemented yet"
+from agentic_neurodata_conversion.evaluation.framework import (
+    EvaluationConfig,
+    EvaluationCriteria,
+    EvaluationFramework,
+    EvaluationResult,
+    EvaluationStatus,
+    QualityDimension,
+    QualityMetrics,
 )
 
 

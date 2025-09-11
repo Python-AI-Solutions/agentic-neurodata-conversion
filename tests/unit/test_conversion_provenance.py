@@ -9,27 +9,11 @@ from unittest.mock import patch
 import pytest
 
 # Import the actual components that should be implemented
-try:
-    from agentic_neurodata_conversion.data_management.conversion_provenance import (
-        ConversionProvenanceTracker,
-        ConversionSession,
-        ProvenanceRecord,
-        ProvenanceSource,
-    )
-
-    COMPONENTS_AVAILABLE = True
-except ImportError:
-    # These should fail until implemented
-    ConversionProvenanceTracker = None
-    ProvenanceRecord = None
-    ConversionSession = None
-    ProvenanceSource = None
-    COMPONENTS_AVAILABLE = False
-
-# Skip all tests if components are not implemented
-pytestmark = pytest.mark.skipif(
-    not COMPONENTS_AVAILABLE,
-    reason="Conversion provenance components not implemented yet",
+from agentic_neurodata_conversion.data_management.conversion_provenance import (
+    ConversionProvenanceTracker,
+    ConversionSession,
+    ProvenanceRecord,
+    ProvenanceSource,
 )
 
 
