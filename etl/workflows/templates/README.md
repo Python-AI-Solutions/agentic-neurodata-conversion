@@ -1,6 +1,7 @@
 # Workflow Templates
 
-This directory contains standardized workflow templates for common ETL operations in the agentic neurodata conversion pipeline.
+This directory contains standardized workflow templates for common ETL
+operations in the agentic neurodata conversion pipeline.
 
 ## Available Templates
 
@@ -9,6 +10,7 @@ This directory contains standardized workflow templates for common ETL operation
 A foundational template for single dataset conversion workflows.
 
 **Features:**
+
 - Input validation and format detection
 - Metadata extraction and processing
 - Conversion execution with error handling
@@ -16,6 +18,7 @@ A foundational template for single dataset conversion workflows.
 - Comprehensive logging and status tracking
 
 **Usage:**
+
 ```python
 from etl.workflows.templates.basic_conversion_workflow import BasicConversionWorkflow, ConversionConfig
 
@@ -35,6 +38,7 @@ result = workflow.execute()
 Template for processing multiple datasets with parallel execution capabilities.
 
 **Features:**
+
 - Parallel and sequential processing modes
 - Comprehensive error handling and recovery
 - Progress tracking and reporting
@@ -42,6 +46,7 @@ Template for processing multiple datasets with parallel execution capabilities.
 - Configurable worker pools and resource management
 
 **Usage:**
+
 ```python
 from etl.workflows.templates.batch_processing_workflow import BatchProcessingWorkflow, BatchConfig
 
@@ -63,6 +68,7 @@ result = workflow.execute()
 Template for integrating DataLad data management capabilities into workflows.
 
 **Features:**
+
 - Dataset initialization and management
 - Provenance tracking for all operations
 - Subdataset installation and management
@@ -70,6 +76,7 @@ Template for integrating DataLad data management capabilities into workflows.
 - Data retrieval and storage operations
 
 **Usage:**
+
 ```python
 from etl.workflows.templates.datalad_integration_workflow import DataLadIntegrationWorkflow, DataLadConfig
 
@@ -88,11 +95,13 @@ result = workflow.initialize_dataset()
 All workflow templates follow a consistent structure:
 
 ### Configuration Classes
+
 - **Dataclass-based configuration** with type hints and defaults
 - **Validation methods** for configuration parameters
 - **Flexible parameter management** with environment variable support
 
 ### Workflow Classes
+
 - **Standardized initialization** with configuration and logging setup
 - **Execute method** as the main entry point
 - **Modular processing steps** with clear separation of concerns
@@ -100,6 +109,7 @@ All workflow templates follow a consistent structure:
 - **Result objects** with success status and detailed information
 
 ### Result Classes
+
 - **Success/failure status** with boolean flags
 - **Detailed error messages** for debugging
 - **Processing metrics** (time, memory, etc.)
@@ -112,6 +122,7 @@ All workflow templates follow a consistent structure:
 To create custom workflows based on these templates:
 
 1. **Inherit from template classes**:
+
    ```python
    class CustomConversionWorkflow(BasicConversionWorkflow):
        def _detect_format(self):
@@ -135,18 +146,21 @@ To create custom workflows based on these templates:
 
 ### Best Practices
 
-1. **Maintain Template Structure**: Keep the standard template interface for consistency
+1. **Maintain Template Structure**: Keep the standard template interface for
+   consistency
 2. **Add Comprehensive Logging**: Use the established logging patterns
 3. **Handle Errors Gracefully**: Implement robust error handling and recovery
 4. **Document Customizations**: Provide clear documentation for custom logic
 5. **Test Thoroughly**: Create unit tests for custom workflow components
-6. **Follow Naming Conventions**: Use descriptive names for custom methods and classes
+6. **Follow Naming Conventions**: Use descriptive names for custom methods and
+   classes
 
 ## Integration with MCP Server
 
 Templates are designed to integrate seamlessly with the MCP server:
 
 ### Tool Registration
+
 ```python
 from agentic_neurodata_conversion.mcp_server.server import mcp
 
@@ -158,10 +172,10 @@ async def run_conversion_workflow(input_path: str, output_path: str, **kwargs):
         output_path=output_path,
         metadata=kwargs.get("metadata", {})
     )
-    
+
     workflow = BasicConversionWorkflow(config)
     result = workflow.execute()
-    
+
     return {
         "success": result.success,
         "output_path": str(result.output_path) if result.output_path else None,
@@ -171,7 +185,9 @@ async def run_conversion_workflow(input_path: str, output_path: str, **kwargs):
 ```
 
 ### Agent Coordination
+
 Templates coordinate with internal agents:
+
 - **Conversation Agent**: Interactive metadata collection
 - **Conversion Agent**: Script generation and execution
 - **Evaluation Agent**: Quality assessment and validation
@@ -212,6 +228,7 @@ pixi run pytest tests/integration/test_template_integration.py
 ## Support
 
 For questions about workflow templates:
+
 - Review existing template implementations
 - Check the main ETL documentation
 - Refer to MCP server and agent specifications
