@@ -1,20 +1,24 @@
 # Implementation Plan
 
-- [ ] 1. Implement core service layer (transport-agnostic)
+- [x] 1. Implement core service layer (transport-agnostic)
+
+
+
+
   - Create `agentic_neurodata_conversion/core/service.py` with business logic and data models
   - Implement `ConversionService` class with all conversion operations (analyze, convert, evaluate)
   - Add agent management and workflow orchestration without any transport dependencies
   - Create data models for requests, responses, and internal state (no MCP or FastAPI imports)
   - _Requirements: 1.1, 1.3, 3.1_
 
-- [ ] 2. Build agent management in core service layer
+- [x] 2. Build agent management in core service layer
   - Implement `AgentManager` in core service for agent lifecycle management
   - Add agent execution coordination and error handling in transport-agnostic way
   - Create agent performance metrics and statistics tracking
   - Implement workflow orchestration for multi-step pipeline execution
   - _Requirements: 3.1, 3.2, 6.2, 6.3_
 
-- [ ] 3. Create tool registry and execution system in core layer
+- [x] 3. Create tool registry and execution system in core layer
   - Implement tool registry system with metadata and execution tracking
   - Add tool categorization and discovery without transport-specific code
   - Create tool execution engine with timeout and error handling
