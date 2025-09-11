@@ -78,7 +78,7 @@ class ConcreteTestAgent(BaseAgent):
         self.process_called = True
 
         task_type = task.get("type")
-        if task_type == "fail":
+        if task.get("fail"):
             raise RuntimeError("Task processing failed")
 
         return {
@@ -166,7 +166,8 @@ class TestBaseAgent:
     @pytest.mark.unit
     async def test_task_execution_failure(self, test_agent):
         """Test task execution failure."""
-        task = {"type": "fail", "params": {}}
+        # Use a supported task type that will fail in processing
+        task = {"type": "dataset_analysis", "fail": True}
 
         with pytest.raises(RuntimeError, match="Task processing failed"):
             await test_agent.execute_task(task)
