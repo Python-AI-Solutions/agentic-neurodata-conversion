@@ -113,6 +113,12 @@ fileSizeBytes=1000000
         assert "blackrock" in format_detector.supported_formats
         assert "intan" in format_detector.supported_formats
 
+        # Check format structure
+        open_ephys_format = format_detector.supported_formats["open_ephys"]
+        assert "extensions" in open_ephys_format
+        assert "patterns" in open_ephys_format
+        assert "required_files" in open_ephys_format
+
     @pytest.mark.unit
     async def test_analyze_directory_open_ephys(
         self, format_detector, open_ephys_dataset
