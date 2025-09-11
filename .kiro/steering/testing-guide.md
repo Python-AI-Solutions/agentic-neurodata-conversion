@@ -40,22 +40,26 @@ class TestComponentClass:
 ### 1. Unit Tests (`@pytest.mark.unit`)
 - **No external dependencies** - Pure function testing, data validation
 - **Priority**: Highest (run always, run first)
-- **Command**: `pixi run pytest -m "unit" --no-cov`
+- **Default Command**: `pixi run test-unit` (quiet output)
+- **Debug Command**: `pixi run test-verbose -m "unit"`
 
 ### 2. Mock LLM Tests (`@pytest.mark.mock_llm`) 
 - **Mocked LLM responses** - Deterministic agent workflow testing
 - **Priority**: High (fast, reliable)
-- **Command**: `pixi run pytest -m "mock_llm" --no-cov`
+- **Default Command**: `pixi run pytest -m "mock_llm" -q --no-cov`
+- **Debug Command**: `pixi run test-verbose -m "mock_llm"`
 
 ### 3. Integration Tests (`@pytest.mark.integration`)
 - **Multiple components** - Real component coordination
 - **Priority**: Medium-High
-- **Command**: `pixi run pytest -m "integration" --no-cov`
+- **Default Command**: `pixi run test-integration` (quiet output)
+- **Debug Command**: `pixi run test-verbose -m "integration"`
 
 ### 4. Performance Tests (`@pytest.mark.performance`)
 - **Resource intensive** - Benchmarks, memory usage
 - **Priority**: Medium-Low
-- **Command**: `pixi run pytest -m "performance" --no-cov`
+- **Default Command**: `pixi run pytest -m "performance" -q --no-cov`
+- **Debug Command**: `pixi run test-detailed -m "performance"`
 
 ### 5. Model Tests (Local)
 - **Small models** (`@pytest.mark.small_model`) - <3B parameters
@@ -70,42 +74,93 @@ class TestComponentClass:
 
 ## Quick Commands
 
-### Development Workflow
+### Development Workflow (Minimal Output by Default)
 ```bash
-# Fast development cycle
-pixi run pytest -m "unit" --no-cov -x              # Unit tests, stop on first failure
-pixi run pytest -m "unit or mock_llm" --no-cov     # Fast tests combined
+# Fast development cycle - quiet by default
+pixi run test-unit                                  # Unit tests, minimal output
+pixi run test-fast                                  # Fast tests, minimal output
 
 # Before committing
 pixi run pre-commit                                 # Quality checks first
-pixi run pytest -m "unit or integration" --no-cov  # Then relevant tests
+pixi run test -m "unit or integration"              # Relevant tests, minimal output
 
-# CI/CD pipeline  
-pixi run pytest -m "not (cheap_api or frontier_api or large_model_extended)" --no-cov
+# CI/CD pipeline - optimized for automated processing
+pixi run test-ci                                    # CI-friendly minimal output
 ```
 
-### Debugging & Specific Tests
+### Verbose Commands for Debugging
 ```bash
-# Verbose output
-pixi run pytest -m "unit" -v --no-cov
+# When you need detailed output for debugging
+pixi run test-verbose                               # Standard verbose output
+pixi run test-debug                                 # Full verbosity with pdb integration
+pixi run test-detailed                              # Maximum verbosity (-vv)
 
-# Single test method
-pixi run pytest tests/unit/test_file.py::TestClass::test_method --no-cov
+# Single test debugging
+pixi run pytest tests/unit/test_file.py::TestClass::test_method -v --no-cov
 
-# Debug on first failure
-pixi run pytest -m "unit" --no-cov -x --pdb
+# Interactive debugging on first failure
+pixi run test-debug -x                              # Stop on first failure with pdb
 
-# See what tests would run
+# See what tests would run (minimal output)
 pixi run pytest -m "unit" --collect-only -q
+```
+
+### Specialized Minimal Commands for Agents
+```bash
+# Ultra-minimal output for automated agents
+pixi run test-summary                               # Absolute minimal output
+pixi run test-agent                                 # Agent-optimized output format
 ```
 
 ### Coverage & Reporting
 ```bash
-# With coverage (slower)
-pixi run pytest -m "unit" --cov=agentic_neurodata_conversion
+# With coverage (slower) - quiet by default
+pixi run test-cov                                   # Coverage with minimal output
+pixi run test-cov-unit                              # Unit test coverage only
 
-# HTML coverage report
-pixi run pytest -m "unit" --cov=agentic_neurodata_conversion --cov-report=html
+# HTML coverage report with verbose output for debugging
+pixi run pytest -m "unit" --cov=agentic_neurodata_conversion --cov-report=html -v
+```
+
+## Verbosity Control Guide
+
+### When to Use Quiet Mode (Default)
+- **Daily development** - Quick feedback on test status
+- **CI/CD pipelines** - Minimal log output, faster processing
+- **Automated agents** - Token-efficient test result consumption
+- **Batch testing** - Running large test suites
+
+### When to Use Verbose Mode
+- **Debugging test failures** - Need detailed error information
+- **Understanding test behavior** - See what tests are actually doing
+- **Investigating performance** - Detailed timing and resource usage
+- **Learning the codebase** - Understand test structure and flow
+
+### Verbosity Levels Explained
+```bash
+# Level 0: Quiet (default) - Summary only
+pixi run test                                       # Minimal output, essential info only
+
+# Level 1: Standard verbose - Test names and basic info
+pixi run test-verbose                               # -v flag, shows test names
+
+# Level 2: Extra verbose - Detailed test information
+pixi run test-detailed                              # -vv flag, maximum detail
+
+# Debug mode: Full diagnostics with interactive debugging
+pixi run test-debug                                 # -v -s --tb=long --pdb
+
+# Ultra-minimal: For automated processing
+pixi run test-summary                               # --tb=no, absolute minimum
+pixi run test-agent                                 # Optimized for agent consumption
+```
+
+### Escalating Verbosity During Development
+```bash
+# Start minimal, escalate as needed
+pixi run test-unit                                  # Quick check
+pixi run test-verbose -m "unit"                     # If failures need investigation
+pixi run test-debug -k "specific_test"              # For deep debugging
 ```
 
 ## Test Quality Standards
@@ -165,12 +220,24 @@ markers = [
 
 ## CI/CD Strategy
 
-### Test Execution Tiers
-1. **PR Tests**: `unit` and `mock_llm` tests
-2. **Nightly Tests**: `small_model` and `large_model_minimal` tests  
-3. **Weekly Tests**: `large_model_extended` tests
-4. **Release Tests**: `cheap_api` tests (limited)
-5. **Final Validation**: `frontier_api` tests (minimal)
+### Test Execution Tiers (All with Minimal Output)
+1. **PR Tests**: `pixi run test-ci -m "unit or mock_llm"` - Fast, minimal output
+2. **Nightly Tests**: `pixi run test-ci -m "small_model or large_model_minimal"` - Automated processing
+3. **Weekly Tests**: `pixi run test-ci -m "large_model_extended"` - Comprehensive but quiet
+4. **Release Tests**: `pixi run test-ci -m "cheap_api"` - Limited external calls
+5. **Final Validation**: `pixi run test-ci -m "frontier_api"` - Minimal expensive tests
+
+### CI/CD Command Patterns
+```bash
+# Standard CI pipeline - optimized for log parsing
+pixi run test-ci                                    # Line-level tracebacks, no header
+
+# Agent-driven testing - ultra-minimal output
+pixi run test-agent                                 # No summaries, essential info only
+
+# Coverage in CI - quiet with reports
+pixi run test-cov                                   # Coverage with minimal console output
+```
 
 ## Error Handling Patterns
 
@@ -214,4 +281,45 @@ All test dependencies managed in pixi.toml - never use pip directly:
 - Mock utilities (responses, aioresponses)
 - Performance testing (pytest-benchmark)
 
-Remember: **Start with unit tests, test real interfaces, skip until implemented, maintain pre-commit compliance.**
+## Execution Context Guidelines
+
+### For Developers
+```bash
+# Daily workflow - start quiet, escalate as needed
+pixi run test-fast                                  # Quick sanity check
+pixi run test-verbose -k "failing_test"             # Debug specific failures
+pixi run test-debug --pdb                           # Interactive debugging session
+```
+
+### For Automated Agents
+```bash
+# Token-efficient commands for AI agents
+pixi run test-agent                                 # Ultra-minimal, parseable output
+pixi run test-summary                               # Summary only, no noise
+pixi run test-ci                                    # CI-friendly format
+```
+
+### For CI/CD Systems
+```bash
+# Optimized for automated processing and log parsing
+pixi run test-ci                                    # Consistent, minimal format
+pixi run test-cov                                   # Coverage with quiet console output
+pixi run test-parallel                              # Fast parallel execution
+```
+
+### For Interactive Development
+```bash
+# When you need to see what's happening
+pixi run test-verbose                               # Standard detailed output
+pixi run test-detailed                              # Maximum verbosity
+pixi run test-debug                                 # Full diagnostics with pdb
+```
+
+### Command Selection Decision Tree
+1. **Quick check?** → `pixi run test-fast`
+2. **Need details?** → `pixi run test-verbose`
+3. **Debugging?** → `pixi run test-debug`
+4. **CI/CD?** → `pixi run test-ci`
+5. **Agent processing?** → `pixi run test-agent`
+
+Remember: **Start with minimal output, escalate verbosity only when needed. Test real interfaces, skip until implemented, maintain pre-commit compliance.**
