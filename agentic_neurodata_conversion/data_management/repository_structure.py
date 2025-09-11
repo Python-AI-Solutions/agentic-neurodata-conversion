@@ -179,7 +179,7 @@ class DataLadRepositoryManager:
         self.logger.info("Configured .gitattributes for proper file handling")
 
 
-class TestDatasetManager:
+class DatasetManager:
     """Manages test datasets for development and testing."""
 
     def __init__(self, repository_manager: DataLadRepositoryManager):

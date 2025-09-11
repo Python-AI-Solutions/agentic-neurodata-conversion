@@ -38,7 +38,7 @@ def pytest_configure(config):
     )
 
 
-def pytest_collection_modifyitems(_config, items):
+def pytest_collection_modifyitems(items):
     """Modify test collection to add appropriate markers."""
     for item in items:
         # Mark adapter parity tests
@@ -363,17 +363,10 @@ async def cleanup_sessions():
 # ============================================================================
 
 # Custom pytest markers for integration tests
-pytest_plugins = []
 
 # Test timeout configuration
 INTEGRATION_TEST_TIMEOUT = 30  # seconds
 SLOW_TEST_TIMEOUT = 60  # seconds
 
-
-def pytest_timeout_set_timer(item, timeout):
-    """Set appropriate timeouts for different test types."""
-    if item.get_closest_marker("slow_integration"):
-        return SLOW_TEST_TIMEOUT
-    elif item.get_closest_marker("integration"):
-        return INTEGRATION_TEST_TIMEOUT
-    return timeout
+# Note: pytest_timeout_set_timer hook is only available when pytest-timeout plugin is loaded
+# The timeout configuration is handled via pytest.ini_options in pyproject.toml

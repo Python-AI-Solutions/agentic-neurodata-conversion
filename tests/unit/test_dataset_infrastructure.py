@@ -36,6 +36,7 @@ try:
 except ImportError:
     # Components not implemented yet
     COMPONENTS_AVAILABLE = False
+    DATALAD_AVAILABLE = False
     DataLadRepositoryManager = None
     TestDatasetManager = None
     DatasetRegistry = None

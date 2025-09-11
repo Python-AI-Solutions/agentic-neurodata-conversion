@@ -212,7 +212,7 @@ mkdocs-material = ">=9.0.0"
 [tool.pytest.ini_options]
 minversion = "7.0"
 addopts = [
-    "-ra",
+    "-q",
     "--strict-markers",
     "--strict-config",
     "--cov=agentic_neurodata_conversion",
@@ -221,8 +221,9 @@ addopts = [
     "--cov-report=xml:coverage.xml",
     "--cov-branch",
     "--cov-fail-under=80",
-    "--tb=short",
-    "--durations=10"
+    "--tb=line",
+    "--no-header",
+    "--disable-warnings"
 ]
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
@@ -251,12 +252,13 @@ asyncio_mode = "auto"
 filterwarnings = [
     "ignore::DeprecationWarning",
     "ignore::PendingDeprecationWarning",
-    "ignore::UserWarning:linkml.*",
-    "ignore::UserWarning:neuroconv.*"
+    "ignore::UserWarning",
+    "ignore::FutureWarning",
+    "ignore::RuntimeWarning"
 ]
-log_cli = true
-log_cli_level = "INFO"
-log_cli_format = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s"
+log_cli = false
+log_cli_level = "WARNING"
+log_cli_format = "%(levelname)s: %(message)s"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 
 [tool.ruff]

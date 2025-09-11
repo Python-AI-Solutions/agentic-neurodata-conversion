@@ -62,7 +62,7 @@
   - Set up foundation for DataLad integration
   - _Requirements: 8.4, 9.4_
 
-- [ ] 9. Implement basic testing infrastructure
+- [x] 9. Implement basic testing infrastructure
   - Create `tests/` directory with unit/, integration/, and fixtures/
     subdirectories
   - Set up pytest configuration in pyproject.toml
