@@ -1,10 +1,12 @@
 # Test Fixtures
 
-Small, lightweight datasets specifically designed for unit testing and development.
+Small, lightweight datasets specifically designed for unit testing and
+development.
 
 ## Purpose
 
 This directory contains minimal datasets optimized for:
+
 - **Unit Testing**: Fast, reliable test data for automated testing
 - **Development**: Quick datasets for development and debugging
 - **CI/CD**: Lightweight data for continuous integration pipelines
@@ -13,12 +15,14 @@ This directory contains minimal datasets optimized for:
 ## Dataset Characteristics
 
 ### Size Constraints
+
 - **Small File Sizes**: Typically < 10MB per dataset
 - **Minimal Duration**: Short recordings (seconds to minutes)
 - **Low Channel Counts**: Few channels for fast processing
 - **Simple Structure**: Straightforward file organization
 
 ### Quality Requirements
+
 - **Well-Formed Data**: Clean, properly formatted data files
 - **Complete Metadata**: All required fields present
 - **Consistent Structure**: Standardized organization across fixtures
@@ -27,6 +31,7 @@ This directory contains minimal datasets optimized for:
 ## Fixture Categories
 
 ### Format-Specific Fixtures
+
 ```
 test-fixtures/
 ├── spikeglx/           # SpikeGLX format fixtures
@@ -37,6 +42,7 @@ test-fixtures/
 ```
 
 ### Test Scenario Fixtures
+
 ```
 test-fixtures/
 ├── minimal/            # Absolute minimum viable datasets
@@ -48,6 +54,7 @@ test-fixtures/
 ## Usage in Testing
 
 ### Unit Tests
+
 ```python
 import pytest
 from pathlib import Path
@@ -66,20 +73,22 @@ def test_spikeglx_conversion(spikeglx_fixture):
 ```
 
 ### Integration Tests
+
 ```python
 @pytest.mark.integration
 def test_full_pipeline_with_fixture():
     """Test complete pipeline with test fixture."""
     fixture_path = "etl/evaluation-data/test-fixtures/complete/example"
-    
+
     # Test full pipeline
     result = run_conversion_pipeline(fixture_path)
-    
+
     assert result.success
     assert validate_nwb_file(result.output_path)
 ```
 
 ### Development Testing
+
 ```python
 # Quick development test
 def test_new_feature():
@@ -100,6 +109,7 @@ def test_new_feature():
 5. **Test Thoroughly**: Verify fixtures work correctly in tests
 
 ### Fixture Structure Template
+
 ```
 fixture_name/
 ├── README.md           # Fixture description and usage
@@ -115,12 +125,15 @@ fixture_name/
 ## Maintenance
 
 ### Regular Updates
+
 - **Refresh Data**: Update fixtures to reflect current format standards
 - **Add Coverage**: Create fixtures for new formats or edge cases
-- **Optimize Size**: Keep fixtures as small as possible while maintaining utility
+- **Optimize Size**: Keep fixtures as small as possible while maintaining
+  utility
 - **Update Documentation**: Keep fixture descriptions current
 
 ### Quality Assurance
+
 - **Validate Fixtures**: Regularly test that fixtures work correctly
 - **Check Performance**: Ensure fixtures remain fast for testing
 - **Review Relevance**: Remove obsolete or redundant fixtures
@@ -129,6 +142,7 @@ fixture_name/
 ## Integration with Testing Framework
 
 ### Pytest Configuration
+
 ```python
 # conftest.py
 import pytest
@@ -151,6 +165,7 @@ def format_fixture(request, test_fixtures_dir):
 ```
 
 ### Automated Fixture Validation
+
 ```bash
 # Validate all test fixtures
 pixi run pytest tests/fixtures/test_fixture_validation.py
@@ -165,12 +180,14 @@ pixi run pytest tests/fixtures/test_fixture_smoke.py --fast
 ## Performance Considerations
 
 ### Speed Optimization
+
 - **Minimal Data**: Use smallest possible datasets
 - **Efficient Formats**: Choose formats that load quickly
 - **Cached Results**: Cache conversion results when possible
 - **Parallel Testing**: Design fixtures for parallel test execution
 
 ### Resource Management
+
 - **Memory Efficiency**: Keep memory usage low
 - **Storage Optimization**: Compress fixtures when appropriate
 - **Cleanup**: Ensure tests clean up temporary files
@@ -179,6 +196,7 @@ pixi run pytest tests/fixtures/test_fixture_smoke.py --fast
 ## Usage Examples
 
 ### Basic Usage
+
 ```python
 # Load and use a test fixture
 fixture_path = "etl/evaluation-data/test-fixtures/spikeglx/minimal"
@@ -186,10 +204,11 @@ result = test_conversion_function(fixture_path)
 ```
 
 ### Parametrized Testing
+
 ```python
 @pytest.mark.parametrize("fixture_name", [
     "minimal/basic_recording",
-    "complete/full_session", 
+    "complete/full_session",
     "multi_modal/ephys_behavior"
 ])
 def test_conversion_with_fixtures(fixture_name):
@@ -200,6 +219,7 @@ def test_conversion_with_fixtures(fixture_name):
 ```
 
 ### CI/CD Integration
+
 ```yaml
 # GitHub Actions example
 - name: Run tests with fixtures

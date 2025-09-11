@@ -1,10 +1,12 @@
 # Validation Datasets
 
-High-quality datasets with known correct outputs for validation and regression testing.
+High-quality datasets with known correct outputs for validation and regression
+testing.
 
 ## Purpose
 
 This directory contains carefully curated datasets that serve as:
+
 - **Reference Standards**: Known correct conversion examples
 - **Regression Tests**: Datasets for detecting pipeline changes
 - **Quality Baselines**: Minimum quality thresholds for validation
@@ -13,24 +15,28 @@ This directory contains carefully curated datasets that serve as:
 ## Dataset Categories
 
 ### Gold Standard Conversions
+
 - Expert-validated NWB files with complete metadata
 - Manually curated conversions from domain experts
 - Reference implementations from established labs
 - Community-approved conversion examples
 
 ### Regression Test Datasets
+
 - Datasets with stable, expected conversion outputs
 - Version-controlled reference outputs for comparison
 - Automated test datasets for CI/CD pipelines
 - Historical conversion examples for compatibility testing
 
 ### Quality Validation Datasets
+
 - Datasets that define minimum quality standards
 - Examples of complete and compliant NWB files
 - Datasets covering all major NWB data types
 - Examples of proper metadata structure and content
 
 ### Format Coverage Datasets
+
 - Representative examples of each supported data format
 - Complete coverage of major acquisition systems
 - Examples of different experimental paradigms
@@ -41,18 +47,21 @@ This directory contains carefully curated datasets that serve as:
 All validation datasets must meet strict criteria:
 
 ### Data Quality
+
 - Complete and accurate experimental metadata
 - Proper file structure and organization
 - No missing or corrupted data files
 - Consistent naming conventions
 
 ### Conversion Quality
+
 - Full compliance with NWB standard
 - Complete metadata mapping
 - Proper data type assignments
 - Validated temporal alignment
 
 ### Documentation Quality
+
 - Comprehensive dataset descriptions
 - Clear experimental protocols
 - Complete parameter specifications
@@ -61,26 +70,28 @@ All validation datasets must meet strict criteria:
 ## Usage in Testing
 
 ### Automated Validation
+
 ```python
 @pytest.mark.validation
 def test_conversion_accuracy(validation_dataset):
     """Test conversion against known good output."""
     result = convert_dataset(validation_dataset.input_path)
     reference = load_reference_nwb(validation_dataset.reference_path)
-    
+
     assert validate_nwb_equivalence(result, reference)
     assert check_metadata_completeness(result)
     assert verify_data_integrity(result)
 ```
 
 ### Regression Testing
+
 ```python
 @pytest.mark.regression
 def test_conversion_stability(validation_dataset):
     """Test that conversion output remains stable."""
     current_result = convert_dataset(validation_dataset.input_path)
     baseline_result = load_baseline_output(validation_dataset.baseline_path)
-    
+
     assert compare_conversion_outputs(current_result, baseline_result)
 ```
 
@@ -104,7 +115,9 @@ def test_conversion_stability(validation_dataset):
 ## Integration with Pipeline
 
 ### MCP Server Integration
+
 Validation datasets are accessible through MCP tools:
+
 ```python
 @mcp.tool(name="validate_conversion_quality")
 async def validate_conversion_quality(dataset_name: str, conversion_result_path: str):
@@ -115,6 +128,7 @@ async def validate_conversion_quality(dataset_name: str, conversion_result_path:
 ```
 
 ### Agent Coordination
+
 - **Evaluation Agent**: Uses validation datasets for quality assessment
 - **Conversion Agent**: References validation examples for script generation
 - **Knowledge Graph Agent**: Validates metadata extraction against references
@@ -122,12 +136,14 @@ async def validate_conversion_quality(dataset_name: str, conversion_result_path:
 ## Validation Metrics
 
 ### Data Fidelity Metrics
+
 - **Temporal Accuracy**: Correct timing and synchronization
 - **Amplitude Preservation**: Accurate signal amplitudes and units
 - **Channel Mapping**: Correct electrode/channel assignments
 - **Metadata Completeness**: All required fields present and accurate
 
 ### NWB Compliance Metrics
+
 - **Schema Validation**: Compliance with NWB schema requirements
 - **Data Type Correctness**: Proper use of NWB data types
 - **Hierarchical Structure**: Correct organization of NWB file structure
