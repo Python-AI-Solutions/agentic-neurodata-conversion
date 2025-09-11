@@ -16,7 +16,7 @@ maintainers = [
 ]
 keywords = [
     "neuroscience",
-    "nwb", 
+    "nwb",
     "neuroconv",
     "mcp-server",
     "multi-agent",
@@ -39,28 +39,28 @@ dependencies = [
     # Core dependencies
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
-    
+
     # MCP Server dependencies
     "fastapi>=0.100.0",
     "uvicorn[standard]>=0.20.0",
-    
+
     # Async and HTTP
     "httpx>=0.24.0",
     "aiofiles>=23.0.0",
-    
+
     # Data processing
     "numpy>=1.24.0",
     "pandas>=2.0.0",
-    
+
     # Neuroscience specific
     "neuroconv>=0.4.0",
     "pynwb>=2.5.0",
     "nwbinspector>=0.4.0",
-    
+
     # Knowledge graph and validation
     "linkml>=1.5.0",
     "rdflib>=7.0.0",
-    
+
     # Utilities
     "click>=8.0.0",
     "rich>=13.0.0",
@@ -87,17 +87,17 @@ dev = [
     "responses>=0.23.0",
     "httpx>=0.24.0",
     "aioresponses>=0.7.4",
-    
+
     # Code quality
     "ruff>=0.1.0",
     "mypy>=1.5.0",
     "pre-commit>=3.0.0",
-    
+
     # Documentation
     "mkdocs>=1.5.0",
     "mkdocs-material>=9.0.0",
     "mkdocstrings[python]>=0.22.0",
-    
+
     # Development utilities
     "ipython>=8.0.0",
     "jupyter>=1.0.0"
@@ -105,7 +105,7 @@ dev = [
 
 test = [
     "pytest>=7.0.0",
-    "pytest-asyncio>=0.21.0", 
+    "pytest-asyncio>=0.21.0",
     "pytest-cov>=4.0.0",
     "pytest-mock>=3.10.0",
     "pytest-xdist>=3.0.0",
@@ -212,7 +212,7 @@ mkdocs-material = ">=9.0.0"
 minversion = "7.0"
 addopts = [
     "-ra",
-    "--strict-markers", 
+    "--strict-markers",
     "--strict-config",
     "--cov=agentic_neurodata_conversion",
     "--cov-report=term-missing",
@@ -232,7 +232,7 @@ markers = [
     "mock_llm: Tests with mocked LLM responses",
     "small_model: Tests with <3B parameter local models",
     "large_model_minimal: Tests with 7B models, minimal context",
-    "large_model_extended: Tests with 7B models, full context", 
+    "large_model_extended: Tests with 7B models, full context",
     "cheap_api: Tests with inexpensive cloud APIs",
     "frontier_api: Tests with expensive frontier models",
     "integration: Integration tests",
@@ -260,7 +260,9 @@ log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 
 [tool.ruff]
 target-version = "py39"
-line-length = 100
+line-length = 88
+
+[tool.ruff.lint]
 select = [
     "E",   # pycodestyle errors
     "W",   # pycodestyle warnings
@@ -280,15 +282,15 @@ ignore = [
     "ARG002", # unused method argument
 ]
 
+[tool.ruff.lint.isort]
+known-first-party = ["agentic_neurodata_conversion"]
+force-sort-within-sections = true
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
-
-[tool.ruff.isort]
-known-first-party = ["agentic_neurodata_conversion"]
-force-sort-within-sections = true
 
 [tool.mypy]
 python_version = "3.9"

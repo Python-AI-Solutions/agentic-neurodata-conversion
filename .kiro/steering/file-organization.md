@@ -4,23 +4,27 @@
 
 ### Never Create Files in Root Directory
 
-**CRITICAL RULE**: Never create test files, throwaway scripts, or temporary files in the project root directory.
+**CRITICAL RULE**: Never create test files, throwaway scripts, or temporary
+files in the project root directory.
 
 ### Proper File Locations
 
 #### Test Files
+
 - **Unit tests**: Place in `tests/unit/`
 - **Integration tests**: Place in `tests/integration/`
 - **End-to-end tests**: Place in `tests/e2e/`
 - **Test utilities**: Place in `tests/fixtures/` or `tests/utils/`
 
 #### Scripts and Utilities
+
 - **Development scripts**: Place in `scripts/`
 - **Build scripts**: Place in `scripts/build/`
 - **Deployment scripts**: Place in `scripts/deploy/`
 - **Utility scripts**: Place in `scripts/utils/`
 
 #### Temporary or Throwaway Files
+
 - **Quick test scripts**: Place in `scripts/temp/` or `scripts/debug/`
 - **Integration verification**: Add to appropriate test directory
 - **Manual testing**: Create in `scripts/manual_testing/`
@@ -28,6 +32,7 @@
 ### Examples
 
 #### ❌ WRONG - Files in root directory
+
 ```
 project_root/
 ├── test_something.py          # NEVER DO THIS
@@ -37,6 +42,7 @@ project_root/
 ```
 
 #### ✅ CORRECT - Proper organization
+
 ```
 project_root/
 ├── tests/
@@ -60,7 +66,8 @@ project_root/
    - Is it a test? → `tests/` directory
    - Is it a script? → `scripts/` directory
    - Is it temporary? → `scripts/temp/` or appropriate test directory
-3. **Create directories if needed**: Use `mkdir -p` to create directory structure
+3. **Create directories if needed**: Use `mkdir -p` to create directory
+   structure
 4. **Follow naming conventions**: Use descriptive names that indicate purpose
 
 ### Directory Creation
@@ -71,7 +78,7 @@ If the appropriate directory doesn't exist, create it:
 # Create test directories
 mkdir -p tests/unit tests/integration tests/e2e
 
-# Create script directories  
+# Create script directories
 mkdir -p scripts/temp scripts/debug scripts/utils
 
 # Create specific subdirectories as needed

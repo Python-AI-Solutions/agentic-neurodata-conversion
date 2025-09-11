@@ -7,6 +7,7 @@ inclusion: always
 ## Project Setup
 
 ### Initial Setup
+
 ```bash
 # Clone the repository
 git clone <repository-url>
@@ -21,6 +22,7 @@ pixi list
 ```
 
 ### Environment Activation
+
 ```bash
 # For interactive development
 pixi shell
@@ -32,11 +34,12 @@ pixi run <command>
 ## Development Commands
 
 ### Code Quality
+
 ```bash
 # Lint code
 pixi run lint
 
-# Format code  
+# Format code
 pixi run format
 
 # Type checking
@@ -47,6 +50,7 @@ pixi run lint && pixi run format && pixi run type-check
 ```
 
 ### Testing
+
 ```bash
 # Run all tests
 pixi run test
@@ -56,7 +60,7 @@ pixi run test-cov
 
 # Run specific test types
 pixi run test-unit
-pixi run test-integration  
+pixi run test-integration
 pixi run test-e2e
 pixi run test-fast
 
@@ -68,6 +72,7 @@ pixi run test-benchmark
 ```
 
 ### Server Development
+
 ```bash
 # Run production server
 pixi run run-server
@@ -77,6 +82,7 @@ pixi run run-server-dev
 ```
 
 ### Documentation
+
 ```bash
 # Serve documentation locally
 pixi run docs-serve
@@ -86,6 +92,7 @@ pixi run docs-build
 ```
 
 ### Utility Tasks
+
 ```bash
 # Clean build artifacts
 pixi run clean
@@ -100,6 +107,7 @@ pixi run pre-commit-run
 ## Adding Dependencies
 
 ### Runtime Dependencies
+
 ```bash
 # Add a new runtime dependency
 pixi add numpy>=1.24.0
@@ -109,6 +117,7 @@ pixi add "pydantic>=2.0.0,<3.0.0"
 ```
 
 ### Development Dependencies
+
 ```bash
 # Add development dependency
 pixi add --feature dev black
@@ -118,6 +127,7 @@ pixi add --feature test pytest-xdist
 ```
 
 ### Checking Dependencies
+
 ```bash
 # List all installed packages
 pixi list
@@ -132,6 +142,7 @@ pixi update --dry-run
 ## Python Execution
 
 ### Running Scripts
+
 ```bash
 # Run Python scripts
 pixi run python script.py
@@ -142,6 +153,7 @@ pixi run python script.py --arg1 value1 --arg2 value2
 ```
 
 ### Interactive Python
+
 ```bash
 # Start Python REPL
 pixi run python
@@ -156,6 +168,7 @@ pixi run jupyter notebook
 ## Environment Management
 
 ### Environment Information
+
 ```bash
 # Show environment info
 pixi info
@@ -168,6 +181,7 @@ pixi run python -c "import site; print(site.getsitepackages())"
 ```
 
 ### Environment Cleanup
+
 ```bash
 # Remove environment and reinstall
 rm -rf .pixi
@@ -180,20 +194,23 @@ pixi update
 ## IDE Configuration
 
 ### VS Code
+
 Add to `.vscode/settings.json`:
+
 ```json
 {
-    "python.defaultInterpreterPath": "./.pixi/envs/default/bin/python",
-    "python.terminal.activateEnvironment": false,
-    "python.testing.pytestEnabled": true,
-    "python.testing.pytestArgs": ["tests/"],
-    "python.linting.enabled": true,
-    "python.linting.ruffEnabled": true,
-    "python.formatting.provider": "ruff"
+  "python.defaultInterpreterPath": "./.pixi/envs/default/bin/python",
+  "python.terminal.activateEnvironment": false,
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": ["tests/"],
+  "python.linting.enabled": true,
+  "python.linting.ruffEnabled": true,
+  "python.formatting.provider": "ruff"
 }
 ```
 
 ### PyCharm
+
 1. Go to Settings → Project → Python Interpreter
 2. Add New Interpreter → Existing Environment
 3. Select `.pixi/envs/default/bin/python`
@@ -203,6 +220,7 @@ Add to `.vscode/settings.json`:
 ### Common Issues
 
 #### Import Errors
+
 ```bash
 # Check if package is installed
 pixi list | grep package_name
@@ -218,7 +236,9 @@ pixi run python -c "import agentic_neurodata_conversion; print('Local package im
 ```
 
 #### PYTHONPATH Issues
+
 **If you see PYTHONPATH-related problems:**
+
 ```bash
 # NEVER do this - it breaks pixi isolation
 # export PYTHONPATH=/some/path:$PYTHONPATH  # ❌ WRONG
@@ -232,6 +252,7 @@ pixi run pip show agentic-neurodata-conversion
 ```
 
 #### Version Conflicts
+
 ```bash
 # Check dependency conflicts
 pixi tree
@@ -244,6 +265,7 @@ pixi search package_name
 ```
 
 #### Environment Issues
+
 ```bash
 # Verify pixi environment is active
 pixi run which python
@@ -257,6 +279,7 @@ pixi install
 ```
 
 ### Performance Issues
+
 ```bash
 # Use parallel installation
 pixi install --parallel
@@ -283,6 +306,7 @@ pixi install --solver=local
 ## Git Integration
 
 ### Pre-commit Setup
+
 ```bash
 # Install pre-commit hooks
 pixi run pre-commit-install
@@ -295,7 +319,9 @@ pixi run pre-commit autoupdate
 ```
 
 ### Ignore Files
+
 Ensure `.gitignore` includes:
+
 ```
 .pixi/
 *.pyc
@@ -308,11 +334,12 @@ htmlcov/
 ## Continuous Integration
 
 For CI/CD, use pixi in your workflows:
+
 ```yaml
 # GitHub Actions example
 - name: Setup Pixi
   uses: prefix-dev/setup-pixi@v0.4.1
-  
+
 - name: Install dependencies
   run: pixi install
 

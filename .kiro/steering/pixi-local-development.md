@@ -6,7 +6,9 @@ inclusion: always
 
 ## The Correct Pixi Way
 
-This project follows the **official pixi approach** for local package development as documented in the [pixi Python tutorial](https://pixi.sh/latest/python/tutorial/).
+This project follows the **official pixi approach** for local package
+development as documented in the
+[pixi Python tutorial](https://pixi.sh/latest/python/tutorial/).
 
 ### Local Package Configuration
 
@@ -17,6 +19,7 @@ agentic-neurodata-conversion = { path = ".", editable = true }
 ```
 
 This single line tells pixi to:
+
 - Install the local package in editable mode
 - Handle all import resolution automatically
 - Maintain proper environment isolation
@@ -40,6 +43,7 @@ sys.path.insert(0, '.')
 ### How It Works
 
 When you run `pixi install`, pixi automatically:
+
 1. Reads the `pypi-dependencies` section
 2. Installs the local package with `editable = true`
 3. Sets up proper import paths within the environment
@@ -61,6 +65,7 @@ pixi run python -c "import agentic_neurodata_conversion; print(agentic_neurodata
 ## Development Workflow
 
 ### 1. Initial Setup
+
 ```bash
 git clone <repo>
 cd agentic-neurodata-conversion
@@ -68,6 +73,7 @@ pixi install  # Automatically handles local package
 ```
 
 ### 2. Development
+
 ```bash
 # Edit code in agentic_neurodata_conversion/
 # Changes are immediately available (editable install)
@@ -77,6 +83,7 @@ pixi run pytest tests/
 ```
 
 ### 3. No Manual Steps Needed
+
 - No `pip install -e .` required
 - No PYTHONPATH manipulation needed
 - No sys.path modifications required
@@ -96,6 +103,7 @@ test = "pytest tests/ -v --no-cov"
 ## Common Mistakes to Avoid
 
 ### ❌ Don't Add Manual Setup Tasks
+
 ```toml
 # WRONG - not needed with pixi
 setup = "pip install -e ."
@@ -103,6 +111,7 @@ setup-dev = "pip install -e .[dev]"
 ```
 
 ### ❌ Don't Use Task Dependencies for Local Package
+
 ```toml
 # WRONG - creates unnecessary complexity
 server = { cmd = "python -m app.server", depends-on = ["setup"] }
@@ -112,6 +121,7 @@ server = "python -m app.server"
 ```
 
 ### ❌ Don't Manipulate Python Path
+
 ```bash
 # WRONG - breaks pixi isolation
 export PYTHONPATH=".:$PYTHONPATH"
@@ -132,13 +142,15 @@ pixi run python script.py
 
 ## Troubleshooting
 
-### If imports fail:
+### If imports fail
+
 1. Check pixi.toml has the local package declared
 2. Run `pixi install` to ensure proper setup
 3. Verify with `pixi run pip show <package-name>`
 4. Never resort to PYTHONPATH manipulation
 
-### If package changes aren't reflected:
+### If package changes aren't reflected
+
 - With `editable = true`, changes should be immediate
 - If not, try `pixi install` to refresh
 - Check that you're using `pixi run` commands

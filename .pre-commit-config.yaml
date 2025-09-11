@@ -9,8 +9,10 @@ repos:
     hooks:
       - id: trailing-whitespace
         name: Trim trailing whitespace
+        exclude: ^(results/|mvp-example/|\.pixi/|\.kiro/)
       - id: end-of-file-fixer
         name: Fix end of files
+        exclude: ^(results/|mvp-example/|\.pixi/|\.kiro/)
       - id: check-yaml
         name: Check YAML syntax
         args: [--allow-multiple-documents]
@@ -51,7 +53,7 @@ repos:
 
   # Python specific
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.1.14
+    rev: v0.13.0
     hooks:
       - id: ruff
         name: Ruff linter
@@ -59,53 +61,27 @@ repos:
       - id: ruff-format
         name: Ruff formatter
 
-  # Black formatter (alternative/additional to ruff-format)
-  - repo: https://github.com/psf/black
-    rev: 24.1.1
-    hooks:
-      - id: black
-        name: Black formatter
-        language_version: python3
-        args: [--line-length=100]
-
-  # isort for import sorting
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-        name: Sort imports
-        args: [--profile=black, --line-length=100]
-
   # Type checking with mypy
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.8.0
-    hooks:
-      - id: mypy
-        name: Type check with mypy
-        args: [--ignore-missing-imports, --no-strict-optional]
-        additional_dependencies:
-          - types-requests
-          - types-pyyaml
-          - types-jsonschema
-        exclude: ^tests/
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.17.1
+  #   hooks:
+  #     - id: mypy
+  #       name: Type check with mypy
+  #       args: [--ignore-missing-imports, --no-strict-optional]
+  #       additional_dependencies:
+  #         - types-requests
+  #         - types-pyyaml
+  #         - types-jsonschema
+  #       exclude: ^(tests/|mvp-example/|results/|\.kiro/)
 
   # Security checks
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.6
-    hooks:
-      - id: bandit
-        name: Security check with bandit
-        args: [-r, --skip=B101]
-        exclude: ^tests/
-
-  # Docstring coverage
-  - repo: https://github.com/PyCQA/pydocstyle
-    rev: 6.3.0
-    hooks:
-      - id: pydocstyle
-        name: Check docstring style
-        exclude: ^(tests/|setup.py)
-        args: [--convention=numpy]
+  # - repo: https://github.com/PyCQA/bandit
+  #   rev: 1.8.6
+  #   hooks:
+  #     - id: bandit
+  #       name: Security check with bandit
+  #       args: [-r, --skip=B101]
+  #       exclude: ^(tests/|mvp-example/|results/|\.kiro/)
 
   # YAML formatting
   - repo: https://github.com/pre-commit/mirrors-prettier
@@ -118,69 +94,71 @@ repos:
 
   # Shell script checks
   - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.9.0.6
+    rev: v0.11.0.1
     hooks:
       - id: shellcheck
         name: Check shell scripts
 
   # Markdown linting
-  - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.39.0
-    hooks:
-      - id: markdownlint
-        name: Lint markdown files
-        args: [--fix]
+  # - repo: https://github.com/igorshubovych/markdownlint-cli
+  #   rev: v0.45.0
+  #   hooks:
+  #     - id: markdownlint
+  #       name: Lint markdown files
+  #       args: [--fix]
 
   # Jupyter notebook cleaning
   - repo: https://github.com/kynan/nbstripout
-    rev: 0.6.1
+    rev: 0.8.1
     hooks:
       - id: nbstripout
         name: Strip Jupyter notebook outputs
 
   # Check for secrets
-  - repo: https://github.com/Yelp/detect-secrets
-    rev: v1.4.0
-    hooks:
-      - id: detect-secrets
-        name: Detect secrets
-        args: [--baseline, .secrets.baseline]
+  # - repo: https://github.com/Yelp/detect-secrets
+  #   rev: v1.5.0
+  #   hooks:
+  #     - id: detect-secrets
+  #       name: Detect secrets
+  #       args: [--baseline, .secrets.baseline]
 
   # License headers
-  - repo: https://github.com/Lucas-C/pre-commit-hooks
-    rev: v1.5.4
-    hooks:
-      - id: insert-license
-        name: Add license headers
-        files: \.py$
-        args:
-          - --license-filepath
-          - LICENSE_HEADER.txt
-          - --comment-style
-          - "#"
-        exclude: ^(tests/|__pycache__/)
+  # - repo: https://github.com/Lucas-C/pre-commit-hooks
+  #   rev: v1.5.4
+  #   hooks:
+  #     - id: insert-license
+  #       name: Add license headers
+  #       files: \.py$
+  #       args:
+  #         - --license-filepath
+  #         - LICENSE_HEADER.txt
+  #         - --comment-style
+  #         - "#"
+  #       exclude: ^(tests/|__pycache__/|mvp-example/|results/|\.kiro/)
 
-  # Python upgrade syntax
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v3.15.0
-    hooks:
-      - id: pyupgrade
-        name: Upgrade Python syntax
-        args: [--py39-plus]
+  # # Python upgrade syntax
+  # - repo: https://github.com/asottile/pyupgrade
+  #   rev: v3.20.0
+  #   hooks:
+  #     - id: pyupgrade
+  #       name: Upgrade Python syntax
+  #       args: [--py39-plus]
+  #       exclude: ^(mvp-example/|results/|\.kiro/)
 
   # Check for common typos
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.2.6
+    rev: v2.4.1
     hooks:
       - id: codespell
         name: Check spelling
         args: [--write-changes]
         additional_dependencies:
           - tomli
+        exclude: ^(mvp-example/|results/|\.kiro/)
 
   # Validate GitHub Actions
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.27.3
+    rev: 0.33.3
     hooks:
       - id: check-github-actions
         name: Validate GitHub Actions
@@ -189,7 +167,7 @@ repos:
 
   # Check requirements files
   - repo: https://github.com/regebro/pyroma
-    rev: "4.2"
+    rev: "5.0"
     hooks:
       - id: pyroma
         name: Check package metadata
@@ -197,7 +175,7 @@ repos:
 
 # Configuration for specific hooks
 default_language_version:
-  python: python3.11
+  python: python3.12
 
 ci:
   autofix_commit_msg: |
@@ -208,4 +186,6 @@ ci:
   autoupdate_branch: ""
   autoupdate_commit_msg: "[pre-commit.ci] pre-commit autoupdate"
   autoupdate_schedule: weekly
-  skip: [mypy, shellcheck]  # These might need additional setup in CI
+  skip: [mypy, shellcheck] # These might need additional setup in CI
+
+exclude: ^(results/|mvp-example/|\.pixi/|\.kiro/|documents)

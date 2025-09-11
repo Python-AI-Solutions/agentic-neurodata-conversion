@@ -2,7 +2,12 @@
 
 ## Overview
 
-This design document outlines the MCP (Model Context Protocol) server that serves as the central orchestration hub for the agentic neurodata conversion pipeline. The MCP server exposes dataset analysis capabilities, conversion orchestration tools, and workflow handoff mechanisms through standardized interfaces, coordinating specialized agents and managing the complete conversion workflow from dataset analysis to NWB file generation and evaluation.
+This design document outlines the MCP (Model Context Protocol) server that
+serves as the central orchestration hub for the agentic neurodata conversion
+pipeline. The MCP server exposes dataset analysis capabilities, conversion
+orchestration tools, and workflow handoff mechanisms through standardized
+interfaces, coordinating specialized agents and managing the complete conversion
+workflow from dataset analysis to NWB file generation and evaluation.
 
 ## Architecture
 
@@ -53,7 +58,7 @@ This design document outlines the MCP (Model Context Protocol) server that serve
 
 ### Request Flow Architecture
 
-```
+````
 ┌─────────────────┐    ┌─────────────────┐
 │   MCP Client    │    │  HTTP Client    │
 └─────────┬───────┘    └─────────┬───────┘
@@ -76,7 +81,7 @@ This design document outlines the MCP (Model Context Protocol) server that serve
           │ • Workflow control  │
           │ • State management  │
           └─────────────────────┘
-```## 
+```##
 ## Core Components
 
 ### 1. Core Service Layer (Transport Agnostic)
@@ -116,19 +121,19 @@ class ConversionResponse:
 
 class ConversionService:
     """Core conversion service with all business logic."""
-    
+
     def __init__(self, config):
         self.config = config
         self.agent_manager = AgentManager(config)
         self.workflow_orchestrator = WorkflowOrchestrator(self.agent_manager)
         self.logger = logging.getLogger(__name__)
-    
-    async def dataset_analysis(self, dataset_dir: str, use_llm: bool = False, 
+
+    async def dataset_analysis(self, dataset_dir: str, use_llm: bool = False,
                             session_id: Optional[str] = None) -> ConversionResponse:
         """Analyze dataset structure and extract metadata."""
         # Core business logic implementation
         pass
-    
+
     async def conversion_orchestration(self, normalized_metadata: Dict[str, Any],
                                        files_map: Dict[str, str],
                                        output_nwb_path: Optional[str] = None,
@@ -136,25 +141,26 @@ class ConversionService:
         """Generate and execute NeuroConv conversion script."""
         # Core business logic implementation
         pass
-    
+
     async def evaluate_nwb_file(self, nwb_path: str, generate_report: bool = True,
                               include_visualizations: bool = True,
                               session_id: Optional[str] = None) -> ConversionResponse:
         """Evaluate NWB file quality and generate reports."""
         # Core business logic implementation
         pass
-    
+
     async def run_full_pipeline(self, request: ConversionRequest) -> ConversionResponse:
         """Run complete conversion pipeline."""
         # Core business logic implementation
         pass
-```
+````
 
 ### 2. MCP Adapter Layer
 
 Thin adapter that maps MCP protocol methods to core service layer functions.
 
 #### MCP Protocol Adapter
+
 ```python
 # agentic_neurodata_conversion/mcp_server/mcp_adapter.py
 from mcp.server import Server
@@ -167,17 +173,17 @@ from ..core.service import ConversionService, ConversionRequest
 
 class MCPAdapter:
     """Thin adapter that maps MCP methods to core service layer."""
-    
+
     def __init__(self, conversion_service: ConversionService):
         self.service = conversion_service
         self.server = Server("agentic-neurodata-converter")
         self.logger = logging.getLogger(__name__)
         self._register_tools()
         self._register_resources()
-    
+
     def _register_tools(self):
         """Register MCP tools that call core service methods."""
-        
+
         @self.server.call_tool()
         async def dataset_analysis(arguments: Dict[str, Any]) -> List[TextContent]:
             """Analyze dataset - calls core service method."""
@@ -187,7 +193,7 @@ class MCPAdapter:
                 session_id=arguments.get("session_id")
             )
             return [TextContent(type="text", text=json.dumps(response.__dict__, default=str))]
-        
+
         @self.server.call_tool()
         async def conversion_orchestration(arguments: Dict[str, Any]) -> List[TextContent]:
             """Generate conversion script - calls core service method."""
@@ -198,15 +204,15 @@ class MCPAdapter:
                 session_id=arguments.get("session_id")
             )
             return [TextContent(type="text", text=json.dumps(response.__dict__, default=str))]
-        
+
         # Additional MCP tools...
-    
+
     async def run_stdio(self):
         """Run MCP server with stdio transport."""
         from mcp.server.stdio import stdio_server
-        
+
         async with stdio_server() as (read_stream, write_stream):
-            await self.server.run(read_stream, write_stream, 
+            await self.server.run(read_stream, write_stream,
                                 self.server.create_initialization_options())
 ```
 
@@ -217,7 +223,8 @@ Thin adapter that maps HTTP endpoints to the same core service layer functions.
 ### 4. HTTP API Layer (FastAPI)
 
 #### Main Server Application
-```python
+
+````python
 # agentic_neurodata_conversion/mcp_server/app.py
 from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
@@ -242,9 +249,9 @@ async def lifespan(app: FastAPI):
     app.state.mcp_server = MCPServer(settings)
     await app.state.mcp_server.initialize()
     logger.info("MCP Server started successfully")
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Shutting down MCP Server...")
     await app.state.mcp_server.shutdown()
@@ -252,7 +259,7 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     """Create and configure FastAPI application."""
-    
+
     app = FastAPI(
         title="Agentic Neurodata Converter MCP Server",
         description="MCP server for orchestrating neurodata conversion pipeline",
@@ -261,7 +268,7 @@ def create_app() -> FastAPI:
         docs_url="/docs",
         redoc_url="/redoc"
     )
-    
+
     # Add middleware
     app.add_middleware(
         CORSMiddleware,
@@ -270,22 +277,22 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    
+
     app.add_middleware(LoggingMiddleware)
     app.add_middleware(MetricsMiddleware)
     app.add_middleware(ErrorHandlingMiddleware)
-    
+
     # Include routers
     from .routers import conversion, agents, monitoring, tools
     app.include_router(conversion.router, prefix="/api/v1/conversion", tags=["conversion"])
     app.include_router(agents.router, prefix="/api/v1/agents", tags=["agents"])
     app.include_router(monitoring.router, prefix="/api/v1/monitoring", tags=["monitoring"])
     app.include_router(tools.router, prefix="/api/v1/tools", tags=["tools"])
-    
+
     # Legacy endpoints for backward compatibility
     from .legacy_endpoints import setup_legacy_endpoints
     setup_legacy_endpoints(app)
-    
+
     return app
 
 # Create application instance
@@ -295,19 +302,19 @@ def custom_openapi():
     """Generate custom OpenAPI schema."""
     if app.openapi_schema:
         return app.openapi_schema
-    
+
     openapi_schema = get_openapi(
         title="Agentic Neurodata Converter MCP Server",
         version="1.0.0",
         description="Central orchestration hub for agentic neurodata conversion",
         routes=app.routes,
     )
-    
+
     # Add custom schema extensions
     openapi_schema["info"]["x-logo"] = {
         "url": "https://example.com/logo.png"
     }
-    
+
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
@@ -352,11 +359,11 @@ async def dataset_analysis(
     mcp_server = Depends(get_mcp_server)
 ):
     """Analyze dataset structure and extract metadata."""
-    
+
     try:
         # Generate session ID if not provided
         session_id = request.session_id or str(uuid.uuid4())
-        
+
         # Execute analysis through MCP server
         result = await mcp_server.execute_tool(
             "dataset_analysis",
@@ -364,7 +371,7 @@ async def dataset_analysis(
             use_llm=request.use_llm,
             session_id=session_id
         )
-        
+
         # Track conversion session
         background_tasks.add_task(
             mcp_server.track_conversion_step,
@@ -372,14 +379,14 @@ async def dataset_analysis(
             "analysis",
             result
         )
-        
+
         return ConversionResponse(
             status="success" if result.get("status") == "success" else "error",
             data=result,
             session_id=session_id,
             timestamp=datetime.utcnow()
         )
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -390,10 +397,10 @@ async def conversion_orchestration(
     mcp_server = Depends(get_mcp_server)
 ):
     """Generate and execute NeuroConv conversion script."""
-    
+
     try:
         session_id = request.session_id or str(uuid.uuid4())
-        
+
         result = await mcp_server.execute_tool(
             "conversion_orchestration",
             normalized_metadata=request.normalized_metadata,
@@ -401,21 +408,21 @@ async def conversion_orchestration(
             output_nwb_path=request.output_nwb_path,
             session_id=session_id
         )
-        
+
         background_tasks.add_task(
             mcp_server.track_conversion_step,
             session_id,
             "conversion",
             result
         )
-        
+
         return ConversionResponse(
             status="success" if result.get("status") == "success" else "error",
             data=result,
             session_id=session_id,
             timestamp=datetime.utcnow()
         )
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -426,10 +433,10 @@ async def evaluate_nwb_file(
     mcp_server = Depends(get_mcp_server)
 ):
     """Evaluate NWB file quality and generate reports."""
-    
+
     try:
         session_id = request.session_id or str(uuid.uuid4())
-        
+
         result = await mcp_server.execute_tool(
             "evaluate_nwb_file",
             nwb_path=request.nwb_path,
@@ -437,21 +444,21 @@ async def evaluate_nwb_file(
             include_visualizations=request.include_visualizations,
             session_id=session_id
         )
-        
+
         background_tasks.add_task(
             mcp_server.track_conversion_step,
             session_id,
             "evaluation",
             result
         )
-        
+
         return ConversionResponse(
             status="success" if result.get("status") == "success" else "error",
             data=result,
             session_id=session_id,
             timestamp=datetime.utcnow()
         )
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -462,10 +469,10 @@ async def run_full_pipeline(
     mcp_server = Depends(get_mcp_server)
 ):
     """Run complete conversion pipeline."""
-    
+
     try:
         session_id = str(uuid.uuid4())
-        
+
         # Start pipeline execution in background
         task_id = await mcp_server.start_pipeline_execution(
             session_id=session_id,
@@ -474,7 +481,7 @@ async def run_full_pipeline(
             use_llm=request.use_llm,
             output_nwb_path=request.output_nwb_path
         )
-        
+
         return ConversionResponse(
             status="started",
             data={
@@ -485,7 +492,7 @@ async def run_full_pipeline(
             session_id=session_id,
             timestamp=datetime.utcnow()
         )
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -495,15 +502,15 @@ async def get_conversion_status(
     mcp_server = Depends(get_mcp_server)
 ):
     """Get status of conversion session."""
-    
+
     try:
         status = await mcp_server.get_session_status(session_id)
-        
+
         if not status:
             raise HTTPException(status_code=404, detail="Session not found")
-        
+
         return status
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -515,16 +522,16 @@ async def cancel_conversion(
     mcp_server = Depends(get_mcp_server)
 ):
     """Cancel ongoing conversion session."""
-    
+
     try:
         result = await mcp_server.cancel_session(session_id)
-        
+
         return {
             "status": "cancelled" if result else "not_found",
             "session_id": session_id,
             "timestamp": datetime.utcnow()
         }
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 ```### 2. A
@@ -569,7 +576,7 @@ class AgentInfo:
 
 class AgentManager:
     """Manages agent lifecycle and coordination."""
-    
+
     def __init__(self, config):
         self.config = config
         self.agents: Dict[str, AgentInfo] = {}
@@ -580,17 +587,17 @@ class AgentManager:
         }
         self.logger = logging.getLogger(__name__)
         self._initialization_lock = asyncio.Lock()
-    
+
     async def initialize_agents(self):
         """Initialize all configured agents."""
         async with self._initialization_lock:
             for agent_type, agent_class in self.agent_classes.items():
                 try:
                     self.logger.info(f"Initializing {agent_type} agent...")
-                    
+
                     # Create agent instance
                     agent_instance = agent_class(self.config.agents)
-                    
+
                     # Create agent info
                     agent_info = AgentInfo(
                         name=agent_type,
@@ -599,10 +606,10 @@ class AgentManager:
                         instance=agent_instance,
                         created_at=datetime.utcnow()
                     )
-                    
+
                     self.agents[agent_type] = agent_info
                     self.logger.info(f"Successfully initialized {agent_type} agent")
-                    
+
                 except Exception as e:
                     self.logger.error(f"Failed to initialize {agent_type} agent: {e}")
                     # Create error state agent info
@@ -613,46 +620,46 @@ class AgentManager:
                         instance=None,
                         created_at=datetime.utcnow()
                     )
-    
+
     async def get_agent(self, agent_type: str) -> Optional[BaseAgent]:
         """Get agent instance by type."""
         agent_info = self.agents.get(agent_type)
-        
+
         if not agent_info:
             self.logger.error(f"Agent type not found: {agent_type}")
             return None
-        
+
         if agent_info.status != AgentStatus.READY:
             self.logger.warning(f"Agent {agent_type} is not ready (status: {agent_info.status})")
             return None
-        
+
         return agent_info.instance
-    
+
     async def execute_agent_task(self, agent_type: str, **kwargs) -> Dict[str, Any]:
         """Execute task using specified agent."""
         agent_info = self.agents.get(agent_type)
-        
+
         if not agent_info or not agent_info.instance:
             return {
                 "status": "error",
                 "message": f"Agent {agent_type} not available"
             }
-        
+
         # Update agent status
         agent_info.status = AgentStatus.BUSY
         agent_info.last_used = datetime.utcnow()
-        
+
         try:
             # Execute agent task
             result = await agent_info.instance.execute(**kwargs)
-            
+
             # Update statistics
             agent_info.total_executions += 1
             if result.status.value == "completed":
                 agent_info.successful_executions += 1
             else:
                 agent_info.failed_executions += 1
-            
+
             # Convert agent result to dict
             return {
                 "status": "success" if result.status.value == "completed" else "error",
@@ -664,28 +671,28 @@ class AgentManager:
                 "error": result.error,
                 "warnings": result.warnings
             }
-            
+
         except Exception as e:
             self.logger.error(f"Agent {agent_type} execution failed: {e}")
             agent_info.failed_executions += 1
-            
+
             return {
                 "status": "error",
                 "message": str(e),
                 "agent_type": agent_type
             }
-        
+
         finally:
             # Reset agent status
             agent_info.status = AgentStatus.READY
-    
+
     def get_agent_status(self, agent_type: Optional[str] = None) -> Dict[str, Any]:
         """Get status of agents."""
         if agent_type:
             agent_info = self.agents.get(agent_type)
             if not agent_info:
                 return {"error": f"Agent {agent_type} not found"}
-            
+
             return {
                 "name": agent_info.name,
                 "type": agent_info.agent_type,
@@ -716,20 +723,20 @@ class AgentManager:
                 }
                 for agent_type, info in self.agents.items()
             }
-    
+
     async def shutdown_agents(self):
         """Shutdown all agents gracefully."""
         for agent_type, agent_info in self.agents.items():
             try:
                 self.logger.info(f"Shutting down {agent_type} agent...")
                 agent_info.status = AgentStatus.SHUTDOWN
-                
+
                 # If agent has cleanup method, call it
                 if agent_info.instance and hasattr(agent_info.instance, 'cleanup'):
                     await agent_info.instance.cleanup()
-                
+
                 self.logger.info(f"Successfully shut down {agent_type} agent")
-                
+
             except Exception as e:
                 self.logger.error(f"Error shutting down {agent_type} agent: {e}")
 
@@ -737,17 +744,17 @@ class AgentManager:
 
 class WorkflowOrchestrator:
     """Orchestrates multi-step conversion workflows."""
-    
+
     def __init__(self, agent_manager: AgentManager):
         self.agent_manager = agent_manager
         self.active_sessions: Dict[str, Dict[str, Any]] = {}
         self.logger = logging.getLogger(__name__)
-    
+
     async def start_pipeline_execution(self, session_id: str, dataset_dir: str,
                                      files_map: Dict[str, str], use_llm: bool = False,
                                      output_nwb_path: Optional[str] = None) -> str:
         """Start full pipeline execution."""
-        
+
         # Initialize session state
         self.active_sessions[session_id] = {
             "status": "running",
@@ -761,55 +768,55 @@ class WorkflowOrchestrator:
             "output_nwb_path": output_nwb_path,
             "results": {}
         }
-        
+
         # Start pipeline execution as background task
         task_id = f"pipeline_{session_id}"
         asyncio.create_task(self._execute_pipeline(session_id))
-        
+
         return task_id
-    
+
     async def _execute_pipeline(self, session_id: str):
         """Execute complete pipeline workflow."""
         session = self.active_sessions[session_id]
-        
+
         try:
             # Step 1: Dataset Analysis
             session["current_step"] = "analysis"
             self.logger.info(f"Session {session_id}: Starting dataset analysis")
-            
+
             analysis_result = await self.agent_manager.execute_agent_task(
                 "conversation",
                 dataset_dir=session["dataset_dir"],
                 use_llm=session["use_llm"]
             )
-            
+
             if analysis_result["status"] != "success":
                 raise Exception(f"Dataset analysis failed: {analysis_result.get('message', 'Unknown error')}")
-            
+
             session["results"]["analysis"] = analysis_result
             session["steps_completed"].append("analysis")
-            
+
             # Step 2: Conversion Script Generation
             session["current_step"] = "conversion"
             self.logger.info(f"Session {session_id}: Starting conversion")
-            
+
             conversion_result = await self.agent_manager.execute_agent_task(
                 "conversion",
                 normalized_metadata=analysis_result["data"].get("enriched_metadata", {}),
                 files_map=session["files_map"],
                 output_nwb_path=session["output_nwb_path"]
             )
-            
+
             if conversion_result["status"] != "success":
                 raise Exception(f"Conversion failed: {conversion_result.get('message', 'Unknown error')}")
-            
+
             session["results"]["conversion"] = conversion_result
             session["steps_completed"].append("conversion")
-            
+
             # Step 3: Evaluation
             session["current_step"] = "evaluation"
             self.logger.info(f"Session {session_id}: Starting evaluation")
-            
+
             nwb_path = conversion_result["data"].get("nwb_path")
             if nwb_path:
                 evaluation_result = await self.agent_manager.execute_agent_task(
@@ -817,41 +824,41 @@ class WorkflowOrchestrator:
                     nwb_path=nwb_path,
                     generate_report=True
                 )
-                
+
                 session["results"]["evaluation"] = evaluation_result
                 if evaluation_result["status"] == "success":
                     session["steps_completed"].append("evaluation")
                 else:
                     session["steps_failed"].append("evaluation")
-            
+
             # Pipeline completed successfully
             session["status"] = "completed"
             session["current_step"] = "completed"
             session["end_time"] = datetime.utcnow()
-            
+
             self.logger.info(f"Session {session_id}: Pipeline completed successfully")
-            
+
         except Exception as e:
             # Pipeline failed
             session["status"] = "failed"
             session["error"] = str(e)
             session["end_time"] = datetime.utcnow()
             session["steps_failed"].append(session["current_step"])
-            
+
             self.logger.error(f"Session {session_id}: Pipeline failed at {session['current_step']}: {e}")
-    
+
     def get_session_status(self, session_id: str) -> Optional[Dict[str, Any]]:
         """Get status of pipeline session."""
         session = self.active_sessions.get(session_id)
-        
+
         if not session:
             return None
-        
+
         # Calculate progress
         total_steps = 3  # analysis, conversion, evaluation
         completed_steps = len(session["steps_completed"])
         progress = completed_steps / total_steps
-        
+
         return {
             "session_id": session_id,
             "status": session["status"],
@@ -864,33 +871,33 @@ class WorkflowOrchestrator:
             "error": session.get("error"),
             "results_available": list(session["results"].keys())
         }
-    
+
     async def cancel_session(self, session_id: str) -> bool:
         """Cancel active pipeline session."""
         session = self.active_sessions.get(session_id)
-        
+
         if not session:
             return False
-        
+
         if session["status"] == "running":
             session["status"] = "cancelled"
             session["end_time"] = datetime.utcnow()
             self.logger.info(f"Session {session_id}: Cancelled by user request")
             return True
-        
+
         return False
-    
+
     def cleanup_completed_sessions(self, max_age_hours: int = 24):
         """Clean up old completed sessions."""
         current_time = datetime.utcnow()
         sessions_to_remove = []
-        
+
         for session_id, session in self.active_sessions.items():
             if session.get("end_time"):
                 age = current_time - session["end_time"]
                 if age.total_seconds() > max_age_hours * 3600:
                     sessions_to_remove.append(session_id)
-        
+
         for session_id in sessions_to_remove:
             del self.active_sessions[session_id]
             self.logger.info(f"Cleaned up old session: {session_id}")
@@ -931,7 +938,7 @@ class ToolMetadata:
     deprecated: bool = False
     requires_auth: bool = False
     execution_timeout: int = 300  # seconds
-    
+
     # Statistics
     total_calls: int = 0
     successful_calls: int = 0
@@ -941,27 +948,27 @@ class ToolMetadata:
 
 class EnhancedToolRegistry:
     """Enhanced tool registry with metadata and statistics."""
-    
+
     def __init__(self):
         self.tools: Dict[str, ToolMetadata] = {}
         self.categories: Dict[ToolCategory, List[str]] = {
             category: [] for category in ToolCategory
         }
         self.logger = logging.getLogger(__name__)
-    
+
     def register_tool(self, name: Optional[str] = None, description: Optional[str] = None,
                      category: ToolCategory = ToolCategory.UTILITY, version: str = "1.0.0",
                      author: Optional[str] = None, tags: Optional[List[str]] = None,
                      timeout: int = 300, requires_auth: bool = False):
         """Enhanced tool registration decorator."""
-        
+
         def decorator(func: Callable):
             tool_name = name or func.__name__
-            
+
             # Extract parameter information
             sig = inspect.signature(func)
             parameters = {}
-            
+
             for param_name, param in sig.parameters.items():
                 if param_name != 'server':  # Skip server parameter
                     param_info = {
@@ -970,7 +977,7 @@ class EnhancedToolRegistry:
                         'required': param.default == inspect.Parameter.empty
                     }
                     parameters[param_name] = param_info
-            
+
             # Create tool metadata
             metadata = ToolMetadata(
                 name=tool_name,
@@ -985,35 +992,35 @@ class EnhancedToolRegistry:
                 requires_auth=requires_auth,
                 execution_timeout=timeout
             )
-            
+
             # Register tool
             self.tools[tool_name] = metadata
             self.categories[category].append(tool_name)
-            
+
             self.logger.info(f"Registered tool: {tool_name} (category: {category.value})")
             return func
-        
+
         return decorator
-    
+
     def get_tool(self, name: str) -> Optional[ToolMetadata]:
         """Get tool metadata by name."""
         return self.tools.get(name)
-    
-    def list_tools(self, category: Optional[ToolCategory] = None, 
+
+    def list_tools(self, category: Optional[ToolCategory] = None,
                   include_deprecated: bool = False) -> Dict[str, Dict[str, Any]]:
         """List tools with optional filtering."""
-        
+
         tools_list = {}
-        
+
         for tool_name, metadata in self.tools.items():
             # Filter by category
             if category and metadata.category != category:
                 continue
-            
+
             # Filter deprecated
             if not include_deprecated and metadata.deprecated:
                 continue
-            
+
             tools_list[tool_name] = {
                 'description': metadata.description,
                 'category': metadata.category.value,
@@ -1032,99 +1039,99 @@ class EnhancedToolRegistry:
                     'last_called': metadata.last_called.isoformat() if metadata.last_called else None
                 }
             }
-        
+
         return tools_list
-    
+
     def get_tools_by_category(self) -> Dict[str, List[str]]:
         """Get tools organized by category."""
         return {
-            category.value: tool_names 
+            category.value: tool_names
             for category, tool_names in self.categories.items()
             if tool_names
         }
-    
+
     async def execute_tool(self, tool_name: str, **kwargs) -> Dict[str, Any]:
         """Execute tool with enhanced error handling and statistics."""
-        
+
         metadata = self.tools.get(tool_name)
         if not metadata:
             return {
                 "status": "error",
                 "message": f"Tool not found: {tool_name}"
             }
-        
+
         if metadata.deprecated:
             self.logger.warning(f"Using deprecated tool: {tool_name}")
-        
+
         start_time = datetime.utcnow()
-        
+
         try:
             # Execute with timeout
             result = await asyncio.wait_for(
                 metadata.function(**kwargs),
                 timeout=metadata.execution_timeout
             )
-            
+
             # Update statistics
             execution_time = (datetime.utcnow() - start_time).total_seconds()
             self._update_tool_statistics(metadata, execution_time, success=True)
-            
+
             return result
-            
+
         except asyncio.TimeoutError:
             execution_time = (datetime.utcnow() - start_time).total_seconds()
             self._update_tool_statistics(metadata, execution_time, success=False)
-            
+
             return {
                 "status": "error",
                 "message": f"Tool {tool_name} timed out after {metadata.execution_timeout} seconds"
             }
-            
+
         except Exception as e:
             execution_time = (datetime.utcnow() - start_time).total_seconds()
             self._update_tool_statistics(metadata, execution_time, success=False)
-            
+
             self.logger.error(f"Tool {tool_name} execution failed: {e}")
             return {
                 "status": "error",
                 "message": str(e),
                 "tool": tool_name
             }
-    
+
     def _update_tool_statistics(self, metadata: ToolMetadata, execution_time: float, success: bool):
         """Update tool execution statistics."""
         metadata.total_calls += 1
         metadata.last_called = datetime.utcnow()
-        
+
         if success:
             metadata.successful_calls += 1
         else:
             metadata.failed_calls += 1
-        
+
         # Update average execution time
         if metadata.total_calls == 1:
             metadata.average_execution_time = execution_time
         else:
             # Running average
             metadata.average_execution_time = (
-                (metadata.average_execution_time * (metadata.total_calls - 1) + execution_time) 
+                (metadata.average_execution_time * (metadata.total_calls - 1) + execution_time)
                 / metadata.total_calls
             )
-    
+
     def deprecate_tool(self, tool_name: str, reason: Optional[str] = None):
         """Mark tool as deprecated."""
         metadata = self.tools.get(tool_name)
         if metadata:
             metadata.deprecated = True
             self.logger.warning(f"Tool {tool_name} marked as deprecated: {reason}")
-    
+
     def get_tool_statistics(self) -> Dict[str, Any]:
         """Get overall tool registry statistics."""
         total_tools = len(self.tools)
         deprecated_tools = sum(1 for m in self.tools.values() if m.deprecated)
         total_calls = sum(m.total_calls for m in self.tools.values())
         successful_calls = sum(m.successful_calls for m in self.tools.values())
-        
+
         category_stats = {}
         for category in ToolCategory:
             category_tools = self.categories[category]
@@ -1137,7 +1144,7 @@ class EnhancedToolRegistry:
                     if sum(self.tools[name].total_calls for name in category_tools) > 0 else 0.0
                 )
             }
-        
+
         return {
             'total_tools': total_tools,
             'deprecated_tools': deprecated_tools,
@@ -1154,14 +1161,14 @@ enhanced_mcp = EnhancedToolRegistry()
 
 class MCPServerCore:
     """Core MCP server implementation with all components."""
-    
+
     def __init__(self, config):
         self.config = config
         self.agent_manager = AgentManager(config)
         self.workflow_orchestrator = WorkflowOrchestrator(self.agent_manager)
         self.tool_registry = enhanced_mcp
         self.logger = logging.getLogger(__name__)
-        
+
         # Performance metrics
         self.metrics = {
             'server_start_time': None,
@@ -1170,26 +1177,26 @@ class MCPServerCore:
             'failed_requests': 0,
             'active_sessions': 0
         }
-    
+
     async def initialize(self):
         """Initialize MCP server components."""
         self.logger.info("Initializing MCP Server components...")
-        
+
         # Initialize agents
         await self.agent_manager.initialize_agents()
-        
+
         # Register built-in tools
         self._register_builtin_tools()
-        
+
         # Start background tasks
         asyncio.create_task(self._background_maintenance())
-        
+
         self.metrics['server_start_time'] = datetime.utcnow()
         self.logger.info("MCP Server initialization complete")
-    
+
     def _register_builtin_tools(self):
         """Register built-in MCP tools."""
-        
+
         @self.tool_registry.register_tool(
             name="dataset_analysis",
             description="Analyze dataset structure and extract metadata",
@@ -1200,7 +1207,7 @@ class MCPServerCore:
             return await self.agent_manager.execute_agent_task(
                 "conversation", dataset_dir=dataset_dir, use_llm=use_llm
             )
-        
+
         @self.tool_registry.register_tool(
             name="conversion_orchestration",
             description="Generate and execute NeuroConv conversion script",
@@ -1219,7 +1226,7 @@ class MCPServerCore:
                 files_map=files_map,
                 output_nwb_path=output_nwb_path
             )
-        
+
         @self.tool_registry.register_tool(
             name="evaluate_nwb_file",
             description="Evaluate NWB file quality and generate reports",
@@ -1238,21 +1245,21 @@ class MCPServerCore:
                 generate_report=generate_report,
                 include_visualizations=include_visualizations
             )
-    
+
     async def execute_tool(self, tool_name: str, **kwargs) -> Dict[str, Any]:
         """Execute tool through registry."""
         self.metrics['total_requests'] += 1
-        
+
         try:
             result = await self.tool_registry.execute_tool(tool_name, server=self, **kwargs)
-            
+
             if result.get("status") == "success":
                 self.metrics['successful_requests'] += 1
             else:
                 self.metrics['failed_requests'] += 1
-            
+
             return result
-            
+
         except Exception as e:
             self.metrics['failed_requests'] += 1
             self.logger.error(f"Tool execution failed: {e}")
@@ -1260,30 +1267,30 @@ class MCPServerCore:
                 "status": "error",
                 "message": str(e)
             }
-    
+
     async def start_pipeline_execution(self, **kwargs) -> str:
         """Start pipeline execution."""
         self.metrics['active_sessions'] += 1
         return await self.workflow_orchestrator.start_pipeline_execution(**kwargs)
-    
+
     def get_session_status(self, session_id: str) -> Optional[Dict[str, Any]]:
         """Get session status."""
         return self.workflow_orchestrator.get_session_status(session_id)
-    
+
     async def cancel_session(self, session_id: str) -> bool:
         """Cancel session."""
         result = await self.workflow_orchestrator.cancel_session(session_id)
         if result:
             self.metrics['active_sessions'] = max(0, self.metrics['active_sessions'] - 1)
         return result
-    
+
     def get_server_metrics(self) -> Dict[str, Any]:
         """Get comprehensive server metrics."""
         uptime = (
             (datetime.utcnow() - self.metrics['server_start_time']).total_seconds()
             if self.metrics['server_start_time'] else 0
         )
-        
+
         return {
             'server_info': {
                 'start_time': self.metrics['server_start_time'].isoformat() if self.metrics['server_start_time'] else None,
@@ -1305,33 +1312,36 @@ class MCPServerCore:
             'agent_metrics': self.agent_manager.get_agent_status(),
             'tool_metrics': self.tool_registry.get_tool_statistics()
         }
-    
+
     async def _background_maintenance(self):
         """Background maintenance tasks."""
         while True:
             try:
                 # Clean up old sessions every hour
                 self.workflow_orchestrator.cleanup_completed_sessions()
-                
+
                 # Log metrics every 5 minutes
                 if self.metrics['total_requests'] % 100 == 0:
                     metrics = self.get_server_metrics()
                     self.logger.info(f"Server metrics: {metrics['request_metrics']}")
-                
+
                 await asyncio.sleep(300)  # 5 minutes
-                
+
             except Exception as e:
                 self.logger.error(f"Background maintenance error: {e}")
                 await asyncio.sleep(60)  # Retry in 1 minute
-    
+
     async def shutdown(self):
         """Shutdown MCP server gracefully."""
         self.logger.info("Shutting down MCP Server...")
-        
+
         # Shutdown agents
         await self.agent_manager.shutdown_agents()
-        
-        self.logger.info("MCP Server shutdown complete")
-```
 
-This comprehensive MCP server architecture design provides a robust, scalable, and well-organized central orchestration hub that coordinates all aspects of the agentic neurodata conversion pipeline while maintaining high availability, observability, and extensibility.
+        self.logger.info("MCP Server shutdown complete")
+````
+
+This comprehensive MCP server architecture design provides a robust, scalable,
+and well-organized central orchestration hub that coordinates all aspects of the
+agentic neurodata conversion pipeline while maintaining high availability,
+observability, and extensibility.

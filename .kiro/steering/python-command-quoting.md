@@ -4,11 +4,13 @@
 
 ### Python -c Command Quoting
 
-**CRITICAL RULE**: Always use single quotes for `python -c` commands in shell execution.
+**CRITICAL RULE**: Always use single quotes for `python -c` commands in shell
+execution.
 
 ### Correct Quoting Pattern
 
 #### ✅ CORRECT - Single quotes for outer command
+
 ```bash
 pixi run python -c 'print("Hello World")'
 pixi run python -c 'import sys; print(sys.version)'
@@ -16,6 +18,7 @@ pixi run python -c 'from module import func; func("test")'
 ```
 
 #### ❌ WRONG - Double quotes for outer command
+
 ```bash
 pixi run python -c "print('Hello World')"     # AVOID THIS
 pixi run python -c "import sys; print(sys.version)"  # AVOID THIS
@@ -26,6 +29,7 @@ pixi run python -c "import sys; print(sys.version)"  # AVOID THIS
 When you need quotes inside the Python code:
 
 #### ✅ CORRECT - Double quotes inside single quotes
+
 ```bash
 pixi run python -c 'print("This is correct")'
 pixi run python -c 'logger.info("Message with quotes")'
@@ -33,11 +37,13 @@ pixi run python -c 'raise ValueError("Error message")'
 ```
 
 #### ✅ CORRECT - Escaped single quotes when necessary
+
 ```bash
 pixi run python -c 'print("Don'\''t do this often")'  # When you must use single quotes inside
 ```
 
 #### ❌ WRONG - Conflicting quote types
+
 ```bash
 pixi run python -c "print("This breaks")"     # Syntax error
 pixi run python -c 'print('This breaks')'     # Syntax error
@@ -46,6 +52,7 @@ pixi run python -c 'print('This breaks')'     # Syntax error
 ### Complex Examples
 
 #### Multi-line Python code
+
 ```bash
 # ✅ CORRECT
 pixi run python -c '
@@ -60,6 +67,7 @@ print(f"Result: {result}")
 ```
 
 #### Exception handling
+
 ```bash
 # ✅ CORRECT
 pixi run python -c '
@@ -73,6 +81,7 @@ except Exception as e:
 ```
 
 #### JSON and string formatting
+
 ```bash
 # ✅ CORRECT
 pixi run python -c '
@@ -84,7 +93,8 @@ print(json.dumps(data, indent=2))
 
 ### Why This Matters
 
-1. **Shell parsing**: Single quotes prevent shell interpretation of special characters
+1. **Shell parsing**: Single quotes prevent shell interpretation of special
+   characters
 2. **Python string literals**: Double quotes inside work naturally
 3. **Consistency**: Reduces confusion and errors
 4. **Portability**: Works across different shells (bash, zsh, etc.)
@@ -93,18 +103,21 @@ print(json.dumps(data, indent=2))
 ### Common Mistakes to Avoid
 
 #### ❌ Double quote confusion
+
 ```bash
 # This breaks because of nested double quotes
 pixi run python -c "print("Hello")"
 ```
 
 #### ❌ Escaping hell
+
 ```bash
 # This is hard to read and error-prone
 pixi run python -c "print(\"Hello \"World\"\")"
 ```
 
 #### ❌ Mixed quoting without planning
+
 ```bash
 # Inconsistent and confusing
 pixi run python -c "import os; print('Path:', os.getcwd())"
@@ -141,4 +154,5 @@ pixi run python -c 'from mypackage import test; test()'
 pixi shell -c 'python -c "print(\"In pixi shell\")"'  # Note: different context
 ```
 
-Remember: **Single quotes for `python -c`, double quotes for Python strings inside.**
+Remember: **Single quotes for `python -c`, double quotes for Python strings
+inside.**
