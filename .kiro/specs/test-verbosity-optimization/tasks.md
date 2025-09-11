@@ -24,7 +24,7 @@
   - Implement test-ci task with line-level tracebacks for CI/CD
   - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
-- [ ] 5. Update testing guide documentation with new command patterns
+- [x] 5. Update testing guide documentation with new command patterns
   - Replace verbose examples with quiet defaults in testing-guide.md
   - Document when and how to use verbose commands
   - Provide clear guidance for different execution contexts
