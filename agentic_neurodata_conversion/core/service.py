@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field, field_validator
 
-from .config import Settings, get_settings
+from .config import get_config, CoreConfig, configure_logging
 from .exceptions import (
     AgentError,
     ConversionError,
@@ -163,7 +163,7 @@ class AgentResult(BaseModel):
 class AgentManager:
     """Manages agent lifecycle and coordination."""
     
-    def __init__(self, config: Settings):
+    def __init__(self, config: CoreConfig):
         """Initialize agent manager with configuration.
         
         Args:
@@ -621,13 +621,17 @@ class WorkflowOrchestrator:
 class ConversionService:
     """Core conversion service with all business logic."""
     
-    def __init__(self, config: Optional[Settings] = None):
+    def __init__(self, config: Optional[CoreConfig] = None):
         """Initialize conversion service.
         
         Args:
-            config: Optional configuration settings (uses global settings if None)
+            config: Optional configuration settings (uses global config if None)
         """
-        self.config = config or get_settings()
+        self.config = config or get_config()
+        
+        # Configure logging based on config
+        configure_logging(self.config.logging)
+        
         self.agent_manager = AgentManager(self.config)
         self.workflow_orchestrator = WorkflowOrchestrator(self.agent_manager)
         self.logger = logging.getLogger(__name__)

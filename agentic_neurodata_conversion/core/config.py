@@ -1,484 +1,488 @@
 """Configuration management for the agentic neurodata conversion system.
 
-This module provides a comprehensive configuration system using Pydantic Settings
-with support for environment variables, nested configurations, and validation.
+This module provides centralized configuration management that is transport-agnostic
+and supports environment-based configuration for different deployment scenarios.
 """
 
-from __future__ import annotations
-
 import os
+import json
+import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
-
-from pydantic import BaseModel, Field, field_validator, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
-
-
-class ServerConfig(BaseModel):
-    """MCP Server configuration settings."""
-    
-    host: str = Field(default="127.0.0.1", description="Server host address")
-    port: int = Field(default=8000, ge=1, le=65535, description="Server port number")
-    debug: bool = Field(default=False, description="Enable debug mode")
-    log_level: str = Field(default="INFO", description="Logging level")
-    cors_origins: List[str] = Field(
-        default=["*"], 
-        description="Allowed CORS origins for web interface"
-    )
-    
-    @field_validator("log_level")
-    @classmethod
-    def validate_log_level(cls, v: str) -> str:
-        """Validate log level is supported."""
-        valid_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
-        if v.upper() not in valid_levels:
-            raise ValueError(f"Log level must be one of: {valid_levels}")
-        return v.upper()
-    
-    @field_validator("cors_origins")
-    @classmethod
-    def validate_cors_origins(cls, v: List[str]) -> List[str]:
-        """Validate CORS origins format."""
-        if not v:
-            return ["*"]
-        return v
+from typing import Dict, Any, Optional, Union, List
+from dataclasses import dataclass, field, asdict
+from enum import Enum
 
 
-class AgentConfig(BaseModel):
-    """Configuration for internal agents."""
-    
-    conversation_model: str = Field(
-        default="gpt-4", 
-        description="LLM model for conversation agent"
-    )
-    conversion_timeout: int = Field(
-        default=300, 
-        ge=30, 
-        le=3600, 
-        description="Conversion timeout in seconds"
-    )
-    evaluation_strict: bool = Field(
-        default=True, 
-        description="Enable strict evaluation mode"
-    )
-    knowledge_graph_format: str = Field(
-        default="ttl", 
-        description="Knowledge graph output format"
-    )
-    
-    # LLM API Configuration
-    openai_api_key: Optional[str] = Field(default=None, description="OpenAI API key")
-    openai_org_id: Optional[str] = Field(default=None, description="OpenAI organization ID")
-    anthropic_api_key: Optional[str] = Field(default=None, description="Anthropic API key")
-    
-    # Local model configuration
-    local_model_url: Optional[str] = Field(
-        default=None, 
-        description="URL for local model server"
-    )
-    local_model_name: Optional[str] = Field(
-        default=None, 
-        description="Name of local model to use"
-    )
-    
-    @field_validator("knowledge_graph_format")
-    @classmethod
-    def validate_kg_format(cls, v: str) -> str:
-        """Validate knowledge graph format."""
-        valid_formats = {"ttl", "rdf", "jsonld", "nt"}
-        if v.lower() not in valid_formats:
-            raise ValueError(f"Knowledge graph format must be one of: {valid_formats}")
-        return v.lower()
+class LogLevel(str, Enum):
+    """Supported logging levels."""
+    DEBUG = "DEBUG"
+    INFO = "INFO"
+    WARNING = "WARNING"
+    ERROR = "ERROR"
+    CRITICAL = "CRITICAL"
 
 
-class DataConfig(BaseModel):
-    """Data processing configuration."""
-    
-    output_dir: str = Field(default="outputs", description="Output directory path")
-    temp_dir: str = Field(default="temp", description="Temporary files directory")
-    cache_dir: str = Field(default="cache", description="Cache directory path")
-    
-    max_file_size: int = Field(
-        default=1024 * 1024 * 1024,  # 1GB
-        ge=1024 * 1024,  # Minimum 1MB
-        description="Maximum file size in bytes"
-    )
-    max_processing_time: int = Field(
-        default=3600,  # 1 hour
-        ge=60,  # Minimum 1 minute
-        description="Maximum processing time in seconds"
-    )
-    
-    supported_formats: List[str] = Field(
-        default=["open_ephys", "spikeglx", "neuralynx", "blackrock", "intan"],
-        description="Supported data formats for conversion"
-    )
-    
-    @field_validator("output_dir", "temp_dir", "cache_dir")
-    @classmethod
-    def validate_directories(cls, v: str) -> str:
-        """Validate and create directories if they don't exist."""
-        path = Path(v)
-        path.mkdir(parents=True, exist_ok=True)
-        return str(path.resolve())
-    
-    @field_validator("supported_formats")
-    @classmethod
-    def validate_formats(cls, v: List[str]) -> List[str]:
-        """Validate supported formats list."""
-        if not v:
-            raise ValueError("At least one supported format must be specified")
-        return [fmt.lower() for fmt in v]
+class Environment(str, Enum):
+    """Supported deployment environments."""
+    DEVELOPMENT = "development"
+    TESTING = "testing"
+    STAGING = "staging"
+    PRODUCTION = "production"
 
 
-class DatabaseConfig(BaseModel):
-    """Database configuration for state persistence."""
-    
-    url: Optional[str] = Field(
-        default="sqlite:///./agentic_converter.db",
-        description="Database connection URL"
-    )
-    echo: bool = Field(default=False, description="Enable SQL query logging")
-    pool_size: int = Field(default=5, ge=1, description="Connection pool size")
-    max_overflow: int = Field(default=10, ge=0, description="Maximum pool overflow")
-    
-    # Redis configuration for caching
-    redis_url: Optional[str] = Field(default=None, description="Redis connection URL")
-    redis_password: Optional[str] = Field(default=None, description="Redis password")
-    redis_db: int = Field(default=0, ge=0, le=15, description="Redis database number")
+@dataclass
+class AgentConfig:
+    """Configuration for individual agents."""
+    timeout_seconds: int = 300
+    max_retries: int = 3
+    retry_delay_seconds: float = 1.0
+    max_concurrent_tasks: int = 5
+    memory_limit_mb: Optional[int] = None
+    enable_caching: bool = True
+    cache_ttl_seconds: int = 3600
+    custom_parameters: Dict[str, Any] = field(default_factory=dict)
 
 
-class ExternalServicesConfig(BaseModel):
-    """Configuration for external service integrations."""
-    
-    # NeuroConv configuration
-    neuroconv_backend: str = Field(default="auto", description="NeuroConv backend")
-    neuroconv_compression: str = Field(default="gzip", description="NWB compression method")
-    neuroconv_chunk_size: int = Field(
-        default=1024, 
-        ge=64, 
-        description="Chunk size for data processing"
-    )
-    
-    # NWB Inspector configuration
-    nwb_inspector_strict_mode: bool = Field(
-        default=False, 
-        description="Enable NWB Inspector strict mode"
-    )
-    nwb_inspector_check_completeness: bool = Field(
-        default=True, 
-        description="Check NWB file completeness"
-    )
-    
-    # LinkML configuration
-    linkml_schema_path: str = Field(default="schemas/", description="LinkML schema directory")
-    linkml_validation_level: str = Field(
-        default="error", 
-        description="LinkML validation level"
-    )
-    
-    # DANDI Archive integration
-    dandi_api_key: Optional[str] = Field(default=None, description="DANDI API key")
-    dandi_staging: bool = Field(default=False, description="Use DANDI staging server")
-    
-    @field_validator("linkml_validation_level")
-    @classmethod
-    def validate_linkml_level(cls, v: str) -> str:
-        """Validate LinkML validation level."""
-        valid_levels = {"error", "warning", "info"}
-        if v.lower() not in valid_levels:
-            raise ValueError(f"LinkML validation level must be one of: {valid_levels}")
-        return v.lower()
+@dataclass
+class ToolConfig:
+    """Configuration for tool execution."""
+    default_timeout_seconds: int = 120
+    max_concurrent_executions: int = 10
+    enable_metrics: bool = True
+    metrics_retention_days: int = 30
+    custom_tool_paths: List[str] = field(default_factory=list)
+    tool_parameters: Dict[str, Dict[str, Any]] = field(default_factory=dict)
 
 
-class SecurityConfig(BaseModel):
-    """Security and authentication configuration."""
-    
-    secret_key: Optional[str] = Field(default=None, description="Secret key for JWT tokens")
-    jwt_algorithm: str = Field(default="HS256", description="JWT signing algorithm")
-    jwt_expiration_hours: int = Field(
-        default=24, 
-        ge=1, 
-        description="JWT token expiration in hours"
-    )
-    
-    allowed_hosts: List[str] = Field(
-        default=["localhost", "127.0.0.1"], 
-        description="Allowed host names"
-    )
-    trusted_proxies: List[str] = Field(
-        default=[], 
-        description="Trusted proxy addresses"
-    )
+@dataclass
+class SessionConfig:
+    """Configuration for session management."""
+    max_active_sessions: int = 100
+    session_timeout_minutes: int = 60
+    cleanup_interval_minutes: int = 10
+    enable_persistence: bool = False
+    persistence_path: Optional[str] = None
+    max_session_history: int = 1000
 
 
-class PerformanceConfig(BaseModel):
-    """Performance and resource management configuration."""
-    
-    max_workers: int = Field(default=4, ge=1, description="Maximum worker processes")
-    max_concurrent_conversions: int = Field(
-        default=2, 
-        ge=1, 
-        description="Maximum concurrent conversions"
-    )
-    worker_timeout: int = Field(
-        default=1800,  # 30 minutes
-        ge=60, 
-        description="Worker timeout in seconds"
-    )
-    
-    max_memory_usage: int = Field(
-        default=8 * 1024 * 1024 * 1024,  # 8GB
-        ge=1024 * 1024 * 1024,  # Minimum 1GB
-        description="Maximum memory usage in bytes"
-    )
-    memory_check_interval: int = Field(
-        default=60, 
-        ge=10, 
-        description="Memory check interval in seconds"
-    )
-    
-    min_free_disk_space: int = Field(
-        default=5 * 1024 * 1024 * 1024,  # 5GB
-        ge=1024 * 1024 * 1024,  # Minimum 1GB
-        description="Minimum free disk space in bytes"
-    )
-    cleanup_temp_files: bool = Field(
-        default=True, 
-        description="Automatically cleanup temporary files"
-    )
-    temp_file_retention_hours: int = Field(
-        default=24, 
-        ge=1, 
-        description="Temporary file retention in hours"
-    )
+@dataclass
+class LoggingConfig:
+    """Configuration for logging."""
+    level: LogLevel = LogLevel.INFO
+    format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    enable_file_logging: bool = False
+    log_file_path: Optional[str] = None
+    max_log_file_size_mb: int = 100
+    log_file_backup_count: int = 5
+    enable_structured_logging: bool = False
+    log_correlation_id: bool = True
 
 
-class MonitoringConfig(BaseModel):
-    """Monitoring and observability configuration."""
-    
-    enable_metrics: bool = Field(default=False, description="Enable metrics collection")
-    metrics_port: int = Field(
-        default=9090, 
-        ge=1024, 
-        le=65535, 
-        description="Metrics server port"
-    )
-    metrics_path: str = Field(default="/metrics", description="Metrics endpoint path")
-    
-    health_check_interval: int = Field(
-        default=30, 
-        ge=5, 
-        description="Health check interval in seconds"
-    )
-    health_check_timeout: int = Field(
-        default=10, 
-        ge=1, 
-        description="Health check timeout in seconds"
-    )
-    
-    # Sentry configuration
-    sentry_dsn: Optional[str] = Field(default=None, description="Sentry DSN for error tracking")
-    sentry_environment: str = Field(default="development", description="Sentry environment")
-    sentry_traces_sample_rate: float = Field(
-        default=0.1, 
-        ge=0.0, 
-        le=1.0, 
-        description="Sentry traces sample rate"
-    )
+@dataclass
+class SecurityConfig:
+    """Configuration for security settings."""
+    enable_authentication: bool = False
+    api_key_header: str = "X-API-Key"
+    allowed_origins: List[str] = field(default_factory=lambda: ["*"])
+    rate_limit_requests_per_minute: int = 100
+    enable_request_validation: bool = True
+    max_request_size_mb: int = 100
+    enable_cors: bool = True
 
 
-class FeatureFlagsConfig(BaseModel):
-    """Feature flags configuration."""
-    
-    enable_web_interface: bool = Field(default=True, description="Enable web interface")
-    enable_api_docs: bool = Field(default=True, description="Enable API documentation")
-    enable_knowledge_graph: bool = Field(default=True, description="Enable knowledge graph")
-    enable_evaluation_reports: bool = Field(
-        default=True, 
-        description="Enable evaluation reports"
-    )
-    enable_batch_processing: bool = Field(
-        default=False, 
-        description="Enable batch processing"
-    )
-    enable_real_time_monitoring: bool = Field(
-        default=False, 
-        description="Enable real-time monitoring"
-    )
-    
-    # Experimental features
-    enable_experimental_agents: bool = Field(
-        default=False, 
-        description="Enable experimental agents"
-    )
-    enable_advanced_validation: bool = Field(
-        default=False, 
-        description="Enable advanced validation"
-    )
-    enable_ml_optimization: bool = Field(
-        default=False, 
-        description="Enable ML optimization features"
-    )
+@dataclass
+class PerformanceConfig:
+    """Configuration for performance optimization."""
+    enable_async_processing: bool = True
+    worker_pool_size: int = 4
+    queue_max_size: int = 1000
+    enable_compression: bool = True
+    cache_size_mb: int = 256
+    enable_profiling: bool = False
+    profiling_sample_rate: float = 0.01
 
 
-class Settings(BaseSettings):
-    """Main application settings with nested configurations."""
+@dataclass
+class MCPConfig:
+    """Configuration specific to MCP adapter."""
+    transport_type: str = "stdio"
+    socket_path: Optional[str] = None
+    host: Optional[str] = None
+    port: Optional[int] = None
+    enable_heartbeat: bool = True
+    heartbeat_interval_seconds: int = 30
+    max_message_size_kb: int = 1024
+    enable_message_compression: bool = False
+
+
+@dataclass
+class HTTPConfig:
+    """Configuration specific to HTTP adapter."""
+    host: str = "0.0.0.0"
+    port: int = 8000
+    enable_websockets: bool = True
+    websocket_path: str = "/ws"
+    enable_openapi: bool = True
+    openapi_title: str = "Agentic Neurodata Conversion API"
+    openapi_version: str = "1.0.0"
+    enable_metrics_endpoint: bool = True
+    metrics_path: str = "/metrics"
+    health_check_path: str = "/health"
+    enable_request_logging: bool = True
+    cors_allow_credentials: bool = False
+
+
+@dataclass
+class CoreConfig:
+    """Core configuration that applies to all components."""
+    environment: Environment = Environment.DEVELOPMENT
+    debug: bool = False
+    data_directory: str = "./data"
+    temp_directory: str = "./temp"
+    max_file_size_mb: int = 1000
+    supported_formats: List[str] = field(default_factory=lambda: [
+        "nwb", "hdf5", "mat", "csv", "json", "yaml", "pickle"
+    ])
+    enable_format_validation: bool = True
+    enable_metadata_extraction: bool = True
     
-    model_config = SettingsConfigDict(
-        env_nested_delimiter="__",
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
-        case_sensitive=False
-    )
+    # Sub-configurations
+    agents: AgentConfig = field(default_factory=AgentConfig)
+    tools: ToolConfig = field(default_factory=ToolConfig)
+    sessions: SessionConfig = field(default_factory=SessionConfig)
+    logging: LoggingConfig = field(default_factory=LoggingConfig)
+    security: SecurityConfig = field(default_factory=SecurityConfig)
+    performance: PerformanceConfig = field(default_factory=PerformanceConfig)
+    mcp: MCPConfig = field(default_factory=MCPConfig)
+    http: HTTPConfig = field(default_factory=HTTPConfig)
+
+
+class ConfigurationManager:
+    """Manages configuration loading, validation, and access."""
     
-    # Environment and basic settings
-    environment: str = Field(default="development", description="Application environment")
-    debug: bool = Field(default=True, description="Global debug mode")
-    verbose: bool = Field(default=False, description="Verbose logging")
-    
-    # Nested configuration sections
-    mcp_server: ServerConfig = Field(default_factory=ServerConfig)
-    agents: AgentConfig = Field(default_factory=AgentConfig)
-    data: DataConfig = Field(default_factory=DataConfig)
-    database: DatabaseConfig = Field(default_factory=DatabaseConfig)
-    external_services: ExternalServicesConfig = Field(default_factory=ExternalServicesConfig)
-    security: SecurityConfig = Field(default_factory=SecurityConfig)
-    performance: PerformanceConfig = Field(default_factory=PerformanceConfig)
-    monitoring: MonitoringConfig = Field(default_factory=MonitoringConfig)
-    feature_flags: FeatureFlagsConfig = Field(default_factory=FeatureFlagsConfig)
-    
-    @field_validator("environment")
-    @classmethod
-    def validate_environment(cls, v: str) -> str:
-        """Validate environment setting."""
-        valid_envs = {"development", "testing", "staging", "production"}
-        if v.lower() not in valid_envs:
-            raise ValueError(f"Environment must be one of: {valid_envs}")
-        return v.lower()
-    
-    @model_validator(mode='after')
-    def validate_configuration_consistency(self) -> 'Settings':
-        """Validate configuration consistency across sections."""
-        # Ensure debug mode consistency
-        if self.debug and self.environment == "production":
-            raise ValueError("Debug mode should not be enabled in production")
+    def __init__(self, config_path: Optional[Union[str, Path]] = None):
+        """Initialize configuration manager.
         
-        # Validate security settings for production
-        if self.environment == "production":
-            if not self.security.secret_key:
-                raise ValueError("Secret key is required in production")
+        Args:
+            config_path: Path to configuration file. If None, uses environment variables
+                        and defaults.
+        """
+        self._config: Optional[CoreConfig] = None
+        self._config_path = Path(config_path) if config_path else None
+        self._logger = logging.getLogger(__name__)
         
-        return self
+    def load_config(self) -> CoreConfig:
+        """Load configuration from file and environment variables.
+        
+        Returns:
+            Loaded and validated configuration.
+            
+        Raises:
+            ConfigurationError: If configuration is invalid.
+        """
+        if self._config is not None:
+            return self._config
+            
+        # Start with default configuration
+        config_dict = asdict(CoreConfig())
+        
+        # Load from file if specified
+        if self._config_path and self._config_path.exists():
+            try:
+                with open(self._config_path, 'r') as f:
+                    file_config = json.load(f)
+                config_dict = self._merge_configs(config_dict, file_config)
+                self._logger.info(f"Loaded configuration from {self._config_path}")
+            except Exception as e:
+                self._logger.error(f"Failed to load config file {self._config_path}: {e}")
+                raise ConfigurationError(f"Invalid configuration file: {e}")
+        
+        # Override with environment variables
+        env_config = self._load_from_environment()
+        config_dict = self._merge_configs(config_dict, env_config)
+        
+        # Create and validate configuration object
+        try:
+            self._config = self._dict_to_config(config_dict)
+            self._validate_config(self._config)
+            self._logger.info(f"Configuration loaded for environment: {self._config.environment}")
+            return self._config
+        except Exception as e:
+            self._logger.error(f"Configuration validation failed: {e}")
+            raise ConfigurationError(f"Invalid configuration: {e}")
     
-    def get_log_config(self) -> Dict[str, Any]:
-        """Get logging configuration dictionary."""
-        return {
-            "level": self.mcp_server.log_level,
-            "format": "json" if self.environment == "production" else "console",
-            "debug": self.debug,
-            "verbose": self.verbose
-        }
+    def get_config(self) -> CoreConfig:
+        """Get current configuration, loading if necessary.
+        
+        Returns:
+            Current configuration.
+        """
+        if self._config is None:
+            return self.load_config()
+        return self._config
     
-    def get_database_url(self) -> str:
-        """Get the database connection URL."""
-        return self.database.url or "sqlite:///./agentic_converter.db"
+    def reload_config(self) -> CoreConfig:
+        """Reload configuration from sources.
+        
+        Returns:
+            Reloaded configuration.
+        """
+        self._config = None
+        return self.load_config()
     
-    def is_development(self) -> bool:
-        """Check if running in development mode."""
-        return self.environment == "development"
+    def save_config(self, config: CoreConfig, path: Optional[Union[str, Path]] = None) -> None:
+        """Save configuration to file.
+        
+        Args:
+            config: Configuration to save.
+            path: Path to save to. If None, uses the original config path.
+            
+        Raises:
+            ConfigurationError: If save fails.
+        """
+        save_path = Path(path) if path else self._config_path
+        if not save_path:
+            raise ConfigurationError("No save path specified")
+            
+        try:
+            save_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(save_path, 'w') as f:
+                json.dump(asdict(config), f, indent=2, default=str)
+            self._logger.info(f"Configuration saved to {save_path}")
+        except Exception as e:
+            self._logger.error(f"Failed to save configuration: {e}")
+            raise ConfigurationError(f"Failed to save configuration: {e}")
     
-    def is_production(self) -> bool:
-        """Check if running in production mode."""
-        return self.environment == "production"
+    def _load_from_environment(self) -> Dict[str, Any]:
+        """Load configuration from environment variables.
+        
+        Returns:
+            Configuration dictionary from environment variables.
+        """
+        env_config = {}
+        
+        # Core settings
+        if env_val := os.getenv("ANC_ENVIRONMENT"):
+            env_config["environment"] = env_val
+        if env_val := os.getenv("ANC_DEBUG"):
+            env_config["debug"] = env_val.lower() in ("true", "1", "yes")
+        if env_val := os.getenv("ANC_DATA_DIRECTORY"):
+            env_config["data_directory"] = env_val
+        if env_val := os.getenv("ANC_TEMP_DIRECTORY"):
+            env_config["temp_directory"] = env_val
+        
+        # Logging settings
+        logging_config = {}
+        if env_val := os.getenv("ANC_LOG_LEVEL"):
+            logging_config["level"] = env_val.upper()
+        if env_val := os.getenv("ANC_LOG_FILE"):
+            logging_config["log_file_path"] = env_val
+            logging_config["enable_file_logging"] = True
+        if logging_config:
+            env_config["logging"] = logging_config
+        
+        # HTTP settings
+        http_config = {}
+        if env_val := os.getenv("ANC_HTTP_HOST"):
+            http_config["host"] = env_val
+        if env_val := os.getenv("ANC_HTTP_PORT"):
+            http_config["port"] = int(env_val)
+        if env_val := os.getenv("ANC_ENABLE_WEBSOCKETS"):
+            http_config["enable_websockets"] = env_val.lower() in ("true", "1", "yes")
+        if http_config:
+            env_config["http"] = http_config
+        
+        # MCP settings
+        mcp_config = {}
+        if env_val := os.getenv("ANC_MCP_TRANSPORT"):
+            mcp_config["transport_type"] = env_val
+        if env_val := os.getenv("ANC_MCP_SOCKET_PATH"):
+            mcp_config["socket_path"] = env_val
+        if env_val := os.getenv("ANC_MCP_HOST"):
+            mcp_config["host"] = env_val
+        if env_val := os.getenv("ANC_MCP_PORT"):
+            mcp_config["port"] = int(env_val)
+        if mcp_config:
+            env_config["mcp"] = mcp_config
+        
+        # Security settings
+        security_config = {}
+        if env_val := os.getenv("ANC_ENABLE_AUTH"):
+            security_config["enable_authentication"] = env_val.lower() in ("true", "1", "yes")
+        if env_val := os.getenv("ANC_API_KEY_HEADER"):
+            security_config["api_key_header"] = env_val
+        if env_val := os.getenv("ANC_ALLOWED_ORIGINS"):
+            security_config["allowed_origins"] = env_val.split(",")
+        if security_config:
+            env_config["security"] = security_config
+        
+        return env_config
     
-    def get_cors_origins(self) -> List[str]:
-        """Get CORS origins with environment-specific defaults."""
-        if self.is_production():
-            # In production, be more restrictive with CORS
-            return [origin for origin in self.mcp_server.cors_origins if origin != "*"]
-        return self.mcp_server.cors_origins
+    def _merge_configs(self, base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
+        """Recursively merge configuration dictionaries.
+        
+        Args:
+            base: Base configuration dictionary.
+            override: Override configuration dictionary.
+            
+        Returns:
+            Merged configuration dictionary.
+        """
+        result = base.copy()
+        
+        for key, value in override.items():
+            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+                result[key] = self._merge_configs(result[key], value)
+            else:
+                result[key] = value
+        
+        return result
+    
+    def _dict_to_config(self, config_dict: Dict[str, Any]) -> CoreConfig:
+        """Convert configuration dictionary to CoreConfig object.
+        
+        Args:
+            config_dict: Configuration dictionary.
+            
+        Returns:
+            CoreConfig object.
+        """
+        # Convert nested dictionaries to dataclass objects
+        if "agents" in config_dict:
+            config_dict["agents"] = AgentConfig(**config_dict["agents"])
+        if "tools" in config_dict:
+            config_dict["tools"] = ToolConfig(**config_dict["tools"])
+        if "sessions" in config_dict:
+            config_dict["sessions"] = SessionConfig(**config_dict["sessions"])
+        if "logging" in config_dict:
+            config_dict["logging"] = LoggingConfig(**config_dict["logging"])
+        if "security" in config_dict:
+            config_dict["security"] = SecurityConfig(**config_dict["security"])
+        if "performance" in config_dict:
+            config_dict["performance"] = PerformanceConfig(**config_dict["performance"])
+        if "mcp" in config_dict:
+            config_dict["mcp"] = MCPConfig(**config_dict["mcp"])
+        if "http" in config_dict:
+            config_dict["http"] = HTTPConfig(**config_dict["http"])
+        
+        return CoreConfig(**config_dict)
+    
+    def _validate_config(self, config: CoreConfig) -> None:
+        """Validate configuration values.
+        
+        Args:
+            config: Configuration to validate.
+            
+        Raises:
+            ConfigurationError: If configuration is invalid.
+        """
+        # Validate directories exist or can be created
+        for dir_path in [config.data_directory, config.temp_directory]:
+            try:
+                Path(dir_path).mkdir(parents=True, exist_ok=True)
+            except Exception as e:
+                raise ConfigurationError(f"Cannot create directory {dir_path}: {e}")
+        
+        # Validate port ranges
+        if not (1 <= config.http.port <= 65535):
+            raise ConfigurationError(f"Invalid HTTP port: {config.http.port}")
+        
+        if config.mcp.port and not (1 <= config.mcp.port <= 65535):
+            raise ConfigurationError(f"Invalid MCP port: {config.mcp.port}")
+        
+        # Validate timeout values
+        if config.agents.timeout_seconds <= 0:
+            raise ConfigurationError("Agent timeout must be positive")
+        
+        if config.tools.default_timeout_seconds <= 0:
+            raise ConfigurationError("Tool timeout must be positive")
+        
+        # Validate memory limits
+        if config.agents.memory_limit_mb and config.agents.memory_limit_mb <= 0:
+            raise ConfigurationError("Memory limit must be positive")
+        
+        # Validate file size limits
+        if config.max_file_size_mb <= 0:
+            raise ConfigurationError("Max file size must be positive")
+        
+        # Validate session limits
+        if config.sessions.max_active_sessions <= 0:
+            raise ConfigurationError("Max active sessions must be positive")
+        
+        if config.sessions.session_timeout_minutes <= 0:
+            raise ConfigurationError("Session timeout must be positive")
 
 
-# Global settings instance
-settings = Settings()
+class ConfigurationError(Exception):
+    """Raised when configuration is invalid or cannot be loaded."""
+    pass
 
 
-def get_settings() -> Settings:
-    """Get the global settings instance.
+# Global configuration manager instance
+_config_manager: Optional[ConfigurationManager] = None
+
+
+def get_config_manager(config_path: Optional[Union[str, Path]] = None) -> ConfigurationManager:
+    """Get the global configuration manager instance.
     
-    This function provides a way to access settings that can be easily
-    mocked in tests or overridden in different contexts.
+    Args:
+        config_path: Path to configuration file (only used on first call).
+        
+    Returns:
+        Configuration manager instance.
+    """
+    global _config_manager
+    if _config_manager is None:
+        _config_manager = ConfigurationManager(config_path)
+    return _config_manager
+
+
+def get_config() -> CoreConfig:
+    """Get the current configuration.
     
     Returns:
-        Settings: The global settings instance
+        Current configuration.
     """
-    return settings
+    return get_config_manager().get_config()
 
 
-def reload_settings() -> Settings:
-    """Reload settings from environment variables and config files.
-    
-    This is useful for testing or when configuration changes at runtime.
+def reload_config() -> CoreConfig:
+    """Reload configuration from sources.
     
     Returns:
-        Settings: The reloaded settings instance
+        Reloaded configuration.
     """
-    global settings
-    settings = Settings()
-    return settings
+    return get_config_manager().reload_config()
 
 
-def validate_settings() -> None:
-    """Validate current settings and raise errors if invalid.
+def configure_logging(config: Optional[LoggingConfig] = None) -> None:
+    """Configure logging based on configuration.
     
-    This function performs additional validation beyond what Pydantic
-    provides, checking for runtime conditions and dependencies.
-    
-    Raises:
-        ValueError: If settings are invalid
-        FileNotFoundError: If required files/directories don't exist
+    Args:
+        config: Logging configuration. If None, uses current config.
     """
-    # Validate required directories exist and are writable
-    for dir_path in [settings.data.output_dir, settings.data.temp_dir, settings.data.cache_dir]:
-        path = Path(dir_path)
-        if not path.exists():
-            raise FileNotFoundError(f"Required directory does not exist: {dir_path}")
-        if not os.access(path, os.W_OK):
-            raise PermissionError(f"Directory is not writable: {dir_path}")
+    if config is None:
+        config = get_config().logging
     
-    # Validate API keys are present if using external services
-    if settings.agents.conversation_model.startswith("gpt-") and not settings.agents.openai_api_key:
-        raise ValueError("OpenAI API key is required for GPT models")
+    # Set logging level
+    logging.getLogger().setLevel(getattr(logging, config.level.value))
     
-    if settings.agents.conversation_model.startswith("claude-") and not settings.agents.anthropic_api_key:
-        raise ValueError("Anthropic API key is required for Claude models")
+    # Configure formatter
+    formatter = logging.Formatter(config.format)
     
-    # Validate database URL format
-    db_url = settings.get_database_url()
-    if not db_url.startswith(("sqlite://", "postgresql://", "mysql://", "oracle://")):
-        raise ValueError(f"Unsupported database URL format: {db_url}")
+    # Configure console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    logging.getLogger().addHandler(console_handler)
     
-    # Validate port availability (basic check)
-    if settings.mcp_server.port == settings.monitoring.metrics_port:
-        raise ValueError("MCP server port and metrics port cannot be the same")
-
-
-# Export commonly used configurations for convenience
-__all__ = [
-    "Settings",
-    "ServerConfig", 
-    "AgentConfig",
-    "DataConfig",
-    "DatabaseConfig",
-    "ExternalServicesConfig",
-    "SecurityConfig",
-    "PerformanceConfig",
-    "MonitoringConfig",
-    "FeatureFlagsConfig",
-    "settings",
-    "get_settings",
-    "reload_settings",
-    "validate_settings"
-]
+    # Configure file handler if enabled
+    if config.enable_file_logging and config.log_file_path:
+        from logging.handlers import RotatingFileHandler
+        
+        file_handler = RotatingFileHandler(
+            config.log_file_path,
+            maxBytes=config.max_log_file_size_mb * 1024 * 1024,
+            backupCount=config.log_file_backup_count
+        )
+        file_handler.setFormatter(formatter)
+        logging.getLogger().addHandler(file_handler)

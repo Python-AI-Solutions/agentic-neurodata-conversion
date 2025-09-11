@@ -1,48 +1,12 @@
-"""
-Global pytest configuration and fixtures.
-
-This module contains pytest configuration, global fixtures, and utilities
-that are available to all test modules.
-"""
+"""Pytest configuration and shared fixtures for core service tests."""
 
 import asyncio
-import os
-import tempfile
 import pytest
+import tempfile
 from pathlib import Path
-from typing import AsyncGenerator, Generator
-from unittest.mock import Mock, AsyncMock
-
-# Test environment configuration
-TEST_ENV_VARS = {
-    "AGENTIC_CONVERTER_ENV": "test",
-    "AGENTIC_CONVERTER_LOG_LEVEL": "DEBUG",
-    "AGENTIC_CONVERTER_DATABASE_URL": "sqlite:///:memory:",
-    "AGENTIC_CONVERTER_DISABLE_TELEMETRY": "true",
-    "AGENTIC_CONVERTER_CACHE_DISABLED": "true",
-}
 
 
-@pytest.fixture(scope="session", autouse=True)
-def setup_test_environment():
-    """Set up test environment variables."""
-    original_env = {}
-    
-    # Store original values and set test values
-    for key, value in TEST_ENV_VARS.items():
-        original_env[key] = os.environ.get(key)
-        os.environ[key] = value
-    
-    yield
-    
-    # Restore original values
-    for key, original_value in original_env.items():
-        if original_value is None:
-            os.environ.pop(key, None)
-        else:
-            os.environ[key] = original_value
-
-
+# Configure pytest for async tests
 @pytest.fixture(scope="session")
 def event_loop():
     """Create an instance of the default event loop for the test session."""
@@ -51,201 +15,87 @@ def event_loop():
     loop.close()
 
 
+# Shared fixtures
 @pytest.fixture
-def temp_dir() -> Generator[Path, None, None]:
-    """Create a temporary directory for test files."""
+def temp_directory():
+    """Create a temporary directory for testing."""
     with tempfile.TemporaryDirectory() as temp_dir:
         yield Path(temp_dir)
 
 
 @pytest.fixture
-async def async_temp_dir() -> AsyncGenerator[Path, None]:
-    """Create a temporary directory for async test files."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        yield Path(temp_dir)
-
-
-@pytest.fixture
-def mock_settings():
-    """Mock application settings for testing."""
-    settings = Mock()
-    settings.environment = "test"
-    settings.log_level = "DEBUG"
-    settings.debug = True
-    
-    # Server settings
-    settings.server = Mock()
-    settings.server.host = "127.0.0.1"
-    settings.server.port = 8000
-    settings.server.workers = 1
-    settings.server.timeout = 30
-    
-    # Agent settings
-    settings.agents = Mock()
-    settings.agents.conversation = Mock()
-    settings.agents.conversion = Mock()
-    settings.agents.evaluation = Mock()
-    settings.agents.knowledge_graph = Mock()
-    
-    # Database settings
-    settings.database = Mock()
-    settings.database.url = "sqlite:///:memory:"
-    
-    return settings
-
-
-@pytest.fixture
-def mock_logger():
-    """Mock logger for testing."""
-    logger = Mock()
-    logger.debug = Mock()
-    logger.info = Mock()
-    logger.warning = Mock()
-    logger.error = Mock()
-    logger.critical = Mock()
-    return logger
-
-
-@pytest.fixture
-def sample_metadata():
-    """Sample metadata for testing conversions."""
-    return {
-        "identifier": "test_session_001",
-        "session_description": "Test recording session",
-        "experimenter": ["Test User"],
-        "lab": "Test Lab",
-        "institution": "Test Institution",
-        "experiment_description": "Test experiment for unit testing",
-        "session_start_time": "2024-01-01T10:00:00",
-        "keywords": ["test", "neuroscience", "nwb"],
-        "related_publications": [],
-        "notes": "Generated for testing purposes"
+def sample_dataset_files(temp_directory):
+    """Create sample dataset files for testing."""
+    # Create various file types that might be in a neuroscience dataset
+    files = {
+        "ephys_data.bin": b"binary ephys data content",
+        "behavior_data.csv": "timestamp,x,y,velocity\n0.0,10.5,20.3,1.2\n0.1,10.6,20.4,1.3\n",
+        "metadata.json": '{"subject_id": "mouse001", "session_date": "2024-01-01", "experimenter": "test_user"}',
+        "session_info.txt": "Session ID: test_session_001\nDate: 2024-01-01\nDuration: 3600s",
+        "notes.md": "# Experiment Notes\n\nThis is a test experiment for unit testing.",
+        "config.yaml": "experiment:\n  name: test_experiment\n  duration: 3600\n  sampling_rate: 30000"
     }
+    
+    created_files = {}
+    for filename, content in files.items():
+        file_path = temp_directory / filename
+        if isinstance(content, str):
+            file_path.write_text(content)
+        else:
+            file_path.write_bytes(content)
+        created_files[filename] = str(file_path)
+    
+    return created_files
 
 
 @pytest.fixture
-def sample_files_map(temp_dir):
-    """Sample files map for testing conversions."""
-    # Create sample data files
-    recording_file = temp_dir / "recording.dat"
-    recording_file.write_bytes(b"mock recording data" * 1000)
+def sample_nwb_file(temp_directory):
+    """Create a sample NWB file for testing."""
+    nwb_path = temp_directory / "test_output.nwb"
     
-    events_file = temp_dir / "events.txt"
-    events_file.write_text("timestamp,event\n1.0,start\n2.0,end\n")
+    # Create a minimal NWB-like file (just for testing, not a real NWB file)
+    nwb_content = b"""HDF5 file header (fake)
+This is a dummy NWB file for testing purposes.
+It contains fake neuroscience data structures.
+"""
     
-    return {
-        "recording": str(recording_file),
-        "events": str(events_file)
-    }
+    nwb_path.write_bytes(nwb_content)
+    return str(nwb_path)
 
 
-# Test data cleanup utilities
-@pytest.fixture(autouse=True)
-def cleanup_test_artifacts():
-    """Clean up test artifacts after each test."""
-    yield
-    
-    # Clean up common test artifacts
-    artifacts_to_clean = [
-        "test_output.nwb",
-        "test_output.ttl", 
-        "test_conversion_script.py",
-        "test_report.html",
-        "test_report.json"
-    ]
-    
-    for artifact in artifacts_to_clean:
-        if os.path.exists(artifact):
-            os.remove(artifact)
-
-
-# Performance testing utilities
-@pytest.fixture
-def benchmark_config():
-    """Configuration for benchmark tests."""
-    return {
-        "min_rounds": 3,
-        "max_time": 10.0,
-        "warmup": True,
-        "warmup_iterations": 1
-    }
-
-
-# Mock external services
-@pytest.fixture
-def mock_llm_client():
-    """Mock LLM client for testing without external API calls."""
-    client = AsyncMock()
-    
-    # Default responses for common operations
-    client.generate_completion.return_value = "Mock LLM response"
-    client.generate_questions.return_value = [
-        {
-            "field": "experimenter",
-            "question": "Who performed this experiment?",
-            "explanation": "Required for NWB metadata",
-            "priority": "high"
-        }
-    ]
-    
-    return client
-
-
-@pytest.fixture
-def mock_neuroconv_interface():
-    """Mock NeuroConv interface for testing."""
-    interface = Mock()
-    interface.get_metadata.return_value = {"test": "metadata"}
-    interface.run_conversion.return_value = None
-    interface.validate.return_value = []
-    return interface
-
-
-# Import dataset fixtures
-try:
-    from tests.datasets.fixtures import *
-    DATASET_FIXTURES_AVAILABLE = True
-except ImportError:
-    DATASET_FIXTURES_AVAILABLE = False
-
-# Test markers for conditional test execution
+# Test markers for different test types
 def pytest_configure(config):
-    """Configure pytest with custom markers."""
+    """Configure pytest markers."""
     config.addinivalue_line(
-        "markers", 
-        "requires_gpu: mark test as requiring GPU resources"
+        "markers", "unit: Direct functionality tests with no external dependencies"
     )
     config.addinivalue_line(
-        "markers",
-        "requires_network: mark test as requiring network access"
+        "markers", "integration: Integration tests with multiple components"
     )
     config.addinivalue_line(
-        "markers",
-        "requires_datasets: mark test as requiring test datasets"
+        "markers", "performance: Performance and load tests"
     )
     config.addinivalue_line(
-        "markers",
-        "requires_datalad: mark test as requiring DataLad"
+        "markers", "slow: Slow-running tests"
     )
 
 
+# Test collection configuration
 def pytest_collection_modifyitems(config, items):
-    """Modify test collection to add markers based on test names and paths."""
+    """Modify test collection to add markers based on test names."""
     for item in items:
-        # Add markers based on test file location
+        # Add unit marker to all tests in unit/ directory
         if "unit" in str(item.fspath):
             item.add_marker(pytest.mark.unit)
-        elif "integration" in str(item.fspath):
-            item.add_marker(pytest.mark.integration)
-        elif "e2e" in str(item.fspath):
-            item.add_marker(pytest.mark.e2e)
         
-        # Add markers based on test names
-        if "benchmark" in item.name or "performance" in item.name:
+        # Add integration marker to integration tests
+        if "integration" in str(item.fspath):
+            item.add_marker(pytest.mark.integration)
+        
+        # Add performance marker to performance tests
+        if "performance" in item.name.lower() or "benchmark" in item.name.lower():
             item.add_marker(pytest.mark.performance)
         
-        if "llm" in item.name.lower():
-            item.add_marker(pytest.mark.requires_llm)
-        
-        if "dataset" in item.name.lower():
-            item.add_marker(pytest.mark.requires_datasets)
+        # Add slow marker to tests that might be slow
+        if any(keyword in item.name.lower() for keyword in ["timeout", "concurrent", "load"]):
+            item.add_marker(pytest.mark.slow)
