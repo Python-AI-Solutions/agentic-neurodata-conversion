@@ -27,6 +27,7 @@ uvicorn = ">=0.20.0"
 # Development tools
 git = "*"
 make = "*"
+rdflib = ">=7.1.4,<8"
 
 [pypi-dependencies]
 # Install the package itself in editable mode

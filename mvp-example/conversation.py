@@ -1,16 +1,17 @@
 import asyncio
+from dataclasses import dataclass, field
 import json
 import os
+from typing import Any, Optional
 import uuid
+
+from openai import OpenAI  # pip install openai
 import yaml
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any
-from openai import OpenAI   # pip install openai
 
 
 # --- Simulated MCP SDK Classes ---
 class MCPRequest:
-    def __init__(self, method: str, params: Dict, request_id: str = None):
+    def __init__(self, method: str, params: dict, request_id: str = None):
         self.method = method
         self.params = params
         self.id = request_id or str(uuid.uuid4())
@@ -41,25 +42,21 @@ class MCPServer:
             request_id = message.get("id")
 
             if method not in self.methods:
-                return json.dumps({
-                    "jsonrpc": "2.0",
-                    "id": request_id,
-                    "error": f"Unknown method {method}"
-                })
+                return json.dumps(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": request_id,
+                        "error": f"Unknown method {method}",
+                    }
+                )
 
             result = await self.methods[method](params)
-            return json.dumps({
-                "jsonrpc": "2.0",
-                "id": request_id,
-                "result": result
-            })
+            return json.dumps({"jsonrpc": "2.0", "id": request_id, "result": result})
 
         except Exception as e:
-            return json.dumps({
-                "jsonrpc": "2.0",
-                "id": message.get("id", None),
-                "error": str(e)
-            })
+            return json.dumps(
+                {"jsonrpc": "2.0", "id": message.get("id", None), "error": str(e)}
+            )
 
 
 # --- Data Models ---
@@ -68,16 +65,20 @@ class ConversationSession:
     session_id: str
     user_id: str
     dataset_path: Optional[str] = None
-    metadata: Dict = field(default_factory=dict)
-    missing_fields: List[str] = field(default_factory=list)
-    ai_suggestions: List[Dict] = field(default_factory=list)
+    metadata: dict = field(default_factory=dict)
+    missing_fields: list[str] = field(default_factory=list)
+    ai_suggestions: list[dict] = field(default_factory=list)
 
 
 # --- Conversation Agent ---
 class ConversationAgentMCP:
-    def __init__(self, generation_agent_host: str = "localhost", generation_agent_port: int = 8002):
+    def __init__(
+        self,
+        generation_agent_host: str = "localhost",
+        generation_agent_port: int = 8002,
+    ):
         self.server = MCPServer(name="conversation_agent", version="1.2.0")
-        self.sessions: Dict[str, ConversationSession] = {}
+        self.sessions: dict[str, ConversationSession] = {}
 
         # Register MCP methods
         self.server.register_method("conversation/initiate", self.start_conversation)
@@ -92,7 +93,7 @@ class ConversationAgentMCP:
 
         # Context path (schemas, prior examples, etc.)
         self.context_path = os.getenv("CONTEXT_PATH", "./context")
-        self.context_store: Dict[str, Any] = {}
+        self.context_store: dict[str, Any] = {}
         self._load_context_files()
 
         # LLM setup
@@ -111,21 +112,21 @@ class ConversationAgentMCP:
             full_path = os.path.join(self.context_path, file)
             try:
                 if file.endswith((".yaml", ".yml")):
-                    with open(full_path, "r") as f:
+                    with open(full_path) as f:
                         self.context_store[file] = yaml.safe_load(f)
                 elif file.endswith(".json"):
-                    with open(full_path, "r") as f:
+                    with open(full_path) as f:
                         self.context_store[file] = json.load(f)
             except Exception as e:
                 print(f"Failed to load context {file}: {e}")
 
-    async def start_conversation(self, params: Dict):
+    async def start_conversation(self, params: dict):
         session_id = str(uuid.uuid4())
         session = ConversationSession(session_id=session_id, user_id=params["user_id"])
         self.sessions[session_id] = session
         return {"session_id": session_id, "status": "started"}
 
-    async def submit_metadata(self, params: Dict):
+    async def submit_metadata(self, params: dict):
         session_id = params["session_id"]
         session = self.sessions.get(session_id)
         if not session:
@@ -136,7 +137,7 @@ class ConversationAgentMCP:
         session.missing_fields = params.get("missing_fields", [])
         return {"status": "metadata received", "session_id": session_id}
 
-    async def validate_metadata(self, params: Dict):
+    async def validate_metadata(self, params: dict):
         session_id = params["session_id"]
         session = self.sessions.get(session_id)
         if not session:
@@ -147,7 +148,9 @@ class ConversationAgentMCP:
 
         # If OpenAI enabled, call it
         if self.openai_client and session.missing_fields:
-            ai_suggestions = await self._ask_openai(session.metadata, session.missing_fields)
+            ai_suggestions = await self._ask_openai(
+                session.metadata, session.missing_fields
+            )
             session.ai_suggestions.extend(ai_suggestions)
 
         return {
@@ -157,7 +160,7 @@ class ConversationAgentMCP:
             "ai_suggestions": session.ai_suggestions,
         }
 
-    async def handoff_to_generation(self, params: Dict):
+    async def handoff_to_generation(self, params: dict):
         """Pass session data to Generation Agent"""
         session_id = params["session_id"]
         session = self.sessions.get(session_id)
@@ -174,8 +177,8 @@ class ConversationAgentMCP:
                 "output_path": f"/data/output/{session_id}.nwb",
                 "conversion_config": {},
                 "metadata": session.metadata,
-                "provenance": {}
-            }
+                "provenance": {},
+            },
         }
 
         reader, writer = await asyncio.open_connection(
@@ -190,14 +193,16 @@ class ConversationAgentMCP:
 
         return json.loads(raw_response.decode())
 
-    async def load_context(self, params: Dict):
+    async def load_context(self, params: dict):
         """Return loaded context files or a specific one"""
         file_name = params.get("file_name")
         if file_name:
             return self.context_store.get(file_name, {})
         return self.context_store
 
-    async def _ask_openai(self, metadata: Dict, missing_fields: List[str]) -> List[Dict]:
+    async def _ask_openai(
+        self, metadata: dict, missing_fields: list[str]
+    ) -> list[dict]:
         """Call OpenAI with metadata + context to fill missing fields"""
         context_str = json.dumps(self.context_store, indent=2)
 
@@ -214,10 +219,13 @@ class ConversationAgentMCP:
         response = self.openai_client.chat.completions.create(
             model=self.openai_model,
             messages=[
-                {"role": "system", "content": "You are a neuroscience metadata assistant."},
-                {"role": "user", "content": prompt}
+                {
+                    "role": "system",
+                    "content": "You are a neuroscience metadata assistant.",
+                },
+                {"role": "user", "content": prompt},
             ],
-            temperature=0.3
+            temperature=0.3,
         )
 
         try:

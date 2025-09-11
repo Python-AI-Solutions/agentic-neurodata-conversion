@@ -1,6 +1,7 @@
-import subprocess
 import json
 import os
+import subprocess
+
 
 def call_conversion_agent(input_folder, metadata_file):
     """
@@ -10,17 +11,19 @@ def call_conversion_agent(input_folder, metadata_file):
     """
     return subprocess.run(
         ["python", "conversion_agent.py", input_folder, metadata_file],
-        capture_output=True, text=True
+        capture_output=True,
+        text=True,
     ).stdout
+
 
 def call_evaluation_agent(nwb_file):
     """
     Calls Evaluation Agent to validate generated NWB file.
     """
     return subprocess.run(
-        ["python", "evaluation_agent.py", nwb_file],
-        capture_output=True, text=True
+        ["python", "evaluation_agent.py", nwb_file], capture_output=True, text=True
     ).stdout
+
 
 def inspect_raw_metadata(input_folder):
     """
@@ -29,12 +32,13 @@ def inspect_raw_metadata(input_folder):
     - Returns 'detected' structure
     """
     file_summary = {}
-    for root, _, files in os.walk(input_folder):
+    for _root, _, files in os.walk(input_folder):
         for f in files:
             ext = os.path.splitext(f)[1]
             file_summary.setdefault(ext, 0)
             file_summary[ext] += 1
     return file_summary
+
 
 def query_metadata(input_folder, metadata_file=None):
     """
@@ -47,7 +51,7 @@ def query_metadata(input_folder, metadata_file=None):
 
     # 1. Check if user metadata file exists
     if metadata_file and os.path.exists(metadata_file):
-        with open(metadata_file, "r") as f:
+        with open(metadata_file) as f:
             metadata = json.load(f)
 
     # 2. Add auto-detected info if missing
@@ -58,7 +62,4 @@ def query_metadata(input_folder, metadata_file=None):
     required_fields = ["subject_id", "session_start_time", "experimenter"]
     missing = [f for f in required_fields if f not in metadata]
 
-    return {
-        "metadata": metadata,
-        "missing_fields": missing
-    }
+    return {"metadata": metadata, "missing_fields": missing}

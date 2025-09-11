@@ -9,14 +9,13 @@ Combined evaluation agent:
 - EvaluationAgent class that exposes high-level methods for the MCP server to call
 """
 
-from pathlib import Path
-from typing import Optional, Dict, Any, Tuple
-import os
 import json
-import traceback
-import tempfile
-import sys
+import os
+from pathlib import Path
 import time
+import traceback
+from typing import Any, Optional
+
 
 # Optional imports are handled gracefully
 def _safe_import(name):
@@ -24,6 +23,7 @@ def _safe_import(name):
         return __import__(name)
     except Exception:
         return None
+
 
 # Optional modules
 nwbinspector = _safe_import("nwbinspector")
@@ -33,15 +33,15 @@ numpy_mod = _safe_import("numpy")
 pyvis = _safe_import("pyvis")
 openai = _safe_import("openai")  # may be None
 # urllib for Ollama
-from urllib import request as _urlreq
-import urllib.error as _urlerr
+from urllib import request as _urlreq  # noqa: E402
 
 # RDFlib names if available
 if rdflib is not None:
-    from rdflib import Graph, URIRef, Literal, Namespace
+    from rdflib import Graph, Literal, Namespace, URIRef
     from rdflib.namespace import RDF, RDFS, XSD
 else:
     Graph = URIRef = Literal = Namespace = RDF = RDFS = XSD = None
+
 
 # -------------------------
 # Small data structure
@@ -51,6 +51,7 @@ class EvalResult:
         self.passed = passed
         self.formatted_report = formatted_report
         self.summary = summary
+
 
 # -------------------------
 # Inspector wrapper
@@ -76,20 +77,34 @@ def run_inspector(nwb_path: Path) -> EvalResult:
         for m in messages:
             counts[m.importance.name] = counts.get(m.importance.name, 0) + 1
 
-        failing_levels = {"CRITICAL", "BEST_PRACTICE_VIOLATION", "PYNWB_VALIDATION", "ERROR"}
+        failing_levels = {
+            "CRITICAL",
+            "BEST_PRACTICE_VIOLATION",
+            "PYNWB_VALIDATION",
+            "ERROR",
+        }
         failed = any(counts.get(level, 0) > 0 for level in failing_levels)
-        summary = ", ".join([f"{k}:{v}" for k, v in counts.items() if v > 0]) or "no issues"
+        summary = (
+            ", ".join([f"{k}:{v}" for k, v in counts.items() if v > 0]) or "no issues"
+        )
 
-        return EvalResult(passed=not failed, formatted_report="\n".join(formatted), summary=summary)
+        return EvalResult(
+            passed=not failed, formatted_report="\n".join(formatted), summary=summary
+        )
     except Exception as e:
-        return EvalResult(False, f"Inspector error: {e}\n{traceback.format_exc()}", "error")
+        return EvalResult(
+            False, f"Inspector error: {e}\n{traceback.format_exc()}", "error"
+        )
+
 
 # -------------------------
 # TTL instance-graph builder (light)
 # -------------------------
 def _sanitize(name: str) -> str:
     import re
+
     return re.sub(r"[^A-Za-z0-9_\-]", "_", name)
+
 
 def _make_literal(value):
     try:
@@ -103,7 +118,11 @@ def _make_literal(value):
             return Literal(value.item())
         if isinstance(value, (str, int, float, bool)):
             return Literal(value)
-        if isinstance(value, (list, tuple)) and len(value) > 0 and isinstance(value[0], (str, int, float, bool)):
+        if (
+            isinstance(value, (list, tuple))
+            and len(value) > 0
+            and isinstance(value[0], (str, int, float, bool))
+        ):
             return Literal(str(list(value)))
         s = str(value)
         if len(s) > 0:
@@ -112,11 +131,15 @@ def _make_literal(value):
         return None
     return None
 
-def build_instance_graph(nwb_path: Path, base_uri: Optional[str] = None,
-                         include_data: str = "stats",
-                         sample_limit: int = 200,
-                         max_bytes: int = 50_000_000,
-                         stats_inline_limit: int = 500) -> Optional[Graph]:
+
+def build_instance_graph(
+    nwb_path: Path,
+    base_uri: Optional[str] = None,
+    include_data: str = "stats",
+    sample_limit: int = 200,
+    _max_bytes: int = 50_000_000,
+    _stats_inline_limit: int = 500,
+) -> Optional[Graph]:
     """
     Build an rdflib.Graph instance representing the NWB instance graph.
     If rdflib or h5py is not available, returns None.
@@ -132,13 +155,14 @@ def build_instance_graph(nwb_path: Path, base_uri: Optional[str] = None,
 
         Group = EX.Group
         Dataset = EX.Dataset
-        hasChild = EX.hasChild
         hasValue = EX.hasValue
         hasDType = EX.hasDType
         hasShape = EX.hasShape
 
         import h5py as _h5
+
         with _h5.File(str(nwb_path), "r") as f:
+
             def path_to_uri(h5path: str):
                 if not h5path or h5path == "/":
                     return URIRef(str(BASE) + "root")
@@ -189,8 +213,17 @@ def build_instance_graph(nwb_path: Path, base_uri: Optional[str] = None,
                             arr = obj[()]
                             if arr is not None:
                                 # naive add values
-                                vals = arr if getattr(arr, "__len__", None) and not isinstance(arr, (bytes, str)) else [arr]
-                                for v in (vals if sample_limit is None else vals[:sample_limit]):
+                                vals = (
+                                    arr
+                                    if getattr(arr, "__len__", None)
+                                    and not isinstance(arr, (bytes, str))
+                                    else [arr]
+                                )
+                                for v in (
+                                    vals
+                                    if sample_limit is None
+                                    else vals[:sample_limit]
+                                ):
                                     lit = _make_literal(v)
                                     if lit is not None:
                                         g.add((subj, hasValue, lit))
@@ -200,7 +233,12 @@ def build_instance_graph(nwb_path: Path, base_uri: Optional[str] = None,
                         try:
                             arr = obj[()]
                             if arr is not None:
-                                vals = arr if getattr(arr, "__len__", None) and not isinstance(arr, (bytes, str)) else [arr]
+                                vals = (
+                                    arr
+                                    if getattr(arr, "__len__", None)
+                                    and not isinstance(arr, (bytes, str))
+                                    else [arr]
+                                )
                                 for v in vals[:sample_limit]:
                                     lit = _make_literal(v)
                                     if lit is not None:
@@ -212,21 +250,30 @@ def build_instance_graph(nwb_path: Path, base_uri: Optional[str] = None,
                         try:
                             arr = obj[()]
                             import numpy as np
+
                             np_arr = np.array(arr)
-                            g.add((subj, EX.stat_size, Literal(int(getattr(np_arr, "size", 0)))))
+                            g.add(
+                                (
+                                    subj,
+                                    EX.stat_size,
+                                    Literal(int(getattr(np_arr, "size", 0))),
+                                )
+                            )
                         except Exception:
                             pass
 
                 # nothing returned
+
             f.visititems(visit)
         return g
     except Exception:
         return None
 
+
 # -------------------------
 # KG emit helpers
 # -------------------------
-def emit_llm_files(ttl_path: Path) -> Dict[str, Path]:
+def emit_llm_files(ttl_path: Path) -> dict[str, Path]:
     """
     From a TTL file path, write .nt, .jsonld and .triples.txt (labels when possible).
     Returns dict of written paths.
@@ -244,6 +291,7 @@ def emit_llm_files(ttl_path: Path) -> Dict[str, Path]:
     triples_path = parent / f"{stem}.triples.txt"
     g.serialize(destination=str(nt_path), format="nt")
     g.serialize(destination=str(jsonld_path), format="json-ld", indent=2)
+
     # triples text with labels when available
     def lbl(node):
         if isinstance(node, URIRef):
@@ -256,6 +304,7 @@ def emit_llm_files(ttl_path: Path) -> Dict[str, Path]:
                 return s.rstrip("/").rsplit("/", 1)[-1]
             return s
         return str(node)
+
     with open(triples_path, "w", encoding="utf-8") as fh:
         for s, p, o in g:
             fh.write(f"{lbl(s)}\t{lbl(p)}\t{lbl(o)}\n")
@@ -264,10 +313,13 @@ def emit_llm_files(ttl_path: Path) -> Dict[str, Path]:
     results["triples"] = triples_path
     return results
 
+
 # -------------------------
 # KG HTML visualization (pyvis)
 # -------------------------
-def generate_kg_html(ttl_path: Path, out_html: Optional[Path] = None, max_triples: int = 12000) -> Optional[Path]:
+def generate_kg_html(
+    ttl_path: Path, out_html: Optional[Path] = None, max_triples: int = 12000
+) -> Optional[Path]:
     """
     Load TTL, build a subgraph, and create an interactive HTML (pyvis) if pyvis and rdflib are available.
     Returns path to HTML or None.
@@ -283,16 +335,25 @@ def generate_kg_html(ttl_path: Path, out_html: Optional[Path] = None, max_triple
         nodes = set()
         for s, p, o in g:
             if isinstance(s, URIRef) and isinstance(o, URIRef):
-                ss = str(s); oo = str(o); pp = str(p)
+                ss = str(s)
+                oo = str(o)
+                pp = str(p)
                 edges.append((ss, oo, pp))
-                nodes.add(ss); nodes.add(oo)
+                nodes.add(ss)
+                nodes.add(oo)
                 if len(edges) >= max_triples:
                     break
         # create pyvis network
         net = pyvis.network.Network(height="900px", width="100%", notebook=False)
         # Add nodes with simple labels
         for n in nodes:
-            lbl = n.rsplit("#", 1)[-1] if "#" in n else n.rsplit("/", 1)[-1] if "/" in n else n
+            lbl = (
+                n.rsplit("#", 1)[-1]
+                if "#" in n
+                else n.rsplit("/", 1)[-1]
+                if "/" in n
+                else n
+            )
             net.add_node(n, label=lbl, title=n)
         for s, o, p in edges:
             net.add_edge(s, o, title=p)
@@ -304,10 +365,16 @@ def generate_kg_html(ttl_path: Path, out_html: Optional[Path] = None, max_triple
     except Exception:
         return None
 
+
 # -------------------------
 # Context writer
 # -------------------------
-def write_context_file(context_path: Path, nwb_path: Path, eval_result: EvalResult, data_outputs: Optional[Dict[str, Path]] = None):
+def write_context_file(
+    context_path: Path,
+    nwb_path: Path,
+    eval_result: EvalResult,
+    data_outputs: Optional[dict[str, Path]] = None,
+):
     context_path.parent.mkdir(parents=True, exist_ok=True)
     lines = []
     lines.append("NWB Evaluation Context")
@@ -324,10 +391,11 @@ def write_context_file(context_path: Path, nwb_path: Path, eval_result: EvalResu
     lines.extend((eval_result.formatted_report or "").splitlines())
     context_path.write_text("\n".join(lines), encoding="utf-8")
 
+
 # -------------------------
 # Minimal LLM helpers (OpenAI & Ollama)
 # -------------------------
-def try_openai_extract(prompt: str) -> Optional[Dict[str, object]]:
+def try_openai_extract(prompt: str) -> Optional[dict[str, object]]:
     """
     Try to extract structured options using OpenAI ChatCompletion.
     Returns a dict or None.
@@ -347,7 +415,10 @@ def try_openai_extract(prompt: str) -> Optional[Dict[str, object]]:
         resp = openai.ChatCompletion.create(
             model=os.environ.get("OPENAI_MODEL", "gpt-4"),
             temperature=0,
-            messages=[{"role": "system", "content": sys_prompt}, {"role": "user", "content": prompt}],
+            messages=[
+                {"role": "system", "content": sys_prompt},
+                {"role": "user", "content": prompt},
+            ],
         )
         content = resp["choices"][0]["message"]["content"].strip()
         if content.startswith("```"):
@@ -358,7 +429,8 @@ def try_openai_extract(prompt: str) -> Optional[Dict[str, object]]:
     except Exception:
         return None
 
-def try_ollama_extract(prompt: str) -> Optional[Dict[str, object]]:
+
+def try_ollama_extract(prompt: str) -> Optional[dict[str, object]]:
     """
     Try to extract structured options using Ollama local chat endpoint.
     Requires OLLAMA_ENDPOINT and OLLAMA_MODEL env vars to be set.
@@ -369,14 +441,19 @@ def try_ollama_extract(prompt: str) -> Optional[Dict[str, object]]:
         "model": model,
         "stream": False,
         "messages": [
-            {"role": "system", "content": "Return ONLY compact JSON with keys: nwb, data, ontology, overwrite, sample_limit, max_bytes, stats_inline_limit, out_dir, linkml, offline."},
-            {"role": "user", "content": prompt}
+            {
+                "role": "system",
+                "content": "Return ONLY compact JSON with keys: nwb, data, ontology, overwrite, sample_limit, max_bytes, stats_inline_limit, out_dir, linkml, offline.",
+            },
+            {"role": "user", "content": prompt},
         ],
-        "options": {"temperature": 0}
+        "options": {"temperature": 0},
     }
     try:
         data = json.dumps(payload).encode("utf-8")
-        req = _urlreq.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
+        req = _urlreq.Request(
+            url, data=data, headers={"Content-Type": "application/json"}, method="POST"
+        )
         with _urlreq.urlopen(req, timeout=30) as resp:
             body = resp.read().decode("utf-8", errors="ignore")
             j = json.loads(body)
@@ -395,6 +472,7 @@ def try_ollama_extract(prompt: str) -> Optional[Dict[str, object]]:
     except Exception:
         return None
 
+
 # -------------------------
 # High-level EvaluationAgent
 # -------------------------
@@ -402,42 +480,54 @@ class EvaluationAgent:
     """Facade for evaluation tasks used by MCP server"""
 
     def __init__(self, base_cache_dir: Optional[Path] = None):
-        self.base_cache_dir = Path(base_cache_dir) if base_cache_dir else Path.cwd() / ".eval_cache"
+        self.base_cache_dir = (
+            Path(base_cache_dir) if base_cache_dir else Path.cwd() / ".eval_cache"
+        )
         self.base_cache_dir.mkdir(parents=True, exist_ok=True)
 
-    def validate_nwb(self, nwb_path: str) -> Dict[str, Any]:
+    def validate_nwb(self, nwb_path: str) -> dict[str, Any]:
         """Return dictionary with validation results (safe for MCP state)."""
         try:
             er = run_inspector(Path(nwb_path))
             return {
                 "passed": er.passed,
                 "formatted_report": er.formatted_report,
-                "summary": er.summary
+                "summary": er.summary,
             }
         except Exception as e:
             return {"passed": False, "formatted_report": str(e), "summary": "error"}
 
-    def generate_ttl_and_outputs(self, nwb_path: str, out_dir: Optional[str] = None,
-                                 include_data: str = "stats",
-                                 sample_limit: int = 200,
-                                 max_bytes: int = 50_000_000,
-                                 stats_inline_limit: int = 500,
-                                 ontology: str = "none") -> Dict[str, Any]:
+    def generate_ttl_and_outputs(
+        self,
+        nwb_path: str,
+        out_dir: Optional[str] = None,
+        include_data: str = "stats",
+        sample_limit: int = 200,
+        max_bytes: int = 50_000_000,
+        stats_inline_limit: int = 500,
+        ontology: str = "none",
+    ) -> dict[str, Any]:
         """
         Attempt to generate instance graph (rdflib.Graph), write TTL and emit LLM files.
         Returns info about files created (paths as strings) or error.
         """
         out = {"status": "error", "message": "not run", "files": {}}
         try:
-            out_dir = Path(out_dir) if out_dir else (Path(nwb_path).parent / "evaluation_results")
+            out_dir = (
+                Path(out_dir)
+                if out_dir
+                else (Path(nwb_path).parent / "evaluation_results")
+            )
             out_dir.mkdir(parents=True, exist_ok=True)
 
-            g = build_instance_graph(Path(nwb_path),
-                                     base_uri=f"http://example.org/{_sanitize(Path(nwb_path).stem)}#",
-                                     include_data=include_data,
-                                     sample_limit=sample_limit,
-                                     max_bytes=max_bytes,
-                                     stats_inline_limit=stats_inline_limit)
+            g = build_instance_graph(
+                Path(nwb_path),
+                base_uri=f"http://example.org/{_sanitize(Path(nwb_path).stem)}#",
+                include_data=include_data,
+                sample_limit=sample_limit,
+                max_bytes=max_bytes,
+                stats_inline_limit=stats_inline_limit,
+            )
             if g is None:
                 out["status"] = "skipped"
                 out["message"] = "rdflib/h5py not available or graph build failed"
@@ -453,33 +543,61 @@ class EvaluationAgent:
             out["files"].update({k: str(v) for k, v in llm_files.items()})
 
             # generate html KG if pyvis available
-            html_path = generate_kg_html(ttl_path, out_html=out_dir / f"{Path(nwb_path).stem}.html")
+            html_path = generate_kg_html(
+                ttl_path, out_html=out_dir / f"{Path(nwb_path).stem}.html"
+            )
             if html_path:
                 out["files"]["html"] = str(html_path)
 
             out["status"] = "success"
             return out
         except Exception as e:
-            return {"status": "error", "message": str(e), "trace": traceback.format_exc()}
+            return {
+                "status": "error",
+                "message": str(e),
+                "trace": traceback.format_exc(),
+            }
 
-    def write_context_and_report(self, nwb_path: str, eval_results: Dict[str, Any],
-                                 outputs: Optional[Dict[str, str]] = None, out_dir: Optional[str] = None) -> Dict[str, Any]:
+    def write_context_and_report(
+        self,
+        nwb_path: str,
+        eval_results: dict[str, Any],
+        outputs: Optional[dict[str, str]] = None,
+        out_dir: Optional[str] = None,
+    ) -> dict[str, Any]:
         """
         Write a human-readable context file + text quality report to out_dir.
         """
         try:
-            out_dir = Path(out_dir) if out_dir else (Path(nwb_path).parent / "evaluation_results")
+            out_dir = (
+                Path(out_dir)
+                if out_dir
+                else (Path(nwb_path).parent / "evaluation_results")
+            )
             out_dir.mkdir(parents=True, exist_ok=True)
             ctx_path = out_dir / f"{Path(nwb_path).stem}_context_{int(time.time())}.txt"
-            er = EvalResult(eval_results.get("passed", True), eval_results.get("formatted_report", ""), eval_results.get("summary", ""))
-            write_context_file(ctx_path, Path(nwb_path), er, {k: Path(v) for k, v in (outputs or {}).items()})
+            er = EvalResult(
+                eval_results.get("passed", True),
+                eval_results.get("formatted_report", ""),
+                eval_results.get("summary", ""),
+            )
+            write_context_file(
+                ctx_path,
+                Path(nwb_path),
+                er,
+                {k: Path(v) for k, v in (outputs or {}).items()},
+            )
             # Also write a short quality report file
-            report_path = out_dir / f"{Path(nwb_path).stem}_quality_report_{int(time.time())}.txt"
+            report_path = (
+                out_dir / f"{Path(nwb_path).stem}_quality_report_{int(time.time())}.txt"
+            )
             # create summary text
             lines = []
             lines.append("NWB Quality Report")
             lines.append(f"File: {nwb_path}")
-            lines.append(f"Validation: {'PASS' if eval_results.get('passed') else 'FAIL'}")
+            lines.append(
+                f"Validation: {'PASS' if eval_results.get('passed') else 'FAIL'}"
+            )
             lines.append(f"Inspector summary: {eval_results.get('summary')}")
             if outputs:
                 lines.append("Outputs:")
@@ -491,5 +609,6 @@ class EvaluationAgent:
             return {"context": str(ctx_path), "report": str(report_path)}
         except Exception as e:
             return {"status": "error", "message": str(e)}
+
 
 # end of evaluation_agent_combined.py

@@ -1,8 +1,8 @@
 lab_to_nwb_design:
   purpose: >
-    Lab-to-NWB repos standardize a lab’s entire dataset into NWB,
-    wrapping NeuroConv interfaces with lab-specific preprocessing,
-    metadata, and CLI workflows.
+    Lab-to-NWB repos standardize a lab’s entire dataset into NWB, wrapping
+    NeuroConv interfaces with lab-specific preprocessing, metadata, and CLI
+    workflows.
   components:
     - converter.py:
         role: "Subclass NWBConverter, register all NeuroConv interfaces"
@@ -15,23 +15,23 @@ lab_to_nwb_design:
               }
     - metadata.py:
         role: "Fill metadata fields missing from NeuroConv defaults"
-        strategy: "Load template YAML + infer subject/session/task info from filenames"
+        strategy:
+          "Load template YAML + infer subject/session/task info from filenames"
     - preprocess.py:
         role: "Functions for lab-specific alignment and cleaning"
         examples: ["align clocks", "map channels", "define trials table"]
     - io_layout.py:
         role: "Functions to locate raw data files given session folder"
     - convert_session.py:
-        role: "CLI entry point, orchestrates converter + metadata + preprocessing"
+        role:
+          "CLI entry point, orchestrates converter + metadata + preprocessing"
         typical_args: ["--raw", "--out", "--session", "--config"]
     - config/:
         role: "Templates for metadata, interface config, channel maps"
     - tests/:
         role: "Smoke test conversion + run nwbinspector"
   workflow:
-    1. Detect modalities and select interfaces
-    2. Build converter class dynamically
-    3. Synthesize metadata (templates + inference)
-    4. Apply preprocessing (hooks)
-    5. Run conversion and write NWB
-    6. Validate output (nwbinspector)
+    1. Detect modalities and select interfaces 2. Build converter class
+    dynamically 3. Synthesize metadata (templates + inference) 4. Apply
+    preprocessing (hooks) 5. Run conversion and write NWB 6. Validate output
+    (nwbinspector)
