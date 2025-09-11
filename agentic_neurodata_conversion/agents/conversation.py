@@ -1,4 +1,4 @@
-"""
+ """
 Conversation agent for dataset analysis and metadata extraction.
 
 This agent handles interactive analysis of datasets, extracting metadata,
@@ -101,11 +101,12 @@ class ConversationAgent(BaseAgent):
         # Extract metadata from specific file types
         for format_info in format_analysis.get('formats', []):
             format_name = format_info['format']
-            if format_name == 'open_ephys':
-                metadata.update(await self._extract_open_ephys_metadata(format_info))
-            elif format_name == 'spikeglx':
-                metadata.update(await self._extract_spikeglx_metadata(format_info))
-            # Add other format-specific extractors as needed
+            try:
+                format_metadata = await self.format_detector.extract_format_metadata(dataset_dir, format_name)
+                metadata.update(format_metadata)
+            except Exception as e:
+                self.logger.warning(f"Failed to extract {format_name} metadata: {e}")
+                metadata[f'{format_name}_extraction_error'] = str(e)
         
         return metadata
     
@@ -329,19 +330,7 @@ Format your response as a JSON list of questions with this structure:
         
         return missing
     
-    async def _extract_open_ephys_metadata(self, format_info: Dict[str, Any]) -> Dict[str, Any]:
-        """Extract Open Ephys specific metadata."""
-        return {
-            'recording_system': 'Open Ephys',
-            'format_confidence': format_info.get('confidence', 0.0)
-        }
-    
-    async def _extract_spikeglx_metadata(self, format_info: Dict[str, Any]) -> Dict[str, Any]:
-        """Extract SpikeGLX specific metadata."""
-        return {
-            'recording_system': 'SpikeGLX',
-            'format_confidence': format_info.get('confidence', 0.0)
-        }
+
     
     def _get_processing_steps(self) -> List[str]:
         """Get processing steps for provenance."""

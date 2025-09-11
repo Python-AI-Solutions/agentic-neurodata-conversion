@@ -20,7 +20,9 @@
   - Implement domain knowledge application for metadata enrichment
   - _Requirements: 1.1, 1.4, 7.1_
 
-- [-] 3. Implement conversation agent question generation system
+- [x] 3. Implement conversation agent question generation system
+
+
 
   - Create missing metadata identification logic
   - Implement LLM-based question generation for missing fields
@@ -29,6 +31,10 @@
   - _Requirements: 1.2, 1.3, 4.1, 4.2_
 
 - [ ] 4. Build format-specific metadata extractors
+
+
+
+
   - Implement Open Ephys metadata extraction methods
   - Create SpikeGLX metadata extraction functionality
   - Add Neuralynx and Blackrock format support

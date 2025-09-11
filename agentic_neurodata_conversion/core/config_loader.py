@@ -1,300 +1,312 @@
-"""Configuration loading utilities for different deployment scenarios.
+"""Configuration loader utilities for environment-specific configuration management.
 
-This module provides utilities for loading configuration from various sources
-and setting up the application for different environments.
+This module provides utilities for loading configuration files based on environment
+variables and deployment contexts, making it easy to switch between different
+configurations for development, testing, staging, and production environments.
 """
 
 import os
-import sys
 import logging
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, Dict, Any
 
-from .config import (
-    ConfigurationManager, 
-    CoreConfig, 
-    Environment, 
-    configure_logging,
-    ConfigurationError
-)
+from .config import ConfigurationManager, CoreConfig, Environment
 
 
-def load_config_for_environment(
-    environment: Optional[Union[str, Environment]] = None,
-    config_file: Optional[Union[str, Path]] = None
-) -> CoreConfig:
-    """Load configuration for a specific environment.
+class EnvironmentConfigLoader:
+    """Loads configuration based on environment variables and deployment context."""
     
-    Args:
-        environment: Target environment (development, testing, staging, production)
-        config_file: Optional path to configuration file
+    def __init__(self, config_dir: Optional[Union[str, Path]] = None):
+        """Initialize environment config loader.
         
-    Returns:
-        Loaded configuration for the environment.
-        
-    Raises:
-        ConfigurationError: If configuration cannot be loaded.
-    """
-    # Determine environment
-    if environment is None:
-        environment = os.getenv("ANC_ENVIRONMENT", "development")
+        Args:
+            config_dir: Directory containing configuration files (defaults to ./config)
+        """
+        self.config_dir = Path(config_dir) if config_dir else Path("config")
+        self.logger = logging.getLogger(__name__)
     
-    if isinstance(environment, str):
+    def load_for_environment(self, environment: Optional[str] = None) -> CoreConfig:
+        """Load configuration for specified environment.
+        
+        Args:
+            environment: Environment name (development, testing, staging, production).
+                        If None, uses ANC_ENVIRONMENT env var or defaults to development.
+        
+        Returns:
+            Loaded configuration for the environment.
+        """
+        # Determine environment
+        env = environment or os.getenv("ANC_ENVIRONMENT", "development")
+        
         try:
-            environment = Environment(environment.lower())
+            # Validate environment
+            env_enum = Environment(env.lower())
         except ValueError:
-            raise ConfigurationError(f"Invalid environment: {environment}")
-    
-    # Determine config file path
-    if config_file is None:
-        # Look for environment-specific config file
-        config_dir = Path("config")
-        env_config_file = config_dir / f"{environment.value}.json"
+            self.logger.warning(f"Invalid environment '{env}', defaulting to development")
+            env_enum = Environment.DEVELOPMENT
+            env = "development"
         
-        if env_config_file.exists():
-            config_file = env_config_file
-        else:
-            # Fall back to default config
-            default_config_file = config_dir / "default.json"
-            if default_config_file.exists():
-                config_file = default_config_file
-    
-    # Load configuration
-    config_manager = ConfigurationManager(config_file)
-    config = config_manager.load_config()
-    
-    # Override environment if specified
-    if config.environment != environment:
-        config.environment = environment
-    
-    return config
-
-
-def setup_application_config(
-    environment: Optional[str] = None,
-    config_file: Optional[str] = None,
-    log_level: Optional[str] = None
-) -> CoreConfig:
-    """Set up application configuration and logging.
-    
-    This is the main entry point for configuring the application.
-    
-    Args:
-        environment: Target environment
-        config_file: Optional path to configuration file
-        log_level: Optional log level override
+        # Load configuration file for environment
+        config_file = self.config_dir / f"{env}.json"
         
-    Returns:
-        Configured application settings.
-    """
-    try:
-        # Load configuration
-        config = load_config_for_environment(environment, config_file)
+        if not config_file.exists():
+            self.logger.warning(f"Configuration file not found: {config_file}")
+            # Fall back to default configuration
+            config_file = self.config_dir / "default.json"
+            
+            if not config_file.exists():
+                self.logger.warning("Default configuration file not found, using built-in defaults")
+                config_file = None
         
-        # Override log level if specified
-        if log_level:
-            config.logging.level = log_level.upper()
+        # Create configuration manager and load config
+        config_manager = ConfigurationManager(config_file)
+        config = config_manager.load_config()
         
-        # Configure logging
-        configure_logging(config.logging)
+        # Ensure environment is set correctly
+        config.environment = env_enum
         
-        # Log configuration summary
-        logger = logging.getLogger(__name__)
-        logger.info(f"Application configured for environment: {config.environment.value}")
-        logger.info(f"Debug mode: {config.debug}")
-        logger.info(f"Data directory: {config.data_directory}")
-        logger.info(f"HTTP server: {config.http.host}:{config.http.port}")
-        logger.info(f"MCP transport: {config.mcp.transport_type}")
-        
+        self.logger.info(f"Loaded configuration for environment: {env}")
         return config
+    
+    def get_available_environments(self) -> Dict[str, bool]:
+        """Get list of available environment configurations.
         
-    except Exception as e:
-        # Use basic logging if configuration fails
-        logging.basicConfig(level=logging.ERROR)
-        logger = logging.getLogger(__name__)
-        logger.error(f"Failed to configure application: {e}")
-        raise
+        Returns:
+            Dictionary mapping environment names to whether config file exists.
+        """
+        environments = {}
+        
+        for env in Environment:
+            config_file = self.config_dir / f"{env.value}.json"
+            environments[env.value] = config_file.exists()
+        
+        return environments
+    
+    def validate_environment_configs(self) -> Dict[str, Dict[str, Any]]:
+        """Validate all environment configuration files.
+        
+        Returns:
+            Dictionary with validation results for each environment.
+        """
+        results = {}
+        
+        for env in Environment:
+            config_file = self.config_dir / f"{env.value}.json"
+            
+            if not config_file.exists():
+                results[env.value] = {
+                    "exists": False,
+                    "valid": False,
+                    "error": "Configuration file not found"
+                }
+                continue
+            
+            try:
+                config_manager = ConfigurationManager(config_file)
+                config = config_manager.load_config()
+                
+                results[env.value] = {
+                    "exists": True,
+                    "valid": True,
+                    "environment": config.environment.value,
+                    "debug": config.debug,
+                    "agents_timeout": config.agents.timeout_seconds,
+                    "http_port": config.http.port,
+                    "mcp_transport": config.mcp.transport_type
+                }
+                
+            except Exception as e:
+                results[env.value] = {
+                    "exists": True,
+                    "valid": False,
+                    "error": str(e)
+                }
+        
+        return results
 
 
-def get_config_for_mcp() -> CoreConfig:
-    """Get configuration optimized for MCP usage.
+class DeploymentConfigManager:
+    """Manages configuration for different deployment scenarios."""
     
-    Returns:
-        Configuration with MCP-specific optimizations.
-    """
-    config = load_config_for_environment()
+    def __init__(self):
+        """Initialize deployment config manager."""
+        self.logger = logging.getLogger(__name__)
     
-    # MCP-specific optimizations
-    config.performance.enable_compression = config.mcp.enable_message_compression
-    config.logging.enable_structured_logging = False  # MCP prefers simple logging
+    def get_docker_config(self) -> CoreConfig:
+        """Get configuration optimized for Docker deployment.
+        
+        Returns:
+            Configuration suitable for Docker containers.
+        """
+        loader = EnvironmentConfigLoader()
+        config = loader.load_for_environment("production")
+        
+        # Docker-specific overrides
+        config.data_directory = "/app/data"
+        config.temp_directory = "/tmp"
+        config.logging.enable_file_logging = False  # Use stdout in containers
+        config.http.host = "0.0.0.0"  # Bind to all interfaces
+        config.mcp.transport_type = "stdio"  # Prefer stdio in containers
+        
+        self.logger.info("Applied Docker-specific configuration overrides")
+        return config
     
-    return config
+    def get_kubernetes_config(self) -> CoreConfig:
+        """Get configuration optimized for Kubernetes deployment.
+        
+        Returns:
+            Configuration suitable for Kubernetes pods.
+        """
+        loader = EnvironmentConfigLoader()
+        config = loader.load_for_environment("production")
+        
+        # Kubernetes-specific overrides
+        config.data_directory = "/data"  # Mounted volume
+        config.temp_directory = "/tmp"
+        config.logging.enable_file_logging = False  # Use stdout
+        config.logging.enable_structured_logging = True  # Better for log aggregation
+        config.http.host = "0.0.0.0"
+        config.sessions.enable_persistence = False  # Use external storage
+        config.performance.enable_profiling = False  # Reduce overhead
+        
+        # Use environment variables for sensitive config
+        if api_key_header := os.getenv("API_KEY_HEADER"):
+            config.security.api_key_header = api_key_header
+        
+        if allowed_origins := os.getenv("ALLOWED_ORIGINS"):
+            config.security.allowed_origins = allowed_origins.split(",")
+        
+        self.logger.info("Applied Kubernetes-specific configuration overrides")
+        return config
+    
+    def get_serverless_config(self) -> CoreConfig:
+        """Get configuration optimized for serverless deployment.
+        
+        Returns:
+            Configuration suitable for serverless functions.
+        """
+        loader = EnvironmentConfigLoader()
+        config = loader.load_for_environment("production")
+        
+        # Serverless-specific overrides
+        config.agents.timeout_seconds = 60  # Shorter timeouts
+        config.tools.default_timeout_seconds = 30
+        config.sessions.max_active_sessions = 10  # Limited concurrency
+        config.sessions.enable_persistence = False  # Stateless
+        config.performance.worker_pool_size = 1  # Single worker
+        config.performance.enable_async_processing = False  # Simpler execution
+        config.logging.enable_file_logging = False
+        config.logging.enable_structured_logging = True
+        
+        self.logger.info("Applied serverless-specific configuration overrides")
+        return config
+    
+    def get_development_config(self, enable_debug: bool = True) -> CoreConfig:
+        """Get configuration optimized for local development.
+        
+        Args:
+            enable_debug: Whether to enable debug mode.
+        
+        Returns:
+            Configuration suitable for development.
+        """
+        loader = EnvironmentConfigLoader()
+        config = loader.load_for_environment("development")
+        
+        if enable_debug:
+            config.debug = True
+            config.logging.level = "DEBUG"
+            config.http.enable_openapi = True
+            config.performance.enable_profiling = True
+            config.performance.profiling_sample_rate = 0.1
+        
+        self.logger.info("Applied development-specific configuration")
+        return config
 
 
-def get_config_for_http() -> CoreConfig:
-    """Get configuration optimized for HTTP usage.
-    
-    Returns:
-        Configuration with HTTP-specific optimizations.
-    """
-    config = load_config_for_environment()
-    
-    # HTTP-specific optimizations
-    config.performance.enable_compression = True  # HTTP benefits from compression
-    config.logging.enable_structured_logging = True  # HTTP can use structured logs
-    
-    return config
-
-
-def create_development_config() -> CoreConfig:
-    """Create a development configuration with sensible defaults.
-    
-    Returns:
-        Development configuration.
-    """
-    config = CoreConfig()
-    config.environment = Environment.DEVELOPMENT
-    config.debug = True
-    
-    # Development-friendly settings
-    config.logging.level = "DEBUG"
-    config.logging.enable_file_logging = False
-    config.agents.timeout_seconds = 120
-    config.tools.default_timeout_seconds = 60
-    config.sessions.max_active_sessions = 10
-    config.security.enable_authentication = False
-    config.performance.enable_profiling = True
-    config.performance.profiling_sample_rate = 0.1
-    
-    # HTTP settings for development
-    config.http.host = "127.0.0.1"
-    config.http.port = 8000
-    config.http.enable_openapi = True
-    config.http.enable_request_logging = True
-    
-    # MCP settings for development
-    config.mcp.transport_type = "stdio"
-    config.mcp.enable_heartbeat = False
-    
-    return config
-
-
-def create_testing_config() -> CoreConfig:
-    """Create a testing configuration with minimal resources.
-    
-    Returns:
-        Testing configuration.
-    """
-    config = CoreConfig()
-    config.environment = Environment.TESTING
-    config.debug = True
-    
-    # Testing-optimized settings
-    config.logging.level = "WARNING"
-    config.logging.enable_file_logging = False
-    config.agents.timeout_seconds = 30
-    config.agents.max_concurrent_tasks = 2
-    config.tools.default_timeout_seconds = 15
-    config.tools.enable_metrics = False
-    config.sessions.max_active_sessions = 5
-    config.sessions.session_timeout_minutes = 2
-    config.security.enable_authentication = False
-    config.performance.worker_pool_size = 1
-    config.performance.cache_size_mb = 32
-    
-    # HTTP settings for testing
-    config.http.host = "127.0.0.1"
-    config.http.port = 8001
-    config.http.enable_websockets = False
-    config.http.enable_request_logging = False
-    
-    # MCP settings for testing
-    config.mcp.transport_type = "stdio"
-    config.mcp.enable_heartbeat = False
-    config.mcp.max_message_size_kb = 256
-    
-    return config
-
-
-def validate_deployment_config(config: CoreConfig) -> List[str]:
-    """Validate configuration for deployment readiness.
+# Convenience functions for common use cases
+def load_config_for_environment(environment: Optional[str] = None) -> CoreConfig:
+    """Load configuration for specified environment.
     
     Args:
-        config: Configuration to validate.
-        
+        environment: Environment name or None to use ANC_ENVIRONMENT env var.
+    
     Returns:
-        List of validation warnings/issues.
+        Loaded configuration.
     """
-    issues = []
-    
-    # Production environment checks
-    if config.environment == Environment.PRODUCTION:
-        if config.debug:
-            issues.append("Debug mode should be disabled in production")
-        
-        if config.logging.level == "DEBUG":
-            issues.append("Debug logging should be disabled in production")
-        
-        if not config.security.enable_authentication:
-            issues.append("Authentication should be enabled in production")
-        
-        if "*" in config.security.allowed_origins:
-            issues.append("CORS should be restricted in production")
-        
-        if not config.logging.enable_file_logging:
-            issues.append("File logging should be enabled in production")
-        
-        if config.performance.enable_profiling:
-            issues.append("Profiling should be disabled in production")
-    
-    # Resource limit checks
-    if config.agents.memory_limit_mb and config.agents.memory_limit_mb < 256:
-        issues.append("Agent memory limit may be too low")
-    
-    if config.sessions.max_active_sessions > 1000:
-        issues.append("High session limit may impact performance")
-    
-    # Security checks
-    if config.security.enable_authentication and not config.security.api_key_header:
-        issues.append("API key header not configured with authentication enabled")
-    
-    # Performance checks
-    if config.performance.worker_pool_size > 16:
-        issues.append("High worker pool size may cause resource contention")
-    
-    return issues
+    loader = EnvironmentConfigLoader()
+    return loader.load_for_environment(environment)
 
 
-def print_config_summary(config: CoreConfig) -> None:
-    """Print a summary of the current configuration.
+def load_config_for_deployment(deployment_type: str = "docker") -> CoreConfig:
+    """Load configuration for specified deployment type.
+    
+    Args:
+        deployment_type: Type of deployment (docker, kubernetes, serverless, development).
+    
+    Returns:
+        Configuration optimized for deployment type.
+    """
+    manager = DeploymentConfigManager()
+    
+    if deployment_type == "docker":
+        return manager.get_docker_config()
+    elif deployment_type == "kubernetes":
+        return manager.get_kubernetes_config()
+    elif deployment_type == "serverless":
+        return manager.get_serverless_config()
+    elif deployment_type == "development":
+        return manager.get_development_config()
+    else:
+        raise ValueError(f"Unknown deployment type: {deployment_type}")
+
+
+def validate_all_configs() -> Dict[str, Dict[str, Any]]:
+    """Validate all environment configuration files.
+    
+    Returns:
+        Validation results for all environments.
+    """
+    loader = EnvironmentConfigLoader()
+    return loader.validate_environment_configs()
+
+
+def get_config_summary(config: CoreConfig) -> Dict[str, Any]:
+    """Get a summary of key configuration settings.
     
     Args:
         config: Configuration to summarize.
+    
+    Returns:
+        Dictionary with key configuration values.
     """
-    print(f"\n=== Configuration Summary ===")
-    print(f"Environment: {config.environment.value}")
-    print(f"Debug Mode: {config.debug}")
-    print(f"Data Directory: {config.data_directory}")
-    print(f"Temp Directory: {config.temp_directory}")
-    print(f"\n--- HTTP Configuration ---")
-    print(f"Host: {config.http.host}")
-    print(f"Port: {config.http.port}")
-    print(f"WebSockets: {config.http.enable_websockets}")
-    print(f"OpenAPI: {config.http.enable_openapi}")
-    print(f"\n--- MCP Configuration ---")
-    print(f"Transport: {config.mcp.transport_type}")
-    print(f"Socket Path: {config.mcp.socket_path or 'N/A'}")
-    print(f"Heartbeat: {config.mcp.enable_heartbeat}")
-    print(f"\n--- Agent Configuration ---")
-    print(f"Timeout: {config.agents.timeout_seconds}s")
-    print(f"Max Concurrent: {config.agents.max_concurrent_tasks}")
-    print(f"Memory Limit: {config.agents.memory_limit_mb or 'Unlimited'} MB")
-    print(f"\n--- Security Configuration ---")
-    print(f"Authentication: {config.security.enable_authentication}")
-    print(f"CORS: {config.security.enable_cors}")
-    print(f"Rate Limit: {config.security.rate_limit_requests_per_minute}/min")
-    print(f"\n--- Logging Configuration ---")
-    print(f"Level: {config.logging.level.value}")
-    print(f"File Logging: {config.logging.enable_file_logging}")
-    print(f"Log File: {config.logging.log_file_path or 'N/A'}")
-    print("=" * 30)
+    return {
+        "environment": config.environment.value,
+        "debug": config.debug,
+        "data_directory": config.data_directory,
+        "agents": {
+            "timeout_seconds": config.agents.timeout_seconds,
+            "max_concurrent_tasks": config.agents.max_concurrent_tasks,
+            "enable_caching": config.agents.enable_caching
+        },
+        "http": {
+            "host": config.http.host,
+            "port": config.http.port,
+            "enable_websockets": config.http.enable_websockets,
+            "enable_openapi": config.http.enable_openapi
+        },
+        "mcp": {
+            "transport_type": config.mcp.transport_type,
+            "enable_heartbeat": config.mcp.enable_heartbeat
+        },
+        "logging": {
+            "level": config.logging.level.value,
+            "enable_file_logging": config.logging.enable_file_logging,
+            "enable_structured_logging": config.logging.enable_structured_logging
+        },
+        "security": {
+            "enable_authentication": config.security.enable_authentication,
+            "enable_cors": config.security.enable_cors,
+            "rate_limit_requests_per_minute": config.security.rate_limit_requests_per_minute
+        }
+    }
