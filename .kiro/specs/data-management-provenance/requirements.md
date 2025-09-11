@@ -36,15 +36,10 @@ piece of metadata in my final NWB file.
 
 #### Acceptance Criteria
 
-1. WHEN any metadata field is populated THEN the system SHALL record whether it
-   came from user input, automatic extraction, AI suggestion, or external
-   enrichment
-2. WHEN tracking changes THEN the system SHALL maintain complete audit trails of
-   all modifications, decisions, and data transformations
-3. WHEN providing transparency THEN the system SHALL clearly distinguish between
-   high-confidence automatic extractions and AI-generated suggestions
-4. WHEN generating reports THEN the system SHALL include provenance summaries
-   allowing users to verify and validate all automated decisions
+1. WHEN any metadata field is populated THEN the system SHALL record the confidence level (definitive, high_evidence, human_confirmed, human_override, medium_evidence, heuristic, low_evidence, placeholder, unknown), source type, derivation method, and complete reasoning chain
+2. WHEN tracking changes THEN the system SHALL maintain complete audit trails of all modifications, decisions, data transformations, and evidence conflicts with resolution methods
+3. WHEN providing transparency THEN the system SHALL clearly distinguish between evidence-based decisions and human overrides, presenting evidence summaries for human review when conflicts exist
+4. WHEN generating reports THEN the system SHALL include detailed provenance summaries with decision chains, evidence quality assessment, and confidence distributions allowing users to verify and validate all automated decisions
 
 ### Requirement 3
 
