@@ -95,11 +95,12 @@ class TestMCPRegistry:
         metadata = registry.tool_metadata["metadata_test"]
         assert metadata["name"] == "metadata_test"
         assert metadata["description"] == "Metadata test"
-        assert "param1" in metadata["parameters"]
-        assert "param2" in metadata["parameters"]
+        # Parameters include the underscore prefix as they appear in the function signature
+        assert "_param1" in metadata["parameters"]
+        assert "_param2" in metadata["parameters"]
         assert "server" not in metadata["parameters"]  # Should be excluded
-        assert metadata["parameters"]["param1"]["required"] is True
-        assert metadata["parameters"]["param2"]["required"] is False
+        assert metadata["parameters"]["_param1"]["required"] is True
+        assert metadata["parameters"]["_param2"]["required"] is False
 
     def test_list_tools(self, registry):
         """Test listing all registered tools."""
@@ -164,6 +165,7 @@ class TestMCPServer:
             return {"status": "success", "param1": param1}
 
         result = await mcp_server.execute_tool("test_execution", param1="test_value")
+        # The result should contain the returned data from the function
         assert result["status"] == "success"
         assert result["param1"] == "test_value"
 
