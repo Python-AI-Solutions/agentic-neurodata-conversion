@@ -195,4 +195,46 @@ data-init = "echo 'DataLad initialization placeholder'"
 data-get = "echo 'DataLad data retrieval placeholder'"
 data-status = "echo 'DataLad status check placeholder'"
 
+# Deployment tasks
+deploy-dev = "python scripts/deploy.py dev"
+deploy-prod = "python scripts/deploy.py prod"
+deploy-test = "python scripts/deploy.py test"
+deploy-stop = "python scripts/deploy.py stop"
+deploy-status = "python scripts/deploy.py status"
+deploy-logs = "python scripts/deploy.py logs"
+deploy-build = "python scripts/deploy.py build"
+deploy-clean = "python scripts/deploy.py stop --remove-volumes && docker system prune -f && docker volume prune -f"
+
+# Kubernetes deployment tasks
+k8s-deploy = "python scripts/deploy_k8s.py deploy"
+k8s-update = "python scripts/deploy_k8s.py update"
+k8s-status = "python scripts/deploy_k8s.py status"
+k8s-logs = "python scripts/deploy_k8s.py logs"
+k8s-delete = "python scripts/deploy_k8s.py delete"
+
+# Health check tasks
+health-check = "python scripts/health_check.py"
+health-check-json = "python scripts/health_check.py --json"
+health-check-quiet = "python scripts/health_check.py --quiet"
+
+# Setup tasks for deployment
+setup-dev-env = "python scripts/setup_env.py dev"
+setup-prod-env = "python scripts/setup_env.py prod"
+
+# Help task for deployment
+deploy-help = "python -c 'print(\"\\nAvailable Deployment Tasks:\\n\\nDocker Deployment:\\n  pixi run deploy-dev      - Start development environment\\n  pixi run deploy-prod     - Start production environment\\n  pixi run deploy-test     - Run tests in container\\n  pixi run deploy-stop     - Stop all services\\n  pixi run deploy-status   - Show deployment status\\n  pixi run deploy-logs     - Show service logs\\n  pixi run deploy-build    - Build Docker images\\n  pixi run deploy-clean    - Clean up containers and volumes\\n\\nKubernetes Deployment:\\n  pixi run k8s-deploy      - Deploy to Kubernetes\\n  pixi run k8s-update      - Update Kubernetes deployment\\n  pixi run k8s-status      - Show Kubernetes status\\n  pixi run k8s-logs        - Show Kubernetes logs\\n  pixi run k8s-delete      - Delete Kubernetes deployment\\n\\nHealth Checks:\\n  pixi run health-check    - Run health check\\n  pixi run health-check-json - Health check with JSON output\\n  pixi run health-check-quiet - Quiet health check\\n\\nSetup:\\n  pixi run setup-dev-env   - Setup development environment\\n  pixi run setup-prod-env  - Setup production environment\\n\\nDocker Images:\\n  pixi run docker-build    - Build Docker images\\n  pixi run docker-pull     - Pull latest images\\n  pixi run docker-push     - Push images to registry\\n\")'"
+
+# Docker image management
+docker-build = "docker-compose build"
+docker-pull = "docker-compose pull"
+docker-push = { cmd = """
+if [ -z "$REGISTRY" ]; then
+  echo "Error: REGISTRY variable not set"
+  echo "Usage: REGISTRY=your-registry.com pixi run docker-push"
+  exit 1
+fi
+docker tag agentic-neurodata-conversion:latest $REGISTRY/agentic-neurodata-conversion:latest
+docker push $REGISTRY/agentic-neurodata-conversion:latest
+""" }
+
 # Activation scripts removed to avoid warnings

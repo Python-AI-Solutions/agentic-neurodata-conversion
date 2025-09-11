@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agentic-neurodata
+  labels:
+    name: agentic-neurodata
+    app.kubernetes.io/name: agentic-neurodata-conversion
+    app.kubernetes.io/version: "0.1.0"
