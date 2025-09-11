@@ -14,7 +14,7 @@
   - Create utilities for listing and accessing available test datasets
   - _Requirements: 1.1, 1.3, 1.4, 6.2_
 
-- [ ] 3. Build conversion provenance tracking foundation
+- [x] 3. Build conversion provenance tracking foundation
   - Create `ConversionProvenanceTracker` class in `agentic_neurodata_conversion/data_management/conversion_provenance.py`
   - Implement `ProvenanceRecord` and `ConversionSession` dataclasses for structured tracking
   - Add conversion repository creation with DataLad for each conversion session
