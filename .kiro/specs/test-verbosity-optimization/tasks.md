@@ -6,7 +6,7 @@
   - Remove verbose addopts and replace with minimal settings
   - _Requirements: 1.1, 1.2, 1.3, 1.4_
 
-- [ ] 2. Replace all default pixi task commands with quiet mode
+- [x] 2. Replace all default pixi task commands with quiet mode
   - Update all test tasks to use -q flag instead of -v flag
   - Change default test commands to minimal output immediately
   - Remove verbose flags from standard testing tasks
