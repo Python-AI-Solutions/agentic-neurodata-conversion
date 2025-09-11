@@ -4,15 +4,7 @@
   "data_directory": "./data",
   "temp_directory": "./temp",
   "max_file_size_mb": 1000,
-  "supported_formats": [
-    "nwb",
-    "hdf5",
-    "mat",
-    "csv",
-    "json",
-    "yaml",
-    "pickle"
-  ],
+  "supported_formats": ["nwb", "hdf5", "mat", "csv", "json", "yaml", "pickle"],
   "enable_format_validation": true,
   "enable_metadata_extraction": true,
   "agents": {

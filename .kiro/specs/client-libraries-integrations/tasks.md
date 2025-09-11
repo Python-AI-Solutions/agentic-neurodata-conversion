@@ -1,7 +1,8 @@
 # Implementation Plan
 
 - [ ] 1. Create Python client library foundation
-  - Implement `MCPClient` class in `examples/python_client/agentic_converter_client.py`
+  - Implement `MCPClient` class in
+    `examples/python_client/agentic_converter_client.py`
   - Add basic MCP server communication with HTTP transport
   - Create configuration management for server endpoints and client settings
   - Implement basic error handling and response parsing
@@ -9,7 +10,8 @@
 
 - [ ] 2. Implement core conversion workflow methods
   - Add `analyze_dataset()` method calling `dataset_analysis` MCP tool
-  - Implement `generate_conversion_script()` method calling `conversion_orchestration` tool
+  - Implement `generate_conversion_script()` method calling
+    `conversion_orchestration` tool
   - Create `evaluate_nwb_file()` method for validation and evaluation
   - Add `run_full_pipeline()` method for complete workflow automation
   - _Requirements: 2.1, 2.2, 2.3, 2.4_

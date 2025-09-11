@@ -127,6 +127,7 @@ pixi run pytest tests/unit/test_new_feature.py --no-cov
 ## Common Patterns
 
 ### Skip Tests Until Implementation
+
 ```python
 pytestmark = pytest.mark.skipif(
     not COMPONENT_AVAILABLE,
@@ -135,6 +136,7 @@ pytestmark = pytest.mark.skipif(
 ```
 
 ### Test Real Components
+
 ```python
 def test_real_functionality(component_fixture):
     """Test actual component, not mocks."""
@@ -143,13 +145,14 @@ def test_real_functionality(component_fixture):
 ```
 
 ### Resource-Appropriate Testing
+
 ```python
 @pytest.mark.unit
 def test_fast_logic():
     """Fast test with no external dependencies."""
     pass
 
-@pytest.mark.integration  
+@pytest.mark.integration
 def test_component_coordination():
     """Test multiple components working together."""
     pass

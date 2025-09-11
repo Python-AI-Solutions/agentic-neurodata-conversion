@@ -6,11 +6,13 @@ inclusion: always
 
 ## Critical Rule: PYTHONPATH is Forbidden
 
-**NEVER manipulate PYTHONPATH when using pixi.** Pixi handles all dependency management automatically.
+**NEVER manipulate PYTHONPATH when using pixi.** Pixi handles all dependency
+management automatically.
 
 ## Why PYTHONPATH is Harmful with Pixi
 
 ### 1. Breaks Environment Isolation
+
 ```bash
 # ❌ WRONG - breaks pixi's isolation
 export PYTHONPATH="/some/path:$PYTHONPATH"
@@ -21,12 +23,14 @@ pixi run python script.py
 ```
 
 ### 2. Causes Import Conflicts
+
 - PYTHONPATH can cause imports from wrong environments
 - Leads to version conflicts between packages
 - Makes debugging extremely difficult
 - Breaks reproducibility across systems
 
 ### 3. Masks Real Issues
+
 - Hides missing dependencies that should be in pixi.toml
 - Prevents proper dependency resolution
 - Makes the project non-portable
@@ -34,6 +38,7 @@ pixi run python script.py
 ## What Pixi Does Instead
 
 Pixi automatically handles:
+
 - **Package discovery** through proper conda/pip installation
 - **Import resolution** via pypi-dependencies with `editable = true`
 - **Environment isolation** without path manipulation
@@ -42,6 +47,7 @@ Pixi automatically handles:
 ## Correct Approaches
 
 ### For Package Imports
+
 ```python
 # ❌ WRONG - manual path manipulation
 import sys
@@ -58,6 +64,7 @@ import my_package
 ```
 
 ### For Local Development
+
 ```bash
 # ❌ WRONG - manual PYTHONPATH
 export PYTHONPATH=".:$PYTHONPATH"
@@ -72,6 +79,7 @@ pixi run python script.py
 ```
 
 ### For Testing
+
 ```python
 # ❌ WRONG - test-time path manipulation
 import sys
@@ -84,25 +92,29 @@ import agentic_neurodata_conversion  # Works automatically
 
 ## Troubleshooting Import Issues
 
-### If imports fail, DO NOT use PYTHONPATH. Instead:
+### If imports fail, DO NOT use PYTHONPATH. Instead
 
 1. **Check if package is properly installed:**
+
    ```bash
    pixi list | grep package-name
    ```
 
 2. **Verify editable install:**
+
    ```bash
    pixi run pip show agentic-neurodata-conversion
    ```
 
 3. **Reinstall if needed:**
+
    ```bash
    rm -rf .pixi
    pixi install
    ```
 
 4. **Add missing dependencies:**
+
    ```bash
    pixi add missing-package
    ```
@@ -110,6 +122,7 @@ import agentic_neurodata_conversion  # Works automatically
 ## Common Mistakes to Avoid
 
 ### ❌ Setting PYTHONPATH in scripts
+
 ```bash
 #!/bin/bash
 export PYTHONPATH=".:$PYTHONPATH"  # NEVER DO THIS
@@ -117,12 +130,14 @@ pixi run python script.py
 ```
 
 ### ❌ Setting PYTHONPATH in activation scripts
+
 ```bash
 # In scripts/activate.sh
 export PYTHONPATH="$CONDA_PREFIX:$PYTHONPATH"  # NEVER DO THIS
 ```
 
 ### ❌ Setting PYTHONPATH in test configuration
+
 ```python
 # In conftest.py or test files
 import os
@@ -130,38 +145,45 @@ os.environ['PYTHONPATH'] = '/some/path'  # NEVER DO THIS
 ```
 
 ### ❌ Setting PYTHONPATH in CI/CD
+
 ```yaml
 # In GitHub Actions or other CI
-- name: Set PYTHONPATH  # NEVER DO THIS
+- name: Set PYTHONPATH # NEVER DO THIS
   run: export PYTHONPATH=".:$PYTHONPATH"
 ```
 
 ## Correct Solutions
 
 ### ✅ For local packages
+
 Add to `pixi.toml` (this is the correct pixi way):
+
 ```toml
 [pypi-dependencies]
 my-local-package = { path = "./path/to/package", editable = true }
 ```
 
 This is how our project is configured:
+
 ```toml
 [pypi-dependencies]
 agentic-neurodata-conversion = { path = ".", editable = true }
 ```
 
 ### ✅ For development dependencies
+
 ```bash
 pixi add --feature dev my-dev-package
 ```
 
 ### ✅ For test dependencies
+
 ```bash
 pixi add --feature test my-test-package
 ```
 
 ### ✅ For CI/CD
+
 ```yaml
 - name: Install with pixi
   run: pixi install
@@ -196,6 +218,7 @@ agentic-neurodata-conversion = { path = ".", editable = true }
 ```
 
 This tells pixi to:
+
 1. Install the local package in editable mode automatically
 2. Handle all import resolution without PYTHONPATH
 3. Maintain proper environment isolation
@@ -204,7 +227,7 @@ This tells pixi to:
 ## Remember
 
 - **Pixi manages everything** - trust it
-- **PYTHONPATH breaks isolation** - never use it  
+- **PYTHONPATH breaks isolation** - never use it
 - **Declare dependencies properly** - in pixi.toml
 - **Use pypi-dependencies with editable=true** - for local development
 - **Never use manual pip install -e** - let pixi handle it
