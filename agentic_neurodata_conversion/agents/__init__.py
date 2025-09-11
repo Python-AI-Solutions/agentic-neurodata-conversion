@@ -24,23 +24,19 @@ specialized functionality for dataset analysis, metadata extraction, conversion
 script generation, and quality assurance.
 """
 
-from .base import AgentCapability, AgentRegistry, AgentStatus, BaseAgent
+from .base import AgentConfig, AgentResult, AgentStatus, BaseAgent
 from .conversation import ConversationAgent
 from .conversion import ConversionAgent
 from .evaluation import EvaluationAgent
 from .knowledge_graph import KnowledgeGraphAgent
 
-# Global agent registry instance
-agent_registry = AgentRegistry()
-
 __all__ = [
     "BaseAgent",
-    "AgentRegistry",
     "AgentStatus",
-    "AgentCapability",
+    "AgentResult",
+    "AgentConfig",
     "ConversationAgent",
     "ConversionAgent",
     "EvaluationAgent",
     "KnowledgeGraphAgent",
-    "agent_registry",
 ]

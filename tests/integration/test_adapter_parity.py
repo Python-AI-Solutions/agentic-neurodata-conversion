@@ -646,6 +646,434 @@ class TestEndToEndParity:
             )
 
 
+# ============================================================================
+# Data Consistency Parity Tests
+# ============================================================================
+
+
+class TestDataConsistencyParity:
+    """Test that data handling is consistent across adapters."""
+
+    @pytest.mark.integration
+    async def test_metadata_extraction_parity(self, both_adapters, integration_dataset):
+        """Test that metadata extraction produces identical results."""
+        mcp_adapter, http_adapter = both_adapters
+
+        session_id_base = f"metadata_parity_{uuid.uuid4().hex[:8]}"
+
+        # Execute metadata extraction through both adapters
+        mcp_response = await mcp_adapter.conversion_service.dataset_analysis(
+            dataset_dir=integration_dataset,
+            use_llm=False,
+            session_id=f"{session_id_base}_mcp",
+        )
+
+        http_response = await http_adapter.conversion_service.dataset_analysis(
+            dataset_dir=integration_dataset,
+            use_llm=False,
+            session_id=f"{session_id_base}_http",
+        )
+
+        # Both should succeed
+        assert mcp_response.status.value == "completed"
+        assert http_response.status.value == "completed"
+
+        # Extract metadata from responses
+        mcp_metadata = mcp_response.data.get("extracted_metadata", {})
+        http_metadata = http_response.data.get("extracted_metadata", {})
+
+        # Metadata should be identical
+        assert mcp_metadata == http_metadata
+
+        # File analysis should be identical
+        mcp_files = mcp_response.data.get("analyzed_files", [])
+        http_files = http_response.data.get("analyzed_files", [])
+
+        assert len(mcp_files) == len(http_files)
+
+        # Sort by filename for comparison
+        mcp_files_sorted = sorted(mcp_files, key=lambda x: x.get("filename", ""))
+        http_files_sorted = sorted(http_files, key=lambda x: x.get("filename", ""))
+
+        for mcp_file, http_file in zip(mcp_files_sorted, http_files_sorted):
+            assert mcp_file.get("filename") == http_file.get("filename")
+            assert mcp_file.get("file_type") == http_file.get("file_type")
+            assert mcp_file.get("size") == http_file.get("size")
+
+    @pytest.mark.integration
+    async def test_file_processing_parity(self, both_adapters, integration_dataset):
+        """Test that file processing produces identical results."""
+        mcp_adapter, http_adapter = both_adapters
+
+        session_id_base = f"file_parity_{uuid.uuid4().hex[:8]}"
+
+        # Process files through both adapters
+        mcp_response = await mcp_adapter.conversion_service.dataset_analysis(
+            dataset_dir=integration_dataset,
+            use_llm=False,
+            session_id=f"{session_id_base}_mcp",
+        )
+
+        http_response = await http_adapter.conversion_service.dataset_analysis(
+            dataset_dir=integration_dataset,
+            use_llm=False,
+            session_id=f"{session_id_base}_http",
+        )
+
+        # Both should succeed
+        assert mcp_response.status.value == "completed"
+        assert http_response.status.value == "completed"
+
+        # File counts should match
+        mcp_file_count = mcp_response.data.get("file_count", 0)
+        http_file_count = http_response.data.get("file_count", 0)
+        assert mcp_file_count == http_file_count
+
+        # Detected formats should match
+        mcp_formats = set(mcp_response.data.get("detected_formats", []))
+        http_formats = set(http_response.data.get("detected_formats", []))
+        assert mcp_formats == http_formats
+
+        # Processing summary should match
+        mcp_summary = mcp_response.data.get("processing_summary", {})
+        http_summary = http_response.data.get("processing_summary", {})
+
+        # Key summary fields should match
+        summary_fields = [
+            "total_files",
+            "processed_files",
+            "failed_files",
+            "skipped_files",
+        ]
+        for field in summary_fields:
+            assert mcp_summary.get(field) == http_summary.get(field), (
+                f"Summary field {field} mismatch"
+            )
+
+
+# ============================================================================
+# Configuration Parity Tests
+# ============================================================================
+
+
+class TestConfigurationParity:
+    """Test that configuration handling is identical across adapters."""
+
+    @pytest.mark.integration
+    async def test_service_configuration_parity(self, both_adapters):
+        """Test that service configurations are identical."""
+        mcp_adapter, http_adapter = both_adapters
+
+        # Both should have identical service configurations
+        mcp_config = mcp_adapter.conversion_service.config
+        http_config = http_adapter.conversion_service.config
+
+        # Core configuration should match
+        assert mcp_config.max_concurrent_sessions == http_config.max_concurrent_sessions
+        assert mcp_config.session_timeout_minutes == http_config.session_timeout_minutes
+        assert mcp_config.enable_llm_features == http_config.enable_llm_features
+        assert mcp_config.default_output_format == http_config.default_output_format
+
+    @pytest.mark.integration
+    async def test_tool_configuration_parity(self, both_adapters):
+        """Test that tool configurations are identical."""
+        mcp_adapter, http_adapter = both_adapters
+
+        mcp_tools = mcp_adapter.tool_system.registry.list_tools()
+        http_tools = http_adapter.tool_system.registry.list_tools()
+
+        # Compare tool configurations
+        for mcp_tool in mcp_tools:
+            http_tool = next(t for t in http_tools if t.name == mcp_tool.name)
+
+            # Configuration should be identical
+            assert mcp_tool.timeout_seconds == http_tool.timeout_seconds
+            assert mcp_tool.max_retries == http_tool.max_retries
+            assert mcp_tool.retry_delay_seconds == http_tool.retry_delay_seconds
+            assert mcp_tool.enable_caching == http_tool.enable_caching
+
+    @pytest.mark.integration
+    async def test_logging_configuration_parity(self, both_adapters):
+        """Test that logging configurations are identical."""
+        mcp_adapter, http_adapter = both_adapters
+
+        # Both should use the same logger configuration
+        mcp_logger = mcp_adapter.conversion_service.logger
+        http_logger = http_adapter.conversion_service.logger
+
+        # Logger names should follow same pattern
+        assert mcp_logger.name.startswith("agentic_neurodata_conversion")
+        assert http_logger.name.startswith("agentic_neurodata_conversion")
+
+        # Log levels should be identical
+        assert mcp_logger.level == http_logger.level
+
+
+# ============================================================================
+# State Management Parity Tests
+# ============================================================================
+
+
+class TestStateManagementParity:
+    """Test that state management is identical across adapters."""
+
+    @pytest.mark.integration
+    async def test_session_state_parity(self, both_adapters, integration_dataset):
+        """Test that session state is managed identically."""
+        mcp_adapter, http_adapter = both_adapters
+
+        session_id_base = f"state_parity_{uuid.uuid4().hex[:8]}"
+
+        # Start sessions
+        mcp_request = ConversionRequest(
+            dataset_dir=integration_dataset, session_id=f"{session_id_base}_mcp"
+        )
+
+        http_request = ConversionRequest(
+            dataset_dir=integration_dataset, session_id=f"{session_id_base}_http"
+        )
+
+        await mcp_adapter.conversion_service.run_full_pipeline(mcp_request)
+        await http_adapter.conversion_service.run_full_pipeline(http_request)
+
+        # Get session states
+        mcp_session = (
+            mcp_adapter.conversion_service.workflow_orchestrator.active_sessions.get(
+                f"{session_id_base}_mcp"
+            )
+        )
+        http_session = (
+            http_adapter.conversion_service.workflow_orchestrator.active_sessions.get(
+                f"{session_id_base}_http"
+            )
+        )
+
+        # Both should have sessions
+        assert mcp_session is not None
+        assert http_session is not None
+
+        # Session structures should be similar
+        assert type(mcp_session) is type(http_session)
+
+        # Both should have similar state attributes
+        mcp_attrs = set(dir(mcp_session))
+        http_attrs = set(dir(http_session))
+
+        # Core attributes should be present in both
+        core_attrs = {"session_id", "status", "created_at", "updated_at"}
+        assert core_attrs.issubset(mcp_attrs)
+        assert core_attrs.issubset(http_attrs)
+
+    @pytest.mark.integration
+    async def test_workflow_state_parity(self, both_adapters, integration_dataset):
+        """Test that workflow state tracking is identical."""
+        mcp_adapter, http_adapter = both_adapters
+
+        session_id_base = f"workflow_parity_{uuid.uuid4().hex[:8]}"
+
+        # Execute workflows
+        mcp_request = ConversionRequest(
+            dataset_dir=integration_dataset, session_id=f"{session_id_base}_mcp"
+        )
+
+        http_request = ConversionRequest(
+            dataset_dir=integration_dataset, session_id=f"{session_id_base}_http"
+        )
+
+        await mcp_adapter.conversion_service.run_full_pipeline(mcp_request)
+        await http_adapter.conversion_service.run_full_pipeline(http_request)
+
+        # Get workflow states
+        mcp_status = await mcp_adapter.conversion_service.get_session_status(
+            f"{session_id_base}_mcp"
+        )
+        http_status = await http_adapter.conversion_service.get_session_status(
+            f"{session_id_base}_http"
+        )
+
+        # Both should have workflow tracking
+        assert "current_step" in mcp_status
+        assert "current_step" in http_status
+
+        assert "progress" in mcp_status
+        assert "progress" in http_status
+
+        # Progress tracking should be similar
+        mcp_progress = mcp_status["progress"]
+        http_progress = http_status["progress"]
+
+        assert type(mcp_progress) is type(http_progress)
+
+        if isinstance(mcp_progress, dict) and isinstance(http_progress, dict):
+            # Progress structures should be similar
+            assert set(mcp_progress.keys()) == set(http_progress.keys())
+
+
+# ============================================================================
+# Integration Test Utilities
+# ============================================================================
+
+
+class TestUtilities:
+    """Utility functions for integration testing."""
+
+    @staticmethod
+    def compare_response_structures(response1, response2, ignore_fields=None):
+        """Compare two response structures for parity."""
+        ignore_fields = ignore_fields or [
+            "session_id",
+            "timestamp",
+            "execution_time",
+            "task_id",
+        ]
+
+        # Convert to dicts if needed
+        dict1 = response1.dict() if hasattr(response1, "dict") else response1
+        dict2 = response2.dict() if hasattr(response2, "dict") else response2
+
+        # Remove ignored fields
+        for field in ignore_fields:
+            dict1.pop(field, None)
+            dict2.pop(field, None)
+            if "data" in dict1 and isinstance(dict1["data"], dict):
+                dict1["data"].pop(field, None)
+            if "data" in dict2 and isinstance(dict2["data"], dict):
+                dict2["data"].pop(field, None)
+
+        return dict1 == dict2
+
+    @staticmethod
+    def extract_core_metrics(response):
+        """Extract core metrics from a response for comparison."""
+        if hasattr(response, "data") and response.data:
+            return {
+                "status": response.status.value
+                if hasattr(response.status, "value")
+                else str(response.status),
+                "has_data": response.data is not None,
+                "data_keys": list(response.data.keys())
+                if isinstance(response.data, dict)
+                else [],
+                "has_error": response.error is not None,
+                "execution_time_exists": response.execution_time is not None,
+            }
+        return {}
+
+
+# ============================================================================
+# Comprehensive Parity Test Suite
+# ============================================================================
+
+
+@pytest.mark.integration
+class TestComprehensiveParity:
+    """Comprehensive test suite for adapter parity."""
+
+    async def test_full_system_parity(self, both_adapters, integration_dataset):
+        """Comprehensive test of full system parity."""
+        mcp_adapter, http_adapter = both_adapters
+
+        session_id_base = f"comprehensive_parity_{uuid.uuid4().hex[:8]}"
+
+        # Test 1: Service initialization
+        assert mcp_adapter.conversion_service._initialized
+        assert http_adapter.conversion_service._initialized
+
+        # Test 2: Tool system parity
+        mcp_tools = len(mcp_adapter.tool_system.registry.list_tools())
+        http_tools = len(http_adapter.tool_system.registry.list_tools())
+        assert mcp_tools == http_tools
+
+        # Test 3: Dataset analysis parity
+        mcp_analysis = await mcp_adapter.conversion_service.dataset_analysis(
+            dataset_dir=integration_dataset,
+            use_llm=False,
+            session_id=f"{session_id_base}_mcp_analysis",
+        )
+
+        http_analysis = await http_adapter.conversion_service.dataset_analysis(
+            dataset_dir=integration_dataset,
+            use_llm=False,
+            session_id=f"{session_id_base}_http_analysis",
+        )
+
+        assert mcp_analysis.status == http_analysis.status
+        assert TestUtilities.extract_core_metrics(
+            mcp_analysis
+        ) == TestUtilities.extract_core_metrics(http_analysis)
+
+        # Test 4: Pipeline execution parity
+        mcp_request = ConversionRequest(
+            dataset_dir=integration_dataset,
+            use_llm=False,
+            session_id=f"{session_id_base}_mcp_pipeline",
+        )
+
+        http_request = ConversionRequest(
+            dataset_dir=integration_dataset,
+            use_llm=False,
+            session_id=f"{session_id_base}_http_pipeline",
+        )
+
+        mcp_pipeline = await mcp_adapter.conversion_service.run_full_pipeline(
+            mcp_request
+        )
+        http_pipeline = await http_adapter.conversion_service.run_full_pipeline(
+            http_request
+        )
+
+        assert mcp_pipeline.status == http_pipeline.status
+
+        # Test 5: Session management parity
+        mcp_sessions = list(
+            mcp_adapter.conversion_service.workflow_orchestrator.active_sessions.keys()
+        )
+        http_sessions = list(
+            http_adapter.conversion_service.workflow_orchestrator.active_sessions.keys()
+        )
+
+        # Both should have active sessions
+        assert len(mcp_sessions) > 0
+        assert len(http_sessions) > 0
+
+        # Test 6: Status reporting parity
+        mcp_status = await mcp_adapter.conversion_service.get_session_status(
+            f"{session_id_base}_mcp_pipeline"
+        )
+        http_status = await http_adapter.conversion_service.get_session_status(
+            f"{session_id_base}_http_pipeline"
+        )
+
+        if mcp_status and http_status:
+            assert set(mcp_status.keys()) == set(http_status.keys())
+
+        print(
+            "✅ Comprehensive parity test passed - both adapters provide identical functionality"
+        )
+
+
+# ============================================================================
+# Test Configuration and Markers
+# ============================================================================
+
+# Mark all tests in this module as integration tests
+pytestmark = pytest.mark.integration
+
+
+# Test execution order for comprehensive coverage
+TEST_EXECUTION_ORDER = [
+    "TestCoreServiceParity",
+    "TestToolSystemParity",
+    "TestSessionManagementParity",
+    "TestErrorHandlingParity",
+    "TestPerformanceParity",
+    "TestDataConsistencyParity",
+    "TestConfigurationParity",
+    "TestStateManagementParity",
+    "TestComprehensiveParity",
+]
+
+
 if __name__ == "__main__":
-    # Run the parity tests
+    # Run parity tests when executed directly
     pytest.main([__file__, "-v", "--tb=short"])

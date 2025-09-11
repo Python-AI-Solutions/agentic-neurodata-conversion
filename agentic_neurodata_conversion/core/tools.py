@@ -903,3 +903,7 @@ __all__ = [
     "ToolExecutor",
     "ConversionToolSystem",
 ]
+
+
+# Backward compatibility alias
+ToolSystem = ConversionToolSystem
