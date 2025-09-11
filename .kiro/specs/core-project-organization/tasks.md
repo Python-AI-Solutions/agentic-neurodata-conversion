@@ -40,7 +40,7 @@
   - Add basic agent lifecycle management
   - _Requirements: 1.2, 6.2_
 
-- [ ] 6. Set up interface and utility modules
+- [x] 6. Set up interface and utility modules
   - Create `agentic_neurodata_conversion/interfaces/` for external integrations
   - Create `agentic_neurodata_conversion/utils/` for utility functions
   - Implement basic file utilities and format detection stubs
