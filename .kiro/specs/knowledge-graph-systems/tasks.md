@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [ ] 1. Create knowledge graph foundation and data models
+- [x] 1. Create knowledge graph foundation and data models
   - Implement `KnowledgeGraph` class in
     `agentic_neurodata_conversion/knowledge_graph/graph.py`
   - Create entity classes (Dataset, Session, Subject, Device, Lab, Protocol)

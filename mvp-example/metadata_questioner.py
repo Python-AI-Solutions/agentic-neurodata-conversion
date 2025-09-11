@@ -1,6 +1,7 @@
 from rdflib import Graph
 
-def get_required_fields(kg_file, experiment_type):
+
+def get_required_fields(kg_file, _experiment_type):
     g = Graph()
     g.parse(kg_file, format="ttl")
 
@@ -13,7 +14,8 @@ def get_required_fields(kg_file, experiment_type):
     }
     """
     results = g.query(q)
-    return [(str(r['field']), str(r['type'])) for r in results]
+    return [(str(r["field"]), str(r["type"])) for r in results]
+
 
 def generate_dynamic_question(field, constraints, inferred=None):
     q = f"We’re missing `{field}`."

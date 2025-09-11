@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 import argparse
-import os
-import re
-import shlex
-import sys
+import contextlib
 import json
+import os
 from pathlib import Path
-from typing import Optional, Tuple, Dict
-from urllib import request as _urlreq
-from urllib.error import URLError as _URLError, HTTPError as _HTTPError
+import re
 import subprocess
-import time
-
+import sys
+from typing import Optional
+from urllib import request as _urlreq
+from urllib.error import HTTPError as _HTTPError
+from urllib.error import URLError as _URLError
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_PY = REPO_ROOT / "evaluation_agent" / "eval" / "bin" / "python"
@@ -29,7 +28,7 @@ def ensure_paths() -> None:
         raise SystemExit(f"run_single_agent.py not found at: {RUN_SCRIPT}")
 
 
-def build_command(args: argparse.Namespace) -> Tuple[list[str], str]:
+def build_command(args: argparse.Namespace) -> tuple[list[str], str]:
     py = str(pick_python())
     cmd: list[str] = [py, str(RUN_SCRIPT)]
 
@@ -71,8 +70,8 @@ def run_once(args: argparse.Namespace) -> int:
         return 130
 
 
-def parse_natural_language(prompt: str) -> Dict[str, object]:
-    opts: Dict[str, object] = {}
+def parse_natural_language(prompt: str) -> dict[str, object]:
+    opts: dict[str, object] = {}
     m = re.search(r"(?P<quote>['\"]).*?\.nwb(?P=quote)", prompt)
     if m is None:
         m = re.search(r"\s(\S+\.nwb)\b", prompt)
@@ -81,7 +80,9 @@ def parse_natural_language(prompt: str) -> Dict[str, object]:
         if path.lower().endswith(".nwb"):
             opts["nwb"] = path
 
-    if re.search(r"\bfull\s+data\b", prompt, re.I) or re.search(r"\bdata\s*:\s*full\b", prompt, re.I):
+    if re.search(r"\bfull\s+data\b", prompt, re.I) or re.search(
+        r"\bdata\s*:\s*full\b", prompt, re.I
+    ):
         opts["data"] = "full"
     elif re.search(r"\bsample\b", prompt, re.I):
         opts["data"] = "sample"
@@ -122,7 +123,7 @@ def parse_natural_language(prompt: str) -> Dict[str, object]:
     return opts
 
 
-def try_llm_extract(prompt: str) -> Optional[Dict[str, object]]:
+def try_llm_extract(prompt: str) -> Optional[dict[str, object]]:
     """Use an LLM (OpenAI) to extract structured options. Returns None if unavailable."""
     api_key = os.environ.get("OPENAI_API_KEY", "").strip()
     if not api_key:
@@ -158,10 +159,18 @@ def try_llm_extract(prompt: str) -> Optional[Dict[str, object]]:
         if not isinstance(data, dict):
             return None
         # Normalize expected keys
-        out: Dict[str, object] = {}
+        out: dict[str, object] = {}
         for key in [
-            "nwb", "data", "ontology", "overwrite", "sample_limit", "max_bytes",
-            "stats_inline_limit", "out_dir", "linkml", "offline",
+            "nwb",
+            "data",
+            "ontology",
+            "overwrite",
+            "sample_limit",
+            "max_bytes",
+            "stats_inline_limit",
+            "out_dir",
+            "linkml",
+            "offline",
         ]:
             out[key] = data.get(key)
         return out
@@ -169,7 +178,7 @@ def try_llm_extract(prompt: str) -> Optional[Dict[str, object]]:
         return None
 
 
-def try_ollama_extract(prompt: str) -> Optional[Dict[str, object]]:
+def try_ollama_extract(prompt: str) -> Optional[dict[str, object]]:
     """Use local Ollama to extract structured options. Returns None if unavailable."""
     model = os.environ.get("OLLAMA_MODEL", "llama3.2:3b").strip()
     url = os.environ.get("OLLAMA_ENDPOINT", "http://127.0.0.1:11434/api/chat").strip()
@@ -190,7 +199,9 @@ def try_ollama_extract(prompt: str) -> Optional[Dict[str, object]]:
         "options": {"temperature": 0},
     }
     data = json.dumps(payload).encode("utf-8")
-    req = _urlreq.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
+    req = _urlreq.Request(
+        url, data=data, headers={"Content-Type": "application/json"}, method="POST"
+    )
     try:
         with _urlreq.urlopen(req, timeout=30) as resp:
             body = resp.read().decode("utf-8", errors="ignore")
@@ -214,10 +225,18 @@ def try_ollama_extract(prompt: str) -> Optional[Dict[str, object]]:
             obj = json.loads(s)
             if not isinstance(obj, dict):
                 return None
-            out: Dict[str, object] = {}
+            out: dict[str, object] = {}
             for key in [
-                "nwb", "data", "ontology", "overwrite", "sample_limit", "max_bytes",
-                "stats_inline_limit", "out_dir", "linkml", "offline",
+                "nwb",
+                "data",
+                "ontology",
+                "overwrite",
+                "sample_limit",
+                "max_bytes",
+                "stats_inline_limit",
+                "out_dir",
+                "linkml",
+                "offline",
             ]:
                 out[key] = obj.get(key)
             return out
@@ -240,7 +259,7 @@ def ollama_chat_response(prompt: str) -> Optional[str]:
                 "content": (
                     "You are a friendly CLI assistant for an NWB evaluation agent. "
                     "Be concise, helpful, and conversational. Prefer actionable guidance that works inside this project. "
-                    "CRITICAL: When suggesting how to run checks, FIRST suggest the chat command: /run \"/path/file.nwb\". "
+                    'CRITICAL: When suggesting how to run checks, FIRST suggest the chat command: /run "/path/file.nwb". '
                     f"If you give a CLI example, ALWAYS use: {py_path} {script_path} (no placeholders), and mention that it will prompt for the NWB path. "
                     "Never show placeholders like <your_nwb_file_path>. Use quoted example paths if needed. "
                     "Suggest /help, /status, /set as appropriate."
@@ -252,7 +271,9 @@ def ollama_chat_response(prompt: str) -> Optional[str]:
     }
     try:
         data = json.dumps(payload).encode("utf-8")
-        req = _urlreq.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
+        req = _urlreq.Request(
+            url, data=data, headers={"Content-Type": "application/json"}, method="POST"
+        )
         with _urlreq.urlopen(req, timeout=30) as resp:
             body = resp.read().decode("utf-8", errors="ignore")
             j = json.loads(body)
@@ -283,7 +304,7 @@ def openai_chat_response(prompt: str) -> Optional[str]:
         sys_prompt = (
             "You are a friendly CLI assistant for an NWB evaluation agent. "
             "Be concise, helpful, and conversational. Prefer actionable guidance that works inside this project. "
-            "CRITICAL: When suggesting how to run checks, FIRST suggest the chat command: /run \"/path/file.nwb\". "
+            'CRITICAL: When suggesting how to run checks, FIRST suggest the chat command: /run "/path/file.nwb". '
             f"If you give a CLI example, ALWAYS use: {py_path} {script_path} (no placeholders), and mention that it will prompt for the NWB path. "
             "Never show placeholders like <your_nwb_file_path>. Use quoted example paths if needed. "
             "Suggest /help, /status, /set as appropriate."
@@ -315,7 +336,8 @@ def llm_summarize_context(text: str) -> Optional[str]:
     )
     user_msg = (
         "Summarize the following context into a detailed report for a non-expert user. "
-        "Prefer short sentences and bullets. Do not include raw stack traces.\n\n" + text
+        "Prefer short sentences and bullets. Do not include raw stack traces.\n\n"
+        + text
     )
 
     # Try Ollama first
@@ -332,7 +354,9 @@ def llm_summarize_context(text: str) -> Optional[str]:
     }
     try:
         data = json.dumps(payload).encode("utf-8")
-        req = _urlreq.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
+        req = _urlreq.Request(
+            url, data=data, headers={"Content-Type": "application/json"}, method="POST"
+        )
         with _urlreq.urlopen(req, timeout=45) as resp:
             body = resp.read().decode("utf-8", errors="ignore")
             j = json.loads(body)
@@ -351,6 +375,7 @@ def llm_summarize_context(text: str) -> Optional[str]:
     if api_key:
         try:
             import openai  # type: ignore
+
             openai.api_key = api_key
             resp = openai.ChatCompletion.create(
                 model=os.environ.get("OPENAI_MODEL", "gpt-3.5-turbo"),
@@ -374,14 +399,28 @@ def llm_summarize_context(text: str) -> Optional[str]:
 def local_summarize_context(text: str) -> str:
     """Fallback detailed summary without LLM."""
     lines = text.splitlines()
-    decision = next((l.split(":", 1)[-1].strip() for l in lines if l.startswith("Decision:")), None)
-    counts = next((l.split(":", 1)[-1].strip() for l in lines if l.startswith("Inspector counts:")), None)
+    decision = next(
+        (
+            line.split(":", 1)[-1].strip()
+            for line in lines
+            if line.startswith("Decision:")
+        ),
+        None,
+    )
+    counts = next(
+        (
+            line.split(":", 1)[-1].strip()
+            for line in lines
+            if line.startswith("Inspector counts:")
+        ),
+        None,
+    )
     # Data outputs block
     artifacts = []
     try:
         if "Data outputs:" in lines:
             idx = lines.index("Data outputs:")
-            for ln in lines[idx+1: idx+6]:
+            for ln in lines[idx + 1 : idx + 6]:
                 if ln.strip().startswith("-"):
                     artifacts.append(ln.strip().lstrip("- "))
                 else:
@@ -397,7 +436,13 @@ def local_summarize_context(text: str) -> str:
     except Exception:
         pass
     # Heuristic for notable messages
-    notable = [ln for ln in report if any(k in ln for k in ("CRITICAL", "ERROR", "BEST_PRACTICE", "WARNING", "PYNWB"))]
+    notable = [
+        ln
+        for ln in report
+        if any(
+            k in ln for k in ("CRITICAL", "ERROR", "BEST_PRACTICE", "WARNING", "PYNWB")
+        )
+    ]
     if not notable:
         notable = report[:20]
 
@@ -422,13 +467,14 @@ def chat_loop() -> None:
     ensure_paths()
     # Stylized banner
     BOLD = "\033[1m"
-    DIM = "\033[2m"
     RESET = "\033[0m"
     BLUE = "\033[34m"
     GREEN = "\033[32m"
     YELLOW = "\033[33m"
     CYAN = "\033[36m"
-    print(f"{BOLD}{BLUE}NWB Agent{RESET} — chat interface. Type {BOLD}/help{RESET} for commands; {BOLD}quit{RESET} to exit.")
+    print(
+        f"{BOLD}{BLUE}NWB Agent{RESET} — chat interface. Type {BOLD}/help{RESET} for commands; {BOLD}quit{RESET} to exit."
+    )
 
     # Conversation context and defaults
     defaults = {
@@ -441,7 +487,9 @@ def chat_loop() -> None:
         "stats_inline_limit": None,
         "linkml": False,
         "offline": False,
-        "cache_dir": str((REPO_ROOT / "evaluation_agent_final" / ".nwb_linkml_cache").resolve()),
+        "cache_dir": str(
+            (REPO_ROOT / "evaluation_agent_final" / ".nwb_linkml_cache").resolve()
+        ),
     }
     last_args: Optional[argparse.Namespace] = None
 
@@ -450,7 +498,11 @@ def chat_loop() -> None:
             out_dir = Path(args.out_dir)
             stem = Path(str(args.nwb)).expanduser().resolve().stem
             # Find most recent data TTL for this stem
-            ttl_candidates = sorted(out_dir.glob(f"{stem}.data*.ttl"), key=lambda p: p.stat().st_mtime, reverse=True)
+            ttl_candidates = sorted(
+                out_dir.glob(f"{stem}.data*.ttl"),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )
             if ttl_candidates:
                 ttl = ttl_candidates[0]
                 html = ttl.with_suffix(".html")
@@ -459,15 +511,25 @@ def chat_loop() -> None:
                 triples = ttl.with_suffix(".triples.txt")
                 print(f"{GREEN}Outputs:{RESET}")
                 print(f" - TTL: {ttl}")
-                if jsonld.exists(): print(f" - JSON-LD: {jsonld}")
-                if nt.exists(): print(f" - N-Triples: {nt}")
-                if triples.exists(): print(f" - triples.txt: {triples}")
-                if html.exists(): print(f" - KG HTML: {html}")
+                if jsonld.exists():
+                    print(f" - JSON-LD: {jsonld}")
+                if nt.exists():
+                    print(f" - N-Triples: {nt}")
+                if triples.exists():
+                    print(f" - triples.txt: {triples}")
+                if html.exists():
+                    print(f" - KG HTML: {html}")
             else:
-                print(f"{YELLOW}No TTL found in {out_dir} for {stem}. Check logs above.{RESET}")
+                print(
+                    f"{YELLOW}No TTL found in {out_dir} for {stem}. Check logs above.{RESET}"
+                )
 
             # Find and summarize latest context file
-            ctx_candidates = sorted(out_dir.glob(f"{stem}_context*.txt"), key=lambda p: p.stat().st_mtime, reverse=True)
+            ctx_candidates = sorted(
+                out_dir.glob(f"{stem}_context*.txt"),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )
             if ctx_candidates:
                 ctx = ctx_candidates[0]
                 try:
@@ -491,13 +553,21 @@ def chat_loop() -> None:
 
                     # Offer concise summary
                     try:
-                        want = input("Show summary of context? [n=skip, c=concise, d=detailed]: ").strip().lower()
+                        want = (
+                            input(
+                                "Show summary of context? [n=skip, c=concise, d=detailed]: "
+                            )
+                            .strip()
+                            .lower()
+                        )
                     except Exception:
                         want = "n"
                     if want in {"c", "y", "yes"}:
                         print("Concise Summary:")
                         if decision:
-                            tag = GREEN if decision.upper().startswith("PASS") else YELLOW
+                            tag = (
+                                GREEN if decision.upper().startswith("PASS") else YELLOW
+                            )
                             print(f" {tag}Decision:{RESET} {decision}")
                         if counts:
                             print(f" Counts: {counts}")
@@ -508,7 +578,9 @@ def chat_loop() -> None:
                                 print(f"  - KG HTML: {html}")
                     elif want == "d":
                         print("Detailed Summary:")
-                        summary = llm_summarize_context(text) or local_summarize_context(text)
+                        summary = llm_summarize_context(
+                            text
+                        ) or local_summarize_context(text)
                         print(summary)
                 except Exception:
                     pass
@@ -558,14 +630,15 @@ def chat_loop() -> None:
 
         # Commands
         if prompt.startswith("/help"):
-            print("Commands:\n"
-                  " /help                 Show this help\n"
-                  " /status               Show defaults and last run\n"
-                  " /set k=v              Set a default (e.g., /set data=sample)\n"
-                  " /run \"/path.nwb\"    Run with current defaults and this NWB\n"
-                  " /repeat               Re-run the last invocation\n"
-                  " /examples             Show example prompts\n"
-                  )
+            print(
+                "Commands:\n"
+                " /help                 Show this help\n"
+                " /status               Show defaults and last run\n"
+                " /set k=v              Set a default (e.g., /set data=sample)\n"
+                ' /run "/path.nwb"    Run with current defaults and this NWB\n'
+                " /repeat               Re-run the last invocation\n"
+                " /examples             Show example prompts\n"
+            )
             continue
         if prompt.startswith("/status"):
             show_status()
@@ -574,11 +647,13 @@ def chat_loop() -> None:
             parse_set(prompt)
             continue
         if prompt.startswith("/examples"):
-            print("Examples:\n"
-                  " process \"/data/sample.nwb\" with sample data and full ontology overwrite\n"
-                  " set data to full, then run \"/data/file.nwb\"\n"
-                  " /set out_dir=./results_fast\n"
-                  " /run \"/abs/path/to/file with spaces.nwb\"\n")
+            print(
+                "Examples:\n"
+                ' process "/data/sample.nwb" with sample data and full ontology overwrite\n'
+                ' set data to full, then run "/data/file.nwb"\n'
+                " /set out_dir=./results_fast\n"
+                ' /run "/abs/path/to/file with spaces.nwb"\n'
+            )
             continue
         if prompt.startswith("/repeat"):
             if last_args is None:
@@ -592,7 +667,7 @@ def chat_loop() -> None:
         if prompt.startswith("/run"):
             m = re.search(r"\"([^\"]+\.nwb)\"|\s(\S+\.nwb)\b", prompt)
             if not m:
-                print("Usage: /run \"/abs/path/file.nwb\"")
+                print('Usage: /run "/abs/path/file.nwb"')
                 continue
             nwb_path = (m.group(1) or m.group(2)).strip()
             args = argparse.Namespace(
@@ -623,9 +698,9 @@ def chat_loop() -> None:
             continue
 
         # If the user just pasted a path, treat as run
-        if prompt.endswith('.nwb') and Path(prompt.strip('"\'')).expanduser().exists():
+        if prompt.endswith(".nwb") and Path(prompt.strip("\"'")).expanduser().exists():
             args = argparse.Namespace(
-                nwb=prompt.strip('"\''),
+                nwb=prompt.strip("\"'"),
                 out_dir=defaults["out_dir"],
                 overwrite=bool(defaults["overwrite"]),
                 data=defaults["data"],
@@ -658,10 +733,12 @@ def chat_loop() -> None:
             if reply:
                 print(reply)
                 # Also hint actionable next steps
-                print("Hint: use /run \"/path/file.nwb\" to start, or /help for commands.")
+                print(
+                    'Hint: use /run "/path/file.nwb" to start, or /help for commands.'
+                )
                 continue
             # Fallback minimal guidance
-            print("I can run NWB evaluations. Try: /run \"/abs/path/file.nwb\" or /help.")
+            print('I can run NWB evaluations. Try: /run "/abs/path/file.nwb" or /help.')
             continue
         # If we got partial options but no nwb, try regex fallback to pick a path; otherwise just update defaults
         if "nwb" not in opts:
@@ -670,31 +747,61 @@ def chat_loop() -> None:
                 opts["nwb"] = rx_opts["nwb"]
             else:
                 # Treat as preference update
-                provided_keys = {k for k, v in opts.items() if v not in (None, False, "")}
-                option_keys = {"data", "ontology", "overwrite", "sample_limit", "max_bytes", "stats_inline_limit", "out_dir", "linkml", "offline"}
+                provided_keys = {
+                    k for k, v in opts.items() if v not in (None, False, "")
+                }
+                option_keys = {
+                    "data",
+                    "ontology",
+                    "overwrite",
+                    "sample_limit",
+                    "max_bytes",
+                    "stats_inline_limit",
+                    "out_dir",
+                    "linkml",
+                    "offline",
+                }
                 if provided_keys.intersection(option_keys):
                     for k in option_keys:
                         if k in opts and opts[k] not in (None, ""):
                             if k in {"overwrite", "linkml", "offline"}:
                                 defaults[k] = bool(opts[k])
-                            elif k in {"sample_limit", "max_bytes", "stats_inline_limit"}:
-                                try:
-                                    defaults[k] = int(opts[k]) if opts[k] is not None else None
-                                except Exception:
-                                    pass
+                            elif k in {
+                                "sample_limit",
+                                "max_bytes",
+                                "stats_inline_limit",
+                            }:
+                                with contextlib.suppress(Exception):
+                                    defaults[k] = (
+                                        int(opts[k]) if opts[k] is not None else None
+                                    )
                             else:
                                 defaults[k] = opts[k]
                     print(f"{GREEN}Updated defaults.{RESET}")
                     show_status()
                     continue
                 # Otherwise just friendly reply
-                reply = ollama_chat_response(prompt) or openai_chat_response(prompt) or "I can run NWB evaluations. Try: /run \"/abs/path/file.nwb\" or /help."
+                reply = (
+                    ollama_chat_response(prompt)
+                    or openai_chat_response(prompt)
+                    or 'I can run NWB evaluations. Try: /run "/abs/path/file.nwb" or /help.'
+                )
                 print(reply)
                 continue
 
         # If only options were provided, update defaults and confirm
         provided_keys = {k for k, v in opts.items() if v not in (None, False, "")}
-        option_keys = {"data", "ontology", "overwrite", "sample_limit", "max_bytes", "stats_inline_limit", "out_dir", "linkml", "offline"}
+        option_keys = {
+            "data",
+            "ontology",
+            "overwrite",
+            "sample_limit",
+            "max_bytes",
+            "stats_inline_limit",
+            "out_dir",
+            "linkml",
+            "offline",
+        }
         if "nwb" not in opts and provided_keys.intersection(option_keys):
             # Apply to defaults
             for k in option_keys:
@@ -702,10 +809,8 @@ def chat_loop() -> None:
                     if k in {"overwrite", "linkml", "offline"}:
                         defaults[k] = bool(opts[k])
                     elif k in {"sample_limit", "max_bytes", "stats_inline_limit"}:
-                        try:
+                        with contextlib.suppress(Exception):
                             defaults[k] = int(opts[k]) if opts[k] is not None else None
-                        except Exception:
-                            pass
                     else:
                         defaults[k] = opts[k]
             print(f"{GREEN}Updated defaults.{RESET}")
@@ -713,7 +818,9 @@ def chat_loop() -> None:
             continue
 
         if "nwb" not in opts:
-            print("Please include a path to an .nwb file in quotes or as a token, or use /run.")
+            print(
+                "Please include a path to an .nwb file in quotes or as a token, or use /run."
+            )
             continue
 
         # Merge with defaults
@@ -724,7 +831,9 @@ def chat_loop() -> None:
             "data": opts.get("data") or defaults["data"],
             "sample_limit": opts.get("sample_limit", defaults["sample_limit"]),
             "max_bytes": opts.get("max_bytes", defaults["max_bytes"]),
-            "stats_inline_limit": opts.get("stats_inline_limit", defaults["stats_inline_limit"]),
+            "stats_inline_limit": opts.get(
+                "stats_inline_limit", defaults["stats_inline_limit"]
+            ),
             "ontology": opts.get("ontology") or defaults["ontology"],
             "linkml": bool(opts.get("linkml", defaults["linkml"])),
             "offline": bool(opts.get("offline", defaults["offline"])),
@@ -759,16 +868,28 @@ def main() -> None:
 
     prun = sub.add_parser("run", help="Run once with explicit arguments")
     prun.add_argument("nwb", type=str, help="Path to NWB file")
-    prun.add_argument("--out-dir", type=str, default=str((REPO_ROOT / "evaluation_agent_final" / "results").resolve()))
+    prun.add_argument(
+        "--out-dir",
+        type=str,
+        default=str((REPO_ROOT / "evaluation_agent_final" / "results").resolve()),
+    )
     prun.add_argument("--overwrite", action="store_true")
-    prun.add_argument("--data", choices=["none", "stats", "sample", "full"], default="stats")
+    prun.add_argument(
+        "--data", choices=["none", "stats", "sample", "full"], default="stats"
+    )
     prun.add_argument("--sample-limit", type=int, default=None)
     prun.add_argument("--max-bytes", type=int, default=None)
     prun.add_argument("--stats-inline-limit", type=int, default=None)
     prun.add_argument("--ontology", choices=["none", "full"], default="none")
     prun.add_argument("--linkml", action="store_true")
     prun.add_argument("--offline", action="store_true")
-    prun.add_argument("--cache-dir", type=str, default=str((REPO_ROOT / "evaluation_agent_final" / ".nwb_linkml_cache").resolve()))
+    prun.add_argument(
+        "--cache-dir",
+        type=str,
+        default=str(
+            (REPO_ROOT / "evaluation_agent_final" / ".nwb_linkml_cache").resolve()
+        ),
+    )
 
     sub.add_parser("chat", help="Interactive natural-language mode")
 
@@ -781,5 +902,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-

@@ -53,16 +53,21 @@ class TestComponentClass:
 
 ### What NOT to Do
 
-❌ **Don't create mock implementations that make tests pass** ❌ **Don't test
-mock objects instead of real functionality** ❌ **Don't write tests that pass
-without real implementation** ❌ **Don't use extensive mocking to avoid testing
-real interfaces**
+❌ **Don't create mock implementations that make tests pass**
+❌ **Don't test mock objects instead of real functionality** 
+❌ **Don't write tests that pass without real implementation** 
+❌ **Don't use extensive mocking to avoid testing real interfaces**
+❌ **Don't use unused function arguments without underscore prefix**
+❌ **Don't ignore pre-commit failures in test files**
 
 ### What TO Do
 
-✅ **Write tests that expect real component interfaces** ✅ **Use pytest.skipif
-to skip tests until implementation exists** ✅ **Define clear expected behavior
-through test assertions** ✅ **Let tests drive the design of your components**
+✅ **Write tests that expect real component interfaces** 
+✅ **Use pytest.skipif to skip tests until implementation exists** 
+✅ **Define clear expected behavior through test assertions** 
+✅ **Let tests drive the design of your components**
+✅ **Follow pre-commit standards for test code quality**
+✅ **Prefix unused test parameters with underscore**
 
 ## Resource-Based Test Clustering
 
@@ -324,6 +329,67 @@ def test_with_mocked_llm():
 def test_with_local_model():
     """Test with small local model."""
     pass
+```
+
+### 6. Follow Pre-commit Standards in Tests
+
+```python
+# ✅ GOOD - Prefix unused parameters with underscore
+@pytest.mark.unit
+def test_my_feature(_config, items):
+    """Test function where config parameter is unused."""
+    assert len(items) > 0
+
+# ✅ GOOD - Test functions with unused **kwargs
+def test_tool_function(**_kwargs):
+    """Test function that accepts any kwargs but doesn't use them."""
+    return {"result": "test"}
+
+# ✅ GOOD - MCP tool test functions
+async def test_mcp_tool(param1: str, _server=None):
+    """Test MCP tool where server parameter is unused."""
+    return {"result": param1}
+
+# ✅ GOOD - pytest collection function
+def pytest_collection_modifyitems(_config, items):
+    """Modify test collection - config parameter unused."""
+    for item in items:
+        # Process items
+        pass
+```
+
+### 7. Handle Imports in Test Files
+
+```python
+# ✅ GOOD - Remove unused imports or add noqa
+try:
+    from my_module import ComponentClass
+    COMPONENT_AVAILABLE = True
+except ImportError:
+    ComponentClass = None
+    COMPONENT_AVAILABLE = False
+
+# ✅ GOOD - Keep imports needed for testing with noqa
+try:
+    import datalad  # noqa: F401
+    DATALAD_AVAILABLE = True
+except ImportError:
+    DATALAD_AVAILABLE = False
+```
+
+### 8. Run Pre-commit Before Test Development
+
+Always ensure your test files pass pre-commit checks:
+
+```bash
+# Before writing tests
+pixi run pre-commit
+
+# After writing tests
+pixi run pre-commit
+
+# Fix any issues and run again
+pixi run pre-commit
 ```
 
 ## Error Handling in Tests

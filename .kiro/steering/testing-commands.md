@@ -39,14 +39,30 @@ pixi run pytest -m "frontier_api" --no-cov
 # During development - run fast tests frequently
 pixi run pytest -m "unit" --no-cov -x
 
-# Before committing - run unit and integration tests
-pixi run pytest -m "unit or integration" --no-cov
+# Before committing - run quality checks and tests
+pixi run pre-commit                                    # Quality checks first
+pixi run pytest -m "unit or integration" --no-cov     # Then tests
 
 # CI/CD pipeline - exclude expensive tests
 pixi run pytest -m "not (cheap_api or frontier_api or large_model_extended)" --no-cov
 
 # Full test suite (expensive, use sparingly)
 pixi run pytest --no-cov
+```
+
+### Pre-commit Integration
+
+```bash
+# Essential workflow - run before every commit
+pixi run pre-commit
+
+# If pre-commit fails, fix issues and run again
+pixi run format      # Fix formatting issues
+pixi run lint        # Check remaining linting issues
+pixi run pre-commit  # Verify all issues resolved
+
+# Combined quality and testing workflow
+pixi run pre-commit && pixi run pytest -m "unit" --no-cov
 ```
 
 ### Specific Test Categories
