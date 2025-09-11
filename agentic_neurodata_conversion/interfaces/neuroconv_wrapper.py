@@ -13,6 +13,27 @@ from typing import Any, Optional, Union
 logger = logging.getLogger(__name__)
 
 
+class MissingDependencyError(Exception):
+    """Raised when a critical dependency is missing."""
+
+    def __init__(self, dependency: str, functionality: str):
+        super().__init__(
+            f"Cannot perform {functionality} without '{dependency}'. "
+            f"This dependency is required for NWB conversion. "
+            f"Install with: pixi add {dependency}"
+        )
+
+
+def _check_neuroconv_available():
+    """Check that neuroconv is available."""
+    try:
+        import neuroconv  # noqa: F401
+    except ImportError as e:
+        raise MissingDependencyError(
+            "neuroconv", "neuroscience data conversion to NWB"
+        ) from e
+
+
 class NeuroConvInterface:
     """
     Wrapper interface for NeuroConv functionality.
@@ -23,27 +44,10 @@ class NeuroConvInterface:
 
     def __init__(self):
         """Initialize NeuroConv interface."""
+        # Check critical dependencies at initialization
+        _check_neuroconv_available()
         self._available_interfaces = None
-        self._initialized = False
-
-    def initialize(self) -> bool:
-        """
-        Initialize NeuroConv dependencies.
-
-        Returns:
-            bool: True if initialization successful, False otherwise
-        """
-        try:
-            # Import NeuroConv when needed to avoid hard dependency
-            import neuroconv  # noqa: F401
-
-            self._initialized = True
-            logger.info("NeuroConv interface initialized successfully")
-            return True
-        except ImportError as e:
-            logger.warning(f"NeuroConv not available: {e}")
-            self._initialized = False
-            return False
+        logger.info("NeuroConv interface initialized successfully")
 
     def detect_data_interfaces(
         self, data_path: Union[str, Path]
@@ -57,8 +61,7 @@ class NeuroConvInterface:
         Returns:
             List of detected interfaces with metadata
         """
-        if not self._initialized and not self.initialize():
-            return []
+        # neuroconv should be available due to dependency check in __init__
 
         data_path = Path(data_path)
         detected_interfaces = []
@@ -113,8 +116,6 @@ class NeuroConvInterface:
         Returns:
             Dictionary containing generated script and execution info
         """
-        if not self._initialized and not self.initialize():
-            return {"status": "error", "message": "NeuroConv not available"}
 
         try:
             # Generate conversion script template
@@ -146,8 +147,6 @@ class NeuroConvInterface:
         Returns:
             Conversion execution results
         """
-        if not self._initialized and not self.initialize():
-            return {"status": "error", "message": "NeuroConv not available"}
 
         try:
             # Execute conversion script
@@ -245,8 +244,6 @@ class NeuroConvInterface:
         Returns:
             List of available interface names
         """
-        if not self._initialized and not self.initialize():
-            return []
 
         if self._available_interfaces is None:
             try:

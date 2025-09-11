@@ -18,7 +18,6 @@ pip = "*"
 hdf5 = ">=1.12.0"
 numpy = ">=1.24.0"
 scipy = ">=1.10.0"
-pandas = ">=2.0.0"
 
 # HTTP and async dependencies
 httpx = ">=0.24.0"
@@ -28,6 +27,8 @@ uvicorn = ">=0.20.0"
 git = "*"
 make = "*"
 rdflib = ">=7.1.4,<8"
+pandas = ">=2.3.2,<3"
+pynwb = ">=3.1.2,<4"
 
 [pypi-dependencies]
 # Install the package itself in editable mode

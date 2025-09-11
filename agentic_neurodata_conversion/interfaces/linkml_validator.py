@@ -12,6 +12,27 @@ from typing import Any, Optional, Union
 logger = logging.getLogger(__name__)
 
 
+class MissingDependencyError(Exception):
+    """Raised when a critical dependency is missing."""
+
+    def __init__(self, dependency: str, functionality: str):
+        super().__init__(
+            f"Cannot perform {functionality} without '{dependency}'. "
+            f"This dependency is required for schema validation. "
+            f"Install with: pixi add {dependency}"
+        )
+
+
+def _check_linkml_available():
+    """Check that linkml and linkml-runtime are available."""
+    try:
+        import linkml  # noqa: F401
+        import linkml_runtime  # noqa: F401
+    except ImportError as e:
+        missing_dep = "linkml" if "linkml" in str(e) else "linkml-runtime"
+        raise MissingDependencyError(missing_dep, "metadata schema validation") from e
+
+
 class LinkMLValidatorInterface:
     """
     Wrapper interface for LinkML validation functionality.
@@ -22,28 +43,10 @@ class LinkMLValidatorInterface:
 
     def __init__(self):
         """Initialize LinkML validator interface."""
-        self._initialized = False
+        # Check critical dependencies at initialization
+        _check_linkml_available()
         self._loaded_schemas = {}
-
-    def initialize(self) -> bool:
-        """
-        Initialize LinkML dependencies.
-
-        Returns:
-            bool: True if initialization successful, False otherwise
-        """
-        try:
-            # Import LinkML when needed to avoid hard dependency
-            import linkml  # noqa: F401
-            import linkml_runtime  # noqa: F401
-
-            self._initialized = True
-            logger.info("LinkML validator interface initialized successfully")
-            return True
-        except ImportError as e:
-            logger.warning(f"LinkML not available: {e}")
-            self._initialized = False
-            return False
+        logger.info("LinkML validator interface initialized successfully")
 
     def load_schema(
         self, schema_path: Union[str, Path], schema_name: Optional[str] = None
@@ -58,8 +61,6 @@ class LinkMLValidatorInterface:
         Returns:
             Schema loading results
         """
-        if not self._initialized and not self.initialize():
-            return {"status": "error", "message": "LinkML not available"}
 
         schema_path = Path(schema_path)
 
@@ -111,8 +112,6 @@ class LinkMLValidatorInterface:
         Returns:
             Validation results with errors and warnings
         """
-        if not self._initialized and not self.initialize():
-            return {"status": "error", "message": "LinkML not available"}
 
         if schema_name not in self._loaded_schemas:
             return {"status": "error", "message": f"Schema not loaded: {schema_name}"}
@@ -158,8 +157,6 @@ class LinkMLValidatorInterface:
         Returns:
             Validation results for metadata
         """
-        if not self._initialized and not self.initialize():
-            return {"status": "error", "message": "LinkML not available"}
 
         try:
             # Load appropriate schema if not already loaded

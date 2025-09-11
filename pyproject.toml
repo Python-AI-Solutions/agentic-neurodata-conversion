@@ -59,6 +59,7 @@ dependencies = [
 
     # Knowledge graph and validation
     "linkml>=1.5.0",
+    "linkml-runtime>=1.5.0",
     "rdflib>=7.0.0",
 
     # Utilities
