@@ -1,0 +1,162 @@
+# Docker Compose configuration for Agentic Neurodata Conversion
+# Supports development, testing, and production environments
+
+version: "3.8"
+
+services:
+  # Main MCP server service
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: agentic-mcp-server
+    ports:
+      - "${MCP_SERVER_PORT:-8000}:8000"
+      - "${MCP_DEBUG_PORT:-8001}:8001"
+    environment:
+      - AGENTIC_CONVERTER_ENV=${AGENTIC_CONVERTER_ENV:-development}
+      - AGENTIC_CONVERTER_CONFIG_FILE=/app/config/${CONFIG_FILE:-default.json}
+      - AGENTIC_CONVERTER_LOG_LEVEL=${LOG_LEVEL:-DEBUG}
+      - AGENTIC_CONVERTER_DATA_DIR=/app/data
+      - AGENTIC_CONVERTER_TEMP_DIR=/app/temp
+      - AGENTIC_CONVERTER_HTTP__HOST=0.0.0.0
+      - AGENTIC_CONVERTER_HTTP__PORT=8000
+    volumes:
+      - ./data:/app/data
+      - ./temp:/app/temp
+      - ./logs:/app/logs
+      - ./config:/app/config:ro
+      # Development: mount source code for hot reload
+      - ./agentic_neurodata_conversion:/app/agentic_neurodata_conversion
+      - ./examples:/app/examples
+      - ./tests:/app/tests
+    networks:
+      - agentic-network
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "pixi",
+          "run",
+          "python",
+          "-c",
+          "import requests; requests.get('http://localhost:8000/health',
+          timeout=5)",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # HTTP adapter service (alternative interface)
+  http-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: agentic-http-server
+    ports:
+      - "${HTTP_SERVER_PORT:-8080}:8000"
+    environment:
+      - AGENTIC_CONVERTER_ENV=${AGENTIC_CONVERTER_ENV:-development}
+      - AGENTIC_CONVERTER_CONFIG_FILE=/app/config/${CONFIG_FILE:-default.json}
+      - AGENTIC_CONVERTER_LOG_LEVEL=${LOG_LEVEL:-DEBUG}
+      - AGENTIC_CONVERTER_HTTP__HOST=0.0.0.0
+      - AGENTIC_CONVERTER_HTTP__PORT=8000
+    volumes:
+      - ./data:/app/data
+      - ./temp:/app/temp
+      - ./logs:/app/logs
+      - ./config:/app/config:ro
+      - ./agentic_neurodata_conversion:/app/agentic_neurodata_conversion
+    networks:
+      - agentic-network
+    command: ["pixi", "run", "python", "scripts/run_http_server.py"]
+    restart: unless-stopped
+    profiles:
+      - http
+
+  # Redis for caching and session management (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: agentic-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - agentic-network
+    restart: unless-stopped
+    profiles:
+      - cache
+
+  # PostgreSQL for persistent storage (optional)
+  postgres:
+    image: postgres:15-alpine
+    container_name: agentic-postgres
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-agentic_converter}
+      - POSTGRES_USER=${POSTGRES_USER:-agentic}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-agentic_password}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/sql:/docker-entrypoint-initdb.d:ro
+    networks:
+      - agentic-network
+    restart: unless-stopped
+    profiles:
+      - database
+
+  # Testing service
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: testing
+    container_name: agentic-test-runner
+    environment:
+      - AGENTIC_CONVERTER_ENV=test
+      - AGENTIC_CONVERTER_CONFIG_FILE=/app/config/testing.json
+      - AGENTIC_CONVERTER_LOG_LEVEL=DEBUG
+    volumes:
+      - ./tests:/app/tests
+      - ./agentic_neurodata_conversion:/app/agentic_neurodata_conversion
+      - ./test-results:/app/test-results
+    networks:
+      - agentic-network
+    profiles:
+      - test
+    command: ["pixi", "run", "test-ci"]
+
+  # Documentation service
+  docs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: agentic-docs
+    ports:
+      - "${DOCS_PORT:-8002}:8000"
+    volumes:
+      - ./docs:/app/docs
+      - ./agentic_neurodata_conversion:/app/agentic_neurodata_conversion
+    networks:
+      - agentic-network
+    profiles:
+      - docs
+    command: ["pixi", "run", "docs"]
+
+networks:
+  agentic-network:
+    driver: bridge
+    name: agentic-network
+
+volumes:
+  redis-data:
+    name: agentic-redis-data
+  postgres-data:
+    name: agentic-postgres-data
