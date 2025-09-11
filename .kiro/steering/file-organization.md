@@ -11,12 +11,14 @@ inclusion: always
 ## Proper Locations
 
 ### Tests
+
 - `tests/unit/` - Unit tests
-- `tests/integration/` - Integration tests  
+- `tests/integration/` - Integration tests
 - `tests/e2e/` - End-to-end tests
 - `tests/fixtures/` - Test utilities
 
 ### Scripts
+
 - `scripts/` - Development scripts
 - `scripts/temp/` - Temporary/throwaway scripts
 - `scripts/debug/` - Debug utilities
@@ -25,14 +27,16 @@ inclusion: always
 ## Examples
 
 ### ❌ Wrong - Root Directory
+
 ```
 project_root/
 ├── test_something.py          # NEVER
-├── debug_script.py            # NEVER  
+├── debug_script.py            # NEVER
 └── temp_verification.py       # NEVER
 ```
 
 ### ✅ Correct - Organized
+
 ```
 project_root/
 ├── tests/unit/test_component.py
@@ -52,7 +56,7 @@ mkdir -p scripts/{temp,debug,utils}
 ## Decision Guide
 
 - **Is it a test?** → `tests/` directory
-- **Is it a script?** → `scripts/` directory  
+- **Is it a script?** → `scripts/` directory
 - **Is it temporary?** → `scripts/temp/`
 - **Is it for debugging?** → `scripts/debug/`
 

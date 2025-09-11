@@ -172,7 +172,8 @@ def _create_test_dataset(base_path: Path) -> None:
     metadata_dir = base_path / "metadata"
     metadata_dir.mkdir()
 
-    (metadata_dir / "session_info.json").write_text("""
+    (metadata_dir / "session_info.json").write_text(
+        """
     {
         "subject_id": "test_mouse_001",
         "session_id": "integration_test_session",
@@ -199,9 +200,11 @@ def _create_test_dataset(base_path: Path) -> None:
             "humidity": 45
         }
     }
-    """)
+    """
+    )
 
-    (metadata_dir / "experiment_protocol.yaml").write_text("""
+    (metadata_dir / "experiment_protocol.yaml").write_text(
+        """
     protocol:
       name: integration_test_protocol
       version: 1.0
@@ -229,13 +232,15 @@ def _create_test_dataset(base_path: Path) -> None:
       - name: events
         type: experimental_events
         sampling_rate: 1000
-    """)
+    """
+    )
 
     # Configuration files
     config_dir = base_path / "config"
     config_dir.mkdir()
 
-    (config_dir / "acquisition_settings.ini").write_text("""
+    (config_dir / "acquisition_settings.ini").write_text(
+        """
     [Acquisition]
     SamplingRate=30000
     Channels=4
@@ -250,7 +255,8 @@ def _create_test_dataset(base_path: Path) -> None:
     Format=binary
     Compression=none
     ChunkSize=1000000
-    """)
+    """
+    )
 
     # Analysis results (simulated)
     analysis_dir = base_path / "analysis"

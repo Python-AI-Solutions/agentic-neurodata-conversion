@@ -133,6 +133,7 @@ ls -la *.md *.toml *.py
    ```
 
 2. **Task Definition**: Define common tasks in `pixi.toml`:
+
    ```toml
    [tool.pixi.tasks]
    test = "pytest tests/"

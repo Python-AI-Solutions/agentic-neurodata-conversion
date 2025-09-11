@@ -414,7 +414,7 @@ if __name__ == "__main__":
         cache_data = {"metadata": metadata, "files_map": files_map}
 
         cache_str = json.dumps(cache_data, sort_keys=True)
-        return hashlib.md5(cache_str.encode()).hexdigest()
+        return hashlib.sha256(cache_str.encode()).hexdigest()
 
     async def _execute_conversion(self, task: dict[str, Any]) -> dict[str, Any]:
         """

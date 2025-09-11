@@ -137,6 +137,7 @@ To create custom workflows based on these templates:
    - `_execute_conversion()`: Specialized conversion logic
 
 3. **Add new configuration parameters**:
+
    ```python
    @dataclass
    class CustomConfig(ConversionConfig):

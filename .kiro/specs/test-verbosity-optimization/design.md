@@ -2,7 +2,10 @@
 
 ## Overview
 
-This design optimizes the test suite verbosity configuration to provide minimal output by default while preserving full debugging capabilities when needed. The solution involves modifying pytest configuration defaults and restructuring pixi task commands to use appropriate verbosity levels for different use cases.
+This design optimizes the test suite verbosity configuration to provide minimal
+output by default while preserving full debugging capabilities when needed. The
+solution involves modifying pytest configuration defaults and restructuring pixi
+task commands to use appropriate verbosity levels for different use cases.
 
 ## Architecture
 
@@ -27,6 +30,7 @@ This design optimizes the test suite verbosity configuration to provide minimal 
 ### Pytest Configuration Updates
 
 **Default Settings (pyproject.toml)**
+
 ```toml
 [tool.pytest.ini_options]
 addopts = [
@@ -39,6 +43,7 @@ addopts = [
 ```
 
 **Verbosity Control**
+
 - Default: Quiet mode with minimal output
 - Debug mode: Full verbosity with detailed tracebacks
 - Coverage mode: Balanced output for reporting
@@ -46,6 +51,7 @@ addopts = [
 ### Pixi Task Restructuring
 
 **Default Tasks (Minimal Output)**
+
 ```bash
 test = "pytest tests/ -q"
 test-unit = "pytest tests/unit/ -q -m unit --no-cov"
@@ -54,6 +60,7 @@ test-fast = "pytest tests/ -q -m 'not slow and not requires_llm and not requires
 ```
 
 **Debug Tasks (Verbose Output)**
+
 ```bash
 test-debug = "pytest tests/ -v -s --tb=long --pdb --no-cov"
 test-verbose = "pytest tests/ -v --tb=short"
@@ -61,6 +68,7 @@ test-detailed = "pytest tests/ -vv --tb=long"
 ```
 
 **Specialized Tasks**
+
 ```bash
 test-summary = "pytest tests/ -q --tb=no"  # Minimal for agents
 test-ci = "pytest tests/ -q --tb=line"     # CI-friendly
@@ -72,6 +80,7 @@ test-dev = "pytest tests/ -v"              # Developer default
 ### Output Format Specifications
 
 **Minimal Output Format**
+
 ```
 ================================ test session starts ================================
 collected 45 items
@@ -83,6 +92,7 @@ tests/integration ..........                                               [100%
 ```
 
 **Failure Output Format**
+
 ```
 ================================ test session starts ================================
 collected 45 items
@@ -99,6 +109,7 @@ tests/unit/test_example.py::test_function FAILED                    [100%]
 ### Configuration Schema
 
 **Verbosity Levels**
+
 - Level 0 (Default): Summary only, minimal failures
 - Level 1 (-v): Standard pytest verbose
 - Level 2 (-vv): Extra verbose with detailed info
@@ -109,12 +120,14 @@ tests/unit/test_example.py::test_function FAILED                    [100%]
 ### Failure Reporting Strategy
 
 **Default Behavior**
+
 - Show only essential failure information
 - Preserve test names and basic error messages
 - Minimize stack trace noise
 - Maintain parseable output format
 
 **Debug Escalation**
+
 - Easy transition to verbose mode
 - Preserve all diagnostic information
 - Support interactive debugging
@@ -123,6 +136,7 @@ tests/unit/test_example.py::test_function FAILED                    [100%]
 ### Warning Management
 
 **Default Suppression**
+
 - Hide deprecation warnings by default
 - Suppress third-party library warnings
 - Preserve critical error messages
@@ -133,12 +147,14 @@ tests/unit/test_example.py::test_function FAILED                    [100%]
 ### Validation Approach
 
 **Output Format Testing**
+
 - Verify minimal output format consistency
 - Test verbosity flag behavior
 - Validate backward compatibility
 - Ensure CI/CD integration works
 
 **Performance Testing**
+
 - Measure token consumption reduction
 - Validate execution time impact
 - Test with various test suite sizes
@@ -147,6 +163,7 @@ tests/unit/test_example.py::test_function FAILED                    [100%]
 ### Compatibility Testing
 
 **Existing Workflow Validation**
+
 - Test all current pixi tasks
 - Verify coverage reporting works
 - Validate CI/CD pipeline compatibility
@@ -155,16 +172,19 @@ tests/unit/test_example.py::test_function FAILED                    [100%]
 ## Implementation Phases
 
 ### Phase 1: Core Configuration
+
 - Update pyproject.toml pytest settings
 - Modify default pixi task verbosity
 - Preserve essential functionality
 
 ### Phase 2: Task Restructuring
+
 - Create specialized task variants
 - Add debug-specific commands
 - Implement verbosity escalation paths
 
 ### Phase 3: Documentation and Migration
+
 - Update testing guide documentation
 - Provide migration guidance
 - Add usage examples for different scenarios
@@ -172,16 +192,19 @@ tests/unit/test_example.py::test_function FAILED                    [100%]
 ## Benefits
 
 ### Token Efficiency
+
 - Reduced output volume for automated agents
 - Faster test result processing
 - Improved agent performance in test-driven workflows
 
 ### Developer Experience
+
 - Cleaner default output for quick feedback
 - Easy access to verbose information when needed
 - Preserved debugging capabilities
 
 ### CI/CD Optimization
+
 - Faster pipeline execution
 - Cleaner build logs
 - Maintained reporting functionality

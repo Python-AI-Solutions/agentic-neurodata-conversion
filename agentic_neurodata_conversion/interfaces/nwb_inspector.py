@@ -310,12 +310,14 @@ class NWBInspectorInterface:
         message_html = []
         for msg in inspection_results.get("messages", []):
             severity = msg.get("severity", "info")
-            message_html.append(f"""
+            message_html.append(
+                f"""
                 <div class="message {severity}">
                     <strong>[{severity.upper()}]</strong> {msg.get("message", "")}
                     <br><small>Check: {msg.get("check_function_name", "unknown")}</small>
                 </div>
-            """)
+            """
+            )
 
         summary = inspection_results.get("summary", {})
 

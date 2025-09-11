@@ -497,7 +497,7 @@ class TestSessionManagementParity:
         for key in ["session_id", "status", "current_step", "progress"]:
             assert key in mcp_status
             assert key in http_status
-            assert type(mcp_status[key]) is type(http_status[key])
+            assert isinstance(mcp_status[key], type(http_status[key]))
 
 
 # ============================================================================
