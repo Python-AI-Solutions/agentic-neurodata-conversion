@@ -35,6 +35,9 @@
 
 
 
+
+
+
   - Implement Open Ephys metadata extraction methods
   - Create SpikeGLX metadata extraction functionality
   - Add Neuralynx and Blackrock format support
