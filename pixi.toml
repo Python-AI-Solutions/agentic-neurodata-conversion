@@ -145,6 +145,11 @@ test-verbose = "pytest tests/ -v --no-cov"
 test-debug = "pytest tests/ -v -s --tb=long --pdb --no-cov"
 test-detailed = "pytest tests/ -vv --tb=long --no-cov"
 
+# Specialized minimal tasks for automated execution
+test-summary = "pytest tests/ -q --tb=no --no-header --disable-warnings --no-cov"
+test-agent = "pytest tests/ -q --tb=no --no-header --disable-warnings --no-summary --no-cov"
+test-ci = "pytest tests/ -q --tb=line --no-header --no-cov"
+
 # Server tasks
 server = "python -m agentic_neurodata_conversion.mcp_server"
 server-dev = "python -m agentic_neurodata_conversion.mcp_server --reload --debug"
