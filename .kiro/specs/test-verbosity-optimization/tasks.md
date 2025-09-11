@@ -18,7 +18,7 @@
   - Implement test-detailed task with -vv for maximum verbosity
   - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
-- [ ] 4. Add specialized minimal tasks for automated execution
+- [x] 4. Add specialized minimal tasks for automated execution
   - Create test-summary task with --tb=no for absolute minimal output
   - Add test-agent task optimized for automated agent consumption
   - Implement test-ci task with line-level tracebacks for CI/CD
