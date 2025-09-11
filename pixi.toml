@@ -1,15 +1,181 @@
 [project]
-authors = ["leej3 <johnleenimh@gmail.com>"]
-channels = ["conda-forge"]
-name = "hello-world"
-platforms = ["osx-arm64"]
+name = "agentic-neurodata-conversion"
 version = "0.1.0"
+description = "Multi-agent system for converting neuroscience data to NWB format using MCP server architecture"
+authors = ["Agentic Neurodata Conversion Team <support@pythonaisolutions.com>"]
+channels = ["conda-forge", "pyviz", "pytorch"]
+platforms = ["linux-64", "osx-arm64"]
 
-[tasks]
+[system-requirements]
+libc = { family="glibc", version="2.17" }
 
+# Base dependencies from conda-forge
 [dependencies]
-python = ">=3.13.5,<3.14"
+python = ">=3.12,<3.14"
+pip = "*"
+
+# System dependencies for neuroscience tools
+hdf5 = ">=1.12.0"
+numpy = ">=1.24.0"
+scipy = ">=1.10.0"
+pandas = ">=2.0.0"
+
+# HTTP and async dependencies
+httpx = ">=0.24.0"
+uvicorn = ">=0.20.0"
+
+# Development tools
+git = "*"
+make = "*"
 
 [pypi-dependencies]
-datalad = ">=1.2.1, <2"
-datalad-deprecated = ">=0.3.0, <0.4"
+# Install the package itself in editable mode
+agentic-neurodata-conversion = { path = ".", editable = true }
+
+# Core Python dependencies
+pydantic = ">=2.0.0"
+pydantic-settings = ">=2.0.0"
+fastapi = ">=0.100.0"
+aiofiles = ">=23.0.0"
+
+# Neuroscience specific packages
+neuroconv = ">=0.4.0"
+pynwb = ">=2.5.0"
+nwbinspector = ">=0.4.0"
+
+# Knowledge graph and validation
+linkml = ">=1.5.0"
+rdflib = ">=7.0.0"
+
+# CLI and utilities
+click = ">=8.0.0"
+rich = ">=13.0.0"
+typer = ">=0.9.0"
+python-dotenv = ">=1.0.0"
+
+# Development environment
+[feature.dev.dependencies]
+# Testing framework
+pytest = ">=7.0.0"
+pytest-asyncio = ">=0.21.0"
+pytest-cov = ">=4.0.0"
+pytest-mock = ">=3.10.0"
+pytest-xdist = ">=3.0.0"
+
+# Code quality tools
+ruff = ">=0.1.0"
+mypy = ">=1.5.0"
+pre-commit = ">=3.0.0"
+
+# Development utilities
+ipython = ">=8.0.0"
+jupyter = ">=1.0.0"
+notebook = ">=7.0.0"
+datalad = ">=0.9.3,<2"
+
+# Documentation environment
+[feature.docs.dependencies]
+mkdocs = ">=1.5.0"
+mkdocs-material = ">=9.0.0"
+mkdocstrings = ">=0.22.0"
+
+# Production environment (minimal dependencies)
+[feature.prod.dependencies]
+# Only essential runtime dependencies
+
+# Testing environment
+[feature.test.dependencies]
+pytest = ">=7.0.0"
+pytest-asyncio = ">=0.21.0"
+pytest-cov = ">=4.0.0"
+pytest-mock = ">=3.10.0"
+pytest-xdist = ">=3.0.0"
+
+# Environment definitions
+[environments]
+default = { features = ["dev"], solve-group = "default" }
+dev = { features = ["dev"], solve-group = "default" }
+test = { features = ["test"], solve-group = "test" }
+docs = { features = ["docs"], solve-group = "docs" }
+prod = { features = ["prod"], solve-group = "prod" }
+
+# Task definitions
+[tasks]
+
+# Setup and installation tasks
+setup-hooks = "pre-commit install"
+
+# Development tasks
+dev = "python -m agentic_neurodata_conversion.mcp_server --reload --debug"
+shell = "python"
+notebook = "jupyter notebook"
+
+# Code quality tasks
+lint = "ruff check agentic_neurodata_conversion/ tests/ examples/"
+lint-fix = "ruff check --fix agentic_neurodata_conversion/ tests/ examples/"
+format = "ruff format agentic_neurodata_conversion/ tests/ examples/"
+format-check = "ruff format --check agentic_neurodata_conversion/ tests/ examples/"
+type-check = "mypy agentic_neurodata_conversion/"
+quality = { depends-on = ["lint", "format-check", "type-check"] }
+
+# Testing tasks
+test = "pytest tests/ -v --no-cov"
+test-unit = "pytest tests/unit/ -v -m unit --no-cov"
+test-integration = "pytest tests/integration/ -v -m integration --no-cov"
+test-e2e = "pytest tests/e2e/ -v -m e2e --no-cov"
+test-fast = "pytest tests/ -v -m 'not slow and not requires_llm and not requires_datasets' --no-cov"
+test-slow = "pytest tests/ -v -m slow --no-cov"
+test-cov = "pytest tests/ -v --cov=agentic_neurodata_conversion --cov-report=html --cov-report=term-missing --cov-report=xml"
+test-cov-unit = "pytest tests/unit/ -v --cov=agentic_neurodata_conversion --cov-report=html --cov-report=term-missing"
+test-parallel = "pytest tests/ -v -n auto --no-cov"
+test-benchmark = "pytest tests/ -v --benchmark-only --no-cov"
+test-watch = "pytest-watch tests/ -- -v --no-cov"
+test-debug = "pytest tests/ -v -s --tb=long --pdb --no-cov"
+test-failed = "pytest tests/ -v --lf --no-cov"
+test-new = "pytest tests/ -v --ff --no-cov"
+
+# Server tasks
+server = "python -m agentic_neurodata_conversion.mcp_server"
+server-dev = "python -m agentic_neurodata_conversion.mcp_server --reload --debug"
+server-prod = "python -m agentic_neurodata_conversion.mcp_server --host 0.0.0.0 --port 8000"
+
+# Documentation tasks
+docs = "mkdocs serve"
+docs-build = "mkdocs build"
+docs-deploy = "mkdocs gh-deploy"
+
+# Utility tasks
+clean = """
+rm -rf build/ dist/ *.egg-info/ .coverage htmlcov/ .pytest_cache/ .mypy_cache/ .ruff_cache/ __pycache__/
+find . -type d -name __pycache__ -exec rm -rf {} +
+find . -type f -name "*.pyc" -delete
+"""
+
+# Pre-commit tasks
+pre-commit = "pre-commit run --all-files"
+pre-commit-update = "pre-commit autoupdate"
+
+# Build and release tasks
+build = "python -m build"
+check-build = { cmd = "python -m twine check dist/*", depends-on = ["build"] }
+
+# Environment info
+info = """
+echo "Pixi Environment Information:"
+echo "Python: $(python --version)"
+echo "Pip: $(pip --version)"
+echo "Platform: $(python -c 'import platform; print(platform.platform())')"
+echo "Architecture: $(python -c 'import platform; print(platform.architecture())')"
+pixi info
+"""
+
+# Example workflow tasks
+example-workflow = "python examples/python_client/workflow_example.py"
+example-simple = "python examples/python_client/simple_client.py"
+
+# Data management tasks (for future use with DataLad)
+data-init = "echo 'DataLad initialization placeholder'"
+data-get = "echo 'DataLad data retrieval placeholder'"
+data-status = "echo 'DataLad status check placeholder'"
+
+# Activation scripts removed to avoid warnings

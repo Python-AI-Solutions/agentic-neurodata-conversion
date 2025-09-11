@@ -1,8 +1,10 @@
 # Implementation Plan
 
 - [ ] 1. Create knowledge graph foundation and data models
-  - Implement `KnowledgeGraph` class in `agentic_neurodata_conversion/knowledge_graph/graph.py`
-  - Create entity classes (Dataset, Session, Subject, Device, Lab, Protocol) with RDF mapping
+  - Implement `KnowledgeGraph` class in
+    `agentic_neurodata_conversion/knowledge_graph/graph.py`
+  - Create entity classes (Dataset, Session, Subject, Device, Lab, Protocol)
+    with RDF mapping
   - Add relationship definitions and semantic property mappings
   - Implement basic graph storage and retrieval using RDFLib or similar
   - _Requirements: 1.3, 3.1_

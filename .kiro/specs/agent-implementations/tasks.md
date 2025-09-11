@@ -1,14 +1,16 @@
 # Implementation Plan
 
 - [ ] 1. Implement base agent framework
-  - Create `BaseAgent` abstract class in `agentic_neurodata_conversion/agents/base.py`
+  - Create `BaseAgent` abstract class in
+    `agentic_neurodata_conversion/agents/base.py`
   - Implement `AgentResult` dataclass with standardized result format
   - Add common error handling, logging, and metrics tracking
   - Create agent status management and execution lifecycle
   - _Requirements: 5.1, 5.2, 6.2_
 
 - [ ] 2. Create conversation agent core functionality
-  - Implement `ConversationAgent` class in `agentic_neurodata_conversion/agents/conversation.py`
+  - Implement `ConversationAgent` class in
+    `agentic_neurodata_conversion/agents/conversation.py`
   - Add dataset analysis and format detection integration
   - Create basic metadata extraction from file structures and formats
   - Implement domain knowledge application for metadata enrichment
@@ -29,7 +31,8 @@
   - _Requirements: 1.1, 1.4, 8.3_
 
 - [ ] 5. Create conversion agent foundation
-  - Implement `ConversionAgent` class in `agentic_neurodata_conversion/agents/conversion.py`
+  - Implement `ConversionAgent` class in
+    `agentic_neurodata_conversion/agents/conversion.py`
   - Add NeuroConv interface selection logic based on detected formats
   - Create script template management system
   - Implement basic script generation framework
@@ -43,7 +46,8 @@
   - _Requirements: 2.2, 2.3, 2.4, 2.5_
 
 - [ ] 7. Build evaluation agent coordination system
-  - Implement `EvaluationAgent` class in `agentic_neurodata_conversion/agents/evaluation.py`
+  - Implement `EvaluationAgent` class in
+    `agentic_neurodata_conversion/agents/evaluation.py`
   - Create coordination interfaces for validation systems
   - Add evaluation system integration and result aggregation
   - Implement knowledge graph system coordination

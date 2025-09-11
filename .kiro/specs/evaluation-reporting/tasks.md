@@ -1,8 +1,10 @@
 # Implementation Plan
 
 - [ ] 1. Create evaluation framework foundation
-  - Implement `EvaluationFramework` class in `agentic_neurodata_conversion/evaluation/framework.py`
-  - Create `EvaluationResult` and `QualityMetrics` dataclasses for structured results
+  - Implement `EvaluationFramework` class in
+    `agentic_neurodata_conversion/evaluation/framework.py`
+  - Create `EvaluationResult` and `QualityMetrics` dataclasses for structured
+    results
   - Add evaluation configuration management and customizable evaluation criteria
   - Implement basic evaluation orchestration and result aggregation
   - _Requirements: 1.1, 4.1_
@@ -15,7 +17,8 @@
   - _Requirements: 1.1, 1.2, 4.1, 4.2_
 
 - [ ] 3. Implement report generation engine
-  - Create `ReportGenerator` class in `agentic_neurodata_conversion/evaluation/reporting.py`
+  - Create `ReportGenerator` class in
+    `agentic_neurodata_conversion/evaluation/reporting.py`
   - Implement comprehensive quality report generation with structured sections
   - Add executive summary generation for technical and non-technical audiences
   - Create actionable recommendations and improvement suggestions
@@ -29,8 +32,10 @@
   - _Requirements: 1.4, 3.3, 3.4_
 
 - [ ] 5. Create interactive visualization system
-  - Implement `VisualizationGenerator` class for HTML-based interactive visualizations
-  - Create knowledge graph visualization with interactive exploration capabilities
+  - Implement `VisualizationGenerator` class for HTML-based interactive
+    visualizations
+  - Create knowledge graph visualization with interactive exploration
+    capabilities
   - Add metadata relationship visualization and entity connection mapping
   - Implement data structure visualization with hierarchical browsing
   - _Requirements: 2.1, 2.3_
