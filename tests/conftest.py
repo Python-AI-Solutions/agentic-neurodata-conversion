@@ -78,7 +78,7 @@ def pytest_configure(config):
 
 
 # Test collection configuration
-def pytest_collection_modifyitems(_config, items):
+def pytest_collection_modifyitems(items):
     """Modify test collection to add markers based on test names."""
     for item in items:
         # Add unit marker to all tests in unit/ directory
