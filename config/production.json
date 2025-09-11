@@ -1,0 +1,74 @@
+{
+  "environment": "production",
+  "debug": false,
+  "data_directory": "/var/lib/agentic-neurodata-conversion/data",
+  "temp_directory": "/tmp/agentic-neurodata-conversion",
+  "max_file_size_mb": 5000,
+  "agents": {
+    "timeout_seconds": 600,
+    "max_retries": 5,
+    "retry_delay_seconds": 2.0,
+    "max_concurrent_tasks": 10,
+    "memory_limit_mb": 4096,
+    "enable_caching": true,
+    "cache_ttl_seconds": 7200
+  },
+  "tools": {
+    "default_timeout_seconds": 300,
+    "max_concurrent_executions": 20,
+    "enable_metrics": true,
+    "metrics_retention_days": 90
+  },
+  "sessions": {
+    "max_active_sessions": 500,
+    "session_timeout_minutes": 120,
+    "cleanup_interval_minutes": 5,
+    "enable_persistence": true,
+    "persistence_path": "/var/lib/agentic-neurodata-conversion/sessions",
+    "max_session_history": 5000
+  },
+  "logging": {
+    "level": "WARNING",
+    "enable_file_logging": true,
+    "log_file_path": "/var/log/agentic-neurodata-conversion/app.log",
+    "max_log_file_size_mb": 500,
+    "log_file_backup_count": 10,
+    "enable_structured_logging": true,
+    "log_correlation_id": true
+  },
+  "security": {
+    "enable_authentication": true,
+    "api_key_header": "X-API-Key",
+    "allowed_origins": ["https://your-domain.com"],
+    "rate_limit_requests_per_minute": 1000,
+    "enable_request_validation": true,
+    "max_request_size_mb": 500,
+    "enable_cors": true
+  },
+  "performance": {
+    "enable_async_processing": true,
+    "worker_pool_size": 8,
+    "queue_max_size": 5000,
+    "enable_compression": true,
+    "cache_size_mb": 1024,
+    "enable_profiling": false,
+    "profiling_sample_rate": 0.001
+  },
+  "http": {
+    "host": "0.0.0.0",
+    "port": 8000,
+    "enable_websockets": true,
+    "enable_openapi": false,
+    "enable_metrics_endpoint": true,
+    "enable_request_logging": true,
+    "cors_allow_credentials": false
+  },
+  "mcp": {
+    "transport_type": "socket",
+    "socket_path": "/var/run/agentic-neurodata-conversion/mcp.sock",
+    "enable_heartbeat": true,
+    "heartbeat_interval_seconds": 15,
+    "max_message_size_kb": 2048,
+    "enable_message_compression": true
+  }
+}

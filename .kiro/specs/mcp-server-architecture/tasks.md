@@ -39,28 +39,28 @@
   - Implement comprehensive logging and error tracking
   - _Requirements: 1.3, 3.3, 6.1, 6.4_
 
-- [ ] 6. Create MCP adapter layer
+- [x] 6. Create MCP adapter layer
   - Implement thin MCP adapter in `agentic_neurodata_conversion/mcp_server/mcp_adapter.py`
   - Map MCP methods (list_resources, read_resource, call_tool) to core service layer
   - Add MCP protocol compliance and message handling
   - Implement stdio transport for MCP communication
   - _Requirements: 2.1, 2.2, 2.3_
 
-- [ ] 7. Implement MCP tool definitions and resource mappings
+- [x] 7. Implement MCP tool definitions and resource mappings
   - Create MCP tool definitions that call core service methods
   - Map conversion operations to MCP tool calls (dataset_analysis, conversion_orchestration, evaluate_nwb_file)
   - Implement MCP resource definitions for conversion artifacts
   - Add MCP-specific error handling and response formatting
   - _Requirements: 1.1, 1.2, 2.4_
 
-- [ ] 8. Build FastAPI HTTP adapter layer
+- [x] 8. Build FastAPI HTTP adapter layer
   - Create FastAPI adapter in `agentic_neurodata_conversion/mcp_server/http_adapter.py`
   - Implement HTTP endpoints that call the same core service methods as MCP adapter
   - Add FastAPI-specific request/response models and validation
   - Create HTTP-specific error handling and middleware
   - _Requirements: 1.2, 1.4, 7.1_
 
-- [ ] 9. Implement HTTP endpoint routing and documentation
+- [x] 9. Implement HTTP endpoint routing and documentation
   - Create conversion endpoints (/analyze, /convert, /evaluate) calling core service
   - Add pipeline orchestration endpoint for full workflow
   - Implement monitoring and health check endpoints
@@ -68,20 +68,26 @@
   - _Requirements: 1.1, 1.2, 6.1, 7.1_
 
 - [ ] 10. Add configuration and customization support
+
+
   - Implement configuration management in core service layer
   - Add environment-based configuration for both MCP and HTTP adapters
   - Create agent parameter and timeout configuration
   - Implement deployment configuration for different environments
   - _Requirements: 7.1, 7.2, 7.3, 7.4_
 
-- [ ] 11. Create contract tests for core service layer
+- [x] 11. Create contract tests for core service layer
+
+
+
   - Implement comprehensive test suite that hits core service directly
   - Create test cases for all conversion operations and workflows
   - Add agent coordination and error handling tests
   - Implement performance and load testing for core service
   - _Requirements: 6.2, 6.3, 6.4_
 
-- [ ] 12. Build integration tests for adapter parity
+
+- [x] 12. Build integration tests for adapter parity
   - Create integration tests that hit both MCP and FastAPI adapters
   - Verify that both adapters produce identical results from core service
   - Test error handling consistency between adapters
