@@ -1,20 +1,27 @@
 # Implementation Plan
 
-- [ ] 1. Implement base agent framework
+- [x] 1. Implement base agent framework
+
+
+
+
   - Create `BaseAgent` abstract class in `agentic_neurodata_conversion/agents/base.py`
   - Implement `AgentResult` dataclass with standardized result format
   - Add common error handling, logging, and metrics tracking
   - Create agent status management and execution lifecycle
   - _Requirements: 5.1, 5.2, 6.2_
 
-- [ ] 2. Create conversation agent core functionality
+- [x] 2. Create conversation agent core functionality
+
+
   - Implement `ConversationAgent` class in `agentic_neurodata_conversion/agents/conversation.py`
   - Add dataset analysis and format detection integration
   - Create basic metadata extraction from file structures and formats
   - Implement domain knowledge application for metadata enrichment
   - _Requirements: 1.1, 1.4, 7.1_
 
-- [ ] 3. Implement conversation agent question generation system
+- [-] 3. Implement conversation agent question generation system
+
   - Create missing metadata identification logic
   - Implement LLM-based question generation for missing fields
   - Add template-based fallback question generation

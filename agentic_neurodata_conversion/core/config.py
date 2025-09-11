@@ -486,3 +486,40 @@ def configure_logging(config: Optional[LoggingConfig] = None) -> None:
         )
         file_handler.setFormatter(formatter)
         logging.getLogger().addHandler(file_handler)
+
+
+# Backward compatibility aliases
+Settings = CoreConfig
+ServerConfig = CoreConfig
+DataConfig = CoreConfig
+DatabaseConfig = CoreConfig
+ExternalServicesConfig = CoreConfig
+MonitoringConfig = CoreConfig
+FeatureFlagsConfig = CoreConfig
+
+
+def get_settings() -> CoreConfig:
+    """Get settings (alias for get_config for backward compatibility)."""
+    return get_config()
+
+
+def reload_settings() -> CoreConfig:
+    """Reload settings (alias for reload_config for backward compatibility)."""
+    return reload_config()
+
+
+def validate_settings(config: CoreConfig) -> None:
+    """Validate settings (alias for _validate_config for backward compatibility)."""
+    return get_config_manager()._validate_config(config)
+
+
+# Initialize logging on module import
+try:
+    configure_logging()
+except Exception:
+    # Fallback to basic logging if configuration fails
+    logging.basicConfig(level=logging.INFO)
+
+
+# Create global settings instance
+settings = get_config()

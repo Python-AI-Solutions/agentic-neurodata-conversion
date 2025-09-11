@@ -6,519 +6,603 @@ detecting formats, and generating questions for missing information.
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Set
+import json
+import time
 from pathlib import Path
+from typing import Dict, Any, List, Optional
 
-from .base import BaseAgent, AgentCapability, AgentStatus
+from .base import BaseAgent, AgentStatus, AgentConfig
+from ..interfaces.format_detector import FormatDetector
+from ..interfaces.llm_client import LLMClient
+from ..core.domain_knowledge import DomainKnowledgeBase
 
 logger = logging.getLogger(__name__)
 
 
 class ConversationAgent(BaseAgent):
-    """
-    Agent responsible for dataset analysis and conversational metadata extraction.
+    """Agent for analyzing datasets and extracting metadata through conversation."""
     
-    This agent analyzes dataset structures, extracts available metadata,
-    detects data formats, and can generate questions to gather missing
-    information required for NWB conversion.
-    """
+    def __init__(self, config: AgentConfig):
+        """Initialize the conversation agent."""
+        super().__init__(config, "conversation")
+        self.format_detector = FormatDetector()
+        self.llm_client = LLMClient(config.llm_config) if config.use_llm else None
+        self.domain_knowledge = DomainKnowledgeBase()
+        self.session_state = {}
+        
+        logger.info(f"ConversationAgent {self.agent_id} initialized")
     
-    def __init__(self, config: Optional[Any] = None, agent_id: Optional[str] = None):
-        """
-        Initialize the conversation agent.
-        
-        Args:
-            config: Agent configuration containing LLM settings and analysis parameters.
-            agent_id: Optional agent identifier.
-        """
-        self.llm_client = None
-        self.analysis_cache: Dict[str, Any] = {}
-        self.supported_formats = [
-            "open_ephys", "spikeglx", "neuralynx", "blackrock", "intan",
-            "axon", "plexon", "tdt", "mcs", "biocam"
-        ]
-        
-        super().__init__(config, agent_id)
-    
-    def _initialize(self) -> None:
-        """Initialize conversation agent specific components."""
-        # Register capabilities
-        self.add_capability(AgentCapability.DATASET_ANALYSIS)
-        self.add_capability(AgentCapability.METADATA_EXTRACTION)
-        self.add_capability(AgentCapability.FORMAT_DETECTION)
-        self.add_capability(AgentCapability.CONVERSATION)
-        
-        # Initialize LLM client if configuration is available
-        if self.config:
-            self._initialize_llm_client()
-        
-        # Update metadata
-        self.update_metadata({
-            "supported_formats": self.supported_formats,
-            "llm_available": self.llm_client is not None,
-            "cache_size": 0
-        })
-        
-        logger.info(f"ConversationAgent {self.agent_id} initialized with {len(self.supported_formats)} supported formats")
-    
-    def _initialize_llm_client(self) -> None:
-        """
-        Initialize LLM client based on configuration.
-        
-        This method sets up the appropriate LLM client (OpenAI, Anthropic, or local)
-        based on the agent configuration.
-        """
-        try:
-            # This is a placeholder for LLM client initialization
-            # In a real implementation, this would set up the actual LLM client
-            # based on the configuration (OpenAI, Anthropic, local model, etc.)
-            
-            model_name = getattr(self.config, 'conversation_model', 'gpt-4') if self.config else 'gpt-4'
-            
-            # Placeholder LLM client setup
-            self.llm_client = {
-                "model": model_name,
-                "initialized": True,
-                "type": "placeholder"
-            }
-            
-            logger.info(f"Initialized LLM client with model: {model_name}")
-            
-        except Exception as e:
-            logger.warning(f"Failed to initialize LLM client: {e}")
-            self.llm_client = None
-    
-    def get_capabilities(self) -> Set[AgentCapability]:
-        """Get the capabilities provided by this agent."""
-        return {
-            AgentCapability.DATASET_ANALYSIS,
-            AgentCapability.METADATA_EXTRACTION,
-            AgentCapability.FORMAT_DETECTION,
-            AgentCapability.CONVERSATION
-        }
-    
-    async def process(self, task: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Process a task assigned to the conversation agent.
-        
-        Args:
-            task: Task dictionary containing task type and parameters.
-            
-        Returns:
-            Dictionary containing the processing result.
-        """
-        task_type = task.get("type")
-        
-        if task_type == "dataset_analysis":
-            return await self._analyze_dataset(task)
-        elif task_type == "metadata_extraction":
-            return await self._extract_metadata(task)
-        elif task_type == "format_detection":
-            return await self._detect_format(task)
-        elif task_type == "conversation":
-            return await self._handle_conversation(task)
-        else:
-            raise NotImplementedError(f"Task type '{task_type}' not supported by ConversationAgent")
-    
-    async def _analyze_dataset(self, task: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Analyze a dataset directory structure and contents.
-        
-        Args:
-            task: Task containing dataset_dir and optional parameters.
-            
-        Returns:
-            Dictionary containing analysis results.
-        """
-        dataset_dir = task.get("dataset_dir")
-        use_llm = task.get("use_llm", False)
-        
+    async def _validate_inputs(self, **kwargs) -> Dict[str, Any]:
+        """Validate conversation agent inputs."""
+        dataset_dir = kwargs.get('dataset_dir')
         if not dataset_dir:
-            raise ValueError("dataset_dir is required for dataset analysis")
+            raise ValueError("dataset_dir is required")
         
         dataset_path = Path(dataset_dir)
         if not dataset_path.exists():
-            raise FileNotFoundError(f"Dataset directory not found: {dataset_dir}")
+            raise ValueError(f"Dataset directory does not exist: {dataset_dir}")
         
-        # Check cache first
-        cache_key = f"analysis_{dataset_path.resolve()}"
-        if cache_key in self.analysis_cache:
-            logger.info(f"Returning cached analysis for {dataset_dir}")
-            return self.analysis_cache[cache_key]
+        return {
+            'dataset_dir': str(dataset_path.absolute()),
+            'use_llm': kwargs.get('use_llm', False),
+            'session_id': kwargs.get('session_id', 'default'),
+            'existing_metadata': kwargs.get('existing_metadata', {})
+        }
+    
+    async def _execute_internal(self, **kwargs) -> Dict[str, Any]:
+        """Execute dataset analysis and metadata extraction."""
+        dataset_dir = kwargs['dataset_dir']
+        use_llm = kwargs['use_llm']
+        session_id = kwargs['session_id']
+        existing_metadata = kwargs['existing_metadata']
         
-        try:
-            # Perform basic file system analysis
-            analysis_result = await self._perform_filesystem_analysis(dataset_path)
-            
-            # Enhance with LLM analysis if requested and available
-            if use_llm and self.llm_client:
-                llm_analysis = await self._perform_llm_analysis(dataset_path, analysis_result)
-                analysis_result.update(llm_analysis)
-            
-            # Cache the result
-            self.analysis_cache[cache_key] = analysis_result
-            self.update_metadata({"cache_size": len(self.analysis_cache)})
-            
-            return {
-                "status": "success",
-                "result": analysis_result,
-                "agent_id": self.agent_id,
-                "cached": False
+        # Step 1: Detect data formats
+        self.logger.info(f"Analyzing dataset structure: {dataset_dir}")
+        format_analysis = await self.format_detector.analyze_directory(dataset_dir)
+        
+        # Step 2: Extract basic metadata from files
+        basic_metadata = await self._extract_basic_metadata(dataset_dir, format_analysis)
+        
+        # Step 3: Apply domain knowledge
+        enriched_metadata = await self._apply_domain_knowledge(basic_metadata, format_analysis)
+        
+        # Step 4: Identify missing critical metadata
+        missing_metadata = await self._identify_missing_metadata(enriched_metadata, format_analysis)
+        
+        # Step 5: Generate questions for missing metadata (if LLM available)
+        questions = []
+        if use_llm and missing_metadata and self.llm_client:
+            questions = await self._generate_questions(missing_metadata, enriched_metadata, format_analysis)
+        
+        return {
+            'format_analysis': format_analysis,
+            'basic_metadata': basic_metadata,
+            'enriched_metadata': enriched_metadata,
+            'missing_metadata': missing_metadata,
+            'questions': questions,
+            'session_id': session_id,
+            'requires_user_input': len(missing_metadata) > 0
+        }
+    
+    async def _extract_basic_metadata(self, dataset_dir: str, format_analysis: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract basic metadata from files and directory structure."""
+        metadata = {
+            'dataset_path': dataset_dir,
+            'detected_formats': format_analysis.get('formats', []),
+            'file_count': format_analysis.get('file_count', 0),
+            'total_size': format_analysis.get('total_size', 0),
+            'directory_structure': format_analysis.get('structure', {}),
+            'timestamps': {
+                'earliest_file': format_analysis.get('earliest_timestamp'),
+                'latest_file': format_analysis.get('latest_timestamp')
             }
-            
-        except Exception as e:
-            logger.error(f"Dataset analysis failed for {dataset_dir}: {e}")
-            return {
-                "status": "error",
-                "message": str(e),
-                "agent_id": self.agent_id
-            }
-    
-    async def _perform_filesystem_analysis(self, dataset_path: Path) -> Dict[str, Any]:
-        """
-        Perform basic filesystem analysis of the dataset.
-        
-        Args:
-            dataset_path: Path to the dataset directory.
-            
-        Returns:
-            Dictionary containing filesystem analysis results.
-        """
-        analysis = {
-            "dataset_path": str(dataset_path.resolve()),
-            "total_files": 0,
-            "total_size_bytes": 0,
-            "file_extensions": {},
-            "directory_structure": {},
-            "detected_formats": [],
-            "metadata_files": [],
-            "data_files": [],
-            "potential_issues": []
         }
         
-        try:
-            # Analyze directory structure and files
-            for item in dataset_path.rglob("*"):
-                if item.is_file():
-                    analysis["total_files"] += 1
-                    
-                    try:
-                        file_size = item.stat().st_size
-                        analysis["total_size_bytes"] += file_size
-                    except (OSError, PermissionError):
-                        analysis["potential_issues"].append(f"Cannot access file: {item}")
-                        continue
-                    
-                    # Track file extensions
-                    ext = item.suffix.lower()
-                    if ext:
-                        analysis["file_extensions"][ext] = analysis["file_extensions"].get(ext, 0) + 1
-                    
-                    # Categorize files
-                    if self._is_metadata_file(item):
-                        analysis["metadata_files"].append(str(item.relative_to(dataset_path)))
-                    elif self._is_data_file(item):
-                        analysis["data_files"].append(str(item.relative_to(dataset_path)))
-            
-            # Detect potential data formats
-            analysis["detected_formats"] = self._detect_formats_from_files(analysis)
-            
-            # Build directory structure summary
-            analysis["directory_structure"] = self._build_directory_structure(dataset_path)
-            
-            logger.info(f"Filesystem analysis completed: {analysis['total_files']} files, "
-                       f"{len(analysis['detected_formats'])} formats detected")
-            
-        except Exception as e:
-            analysis["potential_issues"].append(f"Analysis error: {str(e)}")
-            logger.error(f"Filesystem analysis error: {e}")
+        # Extract metadata from specific file types
+        for format_info in format_analysis.get('formats', []):
+            format_name = format_info['format']
+            if format_name == 'open_ephys':
+                metadata.update(await self._extract_open_ephys_metadata(format_info))
+            elif format_name == 'spikeglx':
+                metadata.update(await self._extract_spikeglx_metadata(format_info))
+            # Add other format-specific extractors as needed
         
-        return analysis
+        return metadata
     
-    def _is_metadata_file(self, file_path: Path) -> bool:
-        """Check if a file is likely a metadata file."""
-        metadata_patterns = [
-            "metadata", "info", "session", "experiment", "config",
-            "settings", "params", "description", "readme"
-        ]
-        metadata_extensions = [".json", ".xml", ".yaml", ".yml", ".txt", ".md", ".ini"]
+    async def _apply_domain_knowledge(self, basic_metadata: Dict[str, Any], format_analysis: Dict[str, Any]) -> Dict[str, Any]:
+        """Apply domain knowledge to enrich metadata."""
+        enriched = basic_metadata.copy()
         
-        filename_lower = file_path.name.lower()
+        # Infer experimental type from formats and file patterns
+        detected_format_names = [f['format'] for f in basic_metadata.get('detected_formats', [])]
+        experimental_type = self.domain_knowledge.infer_experimental_type(
+            formats=detected_format_names,
+            file_patterns=format_analysis.get('file_patterns', [])
+        )
+        if experimental_type:
+            enriched['experimental_type'] = experimental_type
         
-        # Check for metadata patterns in filename
-        for pattern in metadata_patterns:
-            if pattern in filename_lower:
-                return True
+        # Infer species from directory names or file patterns
+        species = self.domain_knowledge.infer_species(
+            directory_path=basic_metadata['dataset_path'],
+            file_patterns=format_analysis.get('file_patterns', [])
+        )
+        if species:
+            enriched['species'] = species
         
-        # Check for metadata file extensions
-        return file_path.suffix.lower() in metadata_extensions
+        # Infer recording device from format
+        device_info = self.domain_knowledge.infer_device_from_format(
+            formats=detected_format_names
+        )
+        if device_info:
+            enriched['device'] = device_info
+        
+        return enriched
     
-    def _is_data_file(self, file_path: Path) -> bool:
-        """Check if a file is likely a data file."""
-        data_extensions = [
-            ".dat", ".bin", ".h5", ".hdf5", ".mat", ".npy", ".npz",
-            ".continuous", ".spikes", ".events", ".lfp", ".mda",
-            ".rhd", ".rhs", ".plx", ".nex", ".smr", ".abf"
-        ]
+    async def _identify_missing_metadata(self, metadata: Dict[str, Any], format_analysis: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Identify critical metadata that is missing."""
+        missing = []
         
-        return file_path.suffix.lower() in data_extensions
-    
-    def _detect_formats_from_files(self, analysis: Dict[str, Any]) -> List[str]:
-        """
-        Detect data formats based on file patterns and extensions.
-        
-        Args:
-            analysis: Current analysis results containing file information.
-            
-        Returns:
-            List of detected format names.
-        """
-        detected_formats = []
-        extensions = analysis.get("file_extensions", {})
-        
-        # Format detection rules
-        format_rules = {
-            "open_ephys": [".continuous", ".spikes", ".events"],
-            "spikeglx": [".bin", ".meta"],
-            "neuralynx": [".ncs", ".nev", ".ntt", ".nse"],
-            "blackrock": [".ns1", ".ns2", ".ns3", ".ns4", ".ns5", ".ns6", ".nev"],
-            "intan": [".rhd", ".rhs"],
-            "axon": [".abf", ".atf"],
-            "plexon": [".plx", ".pl2"],
-            "tdt": [".sev", ".tev"],
-            "matlab": [".mat"],
-            "hdf5": [".h5", ".hdf5"]
+        # Required NWB fields
+        required_fields = {
+            'session_description': 'A description of the experimental session',
+            'identifier': 'A unique identifier for this dataset',
+            'session_start_time': 'The start time of the recording session',
+            'experimenter': 'The person(s) who performed the experiment',
+            'lab': 'The laboratory where the experiment was conducted',
+            'institution': 'The institution where the experiment was conducted'
         }
         
-        for format_name, format_extensions in format_rules.items():
-            if any(ext in extensions for ext in format_extensions):
-                detected_formats.append(format_name)
+        for field, description in required_fields.items():
+            if field not in metadata or not metadata[field]:
+                missing.append({
+                    'field': field,
+                    'description': description,
+                    'required': True,
+                    'category': 'session_info'
+                })
         
-        return detected_formats
-    
-    def _build_directory_structure(self, dataset_path: Path, max_depth: int = 3) -> Dict[str, Any]:
-        """
-        Build a summary of the directory structure.
-        
-        Args:
-            dataset_path: Path to analyze.
-            max_depth: Maximum depth to traverse.
-            
-        Returns:
-            Dictionary representing directory structure.
-        """
-        structure = {
-            "name": dataset_path.name,
-            "type": "directory",
-            "children": []
-        }
-        
-        try:
-            if max_depth > 0:
-                for item in sorted(dataset_path.iterdir()):
-                    if item.is_dir():
-                        child_structure = self._build_directory_structure(item, max_depth - 1)
-                        structure["children"].append(child_structure)
-                    else:
-                        structure["children"].append({
-                            "name": item.name,
-                            "type": "file",
-                            "size": item.stat().st_size if item.exists() else 0
-                        })
-        except (PermissionError, OSError) as e:
-            structure["error"] = str(e)
-        
-        return structure
-    
-    async def _perform_llm_analysis(self, dataset_path: Path, basic_analysis: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Perform LLM-enhanced analysis of the dataset.
-        
-        Args:
-            dataset_path: Path to the dataset.
-            basic_analysis: Results from basic filesystem analysis.
-            
-        Returns:
-            Dictionary containing LLM analysis results.
-        """
-        # This is a placeholder for LLM analysis
-        # In a real implementation, this would use the LLM client to analyze
-        # the dataset structure and provide intelligent insights
-        
-        llm_analysis = {
-            "llm_insights": {
-                "format_confidence": {},
-                "missing_metadata": [],
-                "suggested_questions": [],
-                "conversion_readiness": "unknown"
-            },
-            "llm_model_used": self.llm_client.get("model", "unknown") if self.llm_client else None
-        }
-        
-        # Simulate LLM analysis based on detected formats
-        detected_formats = basic_analysis.get("detected_formats", [])
-        
-        for format_name in detected_formats:
-            llm_analysis["llm_insights"]["format_confidence"][format_name] = 0.8
-        
-        # Generate sample questions for missing metadata
-        if not basic_analysis.get("metadata_files"):
-            llm_analysis["llm_insights"]["missing_metadata"].extend([
-                "session_description",
-                "experimenter",
-                "institution",
-                "lab"
-            ])
-            
-            llm_analysis["llm_insights"]["suggested_questions"].extend([
-                "What is the description of this experimental session?",
-                "Who conducted this experiment?",
-                "Which institution/lab collected this data?"
-            ])
-        
-        logger.info("LLM analysis completed (placeholder implementation)")
-        return llm_analysis
-    
-    async def _extract_metadata(self, task: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Extract metadata from dataset files.
-        
-        Args:
-            task: Task containing file paths and extraction parameters.
-            
-        Returns:
-            Dictionary containing extracted metadata.
-        """
-        # Placeholder implementation for metadata extraction
-        file_paths = task.get("file_paths", [])
-        
-        extracted_metadata = {
-            "session_metadata": {},
-            "file_metadata": {},
-            "extraction_method": "filesystem_analysis"
-        }
-        
-        for file_path in file_paths:
-            path = Path(file_path)
-            if path.exists() and self._is_metadata_file(path):
-                # In a real implementation, this would parse JSON, XML, etc.
-                extracted_metadata["file_metadata"][str(path)] = {
-                    "size": path.stat().st_size,
-                    "modified": path.stat().st_mtime,
-                    "type": "metadata_file"
+        # Subject information
+        if 'subject' not in metadata:
+            missing.extend([
+                {
+                    'field': 'subject_id',
+                    'description': 'A unique identifier for the experimental subject',
+                    'required': True,
+                    'category': 'subject'
+                },
+                {
+                    'field': 'age',
+                    'description': 'Age of the subject at time of experiment',
+                    'required': False,
+                    'category': 'subject'
+                },
+                {
+                    'field': 'sex',
+                    'description': 'Sex of the subject (M/F/U)',
+                    'required': False,
+                    'category': 'subject'
                 }
+            ])
         
+        # Format-specific missing metadata
+        for format_info in format_analysis.get('formats', []):
+            format_missing = self._get_format_specific_missing_metadata(format_info, metadata)
+            missing.extend(format_missing)
+        
+        return missing
+    
+    async def _generate_questions(self, missing_metadata: List[Dict[str, Any]], 
+                                 current_metadata: Dict[str, Any], 
+                                 format_analysis: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Generate natural language questions for missing metadata."""
+        if not self.llm_client:
+            return []
+        
+        # Group missing metadata by category
+        categories = {}
+        for item in missing_metadata:
+            category = item.get('category', 'general')
+            if category not in categories:
+                categories[category] = []
+            categories[category].append(item)
+        
+        questions = []
+        
+        for category, items in categories.items():
+            # Generate contextual questions for each category
+            context = {
+                'detected_formats': [f['format'] for f in current_metadata.get('detected_formats', [])],
+                'experimental_type': current_metadata.get('experimental_type'),
+                'category': category,
+                'missing_fields': items
+            }
+            
+            category_questions = await self._generate_category_questions(context)
+            questions.extend(category_questions)
+        
+        return questions
+    
+    async def _generate_category_questions(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Generate questions for a specific category of missing metadata."""
+        prompt = self._build_question_prompt(context)
+        
+        try:
+            response = await self.llm_client.generate_completion(
+                prompt=prompt,
+                max_tokens=500,
+                temperature=0.3
+            )
+            
+            # Parse response into structured questions
+            questions = self._parse_question_response(response, context)
+            return questions
+            
+        except Exception as e:
+            self.logger.error(f"Failed to generate questions: {e}")
+            # Fallback to template-based questions
+            return self._generate_template_questions(context)
+    
+    def _build_question_prompt(self, context: Dict[str, Any]) -> str:
+        """Build prompt for question generation."""
+        return f"""
+You are helping a neuroscience researcher provide metadata for their dataset conversion to NWB format.
+
+Dataset Context:
+- Detected formats: {context['detected_formats']}
+- Experimental type: {context.get('experimental_type', 'unknown')}
+- Category: {context['category']}
+
+Missing Information:
+{chr(10).join([f"- {item['field']}: {item['description']}" for item in context['missing_fields']])}
+
+Generate clear, concise questions that a researcher can easily answer. Focus on the most critical missing information first. 
+Provide context for why each piece of information is needed.
+
+Format your response as a JSON list of questions with this structure:
+[
+  {{
+    "field": "field_name",
+    "question": "Clear question text",
+    "explanation": "Why this information is needed",
+    "priority": "high|medium|low"
+  }}
+]
+"""
+    
+    def _parse_question_response(self, response: str, context: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Parse LLM response into structured questions."""
+        try:
+            questions = json.loads(response)
+            
+            # Validate and enhance questions
+            validated_questions = []
+            for q in questions:
+                if all(key in q for key in ['field', 'question', 'explanation']):
+                    q['category'] = context['category']
+                    validated_questions.append(q)
+            
+            return validated_questions
+            
+        except (json.JSONDecodeError, KeyError) as e:
+            self.logger.warning(f"Failed to parse question response: {e}")
+            return self._generate_template_questions(context)
+    
+    def _generate_template_questions(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Generate template-based questions as fallback."""
+        questions = []
+        
+        for item in context['missing_fields']:
+            question = {
+                'field': item['field'],
+                'question': f"What is the {item['field'].replace('_', ' ')} for this experiment?",
+                'explanation': item['description'],
+                'priority': 'high' if item.get('required', False) else 'medium',
+                'category': context['category']
+            }
+            questions.append(question)
+        
+        return questions
+    
+    def _get_format_specific_missing_metadata(self, format_info: Dict[str, Any], metadata: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Get format-specific missing metadata."""
+        missing = []
+        format_name = format_info['format']
+        
+        if format_name in ['open_ephys', 'spikeglx', 'neuralynx', 'blackrock', 'intan']:
+            # Electrophysiology-specific metadata
+            if 'sampling_rate' not in metadata:
+                missing.append({
+                    'field': 'sampling_rate',
+                    'description': 'The sampling rate of the recording in Hz',
+                    'required': True,
+                    'category': 'recording'
+                })
+            
+            if 'channel_count' not in metadata:
+                missing.append({
+                    'field': 'channel_count',
+                    'description': 'Number of recording channels',
+                    'required': True,
+                    'category': 'recording'
+                })
+        
+        return missing
+    
+    async def _extract_open_ephys_metadata(self, format_info: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract Open Ephys specific metadata."""
         return {
-            "status": "success",
-            "result": extracted_metadata,
-            "agent_id": self.agent_id
+            'recording_system': 'Open Ephys',
+            'format_confidence': format_info.get('confidence', 0.0)
         }
     
-    async def _detect_format(self, task: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Detect the data format of specific files.
-        
-        Args:
-            task: Task containing file paths to analyze.
-            
-        Returns:
-            Dictionary containing format detection results.
-        """
-        file_paths = task.get("file_paths", [])
-        
-        format_results = {}
-        
-        for file_path in file_paths:
-            path = Path(file_path)
-            if path.exists():
-                # Simple format detection based on extension and filename patterns
-                detected_format = self._detect_single_file_format(path)
-                format_results[str(path)] = detected_format
-        
+    async def _extract_spikeglx_metadata(self, format_info: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract SpikeGLX specific metadata."""
         return {
-            "status": "success",
-            "result": {
-                "format_results": format_results,
-                "supported_formats": self.supported_formats
-            },
-            "agent_id": self.agent_id
+            'recording_system': 'SpikeGLX',
+            'format_confidence': format_info.get('confidence', 0.0)
         }
     
-    def _detect_single_file_format(self, file_path: Path) -> Dict[str, Any]:
-        """
-        Detect format for a single file.
-        
-        Args:
-            file_path: Path to the file to analyze.
-            
-        Returns:
-            Dictionary containing format detection result.
-        """
-        extension = file_path.suffix.lower()
-        filename = file_path.name.lower()
-        
-        # Format detection logic
-        if extension == ".continuous" or "continuous" in filename:
-            return {"format": "open_ephys", "confidence": 0.9, "type": "continuous_data"}
-        elif extension in [".bin", ".meta"] and "imec" in filename:
-            return {"format": "spikeglx", "confidence": 0.9, "type": "neural_data"}
-        elif extension in [".ncs", ".nev", ".ntt"]:
-            return {"format": "neuralynx", "confidence": 0.9, "type": "neural_data"}
-        elif extension in [".rhd", ".rhs"]:
-            return {"format": "intan", "confidence": 0.8, "type": "neural_data"}
-        elif extension == ".abf":
-            return {"format": "axon", "confidence": 0.8, "type": "patch_clamp"}
-        else:
-            return {"format": "unknown", "confidence": 0.0, "type": "unknown"}
+    def _get_processing_steps(self) -> List[str]:
+        """Get processing steps for provenance."""
+        return [
+            'format_detection',
+            'basic_metadata_extraction',
+            'domain_knowledge_application',
+            'missing_metadata_identification',
+            'question_generation'
+        ]
     
-    async def _handle_conversation(self, task: Dict[str, Any]) -> Dict[str, Any]:
+    def _get_external_services_used(self) -> List[str]:
+        """Get external services used."""
+        services = []
+        if self.llm_client:
+            services.append('llm_service')
+        return services
+    
+    async def process_user_responses(self, responses: Dict[str, Any], 
+                                   session_id: str = 'default') -> Dict[str, Any]:
         """
-        Handle conversational interactions for gathering missing metadata.
+        Process user responses to questions and validate them.
         
         Args:
-            task: Task containing conversation context and questions.
+            responses: Dictionary mapping field names to user responses
+            session_id: Session identifier for tracking
             
         Returns:
-            Dictionary containing conversation response.
+            Dictionary containing processed and validated responses
         """
-        question = task.get("question", "")
-        context = task.get("context", {})
+        processed_responses = {}
+        validation_errors = []
+        warnings = []
         
-        # Placeholder conversation handling
-        # In a real implementation, this would use the LLM to generate
-        # intelligent responses and follow-up questions
+        for field, response in responses.items():
+            try:
+                # Validate and process the response
+                validated_response = await self._validate_response(field, response)
+                processed_responses[field] = validated_response
+                
+            except ValueError as e:
+                validation_errors.append({
+                    'field': field,
+                    'error': str(e),
+                    'original_response': response
+                })
         
-        response = {
-            "answer": f"I understand you're asking about: {question}",
-            "follow_up_questions": [
-                "Could you provide more details about the experimental setup?",
-                "What type of recording equipment was used?"
-            ],
-            "metadata_suggestions": {
-                "session_description": "Please describe the experimental session",
-                "experimenter": "Who conducted this experiment?"
+        # Apply domain knowledge validation
+        domain_warnings = await self._validate_responses_with_domain_knowledge(processed_responses)
+        warnings.extend(domain_warnings)
+        
+        return {
+            'processed_responses': processed_responses,
+            'validation_errors': validation_errors,
+            'warnings': warnings,
+            'session_id': session_id,
+            'provenance': {
+                'source': 'user_provided',
+                'timestamp': time.time(),
+                'validation_method': 'conversation_agent'
             }
         }
+    
+    async def _validate_response(self, field: str, response: Any) -> Any:
+        """
+        Validate a single user response.
         
-        return {
-            "status": "success",
-            "result": response,
-            "agent_id": self.agent_id
+        Args:
+            field: The metadata field name
+            response: The user's response
+            
+        Returns:
+            Validated and potentially transformed response
+            
+        Raises:
+            ValueError: If the response is invalid
+        """
+        if response is None or (isinstance(response, str) and not response.strip()):
+            raise ValueError(f"Response for {field} cannot be empty")
+        
+        # Field-specific validation
+        if field == 'session_start_time':
+            return self._validate_datetime(response)
+        elif field == 'age':
+            return self._validate_age(response)
+        elif field == 'sex':
+            return self._validate_sex(response)
+        elif field == 'sampling_rate':
+            return self._validate_sampling_rate(response)
+        elif field == 'channel_count':
+            return self._validate_channel_count(response)
+        else:
+            # Default validation - ensure it's a non-empty string
+            return str(response).strip()
+    
+    def _validate_datetime(self, response: Any) -> str:
+        """Validate datetime response."""
+        import datetime
+        
+        if isinstance(response, str):
+            # Try to parse common datetime formats
+            formats = [
+                '%Y-%m-%d %H:%M:%S',
+                '%Y-%m-%d',
+                '%m/%d/%Y %H:%M:%S',
+                '%m/%d/%Y',
+                '%Y-%m-%dT%H:%M:%S'
+            ]
+            
+            for fmt in formats:
+                try:
+                    dt = datetime.datetime.strptime(response, fmt)
+                    return dt.isoformat()
+                except ValueError:
+                    continue
+            
+            raise ValueError(f"Invalid datetime format: {response}")
+        
+        return str(response)
+    
+    def _validate_age(self, response: Any) -> str:
+        """Validate age response."""
+        if isinstance(response, (int, float)):
+            if response < 0:
+                raise ValueError("Age cannot be negative")
+            return str(int(response)) if response == int(response) else str(response)
+        
+        if isinstance(response, str):
+            response_str = response.strip()
+            
+            # Check if it's a pure numeric string (possibly with decimal)
+            import re
+            if re.match(r'^-?\d+(?:\.\d+)?$', response_str):
+                age = float(response_str)
+                if age < 0:
+                    raise ValueError("Age cannot be negative")
+                # Return as integer string if it's a whole number
+                return str(int(age)) if age == int(age) else str(age)
+            
+            # For descriptive ages like "P30", "adult", etc., check for negative signs
+            if '-' in response_str and re.search(r'-\d', response_str):
+                raise ValueError("Age cannot be negative")
+        
+        # Return as-is for descriptive ages like "adult", "P30" etc.
+        return str(response).strip()
+    
+    def _validate_sex(self, response: Any) -> str:
+        """Validate sex response."""
+        response_str = str(response).strip().upper()
+        
+        valid_values = {
+            'M': 'M', 'MALE': 'M',
+            'F': 'F', 'FEMALE': 'F',
+            'U': 'U', 'UNKNOWN': 'U', 'OTHER': 'U'
         }
-    
-    def clear_cache(self) -> None:
-        """Clear the analysis cache."""
-        self.analysis_cache.clear()
-        self.update_metadata({"cache_size": 0})
-        logger.info(f"Cleared analysis cache for agent {self.agent_id}")
-    
-    async def shutdown(self) -> None:
-        """Shutdown the conversation agent."""
-        self.clear_cache()
         
-        if self.llm_client:
-            # In a real implementation, this would properly close LLM client connections
-            self.llm_client = None
+        if response_str in valid_values:
+            return valid_values[response_str]
         
-        await super().shutdown()
-        logger.info(f"ConversationAgent {self.agent_id} shutdown completed")
+        raise ValueError(f"Invalid sex value: {response}. Must be M/F/U or Male/Female/Unknown")
+    
+    def _validate_sampling_rate(self, response: Any) -> float:
+        """Validate sampling rate response."""
+        try:
+            rate = float(response)
+            if rate <= 0:
+                raise ValueError("Sampling rate must be positive")
+            return rate
+        except (ValueError, TypeError):
+            raise ValueError(f"Invalid sampling rate: {response}. Must be a positive number")
+    
+    def _validate_channel_count(self, response: Any) -> int:
+        """Validate channel count response."""
+        try:
+            count = int(response)
+            if count <= 0:
+                raise ValueError("Channel count must be positive")
+            return count
+        except (ValueError, TypeError):
+            raise ValueError(f"Invalid channel count: {response}. Must be a positive integer")
+    
+    async def _validate_responses_with_domain_knowledge(self, responses: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Validate responses using domain knowledge.
+        
+        Args:
+            responses: Dictionary of validated responses
+            
+        Returns:
+            List of warnings about potentially inconsistent responses
+        """
+        warnings = []
+        
+        # Check for consistency between experimental type and other metadata
+        if 'experimental_type' in responses:
+            exp_type = responses['experimental_type']
+            
+            # Check sampling rate consistency
+            if 'sampling_rate' in responses:
+                rate = float(responses['sampling_rate'])
+                if exp_type == 'electrophysiology' and rate < 1000:
+                    warnings.append({
+                        'field': 'sampling_rate',
+                        'warning': f'Sampling rate {rate} Hz seems low for electrophysiology',
+                        'suggestion': 'Typical electrophysiology sampling rates are 10-50 kHz'
+                    })
+        
+        # Check species and age consistency
+        if 'species' in responses and 'age' in responses:
+            species = responses['species'].lower()
+            age_str = str(responses['age']).lower()
+            
+            if species == 'mouse' and 'year' in age_str:
+                warnings.append({
+                    'field': 'age',
+                    'warning': 'Mouse age specified in years seems unusual',
+                    'suggestion': 'Mouse ages are typically specified in days or weeks'
+                })
+        
+        return warnings
+    
+    async def generate_follow_up_questions(self, current_responses: Dict[str, Any],
+                                         missing_metadata: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Generate follow-up questions based on current responses.
+        
+        Args:
+            current_responses: Current user responses
+            missing_metadata: Still missing metadata fields
+            
+        Returns:
+            List of follow-up questions
+        """
+        follow_up_questions = []
+        
+        # Generate context-aware follow-up questions
+        if 'experimental_type' in current_responses:
+            exp_type = current_responses['experimental_type']
+            
+            if exp_type == 'electrophysiology':
+                # Ask about electrode configuration
+                if not any(item['field'] == 'electrode_config' for item in missing_metadata):
+                    follow_up_questions.append({
+                        'field': 'electrode_config',
+                        'question': 'What type of electrodes were used in this recording?',
+                        'explanation': 'Electrode information helps with data interpretation',
+                        'priority': 'medium',
+                        'category': 'recording'
+                    })
+        
+        # Generate questions based on detected formats
+        if 'recording_system' in current_responses:
+            system = current_responses['recording_system']
+            
+            if system == 'Open Ephys':
+                follow_up_questions.append({
+                    'field': 'open_ephys_version',
+                    'question': 'What version of Open Ephys was used?',
+                    'explanation': 'Version information helps with format compatibility',
+                    'priority': 'low',
+                    'category': 'technical'
+                })
+        
+        return follow_up_questions
