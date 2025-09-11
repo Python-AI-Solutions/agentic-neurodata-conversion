@@ -557,9 +557,10 @@ class ScientificQualityEvaluator:
         issues = []
 
         # Experimental completeness
-        completeness_score, completeness_issues = (
-            self._evaluate_experimental_completeness(metadata)
-        )
+        (
+            completeness_score,
+            completeness_issues,
+        ) = self._evaluate_experimental_completeness(metadata)
         metrics["experimental_completeness"] = completeness_score
         issues.extend(completeness_issues)
 

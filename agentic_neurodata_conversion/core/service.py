@@ -399,7 +399,7 @@ class AgentManager:
         return {
             "conversion_type": "neuroconv_script_generation",
             "script_generated": True,
-            "output_path": kwargs.get("output_nwb_path", "/tmp/output.nwb"),
+            "output_path": kwargs.get("output_nwb_path", "output.nwb"),
             "conversion_successful": True,
             "file_size_mb": 256.7,
             "processing_time_seconds": 45.2,

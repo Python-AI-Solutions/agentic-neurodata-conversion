@@ -33,7 +33,7 @@
 
 CatalystNeuro builds these repos to adapt NeuroConv to each lab’s unique data
 environment.\
-` `Key components:
+``Key components:
 
 1. **Conversion Interfaces Config**\
    1. Which NeuroConv interfaces to load.

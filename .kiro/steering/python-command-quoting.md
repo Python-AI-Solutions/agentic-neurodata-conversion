@@ -6,7 +6,8 @@ inclusion: always
 
 ## Essential Rule
 
-**Always use single quotes for `python -c` commands, double quotes inside for Python strings.**
+**Always use single quotes for `python -c` commands, double quotes inside for
+Python strings.**
 
 ## Correct Pattern
 
@@ -23,6 +24,7 @@ pixi run python -c "print('Hello World')"     # Breaks with nested quotes
 ## Complex Examples
 
 ### Multi-line Code
+
 ```bash
 pixi run python -c '
 import json
@@ -35,6 +37,7 @@ print(f"Result: {result}")
 ```
 
 ### Exception Handling
+
 ```bash
 pixi run python -c '
 try:
@@ -49,13 +52,14 @@ except Exception as e:
 ## Why This Matters
 
 1. **Shell parsing** - Single quotes prevent shell interpretation
-2. **Python strings** - Double quotes inside work naturally  
+2. **Python strings** - Double quotes inside work naturally
 3. **Consistency** - Reduces confusion and errors
 4. **Portability** - Works across different shells
 
 ## When to Use Scripts Instead
 
 For complex commands, create a script:
+
 ```bash
 # Instead of complex python -c
 echo 'complex python code' > scripts/temp/my_script.py

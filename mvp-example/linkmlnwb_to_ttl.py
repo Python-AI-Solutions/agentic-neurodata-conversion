@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import argparse
 import contextlib
 from pathlib import Path

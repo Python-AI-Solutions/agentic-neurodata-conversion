@@ -29,6 +29,7 @@ make = "*"
 rdflib = ">=7.1.4,<8"
 pandas = ">=2.3.2,<3"
 pynwb = ">=3.1.2,<4"
+pbr = ">=7.0.1,<8"
 
 [pypi-dependencies]
 # Install the package itself in editable mode
@@ -168,7 +169,7 @@ find . -type f -name "*.pyc" -delete
 """
 
 # Pre-commit tasks
-pre-commit = "pre-commit run --all-files"
+pre-commit = "pre-commit run"
 pre-commit-update = "pre-commit autoupdate"
 
 # Build and release tasks

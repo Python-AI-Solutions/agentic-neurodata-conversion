@@ -75,6 +75,7 @@ example_name/
    ```
 
 3. **Use CLI Wrapper**:
+
    ```bash
    python examples/integration_patterns/cli_wrapper.py pipeline \
        /path/to/data \

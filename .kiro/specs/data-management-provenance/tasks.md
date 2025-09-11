@@ -29,12 +29,19 @@
   - _Requirements: 2.1, 2.2, 3.1, 4.1_
 
 - [ ] 4. Implement provenance recording with knowledge graph integration
-  - Add methods for recording provenance entries with enhanced confidence levels (definitive, high_evidence, human_confirmed, human_override, medium_evidence, heuristic, low_evidence, placeholder, unknown)
-  - Implement pipeline state tracking and change recording with semantic provenance representation
-  - Create artifact saving system with both DataLad versioning and RDF provenance tracking
-  - Add evidence conflict detection and human override tracking with knowledge graph queries
-  - Integrate with knowledge graph system for semantic provenance representation using PROV-O ontology
-  - Create reasoning chain tracking for decision provenance and evidence hierarchy
+  - Add methods for recording provenance entries with enhanced confidence levels
+    (definitive, high_evidence, human_confirmed, human_override,
+    medium_evidence, heuristic, low_evidence, placeholder, unknown)
+  - Implement pipeline state tracking and change recording with semantic
+    provenance representation
+  - Create artifact saving system with both DataLad versioning and RDF
+    provenance tracking
+  - Add evidence conflict detection and human override tracking with knowledge
+    graph queries
+  - Integrate with knowledge graph system for semantic provenance representation
+    using PROV-O ontology
+  - Create reasoning chain tracking for decision provenance and evidence
+    hierarchy
   - _Requirements: 2.1, 2.2, 2.3, 7.1_
   - _Integration: knowledge-graph-systems Task 3_
 
@@ -59,9 +66,12 @@
 
 - [ ] 7. Implement MCP server integration for provenance tracking
   - Create `ProvenanceIntegration` class for MCP server workflow integration
-  - Add methods for recording agent operations and decisions with enhanced confidence levels and evidence tracking
-  - Implement user input recording with evidence presentation for human override scenarios
-  - Create metadata provenance report generation showing decision chains, evidence conflicts, and confidence levels
+  - Add methods for recording agent operations and decisions with enhanced
+    confidence levels and evidence tracking
+  - Implement user input recording with evidence presentation for human override
+    scenarios
+  - Create metadata provenance report generation showing decision chains,
+    evidence conflicts, and confidence levels
   - Integrate with knowledge graph semantic provenance for complete audit trails
   - _Requirements: 7.1, 7.2, 7.3, 7.4_
   - _Integration: knowledge-graph-systems Task 3, Task 12_
@@ -82,11 +92,16 @@
   - _Requirements: 4.1, 4.2, 4.3, 4.4_
 
 - [ ] 10. Add provenance reporting and audit trail generation
-  - Implement detailed audit trail generation for all conversion operations with decision chain visualization
-  - Create metadata provenance reports showing source, confidence, evidence conflicts, and reasoning for each field
-  - Add conversion history summaries with decision tracking and human override documentation
-  - Create reproducibility documentation with complete workflow records including evidence hierarchy
-  - Generate human-readable provenance summaries with evidence quality assessment
+  - Implement detailed audit trail generation for all conversion operations with
+    decision chain visualization
+  - Create metadata provenance reports showing source, confidence, evidence
+    conflicts, and reasoning for each field
+  - Add conversion history summaries with decision tracking and human override
+    documentation
+  - Create reproducibility documentation with complete workflow records
+    including evidence hierarchy
+  - Generate human-readable provenance summaries with evidence quality
+    assessment
   - _Requirements: 2.3, 2.4, 7.3, 7.4_
   - _Integration: knowledge-graph-systems Task 8_
 

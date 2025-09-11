@@ -72,7 +72,8 @@
 
 - [x] 10. Create development tooling and scripts
   - ✅ `scripts/` directory already exists with comprehensive utilities
-  - ✅ MCP server startup scripts already implemented (`run_mcp_server.py`, `run_http_server.py`)
+  - ✅ MCP server startup scripts already implemented (`run_mcp_server.py`,
+    `run_http_server.py`)
   - ✅ Development environment setup handled by pixi configuration
   - ✅ Configuration management system already in place
   - _Requirements: 3.2_ (3.4 moved to task 13)
@@ -85,7 +86,7 @@
   - Set up documentation building infrastructure
   - _Requirements: 5.1, 5.2_
 
-- [ ] 12. Configure CI/CD pipeline and development workflows
+- [x] 12. Configure CI/CD pipeline and development workflows
   - Create `.github/workflows/` with CI pipeline configuration
   - Set up automated testing, linting, and code quality checks
   - Configure pre-commit hooks with ruff and other tools
@@ -95,7 +96,8 @@
 - [ ] 13. Create containerization and deployment configuration
   - Create Dockerfile using pixi for consistent dependency management
   - Set up docker-compose for development and testing environments
-  - Configure environment variable handling for containers (leverage existing config/docker.json)
+  - Configure environment variable handling for containers (leverage existing
+    config/docker.json)
   - Add deployment configuration templates and scripts
   - _Requirements: 3.4, 4.4_
 

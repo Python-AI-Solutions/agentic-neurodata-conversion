@@ -2,12 +2,16 @@
 
 ## Core Principle
 
-**Fail fast and fail clearly** rather than providing misleading results. When critical dependencies are missing, the system should refuse to operate rather than provide degraded functionality that could mislead users.
+**Fail fast and fail clearly** rather than providing misleading results. When
+critical dependencies are missing, the system should refuse to operate rather
+than provide degraded functionality that could mislead users.
 
 ## Critical Dependencies vs Optional Dependencies
 
 ### Critical Dependencies
-Dependencies that are **essential** for core functionality should cause **immediate failure** when missing:
+
+Dependencies that are **essential** for core functionality should cause
+**immediate failure** when missing:
 
 - `pynwb` for NWB file analysis and quality assessment
 - `h5py` for HDF5 file operations
@@ -15,6 +19,7 @@ Dependencies that are **essential** for core functionality should cause **immedi
 - Schema validation tools for compliance checking
 
 ### Optional Dependencies
+
 Only truly **optional** features should gracefully degrade:
 
 - Visualization libraries for optional charts
@@ -50,7 +55,7 @@ except ImportError:
 ```python
 class MissingDependencyError(Exception):
     """Raised when a critical dependency is missing."""
-    
+
     def __init__(self, dependency: str, install_command: str):
         super().__init__(
             f"Critical dependency '{dependency}' is missing. "
@@ -61,7 +66,8 @@ class MissingDependencyError(Exception):
 
 ## Pixi Integration
 
-Since we use pixi for dependency management, missing dependencies typically indicate:
+Since we use pixi for dependency management, missing dependencies typically
+indicate:
 
 1. **Incorrect pixi usage** - User not running commands with `pixi run`
 2. **Missing dependency declaration** - Package not declared in `pyproject.toml`
@@ -73,21 +79,21 @@ Since we use pixi for dependency management, missing dependencies typically indi
 def check_critical_dependencies():
     """Check that all critical dependencies are available."""
     missing = []
-    
+
     try:
         import pynwb
     except ImportError:
         missing.append(("pynwb", "pixi add pynwb"))
-    
+
     try:
         import h5py
     except ImportError:
         missing.append(("h5py", "pixi add h5py"))
-    
+
     if missing:
         deps = ", ".join([dep for dep, _ in missing])
         commands = "\n".join([f"  {cmd}" for _, cmd in missing])
-        
+
         raise MissingDependencyError(
             f"Critical dependencies missing: {deps}\n"
             f"Install with:\n{commands}\n"
@@ -166,7 +172,8 @@ Only use graceful degradation for truly optional features:
 - **Performance Optimizations** - Faster algorithms with slower fallbacks
 - **UI Enhancements** - Better user experience features
 
-**Never use graceful degradation for core functionality that affects correctness.**
+**Never use graceful degradation for core functionality that affects
+correctness.**
 
 ## Implementation Checklist
 
@@ -181,11 +188,13 @@ Only use graceful degradation for truly optional features:
 
 **It's better to fail clearly than to succeed misleadingly.**
 
-Users trust quality assessment results to make important decisions about their data. Providing inaccurate assessments due to missing dependencies can lead to:
+Users trust quality assessment results to make important decisions about their
+data. Providing inaccurate assessments due to missing dependencies can lead to:
 
 - Publishing low-quality data
 - Missing critical data integrity issues
 - False confidence in conversion quality
 - Wasted time debugging "good" data that's actually problematic
 
-Always choose defensive programming over graceful degradation for core functionality.
+Always choose defensive programming over graceful degradation for core
+functionality.
