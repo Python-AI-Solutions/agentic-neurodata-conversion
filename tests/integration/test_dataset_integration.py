@@ -10,24 +10,12 @@ import uuid
 
 import pytest
 
-pytest.skip(allow_module_level=True)
 # Import components to test
-try:
-    from tests.datasets.access_patterns import DatasetAccessor
-    from tests.datasets.dataset_manager import TestDatasetManager
-    from tests.datasets.repository_manager import DATALAD_AVAILABLE
-    from tests.datasets.types import DatasetFormat, DatasetType
+from tests.datasets.access_patterns import DatasetAccessor
+from tests.datasets.dataset_manager import TestDatasetManager
+from tests.datasets.types import DatasetFormat, DatasetType
 
-    COMPONENTS_AVAILABLE = True
-except ImportError:
-    # Components not implemented yet
-    COMPONENTS_AVAILABLE = False
-
-# Skip all tests if components are not implemented
-pytestmark = pytest.mark.skipif(
-    not COMPONENTS_AVAILABLE,
-    reason="Dataset infrastructure components not implemented yet",
-)
+pytest.skip(allow_module_level=True)
 
 
 @pytest.mark.integration
@@ -287,7 +275,6 @@ class TestDatasetInfrastructureIntegration:
         stats2 = accessor.get_access_stats()
         assert stats2["total_accesses"] == 2
 
-    @pytest.mark.skipif(not DATALAD_AVAILABLE, reason="DataLad not available")
     def test_datalad_integration(self, tmp_path):
         """Test integration with actual DataLad functionality."""
         manager = TestDatasetManager(str(tmp_path))

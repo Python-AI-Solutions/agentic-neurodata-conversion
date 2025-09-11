@@ -7,29 +7,10 @@ from unittest.mock import patch
 import pytest
 
 # Import components to test
-try:
-    from agentic_neurodata_conversion.evaluation.framework import EvaluationFramework
-    from agentic_neurodata_conversion.evaluation.quality_assessment import (
-        IssueCategory,
-        IssueSeverity,
-        MissingDependencyError,
-        QualityBenchmark,
-    )
-
-    COMPONENTS_AVAILABLE = True
-except ImportError:
-    # Components not implemented yet
-    EvaluationFramework = None
-    QualityBenchmark = None
-    IssueSeverity = None
-    IssueCategory = None
-    MissingDependencyError = None
-    COMPONENTS_AVAILABLE = False
-
-# Skip all tests if components are not implemented
-pytestmark = pytest.mark.skipif(
-    not COMPONENTS_AVAILABLE,
-    reason="Quality assessment integration components not implemented yet",
+from agentic_neurodata_conversion.evaluation.framework import EvaluationFramework
+from agentic_neurodata_conversion.evaluation.quality_assessment import (
+    MissingDependencyError,
+    QualityBenchmark,
 )
 
 
