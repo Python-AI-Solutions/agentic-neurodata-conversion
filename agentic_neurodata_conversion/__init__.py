@@ -32,11 +32,25 @@ from .core.exceptions import (
     ValidationError,
 )
 
+# Interface and utility imports
+from .interfaces import LinkMLValidator, NeuroConvWrapper, NWBInspector
+from .utils import FileUtils, FormatDetector, MetadataUtils
+
 __all__ = [
+    # Core functionality
     "get_config",
     "AgenticConverterError",
     "ConfigurationError",
     "ConversionError",
     "ValidationError",
+    # Interfaces
+    "NeuroConvWrapper",
+    "NWBInspector",
+    "LinkMLValidator",
+    # Utilities
+    "FileUtils",
+    "FormatDetector",
+    "MetadataUtils",
+    # Package metadata
     "__version__",
 ]
