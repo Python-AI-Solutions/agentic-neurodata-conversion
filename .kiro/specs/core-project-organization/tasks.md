@@ -1,34 +1,39 @@
 # Implementation Plan
 
-- [ ] 1. Set up basic project structure and configuration
-  - Create main package directory `agentic_neurodata_conversion/` with proper `__init__.py`
+- [x] 1. Set up basic project structure and configuration
+  - Create main package directory `agentic_neurodata_conversion/` with proper
+    `__init__.py`
   - Set up `pyproject.toml` with pixi configuration and basic dependencies
   - Create `pixi.toml` for environment management
   - Create `.env.example` template for environment configuration
   - _Requirements: 1.1, 1.4_
 
-- [-] 2. Implement core configuration system
-  - Create `agentic_neurodata_conversion/core/config.py` with pydantic-settings based configuration
-  - Implement nested configuration classes (ServerConfig, AgentConfig, DataConfig, DatabaseConfig)
+- [x] 2. Implement core configuration system
+  - Create `agentic_neurodata_conversion/core/config.py` with pydantic-settings
+    based configuration
+  - Implement nested configuration classes (ServerConfig, AgentConfig,
+    DataConfig, DatabaseConfig)
   - Add environment variable support with proper validation
   - Create global settings instance for application use
   - _Requirements: 1.4, 2.3_
 
-- [-] 3. Set up logging and exception handling infrastructure
-  - Create `agentic_neurodata_conversion/core/logging.py` with centralized logging setup
-  - Implement `agentic_neurodata_conversion/core/exceptions.py` with custom exception classes
+- [x] 3. Set up logging and exception handling infrastructure
+  - Create `agentic_neurodata_conversion/core/logging.py` with centralized
+    logging setup
+  - Implement `agentic_neurodata_conversion/core/exceptions.py` with custom
+    exception classes
   - Configure structured logging with proper formatters and handlers
   - Add logging configuration to settings system
   - _Requirements: 3.3, 5.1_
 
-- [ ] 4. Create basic MCP server foundation
+- [x] 4. Create basic MCP server foundation
   - Create `agentic_neurodata_conversion/mcp_server/` directory structure
   - Implement basic `server.py` with MCPRegistry class and tool decorator
   - Create tool registration system with @mcp.tool decorator
   - Add basic server initialization and tool execution framework
   - _Requirements: 1.2, 3.1_
 
-- [ ] 5. Implement agent directory structure and base interfaces
+- [x] 5. Implement agent directory structure and base interfaces
   - Create `agentic_neurodata_conversion/agents/` directory with `__init__.py`
   - Create `base.py` with abstract agent interface and common functionality
   - Set up agent registry system for MCP server integration
@@ -50,14 +55,16 @@
   - _Requirements: 7.1, 7.2_
 
 - [ ] 8. Set up ETL directory structure
-  - Create `etl/` directory with subdirectories for input-data, workflows, evaluation-data
+  - Create `etl/` directory with subdirectories for input-data, workflows,
+    evaluation-data
   - Add README files explaining directory purposes
   - Create basic workflow templates and data organization structure
   - Set up foundation for DataLad integration
   - _Requirements: 8.4, 9.4_
 
 - [ ] 9. Implement basic testing infrastructure
-  - Create `tests/` directory with unit/, integration/, and fixtures/ subdirectories
+  - Create `tests/` directory with unit/, integration/, and fixtures/
+    subdirectories
   - Set up pytest configuration in pyproject.toml
   - Create basic test templates for MCP server, agents, and tools
   - Add test fixtures and mock data setup
@@ -71,7 +78,8 @@
   - _Requirements: 3.2, 3.4_
 
 - [ ] 11. Set up documentation structure
-  - Create `docs/` directory with architecture/, api/, development/, examples/ subdirectories
+  - Create `docs/` directory with architecture/, api/, development/, examples/
+    subdirectories
   - Add basic documentation templates and structure
   - Create API documentation generation scripts
   - Set up documentation building infrastructure

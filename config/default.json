@@ -1,0 +1,88 @@
+{
+  "environment": "development",
+  "debug": true,
+  "data_directory": "./data",
+  "temp_directory": "./temp",
+  "max_file_size_mb": 1000,
+  "supported_formats": ["nwb", "hdf5", "mat", "csv", "json", "yaml", "pickle"],
+  "enable_format_validation": true,
+  "enable_metadata_extraction": true,
+  "agents": {
+    "timeout_seconds": 300,
+    "max_retries": 3,
+    "retry_delay_seconds": 1.0,
+    "max_concurrent_tasks": 5,
+    "memory_limit_mb": null,
+    "enable_caching": true,
+    "cache_ttl_seconds": 3600,
+    "custom_parameters": {}
+  },
+  "tools": {
+    "default_timeout_seconds": 120,
+    "max_concurrent_executions": 10,
+    "enable_metrics": true,
+    "metrics_retention_days": 30,
+    "custom_tool_paths": [],
+    "tool_parameters": {}
+  },
+  "sessions": {
+    "max_active_sessions": 100,
+    "session_timeout_minutes": 60,
+    "cleanup_interval_minutes": 10,
+    "enable_persistence": false,
+    "persistence_path": null,
+    "max_session_history": 1000
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    "enable_file_logging": false,
+    "log_file_path": null,
+    "max_log_file_size_mb": 100,
+    "log_file_backup_count": 5,
+    "enable_structured_logging": false,
+    "log_correlation_id": true
+  },
+  "security": {
+    "enable_authentication": false,
+    "api_key_header": "X-API-Key",
+    "allowed_origins": ["*"],
+    "rate_limit_requests_per_minute": 100,
+    "enable_request_validation": true,
+    "max_request_size_mb": 100,
+    "enable_cors": true
+  },
+  "performance": {
+    "enable_async_processing": true,
+    "worker_pool_size": 4,
+    "queue_max_size": 1000,
+    "enable_compression": true,
+    "cache_size_mb": 256,
+    "enable_profiling": false,
+    "profiling_sample_rate": 0.01
+  },
+  "mcp": {
+    "transport_type": "stdio",
+    "socket_path": null,
+    "host": null,
+    "port": null,
+    "enable_heartbeat": true,
+    "heartbeat_interval_seconds": 30,
+    "max_message_size_kb": 1024,
+    "enable_message_compression": false
+  },
+  "http": {
+    "host": "0.0.0.0",
+    "port": 8000,
+    "enable_websockets": true,
+    "websocket_path": "/ws",
+    "enable_openapi": true,
+    "openapi_title": "Agentic Neurodata Conversion API",
+    "openapi_version": "1.0.0",
+    "enable_metrics_endpoint": true,
+    "metrics_path": "/metrics",
+    "health_check_path": "/health",
+    "enable_request_logging": true,
+    "cors_allow_credentials": false
+  }
+}

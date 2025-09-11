@@ -15,7 +15,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Base directory - use current directory if already in nwb-conversion-project
-if [[ "$(basename $(pwd))" == "nwb-conversion-project" ]]; then
+if [[ "$(basename "$(pwd)")" == "nwb-conversion-project" ]]; then
     BASE_DIR="$(pwd)"
 else
     BASE_DIR="$(pwd)/nwb-conversion-project"
@@ -64,7 +64,7 @@ else
     print_warning "DataLad not found in pixi environment"
     echo "Installing DataLad..."
     pixi add datalad
-    
+
     if pixi run datalad --version >/dev/null 2>&1; then
         print_status "DataLad installed successfully"
     else
@@ -127,7 +127,7 @@ if [ -d "${CONVERSIONS_DIR}" ]; then
     for conversion in "${CONVERSIONS_DIR}"/*-to-nwb; do
         if [ -d "$conversion" ]; then
             conversion_name=$(basename "$conversion")
-            
+
             # Check if it's already a subdataset
             if [ ! -d "${conversion}/.datalad" ]; then
                 echo "Adding ${conversion_name} as subdataset..."

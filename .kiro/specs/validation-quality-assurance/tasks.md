@@ -1,8 +1,10 @@
 # Implementation Plan
 
 - [ ] 1. Create validation framework foundation
-  - Implement `ValidationFramework` class in `agentic_neurodata_conversion/validation/framework.py`
-  - Create `ValidationResult` and `ValidationIssue` dataclasses for structured results
+  - Implement `ValidationFramework` class in
+    `agentic_neurodata_conversion/validation/framework.py`
+  - Create `ValidationResult` and `ValidationIssue` dataclasses for structured
+    results
   - Add validation configuration management and customizable validation criteria
   - Implement validation orchestration and result aggregation system
   - _Requirements: 1.1, 3.1, 4.1_
@@ -10,7 +12,8 @@
 - [ ] 2. Build NWB Inspector integration
   - Create `NWBInspectorValidator` class wrapping NWB Inspector functionality
   - Implement schema compliance checking and best practices validation
-  - Add error categorization by severity (critical, warning, info) with remediation guidance
+  - Add error categorization by severity (critical, warning, info) with
+    remediation guidance
   - Create NWB standards and FAIR principles compliance checking
   - _Requirements: 1.1, 1.2, 1.3_
 

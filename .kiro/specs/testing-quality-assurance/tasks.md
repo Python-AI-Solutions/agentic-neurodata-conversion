@@ -1,15 +1,19 @@
 # Implementation Plan
 
-- [ ] 1. Set up comprehensive testing infrastructure
-  - Create pytest configuration in `pyproject.toml` with coverage reporting and test discovery
-  - Set up test directory structure with unit/, integration/, e2e/, and fixtures/ subdirectories
+- [x] 1. Set up comprehensive testing infrastructure
+  - Create pytest configuration in `pyproject.toml` with coverage reporting and
+    test discovery
+  - Set up test directory structure with unit/, integration/, e2e/, and
+    fixtures/ subdirectories
   - Configure test environment management with separate test configurations
   - Implement test data management and cleanup utilities
   - _Requirements: 1.1, 2.1, 3.1_
 
-- [ ] 2. Build MCP server unit testing framework
-  - Create unit tests for MCP server endpoints in `tests/unit/test_mcp_server.py`
-  - Implement test cases for tool registration and execution with various input scenarios
+- [x] 2. Build MCP server unit testing framework
+  - Create unit tests for MCP server endpoints in
+    `tests/unit/test_mcp_server.py`
+  - Implement test cases for tool registration and execution with various input
+    scenarios
   - Add tests for agent coordination and workflow orchestration
   - Create mock agent implementations for isolated MCP server testing
   - _Requirements: 1.1, 1.2_
@@ -38,7 +42,8 @@
 - [ ] 6. Set up DataLad-managed test dataset infrastructure
   - Create DataLad repository for test datasets in `tests/datasets/`
   - Implement test dataset management utilities and access patterns
-  - Add representative datasets for major neuroscience formats (Open Ephys, SpikeGLX, etc.)
+  - Add representative datasets for major neuroscience formats (Open Ephys,
+    SpikeGLX, etc.)
   - Create dataset versioning and update management for test consistency
   - _Requirements: 3.1, 3.2_
 
