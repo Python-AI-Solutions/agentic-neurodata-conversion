@@ -70,12 +70,12 @@
   - Add test fixtures and mock data setup
   - _Requirements: 8.1, 8.2_
 
-- [ ] 10. Create development tooling and scripts
-  - Create `scripts/` directory with development utilities
-  - Implement `setup_dev.py` for development environment setup
-  - Create `run_server.py` for MCP server startup with configuration options
-  - Add basic deployment utilities and containerization setup
-  - _Requirements: 3.2, 3.4_
+- [x] 10. Create development tooling and scripts
+  - ✅ `scripts/` directory already exists with comprehensive utilities
+  - ✅ MCP server startup scripts already implemented (`run_mcp_server.py`, `run_http_server.py`)
+  - ✅ Development environment setup handled by pixi configuration
+  - ✅ Configuration management system already in place
+  - _Requirements: 3.2_ (3.4 moved to task 13)
 
 - [ ] 11. Set up documentation structure
   - Create `docs/` directory with architecture/, api/, development/, examples/
@@ -93,10 +93,10 @@
   - _Requirements: 4.2, 4.3_
 
 - [ ] 13. Create containerization and deployment configuration
-  - Create Dockerfile with pixi-based Python environment
-  - Set up docker-compose for development and testing
-  - Configure environment variable handling for containers
-  - Add deployment scripts and configuration templates
+  - Create Dockerfile using pixi for consistent dependency management
+  - Set up docker-compose for development and testing environments
+  - Configure environment variable handling for containers (leverage existing config/docker.json)
+  - Add deployment configuration templates and scripts
   - _Requirements: 3.4, 4.4_
 
 - [ ] 14. Integrate all components and test basic functionality
