@@ -12,6 +12,27 @@ from typing import Any, Optional, Union
 logger = logging.getLogger(__name__)
 
 
+class MissingDependencyError(Exception):
+    """Raised when a critical dependency is missing."""
+
+    def __init__(self, dependency: str, functionality: str):
+        super().__init__(
+            f"Cannot perform {functionality} without '{dependency}'. "
+            f"This dependency is required for NWB validation. "
+            f"Install with: pixi add {dependency}"
+        )
+
+
+def _check_nwb_inspector_available():
+    """Check that nwbinspector is available."""
+    try:
+        import nwbinspector  # noqa: F401
+    except ImportError as e:
+        raise MissingDependencyError(
+            "nwbinspector", "NWB file validation and inspection"
+        ) from e
+
+
 class NWBInspectorInterface:
     """
     Wrapper interface for NWB Inspector functionality.
@@ -22,26 +43,9 @@ class NWBInspectorInterface:
 
     def __init__(self):
         """Initialize NWB Inspector interface."""
-        self._initialized = False
-
-    def initialize(self) -> bool:
-        """
-        Initialize NWB Inspector dependencies.
-
-        Returns:
-            bool: True if initialization successful, False otherwise
-        """
-        try:
-            # Import NWB Inspector when needed to avoid hard dependency
-            import nwbinspector  # noqa: F401
-
-            self._initialized = True
-            logger.info("NWB Inspector interface initialized successfully")
-            return True
-        except ImportError as e:
-            logger.warning(f"NWB Inspector not available: {e}")
-            self._initialized = False
-            return False
+        # Check critical dependencies at initialization
+        _check_nwb_inspector_available()
+        logger.info("NWB Inspector interface initialized successfully")
 
     def inspect_nwb_file(
         self, nwb_file_path: Union[str, Path], config: Optional[dict[str, Any]] = None
@@ -56,8 +60,7 @@ class NWBInspectorInterface:
         Returns:
             Inspection results with messages and severity levels
         """
-        if not self._initialized and not self.initialize():
-            return {"status": "error", "message": "NWB Inspector not available"}
+        # nwbinspector should be available due to dependency check in __init__
 
         nwb_file_path = Path(nwb_file_path)
 
@@ -115,8 +118,6 @@ class NWBInspectorInterface:
         Returns:
             Validation results with compliance status
         """
-        if not self._initialized and not self.initialize():
-            return {"status": "error", "message": "NWB Inspector not available"}
 
         try:
             inspection_results = self.inspect_nwb_file(nwb_file_path)
@@ -171,8 +172,6 @@ class NWBInspectorInterface:
         Returns:
             Report generation results
         """
-        if not self._initialized and not self.initialize():
-            return {"status": "error", "message": "NWB Inspector not available"}
 
         try:
             inspection_results = self.inspect_nwb_file(nwb_file_path)

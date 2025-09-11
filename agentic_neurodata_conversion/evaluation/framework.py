@@ -9,6 +9,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from .quality_assessment import QualityAssessmentEngine, QualityBenchmark
+
 logger = logging.getLogger(__name__)
 
 
@@ -191,6 +193,13 @@ class EvaluationFramework:
         self.logger = logging.getLogger(__name__)
         self._evaluators: dict[str, Any] = {}
         self._results_cache: dict[str, EvaluationResult] = {}
+
+        # Initialize quality assessment engine
+        self.quality_assessment_engine = QualityAssessmentEngine()
+
+        # Register default benchmark
+        default_benchmark = self.quality_assessment_engine.create_default_benchmark()
+        self.quality_assessment_engine.register_benchmark(default_benchmark)
 
     def _create_default_config(self) -> EvaluationConfig:
         """Create default evaluation configuration."""
@@ -489,3 +498,41 @@ class EvaluationFramework:
         """Update evaluation configuration."""
         self.config = config
         self.logger.info("Updated evaluation configuration")
+
+    def assess_conversion_quality(
+        self,
+        nwb_path: str | Path,
+        validation_results: dict[str, Any],
+        conversion_metadata: dict[str, Any],
+        benchmark_name: str | None = None,
+    ) -> Any:
+        """Perform comprehensive quality assessment using the quality assessment engine.
+
+        Args:
+            nwb_path: Path to the NWB file
+            validation_results: Results from validation systems
+            conversion_metadata: Metadata about the conversion
+            benchmark_name: Optional benchmark to compare against
+
+        Returns:
+            QualityAssessment object with comprehensive quality analysis
+        """
+        return self.quality_assessment_engine.assess_quality(
+            str(nwb_path), validation_results, conversion_metadata, benchmark_name
+        )
+
+    def register_quality_benchmark(self, benchmark: QualityBenchmark) -> None:
+        """Register a quality benchmark for comparison.
+
+        Args:
+            benchmark: Quality benchmark to register
+        """
+        self.quality_assessment_engine.register_benchmark(benchmark)
+
+    def list_quality_benchmarks(self) -> list[str]:
+        """List all registered quality benchmarks.
+
+        Returns:
+            List of benchmark names
+        """
+        return self.quality_assessment_engine.list_benchmarks()
