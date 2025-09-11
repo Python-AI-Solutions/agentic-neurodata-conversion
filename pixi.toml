@@ -39,6 +39,9 @@ pydantic-settings = ">=2.0.0"
 fastapi = ">=0.100.0"
 aiofiles = ">=23.0.0"
 
+# MCP (Model Context Protocol) server
+mcp = ">=1.0.0"
+
 # Neuroscience specific packages
 neuroconv = ">=0.4.0"
 pynwb = ">=2.5.0"
