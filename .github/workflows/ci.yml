@@ -1,0 +1,117 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Pixi
+        uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.13.0
+
+      - name: Install dependencies
+        run: pixi install
+
+      - name: Run pre-commit checks
+        run: pixi run pre-commit run --all-files
+
+      - name: Run unit tests
+        run:
+          pixi run pytest tests/unit/ -v --cov=agentic_neurodata_conversion
+          --cov-report=xml --cov-report=term-missing
+
+      - name: Run integration tests
+        run: pixi run pytest tests/integration/ -v
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Pixi
+        uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.13.0
+
+      - name: Install dependencies
+        run: pixi install
+
+      - name: Run ruff linting
+        run:
+          pixi run ruff check agentic_neurodata_conversion/ tests/ examples/
+          scripts/
+
+      - name: Run ruff formatting check
+        run:
+          pixi run ruff format --check agentic_neurodata_conversion/ tests/
+          examples/ scripts/
+
+      - name: Run mypy type checking
+        run: pixi run mypy agentic_neurodata_conversion/
+
+  build:
+    needs: [test, lint]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Pixi
+        uses: prefix-dev/setup-pixi@v0.8.1
+
+      - name: Install dependencies
+        run: pixi install
+
+      - name: Build package
+        run: pixi run python -m build
+
+      - name: Test installation
+        run: |
+          pixi run pip install dist/*.whl
+          pixi run python -c 'import agentic_neurodata_conversion; print("Package installed successfully")'
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: dist-${{ github.sha }}
+          path: dist/
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Pixi
+        uses: prefix-dev/setup-pixi@v0.8.1
+
+      - name: Install dependencies
+        run: pixi install
+
+      - name: Run security checks
+        run:
+          pixi run bandit -r agentic_neurodata_conversion/ -f json -o
+          bandit-report.json
+
+      - name: Upload security report
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-report-${{ github.sha }}
+          path: bandit-report.json

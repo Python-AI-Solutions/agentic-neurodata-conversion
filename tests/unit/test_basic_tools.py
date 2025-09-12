@@ -7,22 +7,12 @@ Tests the basic tools that demonstrate the MCP tool system functionality.
 import pytest
 
 # Import components to test
-try:
-    from agentic_neurodata_conversion.mcp_server.server import MCPServer
-    from agentic_neurodata_conversion.mcp_server.tools.basic_tools import (
-        echo_tool,
-        get_server_status,
-        list_registered_tools,
-        manage_pipeline_state,
-    )
-
-    BASIC_TOOLS_AVAILABLE = True
-except ImportError:
-    BASIC_TOOLS_AVAILABLE = False
-
-# Skip all tests if components are not implemented
-pytestmark = pytest.mark.skipif(
-    not BASIC_TOOLS_AVAILABLE, reason="Basic tools not implemented yet"
+from agentic_neurodata_conversion.mcp_server.server import MCPServer
+from agentic_neurodata_conversion.mcp_server.tools.basic_tools import (
+    echo_tool,
+    get_server_status,
+    list_registered_tools,
+    manage_pipeline_state,
 )
 
 

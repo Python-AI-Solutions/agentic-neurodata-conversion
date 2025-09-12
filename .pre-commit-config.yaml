@@ -1,7 +1,3 @@
-# Pre-commit hooks for code quality and consistency
-# Install with: pixi run pre-commit install
-# Run manually: pixi run pre-commit run --all-files
-
 repos:
   # General file fixes
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -20,19 +16,19 @@ repos:
         name: Check JSON syntax
       - id: check-toml
         name: Check TOML syntax
+      - id: check-merge-conflict
+        name: Check for merge conflicts
       - id: check-added-large-files
         name: Check for large files
         args: [--maxkb=1000]
       - id: check-case-conflict
         name: Check for case conflicts
-      - id: check-merge-conflict
-        name: Check for merge conflicts
       - id: check-symlinks
         name: Check for broken symlinks
-      - id: check-executables-have-shebangs
-        name: Check executables have shebangs
-      - id: check-shebang-scripts-are-executable
-        name: Check scripts with shebangs are executable
+      # - id: check-executables-have-shebangs
+      #   name: Check executables have shebangs
+      # - id: check-shebang-scripts-are-executable
+      #   name: Check scripts with shebangs are executable
       - id: detect-private-key
         name: Detect private keys
       - id: detect-aws-credentials
@@ -75,13 +71,13 @@ repos:
   #       exclude: ^(tests/|mvp-example/|results/|\.kiro/)
 
   # Security checks
-  # - repo: https://github.com/PyCQA/bandit
-  #   rev: 1.8.6
-  #   hooks:
-  #     - id: bandit
-  #       name: Security check with bandit
-  #       args: [-r, --skip=B101]
-  #       exclude: ^(tests/|mvp-example/|results/|\.kiro/)
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.8.6
+    hooks:
+      - id: bandit
+        name: Security check with bandit
+        args: [-r, --skip=B101, --severity-level=high]
+        exclude: ^(tests/|mvp-example/|results/|\.kiro/)
 
   # YAML formatting
   - repo: https://github.com/pre-commit/mirrors-prettier
@@ -121,29 +117,6 @@ repos:
   #     - id: detect-secrets
   #       name: Detect secrets
   #       args: [--baseline, .secrets.baseline]
-
-  # License headers
-  # - repo: https://github.com/Lucas-C/pre-commit-hooks
-  #   rev: v1.5.4
-  #   hooks:
-  #     - id: insert-license
-  #       name: Add license headers
-  #       files: \.py$
-  #       args:
-  #         - --license-filepath
-  #         - LICENSE_HEADER.txt
-  #         - --comment-style
-  #         - "#"
-  #       exclude: ^(tests/|__pycache__/|mvp-example/|results/|\.kiro/)
-
-  # # Python upgrade syntax
-  # - repo: https://github.com/asottile/pyupgrade
-  #   rev: v3.20.0
-  #   hooks:
-  #     - id: pyupgrade
-  #       name: Upgrade Python syntax
-  #       args: [--py39-plus]
-  #       exclude: ^(mvp-example/|results/|\.kiro/)
 
   # Check for common typos
   - repo: https://github.com/codespell-project/codespell

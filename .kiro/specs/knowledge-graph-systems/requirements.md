@@ -18,10 +18,18 @@ information can be automatically filled with high confidence.
 
 #### Acceptance Criteria
 
-1. WHEN metadata has gaps THEN the knowledge graph SHALL suggest enrichments based on strain-to-species mappings, device specifications, and experimental protocols with evidence quality assessment and conflict detection
-2. WHEN making suggestions THEN the knowledge graph SHALL provide enhanced confidence levels, complete reasoning chains, evidence hierarchy, and support for iterative refinement workflows
-3. WHEN storing relationships THEN the knowledge graph SHALL maintain entities (Dataset, Session, Subject, Device, Lab, Protocol) with semantic relationships and complete provenance using PROV-O ontology
-4. WHEN tracking provenance THEN the knowledge graph SHALL support evidence-based decision making with human override tracking, evidence conflict detection, and integration with DataLad file-level provenance
+1. WHEN metadata has gaps THEN the knowledge graph SHALL suggest enrichments
+   based on strain-to-species mappings, device specifications, and experimental
+   protocols with evidence quality assessment and conflict detection
+2. WHEN making suggestions THEN the knowledge graph SHALL provide enhanced
+   confidence levels, complete reasoning chains, evidence hierarchy, and support
+   for iterative refinement workflows
+3. WHEN storing relationships THEN the knowledge graph SHALL maintain entities
+   (Dataset, Session, Subject, Device, Lab, Protocol) with semantic
+   relationships and complete provenance using PROV-O ontology
+4. WHEN tracking provenance THEN the knowledge graph SHALL support
+   evidence-based decision making with human override tracking, evidence
+   conflict detection, and integration with DataLad file-level provenance
 
 ### Requirement 2
 

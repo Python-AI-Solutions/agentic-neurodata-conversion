@@ -8,24 +8,9 @@ from unittest.mock import Mock, patch
 import pytest
 
 # Import the actual components
-try:
-    from agentic_neurodata_conversion.data_management.repository_structure import (
-        DATALAD_AVAILABLE,
-        DataLadRepositoryManager,
-        TestDatasetManager,
-    )
-
-    COMPONENTS_AVAILABLE = True
-except ImportError:
-    DataLadRepositoryManager = None
-    TestDatasetManager = None
-    DATALAD_AVAILABLE = False
-    COMPONENTS_AVAILABLE = False
-
-# Skip all tests if components are not implemented
-pytestmark = pytest.mark.skipif(
-    not COMPONENTS_AVAILABLE,
-    reason="Repository structure components not implemented yet",
+from agentic_neurodata_conversion.data_management.repository_structure import (
+    DataLadRepositoryManager,
+    TestDatasetManager,
 )
 
 
@@ -90,7 +75,6 @@ class TestDataLadRepositoryManager:
             assert "*.json annex.largefiles=nothing" in content
             assert "*.zip annex.largefiles=anything" in content
 
-    @pytest.mark.skipif(not DATALAD_AVAILABLE, reason="DataLad not available")
     def test_datalad_initialization(self):
         """Test DataLad repository initialization."""
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -272,7 +256,6 @@ class TestTestDatasetManager:
             assert datasets[0]["name"] == "manual_dataset"
             assert datasets[0]["description"] == "No metadata available"
 
-    @pytest.mark.skipif(not DATALAD_AVAILABLE, reason="DataLad not available")
     def test_install_subdataset(self):
         """Test installing a subdataset."""
         with tempfile.TemporaryDirectory() as temp_dir:

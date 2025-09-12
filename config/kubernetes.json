@@ -1,0 +1,72 @@
+{
+  "environment": "production",
+  "debug": false,
+  "data_directory": "/data",
+  "temp_directory": "/tmp",
+  "max_file_size_mb": 10000,
+  "agents": {
+    "timeout_seconds": 900,
+    "max_retries": 5,
+    "retry_delay_seconds": 2.0,
+    "max_concurrent_tasks": 12,
+    "memory_limit_mb": 4096,
+    "enable_caching": true,
+    "cache_ttl_seconds": 10800
+  },
+  "tools": {
+    "default_timeout_seconds": 600,
+    "max_concurrent_executions": 24,
+    "enable_metrics": true,
+    "metrics_retention_days": 180
+  },
+  "sessions": {
+    "max_active_sessions": 1000,
+    "session_timeout_minutes": 180,
+    "cleanup_interval_minutes": 3,
+    "enable_persistence": false,
+    "persistence_path": null,
+    "max_session_history": 10000
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    "enable_file_logging": false,
+    "log_file_path": null,
+    "enable_structured_logging": true,
+    "log_correlation_id": true
+  },
+  "security": {
+    "enable_authentication": true,
+    "api_key_header": "X-API-Key",
+    "allowed_origins": ["https://your-domain.com"],
+    "rate_limit_requests_per_minute": 2000,
+    "enable_request_validation": true,
+    "max_request_size_mb": 1000,
+    "enable_cors": true
+  },
+  "performance": {
+    "enable_async_processing": true,
+    "worker_pool_size": 8,
+    "queue_max_size": 5000,
+    "enable_compression": true,
+    "cache_size_mb": 1024,
+    "enable_profiling": false,
+    "profiling_sample_rate": 0.0001
+  },
+  "http": {
+    "host": "0.0.0.0",
+    "port": 8000,
+    "enable_websockets": true,
+    "enable_openapi": false,
+    "enable_metrics_endpoint": true,
+    "enable_request_logging": false,
+    "cors_allow_credentials": false
+  },
+  "mcp": {
+    "transport_type": "stdio",
+    "enable_heartbeat": true,
+    "heartbeat_interval_seconds": 15,
+    "max_message_size_kb": 4096,
+    "enable_message_compression": true
+  }
+}

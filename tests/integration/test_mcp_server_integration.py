@@ -8,18 +8,9 @@ execution, and state management.
 import pytest
 
 # Import components to test
-try:
-    from agentic_neurodata_conversion.mcp_server.server import MCPServer
-
-    MCP_INTEGRATION_AVAILABLE = True
-except ImportError:
-    MCP_INTEGRATION_AVAILABLE = False
+from agentic_neurodata_conversion.mcp_server.server import MCPServer
 
 # Skip all tests if components are not implemented
-pytestmark = pytest.mark.skipif(
-    not MCP_INTEGRATION_AVAILABLE,
-    reason="MCP server integration components not implemented yet",
-)
 
 
 @pytest.fixture

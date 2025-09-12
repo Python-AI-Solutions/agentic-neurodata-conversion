@@ -10,22 +10,35 @@
   - _Requirements: 1.3, 3.1_
 
 - [ ] 2. Build metadata enrichment engine with evidence-based confidence
-  - Create `MetadataEnricher` class for automatic metadata enhancement with reasoning chain tracking
-  - Implement strain-to-species mapping with evidence quality assessment and conflict detection
-  - Add device specification lookup and protocol enrichment with cross-validation capabilities
-  - Create enrichment suggestion system with evidence hierarchy and human override support
-  - Implement iterative refinement workflows for improving low-confidence metadata over time
-  - Add evidence presentation system for human review of conflicting or uncertain enrichments
+  - Create `MetadataEnricher` class for automatic metadata enhancement with
+    reasoning chain tracking
+  - Implement strain-to-species mapping with evidence quality assessment and
+    conflict detection
+  - Add device specification lookup and protocol enrichment with
+    cross-validation capabilities
+  - Create enrichment suggestion system with evidence hierarchy and human
+    override support
+  - Implement iterative refinement workflows for improving low-confidence
+    metadata over time
+  - Add evidence presentation system for human review of conflicting or
+    uncertain enrichments
   - _Requirements: 1.1, 1.2, 1.4_
   - _Integration: data-management-provenance Task 4, Task 7_
 
 - [ ] 3. Implement semantic provenance tracking with DataLad integration
-  - Create `SemanticProvenanceTracker` class using PROV-O ontology for decision chains and evidence hierarchy
-  - Add enhanced confidence levels (definitive, high_evidence, human_confirmed, human_override, cross_validated, heuristic_strong, medium_evidence, conflicting_evidence, low_evidence, placeholder, unknown)
-  - Implement evidence conflict detection with SPARQL queries and human override tracking with evidence presentation records
-  - Create reasoning chain representation in RDF with evidence quality assessment and source attribution
-  - Integrate with DataLad conversion repositories for file-level provenance correlation
-  - Add decision provenance queries for transparency and reproducibility validation
+  - Create `SemanticProvenanceTracker` class using PROV-O ontology for decision
+    chains and evidence hierarchy
+  - Add enhanced confidence levels (definitive, high_evidence, human_confirmed,
+    human_override, cross_validated, heuristic_strong, medium_evidence,
+    conflicting_evidence, low_evidence, placeholder, unknown)
+  - Implement evidence conflict detection with SPARQL queries and human override
+    tracking with evidence presentation records
+  - Create reasoning chain representation in RDF with evidence quality
+    assessment and source attribution
+  - Integrate with DataLad conversion repositories for file-level provenance
+    correlation
+  - Add decision provenance queries for transparency and reproducibility
+    validation
   - _Requirements: 1.2, 1.4_
   - _Integration: data-management-provenance Task 4_
 
@@ -58,11 +71,16 @@
   - _Requirements: 3.1, 3.2_
 
 - [ ] 8. Build human-readable provenance and decision chain output generation
-  - Create triple summary generation with entity labels, descriptions, and confidence levels
-  - Implement natural language description generation for decision chains and evidence reasoning
-  - Add visualization-friendly output formats for provenance graph exploration and evidence conflict display
-  - Create summary statistics including confidence distributions, evidence quality metrics, and human override rates
-  - Generate human-readable provenance reports showing reasoning paths and evidence hierarchy
+  - Create triple summary generation with entity labels, descriptions, and
+    confidence levels
+  - Implement natural language description generation for decision chains and
+    evidence reasoning
+  - Add visualization-friendly output formats for provenance graph exploration
+    and evidence conflict display
+  - Create summary statistics including confidence distributions, evidence
+    quality metrics, and human override rates
+  - Generate human-readable provenance reports showing reasoning paths and
+    evidence hierarchy
   - _Requirements: 3.2, 3.4_
   - _Integration: data-management-provenance Task 10_
 
@@ -87,10 +105,14 @@
   - Create migration tools for knowledge graph schema changes
   - _Requirements: 1.4, 2.3_
 
-- [ ] 12. Build MCP server integration for semantic provenance and enrichment tools
-  - Create MCP tools for knowledge graph generation with provenance tracking and decision chain recording
-  - Implement metadata enrichment tools with evidence conflict detection and human override capabilities
-  - Add knowledge graph export tools including provenance information and confidence levels
+- [ ] 12. Build MCP server integration for semantic provenance and enrichment
+      tools
+  - Create MCP tools for knowledge graph generation with provenance tracking and
+    decision chain recording
+  - Implement metadata enrichment tools with evidence conflict detection and
+    human override capabilities
+  - Add knowledge graph export tools including provenance information and
+    confidence levels
   - Create semantic provenance validation and evidence quality assessment tools
   - Integrate with DataLad provenance system for complete audit trail generation
   - _Requirements: 1.1, 1.2, 3.1_
