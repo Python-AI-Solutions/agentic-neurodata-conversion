@@ -52,7 +52,7 @@ maintainers.
 4. **Verify installation:**
    ```bash
    pixi run pytest tests/unit/ --no-cov -x
-   pixi run pre-commit
+   pre-commit run
    ```
 
 ## Development Workflow
@@ -62,7 +62,7 @@ maintainers.
 1. **Start with quality checks:**
 
    ```bash
-   pixi run pre-commit
+   pre-commit run
    ```
 
 2. **Run fast tests:**
@@ -78,7 +78,7 @@ maintainers.
 
 4. **Before committing:**
    ```bash
-   pixi run pre-commit
+   pre-commit run
    pixi run pytest tests/unit/ tests/integration/ -v
    ```
 
@@ -117,7 +117,13 @@ Examples:
 All code must pass pre-commit checks:
 
 ```bash
-pixi run pre-commit
+# For agents - most common commands:
+pixi run pre-commit run --all-files     # Check all files
+pixi run pre-commit run                 # Check staged files only
+pixi run pre-commit run --files file.py # Check specific files
+
+# Standard workflow:
+pixi run pre-commit run
 ```
 
 This includes:
@@ -282,7 +288,7 @@ pixi run pytest --pdb -x                       # Debug on failure
 3. **Run quality checks:**
 
    ```bash
-   pixi run pre-commit
+   pre-commit run
    pixi run pytest tests/unit/ tests/integration/
    ```
 

@@ -154,7 +154,7 @@ class IntegrationTester:
             @mcp.tool(
                 name="test_integration_tool", description="Test tool for integration"
             )
-            async def test_tool(message: str, server=None) -> dict[str, Any]:
+            async def test_tool(message: str, _server=None) -> dict[str, Any]:
                 return {"status": "success", "message": f"Test: {message}"}
 
             # Verify the test tool was registered

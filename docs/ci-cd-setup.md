@@ -148,7 +148,7 @@ automation for testing, quality assurance, security, and release management.
 2. **Before making changes**:
 
    ```bash
-   pixi run pre-commit  # Run all quality checks
+   pixi run pre-commit run --all-files  # Run all quality checks
    ```
 
 3. **Fast development cycle**:
@@ -159,7 +159,7 @@ automation for testing, quality assurance, security, and release management.
 
 4. **Before committing**:
    ```bash
-   pixi run pre-commit  # Ensure quality
+   pixi run pre-commit run --all-files  # Ensure quality
    pixi run pytest tests/unit/ tests/integration/  # Full test suite
    ```
 
@@ -167,7 +167,7 @@ automation for testing, quality assurance, security, and release management.
 
 ```bash
 # Full quality check
-pixi run pre-commit
+pixi run pre-commit run --all-files
 
 # Specific checks
 pixi run ruff check .          # Linting
@@ -261,7 +261,7 @@ See `docs/secrets-management.md` for detailed instructions.
 ### Modifying Pre-commit Hooks
 
 1. Update `.pre-commit-config.yaml`
-2. Test locally: `pixi run pre-commit`
+2. Test locally: `pixi run pre-commit run --all-files`
 3. Consider developer workflow impact
 4. Update documentation
 
@@ -276,7 +276,8 @@ See `docs/secrets-management.md` for detailed instructions.
 
 ### Common Issues
 
-1. **Pre-commit failures**: Run `pixi run pre-commit` locally first
+1. **Pre-commit failures**: Run `pixi run pre-commit run --all-files` locally
+   first
 2. **Test failures**: Use `-v` for verbose output, `-x` to stop on first failure
 3. **Pixi environment issues**: Ensure all commands use `pixi run`
 4. **Configuration errors**: Run `pixi run python scripts/validate_config.py`

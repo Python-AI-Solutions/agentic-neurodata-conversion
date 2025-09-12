@@ -46,9 +46,12 @@ class TestAnalyzer(ast.NodeVisitor):
 
         # Check for class-level markers
         for decorator in node.decorator_list:
-            if isinstance(decorator, ast.Call) and hasattr(decorator.func, "attr"):
-                if decorator.func.attr in ["skipif", "xfail"]:
-                    self._analyze_marker(decorator, "class")
+            if (
+                isinstance(decorator, ast.Call)
+                and hasattr(decorator.func, "attr")
+                and decorator.func.attr in ["skipif", "xfail"]
+            ):
+                self._analyze_marker(decorator, "class")
 
         self.generic_visit(node)
         self.current_class = old_class
@@ -60,9 +63,12 @@ class TestAnalyzer(ast.NodeVisitor):
 
         # Check for function-level markers
         for decorator in node.decorator_list:
-            if isinstance(decorator, ast.Call) and hasattr(decorator.func, "attr"):
-                if decorator.func.attr in ["skipif", "xfail"]:
-                    self._analyze_marker(decorator, "function")
+            if (
+                isinstance(decorator, ast.Call)
+                and hasattr(decorator.func, "attr")
+                and decorator.func.attr in ["skipif", "xfail"]
+            ):
+                self._analyze_marker(decorator, "function")
 
         # Check for try-except blocks
         for child in ast.walk(node):

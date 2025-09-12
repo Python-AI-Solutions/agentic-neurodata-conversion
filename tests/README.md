@@ -113,7 +113,7 @@ pixi run test-unit                                  # Unit tests only, no covera
 pixi run test-fast                                  # Fast tests (excludes slow/LLM/dataset tests)
 
 # Before committing
-pixi run pre-commit                                 # Quality checks first
+pixi run pre-commit run --all-files                # Quality checks first
 pixi run test-unit && pixi run test-integration    # Then relevant tests
 
 # Full test suite with coverage
@@ -188,7 +188,8 @@ class TestComponentClass:
 
 ### Test Quality Standards
 
-- **Pre-commit compliance** - All tests must pass `pixi run pre-commit`
+- **Pre-commit compliance** - All tests must pass
+  `pixi run pre-commit run --all-files`
 - **Unused parameters** - Prefix with underscore (`_config`, `_server`)
 - **Import handling** - Use try/except with availability flags
 - **Error testing** - Test both success and failure scenarios
