@@ -246,7 +246,7 @@ class IntegrationTestRunner:
         self.logger.info("Running pre-commit checks...")
 
         try:
-            cmd = ["pixi", "run", "pre-commit", "--", "--all-files"]
+            cmd = ["pre-commit", "run", "--all-files"]
             result = subprocess.run(cmd, capture_output=True, text=True)
 
             if result.returncode == 0:

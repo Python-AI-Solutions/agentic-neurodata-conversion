@@ -25,7 +25,7 @@ Neurodata Conversion project.
 
 1. **Setup**: `pixi install && pixi run setup-hooks`
 2. **Daily workflow**:
-   `pixi run pre-commit && pixi run pytest -m "unit" --no-cov`
+   `pixi run pre-commit run --all-files && pixi run pytest -m "unit" --no-cov`
 3. **Quality checks**: `pixi run format && pixi run lint`
 
 ## Key Principles

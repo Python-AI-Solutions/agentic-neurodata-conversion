@@ -29,7 +29,7 @@ etc.) instead.
 pixi install && pixi run setup-hooks
 
 # Daily workflow
-pixi run pre-commit -- --all-files     # Quality checks on all files
+pixi run pre-commit run --all-files     # Quality checks on all files
 pixi run pytest -m "unit" --no-cov    # Fast tests
 pixi run format && pixi run lint       # Fix code issues
 ```
@@ -38,7 +38,7 @@ pixi run format && pixi run lint       # Fix code issues
 
 ### Pre-commit Integration
 
-**All code must pass `pixi run pre-commit -- --all-files` before committing.**
+**All code must pass `pre-commit run --all-files` before committing.**
 
 Auto-fixes: formatting, import sorting, trailing whitespace Manual fixes needed:
 unused arguments (prefix with `_`), unused imports, long lines (>88 chars)
@@ -139,10 +139,10 @@ pixi run python -c "print('Hello World')"
 
 ```bash
 # Quality workflow
-pixi run pre-commit -- --all-files           # Before committing (all files)
-pixi run pre-commit                          # Before committing (staged files only)
-pixi run format                              # Fix formatting
-pixi run lint                                # Check linting
+pixi run pre-commit run --all-files      # Before committing (all files)
+pixi run pre-commit run                  # Before committing (staged files only)
+pixi run format                          # Fix formatting
+pixi run lint                            # Check linting
 
 # Testing workflow
 pixi run pytest -m "unit" --no-cov -x       # Fast tests, stop on first failure
@@ -157,9 +157,7 @@ pixi run python -c 'import pkg; pkg.test()' # Quick Python commands
 
 - **Import errors**: Check `pixi list`, run `pixi install`, never use PYTHONPATH
 - **Pre-commit fails**: Read errors, run `pixi run format`, fix manually, retry
-  with `pixi run pre-commit -- --all-files`
-- **Pre-commit arguments**: Use `--` separator for pre-commit flags:
-  `pixi run pre-commit -- --files file.py`
+  with `pre-commit run --all-files`
 - **Test failures**: Use `-v` for verbose, `-x` to stop on first failure, `-s`
   for print output
 

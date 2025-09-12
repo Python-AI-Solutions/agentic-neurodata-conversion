@@ -8,16 +8,13 @@ ensuring the complete system integration functions as expected.
 import asyncio
 import json
 import logging
-import subprocess
-import tempfile
-import time
 from pathlib import Path
-from typing import Any, Dict, Optional
-import pytest
-import requests
+import tempfile
 from unittest.mock import patch
 
-from agentic_neurodata_conversion.core.config import ConfigurationManager, CoreConfig
+import pytest
+
+from agentic_neurodata_conversion.core.config import ConfigurationManager
 from agentic_neurodata_conversion.mcp_server.server import MCPServer
 from agentic_neurodata_conversion.mcp_server.tools import basic_tools  # noqa: F401
 
@@ -90,7 +87,7 @@ class TestClientServerIntegration:
 
     async def test_server_startup_and_status(self, mcp_server):
         """Test that server starts up and responds to status requests."""
-        api_url = mcp_server.get_api_url()
+        mcp_server.get_api_url()
 
         # Wait a moment for server to be ready
         await asyncio.sleep(0.1)
@@ -370,10 +367,7 @@ class TestClientExampleValidation:
 
         # Test syntax by compiling
         with open(client_path) as f:
-            code = f.read()
-
-        import sys
-        from python_client.simple_client import SimpleMCPClient
+            f.read()
 
 
 @pytest.mark.integration

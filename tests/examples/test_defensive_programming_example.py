@@ -4,11 +4,55 @@ Example of improved defensive programming in tests.
 This file demonstrates best practices for TDD with defensive programming.
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 # Defensive import pattern - example module not implemented yet
 # from agentic_neurodata_conversion.example.module import ExampleClass
+
+
+# Mock classes for demonstration purposes
+class ExampleError(Exception):
+    """Example error class for demonstration."""
+
+    pass
+
+
+class ExampleClass:
+    """Example class for demonstration of defensive testing patterns."""
+
+    def __init__(self):
+        self.cache_hits = 0
+
+    def expensive_operation(self, data):
+        """Mock expensive operation."""
+        return f"result_{data}"
+
+    async def async_operation(self, data):
+        """Mock async operation."""
+        return f"async_result_{data}"
+
+    def basic_operation(self, data):
+        """Mock basic operation."""
+        if data is None:
+            raise ValueError("Invalid input")
+        if data == "invalid":
+            raise ExampleError("Invalid data provided")
+        return f"basic_result_{data}"
+
+    def operation_with_external_dependency(self, data):
+        """Mock operation with external dependency."""
+        return "mocked_result"
+
+    def call_external_service(self):
+        """Mock external service call."""
+        return type("Result", (), {"status": "success"})()
+
+    def operation_with_optional_component(self):
+        """Mock operation with optional component."""
+        return {"degraded_mode": True}
+
 
 # Use skipif for external dependencies that may not be available
 
@@ -47,7 +91,7 @@ class TestExampleClass:
         # Test with defensive error handling
         try:
             result = example.basic_operation("test")
-            assert result is not None, f"Expected result from basic_operation, got None"
+            assert result is not None, "Expected result from basic_operation, got None"
         except ExampleError as e:
             pytest.fail(f"Basic operation should not raise ExampleError: {e}")
         except Exception as e:

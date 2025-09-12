@@ -133,7 +133,7 @@ class SimpleHTTPServer:
                 return ToolExecutionResponse(**result)
             except Exception as e:
                 logger.error(f"Tool execution error: {e}")
-                raise HTTPException(status_code=500, detail=str(e))
+                raise HTTPException(status_code=500, detail=str(e)) from e
 
         @self.app.post("/reset")
         async def reset_pipeline():

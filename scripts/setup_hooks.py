@@ -37,13 +37,13 @@ def main() -> int:
 
     # Install pre-push hooks
     success &= run_command(
-        ["pixi", "run", "pre-commit", "install", "--hook-type", "pre-push"],
+        ["pre-commit", "install", "--hook-type", "pre-push"],
         "Installing pre-push hooks",
     )
 
     # Run pre-commit on all files to ensure everything works
     success &= run_command(
-        ["pixi", "run", "pre-commit", "run", "--all-files"],
+        ["pre-commit", "run", "--all-files"],
         "Running pre-commit on all files",
     )
 
@@ -51,7 +51,7 @@ def main() -> int:
         print("\n🎉 Development environment setup complete!")
         print("\nNext steps:")
         print("  1. Make your changes")
-        print("  2. Run 'pixi run pre-commit' before committing")
+        print("  2. Run 'pixi run pre-commit run --all-files' before committing")
         print("  3. Run 'pixi run pytest tests/unit/ --no-cov' for fast tests")
         return 0
     else:

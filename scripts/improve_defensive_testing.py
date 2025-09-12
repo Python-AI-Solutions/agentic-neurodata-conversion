@@ -85,16 +85,14 @@ class TestFileImprover:
             if any(
                 keyword in reason.lower()
                 for keyword in ["not implemented", "not available", "missing"]
+            ) and (
+                "implementation" in reason.lower()
+                or "not implemented" in reason.lower()
             ):
-                # Convert to xfail if it's about missing implementation
-                if (
-                    "implementation" in reason.lower()
-                    or "not implemented" in reason.lower()
-                ):
-                    old_marker = match.group(0)
-                    new_marker = f'@pytest.mark.xfail(reason="{reason}")'
-                    content = content.replace(old_marker, new_marker)
-                    improvements.append(f"Converted skipif to xfail for TDD: {reason}")
+                old_marker = match.group(0)
+                new_marker = f'@pytest.mark.xfail(reason="{reason}")'
+                content = content.replace(old_marker, new_marker)
+                improvements.append(f"Converted skipif to xfail for TDD: {reason}")
 
         if improvements:
             self.improvements_made.extend([(file_path, imp) for imp in improvements])
@@ -110,34 +108,31 @@ class TestFileImprover:
             "try:" in content
             and "import" in content
             and "except ImportError:" in content
-        ):
-            if "_AVAILABLE" not in content:
-                # Add availability flag pattern
-                import_section = re.search(
-                    r"(try:\s*\n.*?except ImportError:.*?\n)", content, re.DOTALL
-                )
-                if import_section:
-                    module_name = self._extract_module_name(import_section.group(1))
-                    if module_name:
-                        availability_flag = f"{module_name.upper()}_AVAILABLE"
+        ) and "_AVAILABLE" not in content:
+            # Add availability flag pattern
+            import_section = re.search(
+                r"(try:\s*\n.*?except ImportError:.*?\n)", content, re.DOTALL
+            )
+            if import_section:
+                module_name = self._extract_module_name(import_section.group(1))
+                if module_name:
+                    availability_flag = f"{module_name.upper()}_AVAILABLE"
 
-                        # Add availability flag
-                        new_import_section = import_section.group(1).replace(
-                            "except ImportError:",
-                            f"except ImportError:\n    {availability_flag} = False",
-                        )
+                    # Add availability flag
+                    new_import_section = import_section.group(1).replace(
+                        "except ImportError:",
+                        f"except ImportError:\n    {availability_flag} = False",
+                    )
 
-                        # Add availability flag initialization
-                        new_import_section = new_import_section.replace(
-                            "try:", "try:\n    # Import components to test"
-                        )
+                    # Add availability flag initialization
+                    new_import_section = new_import_section.replace(
+                        "try:", "try:\n    # Import components to test"
+                    )
 
-                        content = content.replace(
-                            import_section.group(1), new_import_section
-                        )
-                        improvements.append(
-                            f"Added availability flag: {availability_flag}"
-                        )
+                    content = content.replace(
+                        import_section.group(1), new_import_section
+                    )
+                    improvements.append(f"Added availability flag: {availability_flag}")
 
         if improvements:
             self.improvements_made.extend([(file_path, imp) for imp in improvements])

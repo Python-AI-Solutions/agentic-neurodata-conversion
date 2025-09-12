@@ -40,7 +40,7 @@ Brief description of the changes in this PR.
 - [ ] I have added tests that prove my fix is effective or that my feature works
 - [ ] New and existing unit tests pass locally with my changes
 - [ ] I have run the full test suite (`pixi run pytest`)
-- [ ] I have run pre-commit checks (`pixi run pre-commit`)
+- [ ] I have run pre-commit checks (`pixi run pre-commit run --all-files`)
 
 ## Test Commands Run
 
@@ -48,7 +48,7 @@ Brief description of the changes in this PR.
 # List the specific test commands you ran
 pixi run pytest tests/unit/
 pixi run pytest tests/integration/
-pixi run pre-commit
+pixi run pre-commit run --all-files
 ```
 
 ## Documentation

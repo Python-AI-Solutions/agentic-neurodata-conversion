@@ -169,7 +169,6 @@ find . -type f -name "*.pyc" -delete
 """
 
 # Pre-commit tasks
-pre-commit = "pre-commit run"
 pre-commit-update = "pre-commit autoupdate"
 
 # Build and release tasks

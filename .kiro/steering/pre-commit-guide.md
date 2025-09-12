@@ -16,40 +16,54 @@ pixi run setup-hooks
 
 ```bash
 # Before every commit - runs on staged files (default behavior)
-pixi run pre-commit
+pixi run pre-commit run
 
 # Run on all files explicitly
-pixi run pre-commit -- --all-files
+pixi run pre-commit run --all-files
 
 # If failures occur, hooks often auto-fix - run again
-pixi run pre-commit -- --all-files
+pixi run pre-commit run --all-files
 ```
 
-### Advanced Usage with Custom Arguments
-
-**Note**: Use `--` to separate pixi arguments from pre-commit arguments.
+### Advanced Usage
 
 ```bash
 # Run on specific files only
-pixi run pre-commit -- --files agentic_neurodata_conversion/core/config.py
+pixi run pre-commit run --files agentic_neurodata_conversion/core/config.py
 
 # Run on multiple specific files
-pixi run pre-commit -- --files file1.py file2.py
+pixi run pre-commit run --files file1.py file2.py
 
 # Run specific hooks only
-pixi run pre-commit -- --hook-stage manual
+pixi run pre-commit run --hook-stage manual
 
 # Run with verbose output
-pixi run pre-commit -- --verbose
+pixi run pre-commit run --verbose
 
 # Run from a specific commit
-pixi run pre-commit -- --from-ref HEAD~1
+pixi run pre-commit run --from-ref HEAD~1
 
 # Run to a specific commit
-pixi run pre-commit -- --to-ref HEAD
+pixi run pre-commit run --to-ref HEAD
 
 # Combine multiple arguments
-pixi run pre-commit -- --all-files --verbose
+pixi run pre-commit run --all-files --verbose
+```
+
+## Agent Examples (Concise)
+
+```bash
+# Most common - check all files
+pixi run pre-commit run --all-files
+
+# Check only staged files (default)
+pixi run pre-commit run
+
+# Check specific files
+pixi run pre-commit run --files file1.py file2.py
+
+# Update hooks
+pixi run pre-commit-update
 ```
 
 ## What Pre-commit Checks
@@ -200,8 +214,7 @@ except ImportError:
 1. **Read error messages** - They tell you exactly what's wrong
 2. **Run formatting first**: `pixi run format`
 3. **Fix remaining issues manually** using patterns above
-4. **Run pre-commit again**: `pixi run pre-commit -- --all-files` (or with your
-   original arguments)
+4. **Run pre-commit again**: `pre-commit run --all-files`
 5. **Repeat until passes**
 
 ### Debug Commands
@@ -253,7 +266,7 @@ pixi run ruff check --fix --unsafe-fixes
 ### Import Conflicts
 
 - Usually caused by editing files while pre-commit runs
-- Solution: `pixi run format` then `pixi run pre-commit -- --all-files`
+- Solution: `pixi run format` then `pre-commit run --all-files`
 
 ## Benefits
 

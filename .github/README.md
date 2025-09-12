@@ -149,13 +149,13 @@ pixi run python scripts/setup_hooks.py
 
 ```bash
 # Before making changes
-pixi run pre-commit
+pixi run pre-commit run --all-files
 
 # Fast feedback loop
 pixi run pytest tests/unit/ --no-cov -x
 
 # Before committing
-pixi run pre-commit
+pixi run pre-commit run --all-files
 pixi run pytest tests/unit/ tests/integration/
 ```
 

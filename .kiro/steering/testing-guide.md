@@ -116,7 +116,7 @@ pixi run test-unit                                  # Unit tests, minimal output
 pixi run test-fast                                  # Fast tests, minimal output
 
 # Before committing
-pixi run pre-commit                                 # Quality checks first
+pixi run pre-commit run --all-files                 # Quality checks first
 pixi run test -m "unit or integration"              # Relevant tests, minimal output
 
 # CI/CD pipeline - optimized for automated processing
