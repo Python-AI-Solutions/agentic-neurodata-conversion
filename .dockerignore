@@ -1,0 +1,126 @@
+# Docker ignore file for Agentic Neurodata Conversion
+# Excludes unnecessary files from Docker build context
+
+# Git
+.git/
+.gitignore
+.gitattributes
+.gitmodules
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Testing
+.coverage
+.pytest_cache/
+.tox/
+.nox/
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Documentation
+docs/_build/
+.readthedocs.yml
+
+# Jupyter
+.ipynb_checkpoints
+
+# Logs
+*.log
+logs/
+
+# Data directories (exclude from image)
+data/
+temp/
+outputs/
+results/
+
+# Development files
+.env.example
+.env.docker
+.env.*
+docker-compose.override.yml
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Deployment
+k8s/
+Makefile
+docker-compose.yml
+docker-compose.*.yml
+
+# Node modules (if any)
+node_modules/
+
+# Pixi cache
+.pixi/
+
+# Pre-commit
+.pre-commit-config.yaml
+
+# Secrets and keys
+*.pem
+*.key
+*.crt
+secrets/
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Temporary files
+tmp/
+*.tmp
+*.temp

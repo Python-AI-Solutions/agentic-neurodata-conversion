@@ -1,100 +1,63 @@
-# File Organization Guidelines
+---
+inclusion: always
+---
 
-## Test and Script File Placement
+# File Organization
 
-### Never Create Files in Root Directory
+## Critical Rule
 
-**CRITICAL RULE**: Never create test files, throwaway scripts, or temporary
-files in the project root directory.
+**Never create files in the project root directory.**
 
-### Proper File Locations
+## Proper Locations
 
-#### Test Files
+### Tests
 
-- **Unit tests**: Place in `tests/unit/`
-- **Integration tests**: Place in `tests/integration/`
-- **End-to-end tests**: Place in `tests/e2e/`
-- **Test utilities**: Place in `tests/fixtures/` or `tests/utils/`
+- `tests/unit/` - Unit tests
+- `tests/integration/` - Integration tests
+- `tests/e2e/` - End-to-end tests
+- `tests/fixtures/` - Test utilities
 
-#### Scripts and Utilities
+### Scripts
 
-- **Development scripts**: Place in `scripts/`
-- **Build scripts**: Place in `scripts/build/`
-- **Deployment scripts**: Place in `scripts/deploy/`
-- **Utility scripts**: Place in `scripts/utils/`
+- `scripts/` - Development scripts
+- `scripts/temp/` - Temporary/throwaway scripts
+- `scripts/debug/` - Debug utilities
+- `scripts/utils/` - Utility scripts
 
-#### Temporary or Throwaway Files
+## Examples
 
-- **Quick test scripts**: Place in `scripts/temp/` or `scripts/debug/`
-- **Integration verification**: Add to appropriate test directory
-- **Manual testing**: Create in `scripts/manual_testing/`
-
-### Examples
-
-#### ❌ WRONG - Files in root directory
+### ❌ Wrong - Root Directory
 
 ```
 project_root/
-├── test_something.py          # NEVER DO THIS
-├── debug_script.py            # NEVER DO THIS
-├── temp_verification.py       # NEVER DO THIS
-└── quick_test.py              # NEVER DO THIS
+├── test_something.py          # NEVER
+├── debug_script.py            # NEVER
+└── temp_verification.py       # NEVER
 ```
 
-#### ✅ CORRECT - Proper organization
+### ✅ Correct - Organized
 
 ```
 project_root/
-├── tests/
-│   ├── unit/
-│   │   └── test_logging_integration.py
-│   └── integration/
-│       └── test_full_workflow.py
-├── scripts/
-│   ├── debug/
-│   │   └── debug_logging.py
-│   ├── temp/
-│   │   └── verify_integration.py
-│   └── utils/
-│       └── test_helpers.py
+├── tests/unit/test_component.py
+├── tests/integration/test_workflow.py
+├── scripts/temp/verify_integration.py
+└── scripts/debug/debug_logging.py
 ```
 
-### When Creating Files
-
-1. **Always ask**: "Where should this file go?"
-2. **Consider the purpose**:
-   - Is it a test? → `tests/` directory
-   - Is it a script? → `scripts/` directory
-   - Is it temporary? → `scripts/temp/` or appropriate test directory
-3. **Create directories if needed**: Use `mkdir -p` to create directory
-   structure
-4. **Follow naming conventions**: Use descriptive names that indicate purpose
-
-### Directory Creation
-
-If the appropriate directory doesn't exist, create it:
+## Quick Setup
 
 ```bash
-# Create test directories
-mkdir -p tests/unit tests/integration tests/e2e
-
-# Create script directories
-mkdir -p scripts/temp scripts/debug scripts/utils
-
-# Create specific subdirectories as needed
-mkdir -p scripts/manual_testing
+# Create directories as needed
+mkdir -p tests/{unit,integration,e2e,fixtures}
+mkdir -p scripts/{temp,debug,utils}
 ```
 
-### Cleanup
+## Decision Guide
 
-- Remove temporary files after use
-- Don't commit throwaway scripts unless they provide ongoing value
-- Use `.gitignore` patterns for temporary directories if needed
+- **Is it a test?** → `tests/` directory
+- **Is it a script?** → `scripts/` directory
+- **Is it temporary?** → `scripts/temp/`
+- **Is it for debugging?** → `scripts/debug/`
 
-## Benefits
-
-1. **Clean root directory**: Keeps project root uncluttered
-2. **Easy navigation**: Files are where developers expect them
-3. **Better organization**: Related files are grouped together
-4. **Maintainability**: Easier to find and manage files
-5. **Professional appearance**: Project looks well-organized
+**Benefits**: Clean root, easy navigation, professional organization.

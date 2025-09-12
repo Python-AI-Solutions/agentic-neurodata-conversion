@@ -1,17 +1,3 @@
-# Copyright (c) 2025 Agentic Neurodata Conversion Project
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 """
 Agentic Neurodata Conversion Package
 
@@ -32,11 +18,29 @@ from .core.exceptions import (
     ValidationError,
 )
 
+# Interface and utility imports
+from .interfaces import (
+    LinkMLValidatorInterface,
+    NeuroConvInterface,
+    NWBInspectorInterface,
+)
+from .utils import FileUtils, FormatDetector, MetadataProcessor
+
 __all__ = [
+    # Core functionality
     "get_config",
     "AgenticConverterError",
     "ConfigurationError",
     "ConversionError",
     "ValidationError",
+    # Interfaces
+    "NeuroConvInterface",
+    "NWBInspectorInterface",
+    "LinkMLValidatorInterface",
+    # Utilities
+    "FileUtils",
+    "FormatDetector",
+    "MetadataProcessor",
+    # Package metadata
     "__version__",
 ]

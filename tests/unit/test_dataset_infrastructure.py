@@ -8,45 +8,24 @@ system, including repository management, dataset creation, and access patterns.
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-import pytest
-
 # Import components to test
-try:
-    from tests.datasets.access_patterns import DatasetAccessor, DatasetCache
-    from tests.datasets.dataset_manager import DatasetRegistry, TestDatasetManager
-    from tests.datasets.format_generators import (
-        DatasetFormatRegistry,
-        GenericFormatGenerator,
-        OpenEphysGenerator,
-        SpikeGLXGenerator,
-    )
-    from tests.datasets.repository_manager import (
-        DATALAD_AVAILABLE,
-        DataLadRepositoryManager,
-        RepositoryConfig,
-    )
-    from tests.datasets.types import (
-        DatasetFormat,
-        DatasetMetadata,
-        DatasetType,
-        GenerationSpec,
-    )
-
-    COMPONENTS_AVAILABLE = True
-except ImportError:
-    # Components not implemented yet
-    COMPONENTS_AVAILABLE = False
-    DataLadRepositoryManager = None
-    TestDatasetManager = None
-    DatasetRegistry = None
-    DatasetAccessor = None
-    DatasetCache = None
-    OpenEphysGenerator = None
-
-# Skip all tests if components are not implemented
-pytestmark = pytest.mark.skipif(
-    not COMPONENTS_AVAILABLE,
-    reason="Dataset infrastructure components not implemented yet",
+from tests.datasets.access_patterns import DatasetAccessor, DatasetCache
+from tests.datasets.dataset_manager import DatasetRegistry, TestDatasetManager
+from tests.datasets.format_generators import (
+    DatasetFormatRegistry,
+    GenericFormatGenerator,
+    OpenEphysGenerator,
+    SpikeGLXGenerator,
+)
+from tests.datasets.repository_manager import (
+    DataLadRepositoryManager,
+    RepositoryConfig,
+)
+from tests.datasets.types import (
+    DatasetFormat,
+    DatasetMetadata,
+    DatasetType,
+    GenerationSpec,
 )
 
 
@@ -77,7 +56,6 @@ class TestDataLadRepositoryManager:
         assert config.annex_backend == "SHA256E"
         assert config.enable_git_annex is True
 
-    @pytest.mark.skipif(not DATALAD_AVAILABLE, reason="DataLad not available")
     def test_initialize_repository_with_datalad(self, tmp_path):
         """Test repository initialization with DataLad available."""
         repo_manager = DataLadRepositoryManager(str(tmp_path))

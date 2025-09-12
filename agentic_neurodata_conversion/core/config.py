@@ -1,17 +1,3 @@
-# Copyright (c) 2025 Agentic Neurodata Conversion Project
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 """Configuration management for the agentic neurodata conversion system.
 
 This module provides centralized configuration management that is transport-agnostic
@@ -388,6 +374,10 @@ class ConfigurationManager:
         Returns:
             CoreConfig object.
         """
+        # Convert string enums to proper enum types
+        if "environment" in config_dict and isinstance(config_dict["environment"], str):
+            config_dict["environment"] = Environment(config_dict["environment"])
+
         # Convert nested dictionaries to dataclass objects
         if "agents" in config_dict:
             config_dict["agents"] = AgentConfig(**config_dict["agents"])
@@ -396,7 +386,11 @@ class ConfigurationManager:
         if "sessions" in config_dict:
             config_dict["sessions"] = SessionConfig(**config_dict["sessions"])
         if "logging" in config_dict:
-            config_dict["logging"] = LoggingConfig(**config_dict["logging"])
+            # Handle LogLevel enum conversion
+            logging_dict = config_dict["logging"].copy()
+            if "level" in logging_dict and isinstance(logging_dict["level"], str):
+                logging_dict["level"] = LogLevel(logging_dict["level"])
+            config_dict["logging"] = LoggingConfig(**logging_dict)
         if "security" in config_dict:
             config_dict["security"] = SecurityConfig(**config_dict["security"])
         if "performance" in config_dict:

@@ -40,21 +40,21 @@
   - Add basic agent lifecycle management
   - _Requirements: 1.2, 6.2_
 
-- [ ] 6. Set up interface and utility modules
+- [x] 6. Set up interface and utility modules
   - Create `agentic_neurodata_conversion/interfaces/` for external integrations
   - Create `agentic_neurodata_conversion/utils/` for utility functions
   - Implement basic file utilities and format detection stubs
   - Add placeholder interfaces for NeuroConv, NWB Inspector, and LinkML
   - _Requirements: 1.2, 1.3_
 
-- [ ] 7. Create examples directory with client templates
+- [x] 7. Create examples directory with client templates
   - Create `examples/` directory structure with subdirectories
   - Implement basic Python client example based on workflow.py pattern
   - Create simple client template with MCP server interaction
   - Add README files with usage instructions and development guides
   - _Requirements: 7.1, 7.2_
 
-- [ ] 8. Set up ETL directory structure
+- [x] 8. Set up ETL directory structure
   - Create `etl/` directory with subdirectories for input-data, workflows,
     evaluation-data
   - Add README files explaining directory purposes
@@ -62,7 +62,7 @@
   - Set up foundation for DataLad integration
   - _Requirements: 8.4, 9.4_
 
-- [ ] 9. Implement basic testing infrastructure
+- [x] 9. Implement basic testing infrastructure
   - Create `tests/` directory with unit/, integration/, and fixtures/
     subdirectories
   - Set up pytest configuration in pyproject.toml
@@ -70,12 +70,13 @@
   - Add test fixtures and mock data setup
   - _Requirements: 8.1, 8.2_
 
-- [ ] 10. Create development tooling and scripts
-  - Create `scripts/` directory with development utilities
-  - Implement `setup_dev.py` for development environment setup
-  - Create `run_server.py` for MCP server startup with configuration options
-  - Add basic deployment utilities and containerization setup
-  - _Requirements: 3.2, 3.4_
+- [x] 10. Create development tooling and scripts
+  - ✅ `scripts/` directory already exists with comprehensive utilities
+  - ✅ MCP server startup scripts already implemented (`run_mcp_server.py`,
+    `run_http_server.py`)
+  - ✅ Development environment setup handled by pixi configuration
+  - ✅ Configuration management system already in place
+  - _Requirements: 3.2_ (3.4 moved to task 13)
 
 - [ ] 11. Set up documentation structure
   - Create `docs/` directory with architecture/, api/, development/, examples/
@@ -85,21 +86,22 @@
   - Set up documentation building infrastructure
   - _Requirements: 5.1, 5.2_
 
-- [ ] 12. Configure CI/CD pipeline and development workflows
+- [x] 12. Configure CI/CD pipeline and development workflows
   - Create `.github/workflows/` with CI pipeline configuration
   - Set up automated testing, linting, and code quality checks
   - Configure pre-commit hooks with ruff and other tools
   - Add issue templates and contribution guidelines
   - _Requirements: 4.2, 4.3_
 
-- [ ] 13. Create containerization and deployment configuration
-  - Create Dockerfile with pixi-based Python environment
-  - Set up docker-compose for development and testing
-  - Configure environment variable handling for containers
-  - Add deployment scripts and configuration templates
+- [x] 13. Create containerization and deployment configuration
+  - Create Dockerfile using pixi for consistent dependency management
+  - Set up docker-compose for development and testing environments
+  - Configure environment variable handling for containers (leverage existing
+    config/docker.json)
+  - Add deployment configuration templates and scripts
   - _Requirements: 3.4, 4.4_
 
-- [ ] 14. Integrate all components and test basic functionality
+- [x] 14. Integrate all components and test basic functionality
   - Wire together MCP server, agents, configuration, and logging systems
   - Test basic tool registration and execution flow
   - Verify client examples work with the MCP server
