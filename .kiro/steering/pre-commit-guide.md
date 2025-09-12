@@ -4,285 +4,75 @@ inclusion: always
 
 # Pre-commit Guide
 
-## Essential Workflow
-
-### Setup (One-time)
-
+## Setup & Usage
 ```bash
-pixi run setup-hooks
+pixi run setup-hooks                           # One-time setup
+pixi run pre-commit run --all-files            # Check all files
+pixi run pre-commit run                        # Check staged files only
+pixi run pre-commit run --files file1.py       # Specific files
 ```
 
-### Daily Usage
+## What Gets Checked
 
-```bash
-# Before every commit - runs on staged files (default behavior)
-pixi run pre-commit run
-
-# Run on all files explicitly
-pixi run pre-commit run --all-files
-
-# If failures occur, hooks often auto-fix - run again
-pixi run pre-commit run --all-files
-```
-
-### Advanced Usage
-
-```bash
-# Run on specific files only
-pixi run pre-commit run --files agentic_neurodata_conversion/core/config.py
-
-# Run on multiple specific files
-pixi run pre-commit run --files file1.py file2.py
-
-# Run specific hooks only
-pixi run pre-commit run --hook-stage manual
-
-# Run with verbose output
-pixi run pre-commit run --verbose
-
-# Run from a specific commit
-pixi run pre-commit run --from-ref HEAD~1
-
-# Run to a specific commit
-pixi run pre-commit run --to-ref HEAD
-
-# Combine multiple arguments
-pixi run pre-commit run --all-files --verbose
-```
-
-## Agent Examples (Concise)
-
-```bash
-# Most common - check all files
-pixi run pre-commit run --all-files
-
-# Check only staged files (default)
-pixi run pre-commit run
-
-# Check specific files
-pixi run pre-commit run --files file1.py file2.py
-
-# Update hooks
-pixi run pre-commit-update
-```
-
-## What Pre-commit Checks
-
-### Auto-Fixed (No Action Needed)
-
-- Trailing whitespace removal
-- End-of-file fixes
-- Import sorting
-- Code formatting (88 char line length)
-- YAML/JSON formatting
-
-### Manual Fixes Required
-
-- Unused function arguments
-- Unused imports
-- Long lines (>88 characters)
-- Code simplification suggestions
+**Auto-fixed**: Whitespace, imports, formatting (88 chars), YAML/JSON
+**Manual fixes**: Unused args/imports, long lines, code simplifications
 
 ## Common Fixes
 
-### 1. Unused Arguments (ARG001)
-
 ```python
-# ❌ Before
-def my_function(used_param, unused_param):
-    return used_param
+# ✅ Unused arguments - prefix with underscore
+def func(used, _unused): return used
 
-# ✅ After - prefix with underscore
-def my_function(used_param, _unused_param):
-    return used_param
-```
-
-**Common in**: Test functions, MCP tools, \*\*kwargs functions
-
-### 2. Unused Imports (F401)
-
-```python
-# ❌ Before
-import os
-import sys  # unused
-
-# ✅ After - remove unused
-import os
-
-# ✅ Or keep with noqa if needed
+# ✅ Unused imports - remove or add noqa
 import sys  # noqa: F401
-```
 
-### 3. Long Lines (E501)
+# ✅ Long lines - break into multiple lines  
+def long_name(
+    param1, param2, param3
+): pass
 
-```python
-# ❌ Before
-def very_long_function_name(param1, param2, param3, param4):
+# ✅ Use enumerate instead of manual counter
+for i, item in enumerate(items):
+    process(item, i)
 
-# ✅ After - break into multiple lines
-def very_long_function_name(
-    param1, param2, param3, param4
-):
-```
+# ✅ Combine with statements
+with open(f1) as a, open(f2) as b:
+    process(a, b)
 
-### 4. Code Simplifications
-
-#### Manual Counter (SIM113)
-
-```python
-# ❌ Before
-counter = 0
-for item in items:
-    process(item, counter)
-    counter += 1
-
-# ✅ After - use enumerate
-for counter, item in enumerate(items):
-    process(item, counter)
-```
-
-#### Nested With Statements (SIM117)
-
-```python
-# ❌ Before
-with open(file1) as f1:
-    with open(file2) as f2:
-        process(f1, f2)
-
-# ✅ After - combine
-with open(file1) as f1, open(file2) as f2:
-    process(f1, f2)
-```
-
-#### Try-Except-Pass (SIM105)
-
-```python
-# ❌ Before
-try:
-    risky_operation()
-except Exception:
-    pass
-
-# ✅ After - use contextlib.suppress
-import contextlib
-
+# ✅ Use contextlib.suppress
 with contextlib.suppress(Exception):
     risky_operation()
 ```
 
-## Test-Specific Patterns
-
-### Pytest Functions
+## Test Patterns
 
 ```python
-# ✅ Collection modifier
-def pytest_collection_modifyitems(_config, items):
-    pass
+# ✅ Pytest functions with unused params
+def pytest_collection_modifyitems(_config, items): pass
+def test_feature(_config, items): pass
+async def tool(param, _server=None): pass
 
-# ✅ Test functions with unused params
-def test_feature(_config, items):
-    assert len(items) > 0
-
-# ✅ MCP tool functions
-async def my_tool(param1: str, _server=None):
-    return {"result": param1}
-```
-
-### Import Patterns for Tests
-
-```python
-# ✅ Conditional imports with availability check
-try:
-    from my_module import Component
-    COMPONENT_AVAILABLE = True
-except ImportError:
-    Component = None
-    COMPONENT_AVAILABLE = False
-
-# ✅ Keep test-only imports with noqa
+# ✅ Optional imports
 try:
     import datalad  # noqa: F401
-    DATALAD_AVAILABLE = True
+    AVAILABLE = True
 except ImportError:
-    DATALAD_AVAILABLE = False
+    AVAILABLE = False
 ```
 
-## Quick Fix Workflow
+## Fix Workflow
 
-### When Pre-commit Fails
+1. Read error messages
+2. `pixi run format` (auto-fixes most issues)
+3. Fix remaining manually using patterns above
+4. `pixi run pre-commit run --all-files`
+5. Repeat until passes
 
-1. **Read error messages** - They tell you exactly what's wrong
-2. **Run formatting first**: `pixi run format`
-3. **Fix remaining issues manually** using patterns above
-4. **Run pre-commit again**: `pre-commit run --all-files`
-5. **Repeat until passes**
-
-### Debug Commands
-
+## Debug Commands
 ```bash
-# Fix most formatting automatically
-pixi run format
-
-# Check specific linting issues
-pixi run lint
-
-# Debug specific files
-pixi run ruff check path/to/file.py
-
-# Apply unsafe fixes if needed
-pixi run ruff check --fix --unsafe-fixes
+pixi run format                        # Auto-fix formatting
+pixi run lint                          # Check linting
+pixi run ruff check file.py            # Debug specific file
 ```
 
-## IDE Integration
-
-### VS Code Settings
-
-```json
-{
-  "python.formatting.provider": "ruff",
-  "python.linting.ruffEnabled": true,
-  "editor.formatOnSave": true,
-  "editor.rulers": [88],
-  "files.trimTrailingWhitespace": true,
-  "files.insertFinalNewline": true
-}
-```
-
-### PyCharm Settings
-
-- Enable "Reformat code" on save
-- Set right margin to 88 characters
-- Configure ruff as external tool
-
-## Troubleshooting
-
-### Persistent Failures
-
-- Check for syntax errors in mentioned files
-- Ensure files are valid Python
-- Look for encoding issues
-- Run individual tools to isolate problems
-
-### Import Conflicts
-
-- Usually caused by editing files while pre-commit runs
-- Solution: `pixi run format` then `pre-commit run --all-files`
-
-## Benefits
-
-1. **Consistent code style** - All code follows same standards
-2. **Early error detection** - Catch issues before CI/CD
-3. **Automated fixes** - Many issues fixed automatically
-4. **Team efficiency** - No manual code review for style
-5. **Quality assurance** - Comprehensive multi-file checks
-
-## Prevention Tips
-
-1. **Configure IDE** to match pre-commit rules
-2. **Run frequently** during development
-3. **Use underscore prefix** for unused parameters from start
-4. **Let ruff handle formatting** - don't fight it
-5. **Follow existing patterns** in codebase
-
-Remember: **Pre-commit hooks help maintain quality - work with them, not against
-them.**
+**Key**: Configure IDE to match rules, use underscore prefix for unused params, let ruff handle formatting.
