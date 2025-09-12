@@ -1,48 +1,40 @@
 # API Documentation
 
-This directory contains comprehensive API reference documentation for the
-Agentic Neurodata Conversion system.
+Generated on: 2025-09-12T10:29:52.264830
 
-## Documents
+This directory contains comprehensive API documentation for the agentic neurodata conversion system.
 
-- **`mcp_server.md`** - MCP server API endpoints and tool interfaces
-- **`agents.md`** - Internal agent interfaces and methods
-- **`tools.md`** - Detailed MCP tool specifications and examples
-- **`client_libraries.md`** - Client library APIs and integration patterns
+## Documentation Files
 
-## API Categories
+- **[mcp_tools.md](mcp_tools.md)** - MCP tools and their parameters
+- **[agents.md](agents.md)** - Internal agent interfaces and methods
+- **[http_api.md](http_api.md)** - HTTP API endpoints and responses
+- **[configuration.md](configuration.md)** - Configuration options and environment variables
 
-### MCP Server API
+## Quick Reference
 
-RESTful HTTP API for external client integration:
+### MCP Server
+- Default URL: `http://127.0.0.1:8000`
+- Status endpoint: `GET /status`
+- Tools list: `GET /tools`
+- Execute tool: `POST /tool/{tool_name}`
 
-- Tool execution endpoints
-- Server status and health checks
-- Pipeline state management
+### Key Tools
+- `dataset_analysis` - Analyze dataset structure and metadata
+- `conversion_orchestration` - Generate and execute NeuroConv scripts
+- `evaluate_nwb_file` - Validate and evaluate NWB files
 
-### MCP Tools API
+### Configuration
+- Environment variables: `AGENTIC_CONVERTER_<SECTION>__<FIELD>`
+- Configuration file: `.env` in project root
+- Nested structure: server, agents, data, database
 
-Standardized tool interfaces for core functionality:
+## Regenerating Documentation
 
-- Dataset analysis tools
-- Conversion orchestration tools
-- Evaluation and quality assessment tools
-- Knowledge graph and semantic tools
+To regenerate this documentation:
 
-### Agent APIs
+```bash
+pixi run python scripts/generate_api_docs.py
+```
 
-Internal agent interfaces (for system developers):
-
-- Conversation agent methods
-- Conversion agent interfaces
-- Evaluation agent APIs
-- Knowledge graph agent methods
-
-## Usage Patterns
-
-All APIs follow consistent patterns for:
-
-- Authentication and authorization
-- Request/response formatting
-- Error handling and status codes
-- Asynchronous operation support
+This will update all API documentation files with the latest information from the codebase.
