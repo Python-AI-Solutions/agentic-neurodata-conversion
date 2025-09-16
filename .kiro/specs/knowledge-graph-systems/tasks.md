@@ -42,12 +42,13 @@
   - _Requirements: 1.2, 1.4_
   - _Integration: data-management-provenance Task 4_
 
-- [ ] 4. Build SPARQL query engine and validation system
+- [ ] 4. Build SPARQL query engine and validation system (Schema-driven)
   - Implement SPARQL endpoint using rdflib or Apache Jena
+  - Generate SHACL shapes from NWB-LinkML schema and validate graphs
   - Create query optimization and indexing for efficient execution
   - Add custom validation rule definition and execution framework
   - Implement enrichment pattern matching and rule application
-  - _Requirements: 2.1, 2.2, 2.3_
+  - _Requirements: 2.1, 2.2, 2.3, 2b_
 
 - [ ] 5. Create federated query and external knowledge integration
   - Implement federated SPARQL query capabilities across multiple sources
@@ -58,13 +59,14 @@
 
 - [ ] 6. Build neuroscience domain knowledge integration
   - Integrate established neuroscience ontologies (NIFSTD, UBERON, etc.)
+  - Align external ontologies to NWB-LinkML classes/slots
   - Create domain-specific reasoning rules for neuroscience concepts
   - Add biological plausibility validation and constraint enforcement
   - Implement ontology alignment and concept mapping
   - _Requirements: 4.1, 4.2, 4.3_
 
 - [ ] 7. Implement multiple RDF format generation
-  - Create format converters for TTL, JSON-LD, N-Triples, RDF/XML
+  - Create format converters for TTL, JSON-LD (schema-derived @context), N-Triples, RDF/XML
   - Add format-specific serialization and optimization
   - Implement streaming serialization for large knowledge graphs
   - Create format validation and quality checking
@@ -86,7 +88,7 @@
 
 - [ ] 9. Create SPARQL endpoint and API services
   - Implement standard SPARQL endpoint with HTTP protocol support
-  - Add RESTful API for programmatic knowledge graph access
+  - Add RESTful API for programmatic knowledge graph access, including schema/shape validation endpoints
   - Create authentication and authorization for knowledge graph access
   - Implement query result caching and performance optimization
   - _Requirements: 3.3, 3.4_
@@ -98,12 +100,19 @@
   - Create automated quality improvement suggestions
   - _Requirements: 2.1, 2.2, 4.3_
 
+- [ ] 11a. Introduce NWB-LinkML schema integration (new)
+  - Ingest NWB-LinkML schema as the canonical NWB ontology
+  - Generate JSON-LD @context, SHACL shapes, and RDF/OWL from schema
+  - Validate LinkML instances (YAML/JSON) against schema pre-ingestion
+  - Record schema version and artifact hashes in PROV-O provenance
+  - _Requirements: 2b.1, 2b.2, 2b.3, 7.2, 8.1, 8.2_
+
 - [ ] 11. Implement knowledge graph versioning and evolution
   - Create versioning system for knowledge graph changes and updates
   - Add change tracking and diff generation for graph evolution
   - Implement rollback and recovery capabilities for knowledge graphs
-  - Create migration tools for knowledge graph schema changes
-  - _Requirements: 1.4, 2.3_
+  - Create migration tools for knowledge graph schema changes, including schema artifact regeneration
+  - _Requirements: 1.4, 2.3, 8.3_
 
 - [ ] 12. Build MCP server integration for semantic provenance and enrichment
       tools
@@ -111,7 +120,7 @@
     decision chain recording
   - Implement metadata enrichment tools with evidence conflict detection and
     human override capabilities
-  - Add knowledge graph export tools including provenance information and
+  - Add knowledge graph export tools including provenance information, schema version, and
     confidence levels
   - Create semantic provenance validation and evidence quality assessment tools
   - Integrate with DataLad provenance system for complete audit trail generation

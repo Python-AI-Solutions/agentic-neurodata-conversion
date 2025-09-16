@@ -4,9 +4,11 @@
 
 This design document outlines the knowledge graph systems that provide semantic
 enrichment, metadata validation, and relationship modeling for the agentic
-neurodata conversion pipeline. The knowledge graph system maintains a rich
-semantic model of neuroscience entities, relationships, and provenance while
-supporting automated metadata enrichment and complex validation queries.
+neurodata conversion pipeline. The system uses NWB-LinkML schema and instance
+files as the canonical ontology source to generate RDF triples, JSON-LD
+contexts, and SHACL shapes. It maintains a rich semantic model of neuroscience
+entities, relationships, and provenance while supporting automated metadata
+enrichment and complex validation queries.
 
 ## Architecture
 
@@ -14,6 +16,11 @@ supporting automated metadata enrichment and complex validation queries.
 
 ```
 Knowledge Graph Systems
+├── Schema and Validation Layer (NWB-LinkML)
+│   ├── LinkML Schema (NWB-LinkML)
+│   ├── JSON-LD Context Generator
+│   ├── SHACL Shapes Generator/Validator
+│   └── OWL/RDF Schema Generator
 ├── Core Knowledge Graph Engine
 │   ├── RDF Store (Apache Jena/Blazegraph)
 │   ├── SPARQL Query Engine
@@ -35,13 +42,21 @@ Knowledge Graph Systems
 ### Data Flow
 
 ````
-Metadata Input → Entity Resolution → Relationship Inference → Confidence Scoring → Enriched Metadata
-                      ↓
-Domain Ontologies → Knowledge Graph → SPARQL Queries → Validation Results
-                      ↓
-Provenance Tracking → RDF Store → Export Services → Multiple Formats
-```## C
-or Components
+NWB/NWB-LinkML Instance → LinkML Schema Validation → SHACL Validation → RDF Generation (JSON-LD/Turtle/N-Triples) → KG Ingestion
+                                   ↓
+Domain Ontologies (NIFSTD, UBERON) → Knowledge Graph → SPARQL Queries → Validation/QA Results
+                                   ↓
+Provenance Tracking (PROV-O + schema version) → RDF Store → Export Services → Multiple Formats
+````
+
+### Schema and Validation Layer (NWB-LinkML)
+
+- Source of truth: NWB-LinkML schema defines classes and slots for the NWB domain.
+- Generated artifacts: JSON-LD @context, SHACL shapes, and OWL/RDF schema; all artifacts are versioned.
+- Validation pipeline: Validate LinkML instances (YAML/JSON) against the schema, then run SHACL validation over the RDF graph.
+- Triple generation: Use LinkML-generated JSON-LD @context to ensure consistent IRIs/prefixes for ingestion into the RDF store.
+
+### 1. Knowledge Graph Engine
 
 ### 1. Knowledge Graph Engine
 
