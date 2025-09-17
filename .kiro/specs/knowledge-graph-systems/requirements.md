@@ -10,61 +10,113 @@ shapes, and RDF/OWL from the schema. It maintains entities, relationships, and
 provenance information while supporting metadata enrichment through external
 references and domain knowledge.
 
+## Modular Architecture Requirements
+
+### MR-1: Module Structure and Organization
+
+**User Story:** As a developer, I want a clear modular architecture so that I can implement, test, and maintain knowledge graph components independently.
+
+#### Acceptance Criteria
+
+1. WHEN organizing code THEN the system SHALL follow a consistent module structure with defined interfaces, core logic, models, configuration, and tests
+2. WHEN defining modules THEN each module SHALL have a single primary responsibility and well-defined boundaries
+3. WHEN implementing modules THEN the system SHALL use dependency injection for loose coupling between modules
+4. WHEN managing dependencies THEN the system SHALL provide a dependency graph that enables proper initialization order
+
+### MR-2: Module Interface Design
+
+**User Story:** As a developer, I want standardized module interfaces so that modules can be easily integrated and tested.
+
+#### Acceptance Criteria
+
+1. WHEN creating modules THEN each module SHALL implement a standard ModuleInterface with initialize(), health_check(), and get_dependencies() methods
+2. WHEN interfacing modules THEN the system SHALL use abstract interfaces to define contracts between modules
+3. WHEN testing modules THEN each module SHALL be testable in isolation with mock dependencies
+4. WHEN monitoring modules THEN each module SHALL provide health status and diagnostic information
+
+### MR-3: Configuration Management
+
+**User Story:** As a system administrator, I want centralized configuration management so that I can easily configure and deploy different module combinations.
+
+#### Acceptance Criteria
+
+1. WHEN configuring modules THEN each module SHALL have its own configuration schema with validation
+2. WHEN managing configuration THEN the system SHALL support environment-specific configurations
+3. WHEN validating configuration THEN the system SHALL validate module configurations before initialization
+4. WHEN updating configuration THEN the system SHALL support configuration hot-reloading where possible
+
 ## Requirements
 
-### Requirement 1
+### Requirement 1 - Metadata Enrichment
 
 **User Story:** As a researcher, I want a knowledge graph system that enriches
 my metadata using external references and domain knowledge, so that missing
 information can be automatically filled with high confidence.
+
+**Primary Modules:** `ontology_foundation` (Module 1), `metadata_enrichment` (Module 4), `quality_assurance` (Module 9)
 
 #### Acceptance Criteria
 
 1. WHEN metadata has gaps THEN the knowledge graph SHALL suggest enrichments
    based on strain-to-species mappings, device specifications, and experimental
    protocols with evidence quality assessment and conflict detection
+   **[metadata_enrichment.entity_resolver, metadata_enrichment.confidence_scorer]**
 2. WHEN making suggestions THEN the knowledge graph SHALL provide enhanced
    confidence levels, complete reasoning chains, evidence hierarchy, and support
    for iterative refinement workflows
+   **[metadata_enrichment.confidence_scorer, quality_assurance.lineage_tracker]**
 3. WHEN storing relationships THEN the knowledge graph SHALL maintain entities
    (Dataset, Session, Subject, Device, Lab, Protocol) with semantic
    relationships and complete provenance using PROV-O ontology and LinkML schema
    versioning metadata
+   **[graph_engine.entity_manager, quality_assurance.lineage_tracker]**
 4. WHEN tracking provenance THEN the knowledge graph SHALL support
    evidence-based decision making with human override tracking, evidence
    conflict detection, and integration with DataLad file-level provenance
+   **[quality_assurance.lineage_tracker, resilience.conflict_resolver]**
 
-### Requirement 2
+### Requirement 2 - SPARQL Query Engine
 
 **User Story:** As a data manager, I want SPARQL query capabilities for complex
 metadata validation and enrichment rules, so that I can implement sophisticated
 data quality checks and automated enrichment.
+
+**Primary Modules:** `schema_validation` (Module 2), `graph_engine` (Module 3), `api_services` (Module 5)
 
 #### Acceptance Criteria
 
 1. WHEN querying knowledge THEN the knowledge graph SHALL support SPARQL queries
    for complex metadata validation and enrichment rules; SHACL shapes generated
    from NWB-LinkML SHALL be used for structural validation
+   **[graph_engine.sparql_engine, schema_validation.shacl_generator]**
 2. WHEN implementing rules THEN the knowledge graph SHALL allow definition of
    custom validation rules and enrichment patterns
+   **[graph_engine.sparql_engine, quality_assurance.consistency_checker]**
 3. WHEN executing queries THEN the knowledge graph SHALL provide efficient query
    execution with appropriate indexing and optimization
+   **[graph_engine.sparql_engine, graph_engine.rdf_store]**
 4. WHEN managing complexity THEN the knowledge graph SHALL support federated
    queries across multiple knowledge sources
+   **[api_services.sparql_endpoint, graph_engine.sparql_engine]**
 
-### Requirement 2b (Schema-driven Validation)
+### Requirement 2b - Schema-driven Validation
 
 **User Story:** As a standards engineer, I want schema-driven validation so that
 NWB data is validated consistently across pipelines.
+
+**Primary Modules:** `schema_validation` (Module 2), `graph_engine` (Module 3)
 
 #### Acceptance Criteria
 
 1. WHEN validating instances THEN the system SHALL validate LinkML instances
    (YAML/JSON) against the NWB-LinkML schema
+   **[schema_validation.linkml_processor]**
 2. WHEN producing RDF THEN the system SHALL generate RDF using the JSON-LD
    @context produced from the NWB-LinkML schema to ensure consistent IRIs
+   **[schema_validation.context_generator, graph_engine.rdf_store]**
 3. WHEN validating graphs THEN the system SHALL run SHACL validation using
    shapes generated from the NWB-LinkML schema and produce detailed reports
+   **[schema_validation.shacl_generator, quality_assurance.consistency_checker]**
 
 ### Requirement 3
 
@@ -83,12 +135,14 @@ tools and systems.
 4. WHEN integrating with tools THEN the system SHALL provide APIs for
    programmatic access to knowledge graph data
 
-### Requirement 4 (Comprehensive NWB Ontology Integration)
+### Requirement 4 - Comprehensive NWB Ontology Integration
 
 **User Story:** As a domain expert, I want the knowledge graph to provide the most
 efficient and comprehensive ontology integration for NWB data, so that all
 neuroscience concepts are semantically rich, scientifically accurate, and
 optimally interconnected for knowledge discovery.
+
+**Primary Modules:** `ontology_foundation` (Module 1), `schema_validation` (Module 2), `advanced_reasoning` (Module 7)
 
 #### Acceptance Criteria
 
@@ -97,21 +151,26 @@ optimally interconnected for knowledge discovery.
    Framework), UBERON (anatomy), CHEBI (chemical entities), OBI (experimental
    methods), PATO (phenotype qualities), and NCBITaxon (species) with automated
    concept mapping, semantic bridging, and conflict resolution protocols
+   **[ontology_foundation.multi_ontology_hub, ontology_foundation.semantic_alignment]**
 2. WHEN creating semantic mappings THEN the knowledge graph SHALL establish
    precise relationships between NWB-LinkML classes/slots and ontology concepts
    using OWL equivalence, subsumption, and property mapping with confidence
    scoring and provenance tracking for all alignments
+   **[ontology_foundation.semantic_alignment, metadata_enrichment.confidence_scorer]**
 3. WHEN making inferences THEN the knowledge graph SHALL employ specialized
    reasoning engines with neuroscience-specific rule sets covering anatomical
    hierarchies, species-strain relationships, device-measurement compatibility,
    protocol-data validation, and experimental paradigm consistency checks
+   **[ontology_foundation.neuro_reasoning, advanced_reasoning.anatomical_reasoner]**
 4. WHEN validating scientific accuracy THEN the knowledge graph SHALL enforce
    multi-level domain constraints including anatomical plausibility (brain
    region compatibility), temporal consistency (developmental stages), species
    compatibility, measurement validity, and experimental protocol compliance
+   **[metadata_enrichment.plausibility_validator, advanced_reasoning.design_validator]**
 5. WHEN managing ontology evolution THEN the knowledge graph SHALL provide
    automated ontology versioning, change impact analysis, concept deprecation
    handling, and seamless migration paths with backward compatibility guarantees
+   **[ontology_foundation.nwb_ontology_manager, resilience.conflict_resolver]**
 
 ### Requirement 4b (NWB-Specific Semantic Enhancement)
 
@@ -207,12 +266,14 @@ schema updates propagate safely.
 3. WHEN breaking changes occur THEN the system SHALL provide migration guidance
    and compatibility reporting
 
-### Requirement 9 (Dynamic Content Handling)
+### Requirement 9 - Dynamic Content Handling
 
 **User Story:** As a researcher, I want the knowledge graph system to handle
 arbitrary NWB content that extends beyond the standard schema, so that all my
 experimental data and custom metadata can be captured and represented
 semantically.
+
+**Primary Modules:** `schema_validation` (Module 2), `graph_engine` (Module 3), `dynamic_adaptation` (Module 8)
 
 #### Acceptance Criteria
 
@@ -220,16 +281,20 @@ semantically.
    automatically discover entity types and properties through runtime schema
    analysis including neurodata_type detection, structural pattern recognition,
    and path-based inference
+   **[dynamic_adaptation.schema_discoverer, dynamic_adaptation.pattern_recognizer]**
 2. WHEN processing arbitrary metadata fields THEN the system SHALL create
    adaptive RDF representations that preserve data types, array shapes, nested
    structures, and maintain full semantic relationships
+   **[dynamic_adaptation.adaptive_manager, graph_engine.entity_manager]**
 3. WHEN handling dynamic content THEN the system SHALL extend the base
    NWB-LinkML schema with discovered entities while maintaining consistency with
    existing ontologies and generating appropriate JSON-LD contexts and SHACL
    shapes
+   **[dynamic_adaptation.runtime_extender, schema_validation.context_generator]**
 4. WHEN validating dynamic content THEN the system SHALL apply both base schema
    validation and dynamically generated validation rules with appropriate
    confidence scoring and provenance tracking
+   **[schema_validation.shacl_generator, quality_assurance.consistency_checker]**
 
 ### Requirement 10 (Array and Nested Structure Support)
 
