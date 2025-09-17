@@ -1,171 +1,500 @@
-# Evaluation and Reporting Requirements
+# Evaluation and Reporting Requirements - Modular Architecture
 
 ## Introduction
 
-This spec focuses on evaluation and reporting systems that generate
-comprehensive assessments, interactive visualizations, and human-readable
-summaries of conversion results. This includes quality reports, context
-summaries, interactive visualizations, and comprehensive evaluation frameworks
-that help users understand and validate their conversion results.
+This spec defines requirements for a modular evaluation and reporting system composed of independent, testable components. The system evaluates conversion quality through systematic analysis starting with nwb-inspector validation, followed by multi-dimensional quality assessment, comprehensive reporting, and interactive visualization capabilities.
 
-## Requirements
+## Module-Based Requirements
 
-### Requirement 1
+### Core Module Requirements (Foundation Layer)
 
-**User Story:** As a researcher, I want comprehensive evaluation reports that
-summarize conversion quality and provide actionable insights, so that I can
-understand and validate my conversion results.
+#### REQ-A: NWB Inspector Interface Module
+**Module**: A - NWB Inspector Interface
+**Priority**: Critical
+**Traceability**: Module A implementation
 
-#### Acceptance Criteria
+**Functional Requirements:**
+1. WHEN nwb-inspector is available THEN the module SHALL execute nwb-inspector with configurable parameters
+2. WHEN nwb-inspector execution completes THEN the module SHALL parse JSON output into structured results
+3. WHEN nwb-inspector times out THEN the module SHALL return timeout result with error details
+4. WHEN nwb-inspector is unavailable THEN the module SHALL automatically trigger fallback validation (Module A-FB)
+5. WHEN circuit breaker is open THEN the module SHALL immediately use fallback validation without attempting nwb-inspector
 
-1. WHEN conversions complete THEN the evaluation system SHALL generate
-   comprehensive quality reports including metadata completeness, validation
-   results, and quality metrics
-2. WHEN providing insights THEN the evaluation system SHALL identify strengths
-   and weaknesses in the conversion with specific recommendations for
-   improvement
-3. WHEN summarizing results THEN the evaluation system SHALL create executive
-   summaries suitable for both technical and non-technical audiences
-4. WHEN tracking provenance THEN the evaluation system SHALL clearly document
-   the source and confidence level of all metadata fields
+**Non-Functional Requirements:**
+1. Module SHALL complete environment validation within 10 seconds
+2. Module SHALL support nwb-inspector timeout configuration from 30 seconds to 30 minutes
+3. Module SHALL log all subprocess interactions for debugging
+4. Module SHALL provide health check capability for monitoring
 
-### Requirement 2
+**Testing Requirements:**
+1. Unit tests SHALL mock subprocess calls to test command building
+2. Integration tests SHALL verify actual nwb-inspector execution with sample files
+3. Error handling tests SHALL cover timeout, missing binary, and malformed output scenarios
+4. Performance tests SHALL verify execution within configured timeout limits
+5. Fallback integration tests SHALL verify seamless transition to Module A-FB
 
-**User Story:** As a researcher, I want interactive visualizations of my
-converted data, so that I can explore and validate the conversion results
-visually.
+#### REQ-A-FB: Fallback Validation Module
+**Module**: A-FB - Fallback Validation System
+**Priority**: High
+**Dependencies**: None
+**Traceability**: Module A-FB implementation
 
-#### Acceptance Criteria
+**Functional Requirements:**
+1. WHEN nwb-inspector is unavailable THEN the module SHALL perform basic HDF5 format validation
+2. WHEN validating files THEN the module SHALL check file accessibility, structure, and basic NWB compliance
+3. WHEN generating results THEN the module SHALL include confidence scores and fallback mode indicators
+4. WHEN validation completes THEN the module SHALL provide recommendations for using full nwb-inspector
 
-1. WHEN generating visualizations THEN the evaluation system SHALL create
-   interactive HTML visualizations of knowledge graphs, metadata relationships,
-   and data structure
-2. WHEN exploring data THEN the evaluation system SHALL provide faceted browsing
-   and filtering capabilities for complex datasets
-3. WHEN validating relationships THEN the evaluation system SHALL visualize
-   entity relationships and allow interactive exploration of semantic
-   connections
-4. WHEN providing context THEN the evaluation system SHALL include contextual
-   information and explanations within interactive visualizations
+**Non-Functional Requirements:**
+1. Module SHALL complete validation within 30 seconds for files up to 1GB
+2. Module SHALL provide confidence scores between 0.0-1.0 with fallback mode penalties
+3. Module SHALL operate independently without external tool dependencies
+4. Module SHALL maintain >95% uptime for basic validation functions
 
-### Requirement 3
+**Testing Requirements:**
+1. Unit tests SHALL verify basic validation with various NWB file conditions
+2. Performance tests SHALL ensure validation completes within time limits
+3. Integration tests SHALL verify seamless fallback from Module A
+4. Error handling tests SHALL cover corrupted files and permission issues
 
-**User Story:** As a domain expert, I want human-readable context summaries that
-explain conversion decisions and data relationships, so that I can quickly
-understand and validate automated conversions.
+#### REQ-B: Validation Results Parser Module
+**Module**: B - Validation Results Parser
+**Priority**: High
+**Dependencies**: Module A
+**Traceability**: Module B implementation
 
-#### Acceptance Criteria
+**Functional Requirements:**
+1. WHEN receiving raw validation data THEN the module SHALL parse into standardized ValidationResult format
+2. WHEN multiple validation sources exist THEN the module SHALL merge results with source attribution
+3. WHEN duplicate issues are detected THEN the module SHALL deduplicate based on configurable criteria
+4. WHEN parsing fails THEN the module SHALL return partial results with error annotations
 
-1. WHEN creating summaries THEN the evaluation system SHALL generate
-   human-readable context summaries that explain conversion decisions and
-   reasoning
-2. WHEN describing relationships THEN the evaluation system SHALL provide clear
-   explanations of how entities relate to each other in natural language
-3. WHEN explaining decisions THEN the evaluation system SHALL document why
-   specific conversion choices were made and what alternatives were considered
-4. WHEN providing transparency THEN the evaluation system SHALL clearly
-   distinguish between automated decisions and user-provided information
+**Non-Functional Requirements:**
+1. Module SHALL process validation results within 5 seconds for typical files
+2. Module SHALL support extensible severity mapping configuration
+3. Module SHALL maintain source traceability for all parsed issues
+4. Module SHALL validate input data schemas before processing
 
-### Requirement 4
+**Testing Requirements:**
+1. Unit tests SHALL verify parsing with various nwb-inspector output formats
+2. Edge case tests SHALL handle malformed, empty, and oversized validation data
+3. Merge logic tests SHALL verify correct aggregation of multiple sources
+4. Schema validation tests SHALL ensure data integrity
 
-**User Story:** As a data manager, I want evaluation systems that assess
-conversion completeness and identify areas for improvement, so that I can
-systematically improve data quality.
+#### REQ-C: Configuration Manager Module
+**Module**: C - Configuration Manager
+**Priority**: Medium
+**Dependencies**: None
+**Traceability**: Module C implementation
 
-#### Acceptance Criteria
+**Functional Requirements:**
+1. WHEN configuration profiles are requested THEN the module SHALL provide built-in and custom profiles
+2. WHEN saving profiles THEN the module SHALL validate configuration parameters and create backups
+3. WHEN profile conflicts exist THEN the module SHALL resolve using precedence rules
+4. WHEN configuration validation fails THEN the module SHALL provide specific error messages
 
-1. WHEN assessing completeness THEN the evaluation system SHALL identify missing
-   metadata fields, incomplete data sections, and potential quality issues
-2. WHEN prioritizing improvements THEN the evaluation system SHALL rank issues
-   by importance and impact on data usability
-3. WHEN providing guidance THEN the evaluation system SHALL suggest specific
-   actions for addressing identified issues
-4. WHEN tracking progress THEN the evaluation system SHALL support comparison of
-   evaluation results across multiple conversion iterations
+**Non-Functional Requirements:**
+1. Module SHALL load configuration profiles within 2 seconds
+2. Module SHALL support profile inheritance and override mechanisms
+3. Module SHALL maintain configuration history for rollback capabilities
+4. Module SHALL encrypt sensitive configuration parameters
 
-### Requirement 5
+**Testing Requirements:**
+1. Unit tests SHALL verify CRUD operations for all profile types
+2. Validation tests SHALL ensure configuration parameter constraints
+3. Persistence tests SHALL verify profile saving/loading integrity
+4. Concurrency tests SHALL handle simultaneous profile modifications
 
-**User Story:** As a system integrator, I want evaluation systems that integrate
-with the conversion pipeline and provide structured outputs, so that evaluation
-results can be consumed by other tools and workflows.
+### Assessment Module Requirements (Analysis Layer)
 
-#### Acceptance Criteria
+#### REQ-D: Technical Quality Evaluator Module
+**Module**: D - Technical Quality Evaluator
+**Priority**: High
+**Dependencies**: Module B
+**Traceability**: Module D implementation
 
-1. WHEN integrating with MCP server THEN the evaluation system SHALL provide
-   evaluation tools accessible through standard MCP endpoints
-2. WHEN generating outputs THEN the evaluation system SHALL produce structured
-   evaluation results in machine-readable formats (JSON, XML, RDF)
-3. WHEN providing APIs THEN the evaluation system SHALL offer programmatic
-   access to evaluation metrics and results
-4. WHEN supporting workflows THEN the evaluation system SHALL integrate with
-   external analysis tools and reporting systems
+**Functional Requirements:**
+1. WHEN validation results are provided THEN the module SHALL assess schema compliance with detailed scoring
+2. WHEN NWB file access is available THEN the module SHALL evaluate data integrity and structure quality
+3. WHEN performance analysis is enabled THEN the module SHALL measure file characteristics and access patterns
+4. WHEN technical issues are found THEN the module SHALL generate specific remediation recommendations
 
-### Requirement 6
+**Non-Functional Requirements:**
+1. Module SHALL complete assessment within 30 seconds for files under 1GB
+2. Module SHALL scale assessment complexity based on file size
+3. Module SHALL provide configurable weightings for different technical aspects
+4. Module SHALL cache assessment results for identical file checksums
 
-**User Story:** As a researcher, I want evaluation systems that support
-different evaluation perspectives, so that I can assess conversion quality from
-multiple viewpoints (technical, scientific, usability).
+**Testing Requirements:**
+1. Unit tests SHALL verify scoring algorithms with known good/bad files
+2. Performance tests SHALL ensure scalability across various file sizes
+3. Integration tests SHALL validate with real NWB files from diverse sources
+4. Regression tests SHALL maintain scoring consistency across updates
 
-#### Acceptance Criteria
+#### REQ-E: Scientific Quality Evaluator Module
+**Module**: E - Scientific Quality Evaluator
+**Priority**: High
+**Dependencies**: Module B
+**Traceability**: Module E implementation
 
-1. WHEN providing technical evaluation THEN the evaluation system SHALL assess
-   schema compliance, data integrity, and technical quality metrics
-2. WHEN providing scientific evaluation THEN the evaluation system SHALL assess
-   scientific validity, experimental completeness, and domain-specific quality
-3. WHEN providing usability evaluation THEN the evaluation system SHALL assess
-   data discoverability, documentation quality, and ease of use
-4. WHEN combining perspectives THEN the evaluation system SHALL provide
-   integrated assessments that balance technical, scientific, and usability
-   concerns
+**Functional Requirements:**
+1. WHEN metadata is available THEN the module SHALL assess experimental completeness against domain standards
+2. WHEN scientific context is provided THEN the module SHALL validate experimental design consistency
+3. WHEN reproducibility information exists THEN the module SHALL evaluate documentation adequacy
+4. WHEN domain-specific requirements apply THEN the module SHALL apply appropriate validation rules
 
-### Requirement 7
+**Non-Functional Requirements:**
+1. Module SHALL support configurable metadata field requirements by research domain
+2. Module SHALL provide extensible validation rule framework
+3. Module SHALL maintain compatibility with multiple metadata schema versions
+4. Module SHALL generate domain-specific improvement suggestions
 
-**User Story:** As a quality assurance engineer, I want evaluation systems that
-provide benchmarking and comparative analysis, so that I can track quality
-improvements and compare conversion approaches.
+**Testing Requirements:**
+1. Unit tests SHALL verify completeness scoring with various metadata scenarios
+2. Domain-specific tests SHALL validate against neuroscience research standards
+3. Edge case tests SHALL handle missing, incomplete, and invalid metadata
+4. Validation rule tests SHALL ensure correct application of domain constraints
 
-#### Acceptance Criteria
+#### REQ-F: Usability Quality Evaluator Module
+**Module**: F - Usability Quality Evaluator
+**Priority**: Medium
+**Dependencies**: Module B
+**Traceability**: Module F implementation
 
-1. WHEN benchmarking quality THEN the evaluation system SHALL compare conversion
-   results against established quality benchmarks and best practices
-2. WHEN providing comparisons THEN the evaluation system SHALL support
-   comparison of different conversion approaches or parameter settings
-3. WHEN tracking trends THEN the evaluation system SHALL provide analytics on
-   quality trends over time and across different datasets
-4. WHEN identifying patterns THEN the evaluation system SHALL highlight common
-   quality patterns and suggest systematic improvements
+**Functional Requirements:**
+1. WHEN documentation is present THEN the module SHALL assess clarity, completeness, and usefulness
+2. WHEN discoverability features exist THEN the module SHALL evaluate searchability and metadata richness
+3. WHEN accessibility is evaluated THEN the module SHALL check file access, permissions, and format compliance
+4. WHEN usability issues are identified THEN the module SHALL suggest user experience improvements
 
-### Requirement 8
+**Non-Functional Requirements:**
+1. Module SHALL assess documentation quality using natural language processing metrics
+2. Module SHALL support multilingual documentation evaluation
+3. Module SHALL provide accessibility scoring based on WCAG-like principles
+4. Module SHALL generate user-focused improvement recommendations
 
-**User Story:** As a developer, I want evaluation systems that are extensible
-and configurable, so that evaluation criteria can be customized for different
-use cases and evolving requirements.
+**Testing Requirements:**
+1. Unit tests SHALL verify documentation scoring algorithms
+2. Accessibility tests SHALL validate compliance checking mechanisms
+3. User experience tests SHALL evaluate recommendation quality
+4. Internationalization tests SHALL handle multiple language scenarios
 
-#### Acceptance Criteria
+#### REQ-G: Quality Assessment Orchestrator Module
+**Module**: G - Quality Assessment Orchestrator
+**Priority**: Critical
+**Dependencies**: Modules D, E, F, C
+**Traceability**: Module G implementation
 
-1. WHEN configuring evaluation THEN the evaluation system SHALL support custom
-   evaluation metrics and quality criteria
-2. WHEN extending functionality THEN the evaluation system SHALL provide plugin
-   architectures for adding new evaluation methods
-3. WHEN customizing reports THEN the evaluation system SHALL allow customization
-   of report formats, content, and presentation
-4. WHEN adapting to requirements THEN the evaluation system SHALL support
-   different evaluation profiles for different use cases (research, clinical,
-   regulatory)
+**Functional Requirements:**
+1. WHEN orchestrating evaluation THEN the module SHALL coordinate all evaluator modules with proper dependency management
+2. WHEN aggregating results THEN the module SHALL apply configurable weights and combine scores appropriately
+3. WHEN generating insights THEN the module SHALL produce actionable recommendations based on comprehensive analysis
+4. WHEN evaluation fails THEN the module SHALL provide graceful degradation with partial results
 
-### Requirement 9
+**Non-Functional Requirements:**
+1. Module SHALL support parallel execution of independent evaluators
+2. Module SHALL complete orchestration within 60 seconds for typical evaluations
+3. Module SHALL provide real-time progress reporting during evaluation
+4. Module SHALL maintain evaluation audit trails for traceability
 
-**User Story:** As a researcher, I want evaluation systems that support
-collaborative review and validation, so that domain experts can review and
-approve conversion results.
+**Testing Requirements:**
+1. Unit tests SHALL verify orchestration logic and dependency handling
+2. Performance tests SHALL ensure efficient parallel execution
+3. Integration tests SHALL validate end-to-end evaluation workflows
+4. Stress tests SHALL handle high-volume evaluation scenarios
 
-#### Acceptance Criteria
+### Output Module Requirements (Presentation Layer)
 
-1. WHEN supporting collaboration THEN the evaluation system SHALL provide
-   interfaces for expert review and annotation of conversion results
-2. WHEN facilitating review THEN the evaluation system SHALL highlight areas
-   that require expert attention and provide review workflows
-3. WHEN capturing feedback THEN the evaluation system SHALL record expert
-   feedback and incorporate it into evaluation results
-4. WHEN managing approval THEN the evaluation system SHALL support approval
-   workflows and track the status of expert reviews
+#### REQ-H: Report Generator Module
+**Module**: H - Report Generator
+**Priority**: High
+**Dependencies**: Module G
+**Traceability**: Module H implementation
+
+**Functional Requirements:**
+1. WHEN generating reports THEN the module SHALL create executive summaries suitable for non-technical audiences
+2. WHEN producing technical reports THEN the module SHALL include detailed metrics, validation results, and recommendations
+3. WHEN formatting outputs THEN the module SHALL support multiple formats (Markdown, HTML, PDF, JSON)
+4. WHEN customizing reports THEN the module SHALL apply templates and branding configuration
+
+**Non-Functional Requirements:**
+1. Module SHALL generate reports within 10 seconds of receiving assessment data
+2. Module SHALL support custom report templates with variable substitution
+3. Module SHALL maintain consistent formatting across all output formats
+4. Module SHALL optimize report size while preserving essential information
+
+**Testing Requirements:**
+1. Unit tests SHALL verify report generation for all supported formats
+2. Template tests SHALL validate custom template processing
+3. Content tests SHALL ensure report accuracy and completeness
+4. Rendering tests SHALL verify output format compliance
+
+#### REQ-I: Visualization Engine Module
+**Module**: I - Visualization Engine
+**Priority**: Medium
+**Dependencies**: Module G
+**Traceability**: Module I implementation
+
+**Functional Requirements:**
+1. WHEN creating visualizations THEN the module SHALL generate interactive quality dashboards with drill-down capabilities
+2. WHEN displaying knowledge graphs THEN the module SHALL create navigable relationship visualizations
+3. WHEN presenting metrics THEN the module SHALL use appropriate chart types and color coding for clarity
+4. WHEN exporting visualizations THEN the module SHALL support static and interactive formats
+
+**Non-Functional Requirements:**
+1. Module SHALL generate visualizations within 15 seconds of receiving data
+2. Module SHALL create responsive visualizations compatible with modern browsers
+3. Module SHALL optimize visualization performance for large datasets
+4. Module SHALL provide accessibility features for visualization content
+
+**Testing Requirements:**
+1. Unit tests SHALL verify visualization generation and interactivity
+2. Rendering tests SHALL validate output across different browsers
+3. Performance tests SHALL ensure scalability with large datasets
+4. Accessibility tests SHALL verify compliance with accessibility standards
+
+#### REQ-J: Export Manager Module
+**Module**: J - Export Manager
+**Priority**: Low
+**Dependencies**: Modules H, I
+**Traceability**: Module J implementation
+
+**Functional Requirements:**
+1. WHEN exporting outputs THEN the module SHALL package reports and visualizations in organized bundles
+2. WHEN delivering results THEN the module SHALL support multiple delivery methods (file system, cloud storage, email)
+3. WHEN archiving evaluations THEN the module SHALL create comprehensive evaluation packages with metadata
+4. WHEN handling large exports THEN the module SHALL provide progress tracking and resumable operations
+
+**Non-Functional Requirements:**
+1. Module SHALL handle exports up to 1GB in size efficiently
+2. Module SHALL provide compression options for large evaluation packages
+3. Module SHALL maintain export history for audit purposes
+4. Module SHALL support configurable retention policies for exported data
+
+**Testing Requirements:**
+1. Unit tests SHALL verify export packaging and delivery mechanisms
+2. Integration tests SHALL validate with real cloud storage providers
+3. Performance tests SHALL ensure efficient handling of large exports
+4. Recovery tests SHALL verify resumable operation capabilities
+
+### Integration Module Requirements (Connectivity Layer)
+
+#### REQ-K: MCP Server Tools Module
+**Module**: K - MCP Server Tools
+**Priority**: High
+**Dependencies**: Modules A, G, H, I
+**Traceability**: Module K implementation
+
+**Functional Requirements:**
+1. WHEN providing MCP endpoints THEN the module SHALL expose evaluation services through standard MCP protocol
+2. WHEN handling requests THEN the module SHALL validate inputs and provide structured responses
+3. WHEN managing sessions THEN the module SHALL support concurrent evaluation requests with proper isolation
+4. WHEN integrating services THEN the module SHALL coordinate with all dependent modules efficiently
+
+**Non-Functional Requirements:**
+1. Module SHALL handle up to 10 concurrent evaluation requests
+2. Module SHALL respond to health checks within 1 second
+3. Module SHALL provide request/response logging for monitoring
+4. Module SHALL implement proper authentication and authorization
+
+**Testing Requirements:**
+1. Unit tests SHALL verify MCP protocol compliance and endpoint functionality
+2. Load tests SHALL validate concurrent request handling capabilities
+3. Integration tests SHALL ensure proper coordination with dependent modules
+4. Security tests SHALL verify authentication and authorization mechanisms
+
+#### REQ-L: Review System Interface Module
+**Module**: L - Review System Interface
+**Priority**: Low
+**Dependencies**: Modules G, H
+**Traceability**: Module L implementation
+
+**Functional Requirements:**
+1. WHEN supporting reviews THEN the module SHALL provide collaborative annotation and approval workflows
+2. WHEN managing sessions THEN the module SHALL track review progress and participant contributions
+3. WHEN integrating feedback THEN the module SHALL incorporate expert input into evaluation results
+4. WHEN generating review reports THEN the module SHALL summarize review activities and outcomes
+
+**Non-Functional Requirements:**
+1. Module SHALL support real-time collaboration features
+2. Module SHALL maintain review history and audit trails
+3. Module SHALL provide notification mechanisms for review events
+4. Module SHALL scale to support teams of up to 50 reviewers
+
+**Testing Requirements:**
+1. Unit tests SHALL verify review workflow and session management
+2. Collaboration tests SHALL validate real-time features and synchronization
+3. Integration tests SHALL ensure proper evaluation result incorporation
+4. Scalability tests SHALL validate performance with multiple concurrent reviewers
+
+### Utility Module Requirements (Support Layer)
+
+#### REQ-N: Data Models & Schemas Module
+**Module**: N - Data Models & Schemas
+**Priority**: Critical
+**Dependencies**: None
+**Traceability**: Module N implementation
+
+**Functional Requirements:**
+1. WHEN defining data structures THEN the module SHALL provide comprehensive type definitions for all evaluation data
+2. WHEN validating data THEN the module SHALL ensure schema compliance and data integrity
+3. WHEN serializing data THEN the module SHALL support multiple formats with version compatibility
+4. WHEN evolving schemas THEN the module SHALL maintain backward compatibility and migration paths
+
+**Non-Functional Requirements:**
+1. Module SHALL provide compile-time type checking for all data structures
+2. Module SHALL support schema versioning with automated migration
+3. Module SHALL optimize serialization performance for large datasets
+4. Module SHALL maintain comprehensive schema documentation
+
+**Testing Requirements:**
+1. Unit tests SHALL verify all data model definitions and constraints
+2. Serialization tests SHALL validate format compatibility and performance
+3. Migration tests SHALL ensure smooth schema evolution
+4. Documentation tests SHALL verify schema documentation completeness
+
+#### REQ-O: Error Handling & Logging Module
+**Module**: O - Error Handling & Logging
+**Priority**: High
+**Dependencies**: None
+**Traceability**: Module O implementation
+
+**Functional Requirements:**
+1. WHEN errors occur THEN the module SHALL provide centralized error handling with context preservation
+2. WHEN logging events THEN the module SHALL create structured, searchable log entries
+3. WHEN monitoring systems THEN the module SHALL support integration with external monitoring tools
+4. WHEN debugging issues THEN the module SHALL provide comprehensive error context and correlation IDs
+
+**Non-Functional Requirements:**
+1. Module SHALL maintain error context without significant performance impact
+2. Module SHALL support configurable log levels and filtering
+3. Module SHALL provide log rotation and retention management
+4. Module SHALL ensure thread-safe logging in concurrent environments
+
+**Testing Requirements:**
+1. Unit tests SHALL verify error handling and context preservation
+2. Performance tests SHALL ensure minimal logging overhead
+3. Integration tests SHALL validate monitoring tool compatibility
+4. Stress tests SHALL verify thread safety under high concurrency
+
+#### REQ-P: Testing Utilities Module
+**Module**: P - Testing Utilities
+**Priority**: Medium
+**Dependencies**: Module N
+**Traceability**: Module P implementation
+
+**Functional Requirements:**
+1. WHEN supporting testing THEN the module SHALL provide comprehensive test fixtures and mock utilities
+2. WHEN generating test data THEN the module SHALL create realistic evaluation scenarios
+3. WHEN validating functionality THEN the module SHALL offer assertion helpers and custom matchers
+4. WHEN testing integration THEN the module SHALL provide end-to-end testing framework support
+
+**Non-Functional Requirements:**
+1. Module SHALL generate test data efficiently for large-scale testing
+2. Module SHALL provide deterministic test data generation for reproducible tests
+3. Module SHALL support test parallelization without conflicts
+4. Module SHALL minimize test execution time while maintaining coverage
+
+**Testing Requirements:**
+1. Unit tests SHALL verify test utility functionality and reliability
+2. Performance tests SHALL ensure efficient test data generation
+3. Integration tests SHALL validate end-to-end testing framework support
+4. Meta-tests SHALL verify testing utilities don't introduce false positives/negatives
+
+#### REQ-R1: Circuit Breaker System Module
+**Module**: R1 - Circuit Breaker System
+**Priority**: High
+**Dependencies**: Module O (Enhanced Logging)
+**Traceability**: Module R1 implementation
+
+**Functional Requirements:**
+1. WHEN services fail repeatedly THEN the module SHALL open circuit breakers to prevent cascading failures
+2. WHEN circuit breakers are open THEN the module SHALL reject calls and provide clear error messages
+3. WHEN recovery timeout expires THEN the module SHALL attempt service recovery with half-open state
+4. WHEN services recover THEN the module SHALL close circuit breakers and resume normal operation
+
+**Non-Functional Requirements:**
+1. Module SHALL detect failures within 3 failed attempts by default
+2. Module SHALL provide configurable failure thresholds and timeout periods
+3. Module SHALL maintain circuit state with thread-safety for concurrent operations
+4. Module SHALL log all state transitions for monitoring and debugging
+
+**Testing Requirements:**
+1. Unit tests SHALL verify circuit state transitions under various failure scenarios
+2. Integration tests SHALL validate circuit breaker protection for real services
+3. Stress tests SHALL ensure thread-safety under high concurrent load
+4. Recovery tests SHALL verify automatic service recovery mechanisms
+
+#### REQ-R2: Resource Manager Module
+**Module**: R2 - Resource Manager
+**Priority**: Medium
+**Dependencies**: Module O (Enhanced Logging)
+**Traceability**: Module R2 implementation
+
+**Functional Requirements:**
+1. WHEN operations request resources THEN the module SHALL check availability and allocate if possible
+2. WHEN resource limits are exceeded THEN the module SHALL reject new operations with clear error messages
+3. WHEN operations complete THEN the module SHALL automatically release allocated resources
+4. WHEN monitoring system health THEN the module SHALL track memory, CPU, and concurrent operation limits
+
+**Non-Functional Requirements:**
+1. Module SHALL support configurable limits for memory (default 2GB) and concurrent operations (default 3)
+2. Module SHALL provide resource status reporting with current usage and availability
+3. Module SHALL clean up stale resource allocations automatically
+4. Module SHALL operate with minimal performance overhead (<1% CPU)
+
+**Testing Requirements:**
+1. Unit tests SHALL verify resource allocation and release mechanisms
+2. Integration tests SHALL validate resource limits enforcement
+3. Performance tests SHALL ensure minimal overhead during normal operations
+4. Stress tests SHALL verify behavior under resource exhaustion scenarios
+
+## Cross-Module Requirements
+
+### System Integration Requirements (Enhanced)
+1. ALL modules MUST implement standardized health check interfaces with status reporting
+2. ALL modules MUST support dependency injection for testability and resilience
+3. ALL modules MUST provide consistent error handling with circuit breaker integration
+4. ALL modules MUST support graceful shutdown and automatic resource cleanup
+5. ALL modules MUST integrate with fallback mechanisms when primary services fail
+6. ALL modules MUST support graceful degradation modes with confidence indicators
+7. ALL modules MUST provide resource usage metrics for monitoring
+8. ALL modules MUST handle partial failures without stopping the entire pipeline
+
+### Performance Requirements (Enhanced)
+1. COMPLETE evaluation pipeline MUST process typical NWB files within 90 seconds
+2. FALLBACK validation MUST complete within 30 seconds for any file size
+3. PARALLEL module execution MUST improve performance by at least 30%
+4. MEMORY usage MUST remain under 2GB for files up to 1GB with automatic monitoring
+5. CONCURRENT evaluations MUST support up to 3 simultaneous processes with resource management
+6. CIRCUIT breaker response time MUST be under 100ms for protection decisions
+7. RESOURCE allocation and release MUST complete within 1 second
+8. GRACEFUL degradation MUST maintain at least 50% functionality when primary services fail
+
+### Monitoring and Observability Requirements
+1. ALL modules MUST emit metrics for performance monitoring
+2. EVALUATION pipeline MUST provide progress tracking
+3. ERROR conditions MUST trigger appropriate alerts
+4. AUDIT trails MUST capture all evaluation activities
+
+### Security Requirements (Enhanced)
+1. ALL file access MUST be validated and sandboxed with permission checking
+2. CONFIGURATION data MUST be validated before use with schema enforcement
+3. EXTERNAL integrations MUST use secure communication protocols with timeout protection
+4. SENSITIVE information MUST be protected in logs and outputs with data sanitization
+5. FALLBACK validation MUST operate with minimal system privileges
+6. CIRCUIT breakers MUST prevent resource exhaustion attacks
+7. ERROR messages MUST NOT expose internal system details
+8. RESOURCE limits MUST prevent denial-of-service scenarios
+
+### Maintainability Requirements (Enhanced)
+1. ALL modules MUST achieve >90% test coverage including failure scenarios
+2. MODULE interfaces MUST be documented with examples and error handling patterns
+3. BREAKING changes MUST include migration guides and fallback compatibility
+4. CODE quality MUST meet established linting and style standards
+5. CIRCUIT breaker configurations MUST be externally configurable
+6. FALLBACK mechanisms MUST be testable independently
+7. ERROR handling patterns MUST be consistent across all modules
+8. MONITORING and health check endpoints MUST be standardized
+
+This modular requirements specification provides clear traceability from requirements to implementation, supports incremental development, and enables comprehensive testing and debugging of the evaluation and reporting system.
