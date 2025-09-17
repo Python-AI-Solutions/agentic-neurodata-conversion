@@ -1,231 +1,462 @@
-# Implementation Plan
+# Modular Implementation Plan
 
-- [x] 1. Create knowledge graph foundation and data models
-  - Implement `KnowledgeGraph` class in
-    `agentic_neurodata_conversion/knowledge_graph/graph.py`
-  - Create entity classes (Dataset, Session, Subject, Device, Lab, Protocol)
-    with RDF mapping
-  - Add relationship definitions and semantic property mappings
-  - Implement basic graph storage and retrieval using RDFLib or similar
-  - _Requirements: 1.3, 3.1_
+## Phase 1: Core Foundation Modules (Priority 1)
 
-- [ ] 2. Build metadata enrichment engine with evidence-based confidence
-  - Create `MetadataEnricher` class for automatic metadata enhancement with
-    reasoning chain tracking
-  - Implement strain-to-species mapping with evidence quality assessment and
-    conflict detection
-  - Add device specification lookup and protocol enrichment with
-    cross-validation capabilities
-  - Create enrichment suggestion system with evidence hierarchy and human
-    override support
-  - Implement iterative refinement workflows for improving low-confidence
-    metadata over time
-  - Add evidence presentation system for human review of conflicting or
-    uncertain enrichments
-  - _Requirements: 1.1, 1.2, 1.4_
-  - _Integration: data-management-provenance Task 4, Task 7_
+### Module 1: Ontology Foundation (ontology_foundation/)
+- [x] **Task 1.1**: Create module structure and interfaces
+  - Implement `OntologyFoundationInterface` in `interfaces.py`
+  - Create `NWBOntologyManager` class in `nwb_ontology_manager.py`
+  - Add module configuration schema in `config.py`
+  - Setup module tests in `tests/test_ontology_foundation.py`
+  - _Requirements: MR-1, MR-2, 4.1_
+  - _Module: ontology_foundation_
 
-- [ ] 3. Implement semantic provenance tracking with DataLad integration
-  - Create `SemanticProvenanceTracker` class using PROV-O ontology for decision
-    chains and evidence hierarchy
-  - Add enhanced confidence levels (definitive, high_evidence, human_confirmed,
-    human_override, cross_validated, heuristic_strong, medium_evidence,
-    conflicting_evidence, low_evidence, placeholder, unknown)
-  - Implement evidence conflict detection with SPARQL queries and human override
-    tracking with evidence presentation records
-  - Create reasoning chain representation in RDF with evidence quality
-    assessment and source attribution
-  - Integrate with DataLad conversion repositories for file-level provenance
-    correlation
-  - Add decision provenance queries for transparency and reproducibility
-    validation
+- [ ] **Task 1.2**: Implement Multi-Ontology Integration Hub
+  - Create `MultiOntologyIntegrationHub` class in `multi_ontology_hub.py`
+  - Implement NIFSTD, UBERON, CHEBI, OBI, PATO, NCBITaxon integration
+  - Add ontology loading and caching mechanisms
+  - Create ontology conflict resolution protocols
+  - _Requirements: 4.1, 4.5_
+  - _Module: ontology_foundation.multi_ontology_hub_
+
+- [ ] **Task 1.3**: Build Semantic Alignment Engine
+  - Implement `SemanticAlignmentEngine` class in `semantic_alignment.py`
+  - Create NWB-LinkML to ontology mapping system
+  - Add confidence scoring for alignments
+  - Implement provenance tracking for alignments
+  - _Requirements: 4.2, 4.5_
+  - _Module: ontology_foundation.semantic_alignment_
+
+- [ ] **Task 1.4**: Develop Neuroscience Reasoning Engine
+  - Create `NeuroReasoningEngine` class in `neuro_reasoning.py`
+  - Implement anatomical hierarchy reasoning
+  - Add species-strain relationship validation
+  - Create device-measurement compatibility checks
+  - _Requirements: 4.3, 4.4_
+  - _Module: ontology_foundation.neuro_reasoning_
+
+### Module 2: Schema Validation (schema_validation/)
+- [ ] **Task 2.1**: Create schema validation module structure
+  - Implement `SchemaValidationInterface` in `interfaces.py`
+  - Create module configuration and dependency management
+  - Setup comprehensive test suite
+  - _Requirements: MR-1, MR-2, 2b.1_
+  - _Module: schema_validation_
+
+- [ ] **Task 2.2**: Implement LinkML Processor
+  - Create `LinkMLProcessor` class in `linkml_processor.py`
+  - Add NWB-LinkML schema loading and validation
+  - Implement instance validation against schema
+  - Create schema versioning and caching
+  - _Requirements: 2b.1, 8.1_
+  - _Module: schema_validation.linkml_processor_
+
+- [ ] **Task 2.3**: Build Dynamic Schema Discovery
+  - Implement `DynamicSchemaDiscovery` class in `dynamic_discovery.py`
+  - Add runtime entity type inference
+  - Create property discovery for arrays and nested structures
+  - Implement intelligent RDF mapping generation
+  - _Requirements: 9.1, 9.2, 10.1_
+  - _Module: schema_validation.dynamic_discovery_
+
+- [ ] **Task 2.4**: Create Context and Shape Generators
+  - Implement `ContextGenerator` class in `context_generator.py`
+  - Create `SHACLGenerator` class in `shacl_generator.py`
+  - Add `OWLGenerator` class in `owl_generator.py`
+  - Implement artifact versioning and caching
+  - _Requirements: 2b.2, 2b.3, 8.2_
+  - _Module: schema_validation.context_generator, schema_validation.shacl_generator_
+
+### Module 3: Graph Engine (graph_engine/)
+- [ ] **Task 3.1**: Create graph engine module foundation
+  - Implement `GraphEngineInterface` in `interfaces.py`
+  - Setup module dependency injection and configuration
+  - Create comprehensive test framework
+  - _Requirements: MR-1, MR-2, 1.3_
+  - _Module: graph_engine_
+
+- [ ] **Task 3.2**: Implement RDF Store Manager
+  - Create `RDFStoreManager` class in `rdf_store.py`
+  - Add support for memory, file, and remote stores
+  - Implement indexing and optimization
+  - Add transaction support and backup/restore
+  - _Requirements: 3.1, 2.3_
+  - _Module: graph_engine.rdf_store_
+
+- [ ] **Task 3.3**: Build SPARQL Query Engine
+  - Implement `SPARQLEngine` class in `sparql_engine.py`
+  - Add query optimization and caching
+  - Create federated query support
+  - Implement query result formatting
+  - _Requirements: 2.1, 2.2, 2.4_
+  - _Module: graph_engine.sparql_engine_
+
+- [ ] **Task 3.4**: Create Entity Manager
+  - Implement `EntityManager` class in `entity_manager.py`
+  - Add adaptive entity creation for dynamic content
+  - Create entity lifecycle management
+  - Implement relationship management
+  - _Requirements: 1.3, 9.2, 10.2_
+  - _Module: graph_engine.entity_manager_
+
+## Phase 2: Enhancement Modules (Priority 2)
+
+### Module 4: Metadata Enrichment (metadata_enrichment/)
+- [ ] **Task 4.1**: Create metadata enrichment module foundation
+  - Implement `MetadataEnrichmentInterface` in `interfaces.py`
+  - Setup module with ontology_foundation dependency
+  - Create comprehensive test suite with mock dependencies
+  - _Requirements: MR-1, MR-2, 1.1_
+  - _Module: metadata_enrichment_
+
+- [ ] **Task 4.2**: Implement Entity Resolver
+  - Create `EntityResolver` class in `entity_resolver.py`
+  - Add strain-to-species mapping with evidence assessment
+  - Implement device specification lookup and protocol enrichment
+  - Create cross-validation capabilities
+  - _Requirements: 1.1, 1.2_
+  - _Module: metadata_enrichment.entity_resolver_
+
+- [ ] **Task 4.3**: Build Relationship Inference Engine
+  - Implement `RelationshipInference` class in `relationship_inference.py`
+  - Create semantic relationship discovery
+  - Add evidence hierarchy and reasoning chain tracking
+  - Implement human override support
   - _Requirements: 1.2, 1.4_
-  - _Integration: data-management-provenance Task 4_
+  - _Module: metadata_enrichment.relationship_inference_
 
-- [ ] 4. Build SPARQL query engine and validation system (Schema-driven)
-  - Implement SPARQL endpoint using rdflib or Apache Jena
-  - Generate SHACL shapes from NWB-LinkML schema and validate graphs
-  - Create query optimization and indexing for efficient execution
-  - Add custom validation rule definition and execution framework
-  - Implement enrichment pattern matching and rule application
-  - _Requirements: 2.1, 2.2, 2.3, 2b_
+- [ ] **Task 4.4**: Create Confidence Scoring System
+  - Implement `ConfidenceScorer` class in `confidence_scorer.py`
+  - Add evidence quality assessment and conflict detection
+  - Create confidence level hierarchies
+  - Implement iterative refinement workflows
+  - _Requirements: 1.2, 1.4_
+  - _Module: metadata_enrichment.confidence_scorer_
 
-- [ ] 5. Create federated query and external knowledge integration
-  - Implement federated SPARQL query capabilities across multiple sources
-  - Add external knowledge base integration (Wikidata, domain ontologies)
-  - Create knowledge source management and synchronization
-  - Implement query routing and result aggregation across sources
-  - _Requirements: 2.4, 4.1_
+- [ ] **Task 4.5**: Implement Biological Plausibility Validator
+  - Create `PlausibilityValidator` class in `plausibility_validator.py`
+  - Add anatomical compatibility checks
+  - Implement temporal consistency validation
+  - Create species-measurement compatibility verification
+  - _Requirements: 4.4, 4b.4_
+  - _Module: metadata_enrichment.plausibility_validator_
 
-- [ ] 6a. Build comprehensive NWB ontology integration framework
-  - Create `NWBOntologyManager` as the central orchestrator for all ontology operations with multi-ontology coordination, version management, and semantic alignment capabilities
-  - Implement automated ontology ingestion pipeline for NIFSTD (Neuroscience Information Framework), UBERON (anatomical structures), CHEBI (chemical entities), OBI (experimental methods), PATO (phenotype qualities), and NCBITaxon (species taxonomy) with OWL parsing, concept extraction, and relationship mapping
-  - Build `SemanticAlignmentEngine` that creates precise mappings between NWB-LinkML classes/slots and ontology concepts using OWL equivalence classes, rdfs:subClassOf relationships, owl:sameAs assertions, and custom property mappings with automated confidence scoring and provenance tracking
-  - Develop conflict resolution protocols for overlapping concepts across ontologies with automated mediation, expert override capabilities, and decision audit trails
-  - Implement ontology versioning system with change impact analysis, concept deprecation handling, backward compatibility matrices, and automated migration scripts for ontology updates
-  - _Requirements: 4.1, 4.2, 4.5, 4b.1_
+### Module 5: API Services (api_services/)
+- [ ] **Task 5.1**: Create API services module foundation
+  - Implement `APIServicesInterface` in `interfaces.py`
+  - Setup module with graph_engine dependency
+  - Create API testing framework
+  - _Requirements: MR-1, MR-2, 3.3_
+  - _Module: api_services_
 
-- [ ] 6b. Implement specialized neuroscience reasoning engine
-  - Create `NeuroReasoningEngine` with domain-specific inference capabilities including anatomical hierarchy reasoning (brain region subsumption), species-strain taxonomic relationships, developmental stage progression, and experimental paradigm compatibility validation
-  - Build sophisticated temporal reasoning system for experimental phases, stimulus-response relationships, behavioral state transitions, multi-scale temporal hierarchies, and cross-modal synchronization with precise temporal constraint validation
-  - Implement biological plausibility validation including anatomical compatibility checks (electrode placement validation), species-appropriate measurements, developmental stage consistency, and protocol-organism suitability assessment
-  - Add device-measurement compatibility reasoning with electrode array geometry validation, recording configuration consistency, stimulation parameter safety bounds, and measurement modality appropriateness checks
-  - Create experimental design validation engine with control condition verification, randomization scheme validation, statistical power assessment, and reproducibility metadata completeness checking
-  - _Requirements: 4.3, 4.4, 4b.2, 4b.4_
+- [ ] **Task 5.2**: Implement REST API
+  - Create `RestAPI` class in `rest_api.py`
+  - Add metadata enrichment endpoints
+  - Implement knowledge graph generation endpoints
+  - Create validation and export endpoints
+  - _Requirements: 3.4, 5.1_
+  - _Module: api_services.rest_api_
 
-- [ ] 6c. Build NWB-specific semantic enhancement system
-  - Develop `NWBSemanticExtension` module for specialized neuroscience concepts beyond generic ontologies including electrode array topologies with spatial relationship modeling, recording configuration semantics with signal path representation, and stimulation parameter ontologies with temporal-spatial coordinate systems
-  - Create behavioral paradigm classification system with task taxonomy, experimental condition modeling, stimulus presentation timing, response measurement protocols, and cross-species behavioral homology mappings
-  - Implement analysis method taxonomy with mathematical relationship modeling, algorithm parameter spaces, statistical method appropriateness, and result interpretation frameworks with automated method selection guidance
-  - Build multi-modal data integration semantics with cross-modal relationship modeling (electrophysiology-behavior links), temporal synchronization metadata, spatial registration frameworks, and modality-specific quality assessment metrics
-  - Add experimental context enrichment including environmental condition modeling, subject preparation protocols, experimenter metadata, equipment calibration history, and experimental timeline reconstruction
-  - _Requirements: 4b.1, 4b.2, 4b.3, 4b.4_
+- [ ] **Task 5.3**: Build SPARQL Endpoint
+  - Implement `SPARQLEndpoint` class in `sparql_endpoint.py`
+  - Add standard SPARQL protocol support
+  - Create query result formatting
+  - Implement authentication and authorization
+  - _Requirements: 3.3, 2.4_
+  - _Module: api_services.sparql_endpoint_
 
-- [ ] 7. Implement multiple RDF format generation
-  - Create format converters for TTL, JSON-LD (schema-derived @context), N-Triples, RDF/XML
-  - Add format-specific serialization and optimization
-  - Implement streaming serialization for large knowledge graphs
-  - Create format validation and quality checking
+- [ ] **Task 5.4**: Create Export Services
+  - Implement `ExportServices` class in `export_services.py`
+  - Add multiple RDF format generation (TTL, JSON-LD, N-Triples, OWL)
+  - Create human-readable summaries
+  - Implement streaming for large datasets
   - _Requirements: 3.1, 3.2_
+  - _Module: api_services.export_services_
 
-- [ ] 8. Build human-readable provenance and decision chain output generation
-  - Create triple summary generation with entity labels, descriptions, and
-    confidence levels
-  - Implement natural language description generation for decision chains and
-    evidence reasoning
-  - Add visualization-friendly output formats for provenance graph exploration
-    and evidence conflict display
-  - Create summary statistics including confidence distributions, evidence
-    quality metrics, and human override rates
-  - Generate human-readable provenance reports showing reasoning paths and
-    evidence hierarchy
-  - _Requirements: 3.2, 3.4_
-  - _Integration: data-management-provenance Task 10_
+### Module 6: MCP Integration (mcp_integration/)
+- [ ] **Task 6.1**: Create MCP integration module
+  - Implement `MCPIntegrationInterface` in `interfaces.py`
+  - Setup dependencies on api_services and metadata_enrichment
+  - Create MCP-specific test framework
+  - _Requirements: MR-1, MR-2, 5.1_
+  - _Module: mcp_integration_
 
-- [ ] 9. Create SPARQL endpoint and API services
-  - Implement standard SPARQL endpoint with HTTP protocol support
-  - Add RESTful API for programmatic knowledge graph access, including schema/shape validation endpoints
-  - Create authentication and authorization for knowledge graph access
-  - Implement query result caching and performance optimization
-  - _Requirements: 3.3, 3.4_
+- [ ] **Task 6.2**: Implement MCP Tools
+  - Create `MCPTools` class in `mcp_tools.py`
+  - Add knowledge graph generation tools
+  - Implement metadata enrichment tools
+  - Create validation and export tools
+  - _Requirements: 5.1, 5.2, 1.1_
+  - _Module: mcp_integration.mcp_tools_
 
-- [ ] 10. Build knowledge graph validation and quality assurance
-  - Create consistency checking and validation rules for knowledge graphs
-  - Implement completeness assessment and gap identification
-  - Add quality metrics calculation and reporting
-  - Create automated quality improvement suggestions
-  - _Requirements: 2.1, 2.2, 4.3_
+- [ ] **Task 6.3**: Build Workflow Integration
+  - Implement `WorkflowIntegration` class in `workflow_integration.py`
+  - Add workflow coordination capabilities
+  - Create agent communication interfaces
+  - Implement provenance tracking integration
+  - _Requirements: 5.1, 5.4_
+  - _Module: mcp_integration.workflow_integration_
 
-- [ ] 11a. Introduce NWB-LinkML schema integration (new)
-  - Ingest NWB-LinkML schema as the canonical NWB ontology
-  - Generate JSON-LD @context, SHACL shapes, and RDF/OWL from schema
-  - Validate LinkML instances (YAML/JSON) against schema pre-ingestion
-  - Record schema version and artifact hashes in PROV-O provenance
-  - _Requirements: 2b.1, 2b.2, 2b.3, 7.2, 8.1, 8.2_
+## Phase 3: Advanced Features (Priority 3)
 
-- [ ] 11b. Build Dynamic Schema Discovery Engine (new)
-  - Create `DynamicSchemaDiscovery` class for runtime schema detection from arbitrary NWB content
-  - Implement entity type inference using neurodata_type indicators, structural patterns (TimeSeries, Intervals, etc.), and path-based recognition
-  - Add comprehensive property discovery for primitive types, NumPy arrays with dtype/shape preservation, nested dictionaries with recursive processing, and sequence types with element analysis
-  - Create intelligent RDF mapping generation with dynamic namespaces, RDFS/OWL class definitions, XSD datatype mapping, and array metadata preservation
-  - Implement adaptive entity creation that handles unknown entity types and creates flexible property definitions
-  - _Requirements: 9.1, 9.2, 10.1, 10.2, 10.3_
+### Module 7: Advanced Reasoning (advanced_reasoning/)
+- [ ] **Task 7.1**: Create advanced reasoning module foundation
+  - Implement `AdvancedReasoningInterface` in `interfaces.py`
+  - Setup dependencies on ontology_foundation and graph_engine
+  - Create reasoning-specific test framework
+  - _Requirements: MR-1, MR-2, 4.3_
+  - _Module: advanced_reasoning_
 
-- [ ] 11c. Implement Adaptive Entity Manager (new)
-  - Extend `EntityManager` with `AdaptiveEntityManager` class for dynamic content handling
-  - Create `create_dynamic_entity` method that generates RDF representations from discovered schemas with full metadata preservation
-  - Implement specialized array property handling that stores shape/dtype metadata, samples representative values, creates validation rules, and maintains data location links
-  - Add nested property management that creates sub-entities for complex structures, establishes parent-child relationships, processes recursive properties, and maintains hierarchical RDF organization
-  - Integrate provenance tracking for all dynamic schema discovery decisions with confidence scoring and source attribution
-  - _Requirements: 9.2, 9.4, 10.1, 10.2, 10.4_
+- [ ] **Task 7.2**: Implement Anatomical Reasoner
+  - Create `AnatomicalReasoner` class in `anatomical_reasoner.py`
+  - Add brain region hierarchy reasoning
+  - Implement electrode placement validation
+  - Create developmental stage compatibility checks
+  - _Requirements: 4.3, 4.4, 4b.2_
+  - _Module: advanced_reasoning.anatomical_reasoner_
 
-- [ ] 11d. Build Runtime Schema Extension System (new)
-  - Create `RuntimeSchemaExtension` class for extending base NWB-LinkML schema with discovered entities
-  - Implement schema extension that creates LinkML class/slot definitions for discovered entities, maintains inheritance relationships, and generates updated JSON-LD contexts and SHACL shapes
-  - Add dynamic SHACL shape generation with NodeShape creation, property definitions, datatype constraints, cardinality rules, and array-specific validation
-  - Create JSON-LD context updates that add namespace mappings for dynamic entities, include property IRI mappings, maintain consistency with base context, and support array/nested serialization
-  - Implement schema conflict resolution with intelligent merge strategies, evidence weighting, human override support, and version compatibility management
-  - _Requirements: 9.3, 9.4, 11.1, 11.2, 11.3_
+- [ ] **Task 7.3**: Build Temporal Modeler
+  - Implement `TemporalModeler` class in `temporal_modeler.py`
+  - Create experimental phase modeling
+  - Add stimulus-response relationship tracking
+  - Implement behavioral state transitions
+  - _Requirements: 4b.2, 4b.4_
+  - _Module: advanced_reasoning.temporal_modeler_
 
-- [ ] 11. Implement knowledge graph versioning and evolution
-  - Create versioning system for knowledge graph changes and updates
-  - Add change tracking and diff generation for graph evolution
-  - Implement rollback and recovery capabilities for knowledge graphs
-  - Create migration tools for knowledge graph schema changes, including schema artifact regeneration
-  - _Requirements: 1.4, 2.3, 8.3_
+- [ ] **Task 7.4**: Create Multi-Modal Integrator
+  - Implement `MultiModalIntegrator` class in `multimodal_integrator.py`
+  - Add cross-modal semantic links
+  - Create modality-specific quality metrics
+  - Implement inter-modal validation rules
+  - _Requirements: 4b.3_
+  - _Module: advanced_reasoning.multimodal_integrator_
 
-- [ ] 11e. Enhance Metadata Enrichment for Dynamic Content (new)
-  - Extend `MetadataEnricher` with dynamic content capabilities including pattern-based enrichment for unknown entity types
-  - Implement intelligent property inference using structural analysis, type pattern matching, and cross-entity relationship discovery
-  - Add array-specific enrichment that analyzes array patterns, infers scientific meaning from shapes/dtypes, and suggests metadata based on array characteristics
-  - Create nested structure enrichment that propagates enrichments through object hierarchies, infers parent-child relationships, and maintains semantic consistency across levels
-  - Implement confidence adaptation for dynamic enrichments with uncertainty quantification, evidence aggregation from multiple sources, and adaptive threshold management
-  - _Requirements: 9.2, 9.4, 10.3, 11.2_
+- [ ] **Task 7.5**: Implement Design Validator
+  - Create `DesignValidator` class in `design_validator.py`
+  - Add experimental design validation
+  - Implement control condition verification
+  - Create statistical power assessment
+  - _Requirements: 4b.4_
+  - _Module: advanced_reasoning.design_validator_
 
-- [ ] 11f. Build Enhanced SPARQL Engine for Dynamic Schemas (new)
-  - Extend SPARQL query engine to handle dynamic schema extensions with unified querying across base and extended entities
-  - Implement federated query capabilities that seamlessly integrate static and dynamic schema elements
-  - Add array query support with specialized operators for shape-based queries, dtype filtering, and value range searches within large arrays
-  - Create nested structure query patterns that enable hierarchical traversal, sub-entity filtering, and complex relationship queries
-  - Implement dynamic validation queries that adapt validation rules based on discovered schemas and provide intelligent error reporting
-  - _Requirements: 10.4, 11.4_
+### Module 8: Dynamic Adaptation (dynamic_adaptation/)
+- [ ] **Task 8.1**: Create dynamic adaptation module foundation
+  - Implement `DynamicAdaptationInterface` in `interfaces.py`
+  - Setup dependencies on schema_validation and graph_engine
+  - Create dynamic adaptation test framework
+  - _Requirements: MR-1, MR-2, 9.1_
+  - _Module: dynamic_adaptation_
 
-- [ ] 12. Build MCP server integration for semantic provenance and enrichment
-      tools
-  - Create MCP tools for knowledge graph generation with provenance tracking and
-    decision chain recording
-  - Implement metadata enrichment tools with evidence conflict detection and
-    human override capabilities
-  - Add knowledge graph export tools including provenance information, schema version, and
-    confidence levels
-  - Create semantic provenance validation and evidence quality assessment tools
-  - Integrate with DataLad provenance system for complete audit trail generation
-  - Add dynamic content MCP tools for schema discovery, runtime extension, and adaptive entity creation
-  - _Requirements: 1.1, 1.2, 3.1, 9.1, 9.3_
-  - _Integration: data-management-provenance Task 7_
+- [ ] **Task 8.2**: Implement Schema Discoverer
+  - Create `SchemaDiscoverer` class in `schema_discoverer.py`
+  - Add runtime entity type inference
+  - Implement neurodata_type detection
+  - Create path-based inference patterns
+  - _Requirements: 9.1, 10.1_
+  - _Module: dynamic_adaptation.schema_discoverer_
 
-- [ ] 13. Create knowledge graph visualization and exploration tools
-  - Implement interactive knowledge graph visualization
-  - Add entity relationship exploration and navigation capabilities
-  - Create faceted browsing and filtering for knowledge graph entities
-  - Implement knowledge graph statistics and analytics dashboards
-  - _Requirements: 3.2, 3.4_
+- [ ] **Task 8.3**: Build Adaptive Manager
+  - Implement `AdaptiveManager` class in `adaptive_manager.py`
+  - Create adaptive entity creation
+  - Add array and nested structure handling
+  - Implement flexible property definitions
+  - _Requirements: 9.2, 10.2, 10.3_
+  - _Module: dynamic_adaptation.adaptive_manager_
 
-- [ ] 14. Build resilience and error handling system
-  - Create `ResilienceManager` class for handling malformed/corrupted NWB files with section isolation, detailed error logging, partial recovery mechanisms, and data integrity validation
-  - Implement resource management system with graceful degradation, automatic cleanup, priority queuing, streaming fallbacks, and configurable resource limits with monitoring
-  - Add schema conflict resolution with early incompatibility detection, migration path generation, backward compatibility matrices, and rollback capabilities with data preservation
-  - Create distributed system resilience with eventual consistency, conflict resolution protocols, partial operation modes, and automatic recovery with state reconciliation
-  - Implement comprehensive error classification, recovery strategies, and failure mode analysis with automated incident response
+- [ ] **Task 8.4**: Create Runtime Extender
+  - Implement `RuntimeExtender` class in `runtime_extender.py`
+  - Add schema extension capabilities
+  - Create JSON-LD context updates
+  - Implement SHACL shape generation
+  - _Requirements: 9.3, 11.2, 11.3_
+  - _Module: dynamic_adaptation.runtime_extender_
+
+- [ ] **Task 8.5**: Implement Pattern Recognizer
+  - Create `PatternRecognizer` class in `pattern_recognizer.py`
+  - Add structural pattern recognition
+  - Implement semantic pattern matching
+  - Create confidence scoring for patterns
+  - _Requirements: 9.1, 11.1_
+  - _Module: dynamic_adaptation.pattern_recognizer_
+
+### Module 9: Quality Assurance (quality_assurance/)
+- [ ] **Task 9.1**: Create quality assurance module foundation
+  - Implement `QualityAssuranceInterface` in `interfaces.py`
+  - Setup dependencies on graph_engine and schema_validation
+  - Create quality testing framework
+  - _Requirements: MR-1, MR-2, 13.1_
+  - _Module: quality_assurance_
+
+- [ ] **Task 9.2**: Implement Data Quality Manager
+  - Create `DataQualityManager` class in `data_quality.py`
+  - Add automated quality scoring
+  - Implement quality threshold management
+  - Create quality trend analysis
+  - _Requirements: 13.1, 13.4_
+  - _Module: quality_assurance.data_quality_
+
+- [ ] **Task 9.3**: Build Lineage Tracker
+  - Implement `LineageTracker` class in `lineage_tracker.py`
+  - Create transformation chain tracking
+  - Add enrichment decision trails
+  - Implement schema evolution impact tracking
+  - _Requirements: 1.4, 13.2_
+  - _Module: quality_assurance.lineage_tracker_
+
+- [ ] **Task 9.4**: Create Consistency Checker
+  - Implement `ConsistencyChecker` class in `consistency_checker.py`
+  - Add automated inconsistency detection
+  - Create SPARQL validation queries
+  - Implement batch consistency repair
+  - _Requirements: 2.1, 13.3_
+  - _Module: quality_assurance.consistency_checker_
+
+- [ ] **Task 9.5**: Implement Monitoring System
+  - Create `MonitoringSystem` class in `monitoring.py`
+  - Add performance metrics tracking
+  - Implement health monitoring
+  - Create alerting capabilities
+  - _Requirements: 7.4_
+  - _Module: quality_assurance.monitoring_
+
+## Phase 4: Production Readiness (Priority 4)
+
+### Module 10: Resilience (resilience/)
+- [ ] **Task 10.1**: Create resilience module foundation
+  - Implement `ResilienceInterface` in `interfaces.py`
+  - Setup comprehensive error handling framework
+  - Create resilience testing suite
+  - _Requirements: MR-1, MR-2, 12.1_
+  - _Module: resilience_
+
+- [ ] **Task 10.2**: Implement Error Handler
+  - Create `ErrorHandler` class in `error_handler.py`
+  - Add malformed NWB file handling
+  - Implement section isolation and partial recovery
+  - Create detailed error logging and classification
+  - _Requirements: 12.1, 12.4_
+  - _Module: resilience.error_handler_
+
+- [ ] **Task 10.3**: Build Recovery Manager
+  - Implement `RecoveryManager` class in `recovery_manager.py`
+  - Add automatic recovery mechanisms
+  - Create state reconciliation protocols
+  - Implement rollback capabilities
+  - _Requirements: 12.3, 12.4_
+  - _Module: resilience.recovery_manager_
+
+- [ ] **Task 10.4**: Create Resource Manager
+  - Implement `ResourceManager` class in `resource_manager.py`
+  - Add graceful degradation capabilities
+  - Create resource limit enforcement
+  - Implement streaming fallbacks
+  - _Requirements: 12.2_
+  - _Module: resilience.resource_manager_
+
+- [ ] **Task 10.5**: Implement Conflict Resolver
+  - Create `ConflictResolver` class in `conflict_resolver.py`
+  - Add schema version conflict detection
+  - Implement migration path generation
+  - Create evidence-based conflict resolution
+  - _Requirements: 12.3, 1.4_
+  - _Module: resilience.conflict_resolver_
+
+## Integration and Testing
+
+### Integration Testing
+- [ ] **Task 11.1**: Module Integration Testing
+  - Create integration test suite for module interactions
+  - Test dependency injection and initialization order
+  - Validate module health check systems
+  - Test configuration management across modules
+  - _Requirements: MR-1, MR-2, MR-3_
+
+- [ ] **Task 11.2**: End-to-End Testing
+  - Create complete system test scenarios
+  - Test NWB file processing through all modules
+  - Validate knowledge graph generation accuracy
+  - Test dynamic content handling capabilities
+  - _Requirements: 1.1, 2.1, 9.1, 10.1_
+
+- [ ] **Task 11.3**: Performance Testing
+  - Test system performance with large datasets
+  - Validate SPARQL query optimization
+  - Test memory usage and resource management
+  - Benchmark module initialization times
+  - _Requirements: 2.3, 7.4, 12.2_
+
+- [ ] **Task 11.4**: Resilience Testing
+  - Test error handling and recovery mechanisms
+  - Validate graceful degradation scenarios
+  - Test network partition and distributed failure scenarios
+  - Validate data integrity under failure conditions
   - _Requirements: 12.1, 12.2, 12.3, 12.4_
 
+### Documentation and Deployment
+- [ ] **Task 12.1**: Module Documentation
+  - Create comprehensive module documentation
+  - Document module interfaces and dependencies
+  - Add configuration schema documentation
+  - Create developer guides for each module
+  - _Requirements: MR-1, MR-2_
 
+- [ ] **Task 12.2**: Deployment and Operations
+  - Create deployment configuration templates
+  - Document module deployment strategies
+  - Add monitoring and alerting setup guides
+  - Create operational runbooks
+  - _Requirements: 7.4, MR-3_
 
-- [ ] 15. Implement comprehensive data quality and lineage system
-  - Create `DataQualityManager` with automated quality scoring, configurable thresholds, detailed reporting, correction suggestions with confidence levels, and quality trend analysis
-  - Implement complete lineage tracking with transformation chain records, enrichment decision trails, schema evolution impact tracking, and lineage query capabilities with impact analysis
-  - Add automated inconsistency detection with SPARQL validation queries, resolution protocols with human override, conflict resolution audit trails, and batch consistency repair operations
-  - Create transformation validation system with correctness testing, rollback capabilities, performance metrics, and referential integrity enforcement across all operations
-  - Build data quality dashboard with real-time monitoring, quality metrics visualization, and automated alerting for quality threshold violations
-  - _Requirements: 14.1, 14.2, 14.3, 14.4_
+## Implementation Summary
 
-- [ ] 16. Create operational monitoring and observability system
-  - Implement comprehensive monitoring with performance metrics, resource utilization tracking, error rate analysis, and real-time alerting with configurable thresholds
-  - Add distributed tracing for request flow analysis, bottleneck identification, and performance optimization with detailed execution profiling
-  - Create health check endpoints with dependency monitoring, circuit breaker status, and system readiness verification for load balancers and orchestration systems
-  - Build operational dashboards with real-time system status, performance trends, error analysis, and capacity planning metrics with historical data retention
-  - Implement log aggregation and analysis with structured logging, correlation IDs, and automated log-based alerting for system anomalies
-  - _Requirements: System Operations and Monitoring_
+### 🎯 **Total Tasks by Module**
+- **Module 1** (ontology_foundation): 4 tasks
+- **Module 2** (schema_validation): 4 tasks
+- **Module 3** (graph_engine): 4 tasks
+- **Module 4** (metadata_enrichment): 5 tasks
+- **Module 5** (api_services): 4 tasks
+- **Module 6** (mcp_integration): 3 tasks
+- **Module 7** (advanced_reasoning): 5 tasks
+- **Module 8** (dynamic_adaptation): 5 tasks
+- **Module 9** (quality_assurance): 5 tasks
+- **Module 10** (resilience): 5 tasks
+- **Integration & Testing**: 4 tasks
+- **Documentation & Deployment**: 2 tasks
 
-- [ ] 17. Test and validate complete knowledge graph system
-  - Create comprehensive test suite for knowledge graph operations
-  - Test SPARQL query performance and correctness
-  - Validate metadata enrichment accuracy and confidence scoring
-  - Perform integration testing with MCP server and other system components
-  - Add dynamic content testing with arbitrary NWB data structures, schema discovery validation, adaptive entity creation verification, and runtime extension accuracy assessment
-  - Test array handling capabilities with multi-dimensional data, dtype preservation, shape metadata, and query performance
-  - Validate nested structure processing with complex hierarchies, relationship preservation, and semantic consistency
-  - Add resilience testing with fault injection, resource exhaustion simulation, network partition scenarios, and recovery validation
-  - Test API versioning and backward compatibility with automated compatibility verification, migration validation, and rollback testing
-  - Validate data quality and lineage systems with quality degradation scenarios, lineage accuracy verification, and consistency repair testing
-  - _Requirements: 1.1, 2.1, 3.1, 4.1, 9.1, 9.2, 10.1, 10.2, 11.1, 12.1, 12.2, 13.1_
+**Total: 50 modular tasks** (vs 17 monolithic tasks in original plan)
+
+### 📊 **Implementation Benefits**
+
+#### **For Claude Code Implementation:**
+1. **Clear Entry Points**: Each module has a single interface to implement first
+2. **Isolated Testing**: Each module can be tested independently
+3. **Incremental Development**: Implement and validate one module at a time
+4. **Parallel Work**: Multiple modules can be implemented simultaneously
+5. **Easy Debugging**: Issues can be traced to specific modules through health checks
+
+#### **For Bug Tracing:**
+1. **Module Health Checks**: Each module reports its status independently
+2. **Dependency Tracking**: Clear dependency graph makes issue isolation easier
+3. **Interface Contracts**: Well-defined interfaces make integration issues obvious
+4. **Modular Testing**: Unit tests for each module help pinpoint failures
+5. **Configuration Isolation**: Module-specific configs reduce configuration conflicts
+
+#### **Development Workflow:**
+```
+Phase 1: Core Foundation (Modules 1-3) → Basic Knowledge Graph
+Phase 2: Enhancement Services (Modules 4-6) → Full Functionality
+Phase 3: Advanced Features (Modules 7-9) → Production Features
+Phase 4: Production Readiness (Module 10) → Enterprise Ready
+```
+
+### 🔧 **Quick Start Guide for Implementation**
+
+1. **Start Here**: `ontology_foundation/interfaces.py` - Define the foundation interface
+2. **Next**: `ontology_foundation/nwb_ontology_manager.py` - Implement the core manager
+3. **Then**: Move through modules 1-3 to get basic functionality
+4. **Test**: Use module health checks and unit tests throughout
+5. **Scale**: Add modules 4-10 based on requirements priority
+
+---
+
+**Note**: This modular implementation plan replaces the original 17 monolithic tasks with 50 focused, modular tasks that provide clear boundaries, easy debugging, and incremental development capabilities optimized for Claude Code implementation.

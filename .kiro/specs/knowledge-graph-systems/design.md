@@ -10,54 +10,156 @@ contexts, and SHACL shapes. It maintains a rich semantic model of neuroscience
 entities, relationships, and provenance while supporting automated metadata
 enrichment and complex validation queries.
 
+## Modular Architecture Approach
+
+The knowledge graph system is designed with a **modular architecture** that enables:
+
+### 🎯 **Implementation Benefits**
+- **Incremental Development**: Each module can be implemented and tested independently
+- **Parallel Development**: Multiple developers can work on different modules simultaneously
+- **Easy Debugging**: Clear module boundaries make it easier to isolate and fix issues
+- **Testability**: Each module has well-defined inputs/outputs for unit testing
+- **Maintainability**: Changes in one module have minimal impact on others
+
+### 📦 **Module Design Principles**
+1. **Single Responsibility**: Each module has one primary purpose
+2. **Loose Coupling**: Modules communicate through well-defined interfaces
+3. **High Cohesion**: Related functionality is grouped together
+4. **Dependency Injection**: Modules receive dependencies rather than creating them
+5. **Interface Segregation**: Modules only depend on interfaces they actually use
+
+### 🔧 **Module Structure**
+Each module follows a consistent structure:
+```
+module_name/
+├── __init__.py           # Module interface and exports
+├── core.py              # Core business logic
+├── models.py            # Data models and schemas
+├── interfaces.py        # Abstract interfaces and protocols
+├── config.py            # Module-specific configuration
+├── exceptions.py        # Module-specific exceptions
+└── tests/               # Comprehensive test suite
+    ├── test_core.py
+    ├── test_models.py
+    └── fixtures/
+```
+
+### 🚀 **Development Workflow**
+1. **Start with Core Modules**: Implement foundational modules first
+2. **Interface-First Design**: Define interfaces before implementation
+3. **Test-Driven Development**: Write tests alongside implementation
+4. **Integration Testing**: Test module interactions systematically
+5. **Documentation**: Maintain clear module documentation
+
 ## Architecture
 
-### High-Level Architecture
+### Modular System Architecture
 
 ```
-Knowledge Graph Systems (Ontology-First Architecture)
-├── Ontology Foundation Layer (Primary)
-│   ├── NWB Ontology Manager (Central Orchestrator)
-│   ├── Multi-Ontology Integration Hub
-│   │   ├── NIFSTD (Neuroscience Information Framework)
-│   │   ├── UBERON (Anatomical Structures)
-│   │   ├── CHEBI (Chemical Entities)
-│   │   ├── OBI (Experimental Methods)
-│   │   ├── PATO (Phenotype Qualities)
-│   │   └── NCBITaxon (Species Taxonomy)
-│   ├── Semantic Alignment Engine
-│   ├── NWB-Specific Semantic Extensions
-│   └── Neuroscience Reasoning Engine
-├── Schema and Validation Layer (NWB-LinkML)
-│   ├── LinkML Schema (NWB-LinkML) → Ontology Bridge
-│   ├── Dynamic Schema Discovery Engine
-│   ├── JSON-LD Context Generator (Ontology-Driven)
-│   ├── SHACL Shapes Generator/Validator
-│   └── OWL/RDF Schema Generator
-├── Core Knowledge Graph Engine
-│   ├── RDF Store (Apache Jena/Blazegraph)
-│   ├── Ontology-Enhanced SPARQL Query Engine
-│   ├── Domain-Aware Inference Engine
-│   └── Adaptive Entity Manager (Semantic-First)
-├── Metadata Enrichment Service
-│   ├── Ontology-Driven Entity Resolution
-│   ├── Semantic Relationship Inference
-│   ├── Dynamic Property Discovery (Ontology-Guided)
-│   ├── Biological Plausibility Validation
-│   └── Confidence Scoring with Domain Constraints
-├── Advanced Reasoning Layer
-│   ├── Anatomical Hierarchy Reasoning
-│   ├── Temporal Relationship Modeling
-│   ├── Multi-Modal Data Integration
-│   ├── Experimental Design Validation
-│   └── Cross-Study Semantic Harmonization
-└── API and Integration Layer
-    ├── REST API for MCP Server
-    ├── Ontology-Aware SPARQL Endpoint
-    ├── Semantic Query Interface
-    ├── Dynamic Schema API
-    └── Export Services (TTL, JSON-LD, N-Triples, OWL)
+Knowledge Graph Systems (Modular Ontology-First Architecture)
+
+📦 CORE MODULES (Foundation Layer)
+├── 🧠 ontology_foundation/         [Module 1: Ontology Foundation]
+│   ├── nwb_ontology_manager.py   # Central orchestrator
+│   ├── multi_ontology_hub.py     # NIFSTD, UBERON, CHEBI, OBI, PATO, NCBITaxon
+│   ├── semantic_alignment.py     # Ontology-schema mappings
+│   └── neuro_reasoning.py         # Domain-specific reasoning
+
+├── 📋 schema_validation/           [Module 2: Schema & Validation]
+│   ├── linkml_processor.py       # NWB-LinkML schema processing
+│   ├── dynamic_discovery.py      # Runtime schema discovery
+│   ├── context_generator.py      # JSON-LD context generation
+│   ├── shacl_generator.py        # SHACL shapes creation
+│   └── owl_generator.py          # OWL/RDF schema generation
+
+├── 🗃️ graph_engine/              [Module 3: Core Graph Engine]
+│   ├── rdf_store.py              # RDF storage management
+│   ├── sparql_engine.py          # Query processing
+│   ├── inference_engine.py       # Reasoning capabilities
+│   └── entity_manager.py         # Entity lifecycle management
+
+📦 ENHANCEMENT MODULES (Processing Layer)
+├── 🔍 metadata_enrichment/        [Module 4: Metadata Enhancement]
+│   ├── entity_resolver.py        # Entity resolution
+│   ├── relationship_inference.py # Semantic relationships
+│   ├── property_discovery.py     # Dynamic properties
+│   ├── plausibility_validator.py # Biological validation
+│   └── confidence_scorer.py      # Confidence assessment
+
+├── 🌐 api_services/               [Module 5: API Services]
+│   ├── rest_api.py               # REST endpoints
+│   ├── sparql_endpoint.py        # SPARQL service
+│   ├── query_interface.py        # Query abstraction
+│   └── export_services.py        # Format exports
+
+├── 🔗 mcp_integration/           [Module 6: MCP Integration]
+│   ├── mcp_tools.py              # MCP tool implementations
+│   ├── workflow_integration.py   # Workflow coordination
+│   └── agent_interface.py        # Agent communication
+
+📦 ADVANCED MODULES (Advanced Features Layer)
+├── 🧮 advanced_reasoning/         [Module 7: Advanced Reasoning]
+│   ├── anatomical_reasoner.py    # Anatomy hierarchies
+│   ├── temporal_modeler.py       # Time relationships
+│   ├── multimodal_integrator.py  # Cross-modal integration
+│   ├── design_validator.py       # Experimental design
+│   └── semantic_harmonizer.py    # Cross-study harmonization
+
+├── 🔄 dynamic_adaptation/         [Module 8: Dynamic Adaptation]
+│   ├── schema_discoverer.py      # Schema discovery
+│   ├── adaptive_manager.py       # Adaptive entities
+│   ├── runtime_extender.py       # Runtime extensions
+│   └── pattern_recognizer.py     # Pattern recognition
+
+├── 📊 quality_assurance/          [Module 9: Quality & Monitoring]
+│   ├── data_quality.py           # Quality assessment
+│   ├── lineage_tracker.py        # Provenance tracking
+│   ├── consistency_checker.py    # Consistency validation
+│   └── monitoring.py             # System monitoring
+
+📦 PRODUCTION MODULES (Production Readiness Layer)
+└── 🛡️ resilience/                [Module 10: Resilience & Error Handling]
+    ├── error_handler.py          # Error management
+    ├── recovery_manager.py       # Recovery strategies
+    ├── resource_manager.py       # Resource optimization
+    └── conflict_resolver.py      # Conflict resolution
 ```
+
+### 🔗 **Module Dependencies**
+
+```mermaid
+graph TD
+    A[1_ontology_foundation] --> B[2_schema_validation]
+    A --> C[3_graph_engine]
+    B --> C
+    C --> D[4_metadata_enrichment]
+    D --> E[5_api_services]
+    E --> F[6_mcp_integration]
+    A --> G[7_advanced_reasoning]
+    B --> H[8_dynamic_adaptation]
+    C --> I[9_quality_assurance]
+    I --> J[10_resilience]
+```
+
+### ⚡ **Module Implementation Priority**
+
+**Phase 1: Core Foundation (Dependencies: None)**
+1. `ontology_foundation` - Essential domain knowledge
+2. `schema_validation` - NWB-LinkML processing
+3. `graph_engine` - Basic RDF operations
+
+**Phase 2: Enhancement Services (Dependencies: Phase 1)**
+4. `metadata_enrichment` - Basic enrichment (requires: graph_engine)
+5. `api_services` - External interfaces (requires: metadata_enrichment)
+6. `mcp_integration` - MCP connectivity (requires: api_services)
+
+**Phase 3: Advanced Features (Dependencies: Phase 1)**
+7. `advanced_reasoning` - Complex reasoning (requires: ontology_foundation)
+8. `dynamic_adaptation` - Runtime adaptation (requires: schema_validation)
+9. `quality_assurance` - Quality systems (requires: graph_engine)
+
+**Phase 4: Production Readiness (Dependencies: Phase 3)**
+10. `resilience` - Error handling & monitoring (requires: quality_assurance)
 
 ### Data Flow
 
@@ -69,7 +171,126 @@ NWB/NWB-LinkML Instance → Dynamic Schema Discovery → LinkML Schema Validatio
                          Adaptive Property Mapping       Provenance Tracking (PROV-O + schema version) → RDF Store → Export Services → Multiple Formats
 ````
 
-## Ontology Foundation Layer (Primary Architecture Component)
+### 🔧 **Module Interface Design**
+
+Each module exposes a clean interface for integration and testing:
+
+```python
+# Example: Module Interface Pattern
+from abc import ABC, abstractmethod
+from typing import Dict, Any, List, Optional
+
+class ModuleInterface(ABC):
+    """Base interface for all knowledge graph modules."""
+
+    @abstractmethod
+    def initialize(self, config: Dict[str, Any]) -> None:
+        """Initialize module with configuration."""
+        pass
+
+    @abstractmethod
+    def health_check(self) -> Dict[str, Any]:
+        """Return module health status."""
+        pass
+
+    @abstractmethod
+    def get_dependencies(self) -> List[str]:
+        """Return list of required module dependencies."""
+        pass
+
+# Example: Ontology Foundation Module Interface
+class OntologyFoundationInterface(ModuleInterface):
+    @abstractmethod
+    def load_ontologies(self, ontology_configs: Dict[str, Any]) -> bool:
+        """Load and initialize domain ontologies."""
+        pass
+
+    @abstractmethod
+    def align_with_schema(self, schema_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create semantic alignments with NWB-LinkML schema."""
+        pass
+
+    @abstractmethod
+    def get_reasoning_engine(self) -> 'NeuroReasoningEngine':
+        """Get neuroscience reasoning engine instance."""
+        pass
+```
+
+### 📋 **Configuration Management**
+
+Each module has its own configuration schema:
+
+```python
+# config/ontology_foundation.yaml
+ontology_foundation:
+  enabled_ontologies:
+    - nifstd
+    - uberon
+    - chebi
+    - obi
+    - pato
+    - ncbitaxon
+
+  cache_settings:
+    enable_cache: true
+    cache_ttl: 3600
+    cache_size_mb: 500
+
+  reasoning:
+    enable_inference: true
+    max_reasoning_depth: 5
+    reasoning_timeout: 30
+
+# config/schema_validation.yaml
+schema_validation:
+  nwb_linkml:
+    schema_version: "latest"
+    validation_level: "strict"
+    cache_artifacts: true
+
+  dynamic_discovery:
+    enable_discovery: true
+    confidence_threshold: 0.7
+    max_dynamic_entities: 1000
+```
+
+### 🧪 **Testing Strategy**
+
+Each module includes comprehensive tests:
+
+```python
+# tests/test_ontology_foundation.py
+import pytest
+from knowledge_graph.ontology_foundation import OntologyFoundationModule
+
+class TestOntologyFoundation:
+    @pytest.fixture
+    def module(self):
+        config = {
+            "enabled_ontologies": ["nifstd", "uberon"],
+            "cache_settings": {"enable_cache": false}
+        }
+        module = OntologyFoundationModule()
+        module.initialize(config)
+        return module
+
+    def test_module_initialization(self, module):
+        assert module.health_check()["status"] == "healthy"
+
+    def test_ontology_loading(self, module):
+        result = module.load_ontologies({})
+        assert result is True
+
+    def test_schema_alignment(self, module):
+        schema_data = {"classes": [], "slots": []}
+        result = module.align_with_schema(schema_data)
+        assert "alignments" in result
+        assert isinstance(result["alignments"], list)
+```
+
+## Modular Implementation Details
+
+## Module 1: Ontology Foundation Layer
 
 The ontology foundation layer forms the semantic core of the knowledge graph system, providing comprehensive neuroscience domain knowledge integration and semantic reasoning capabilities optimized specifically for NWB data.
 
@@ -78,28 +299,72 @@ The ontology foundation layer forms the semantic core of the knowledge graph sys
 The NWB Ontology Manager serves as the central coordination hub for all ontological operations:
 
 ```python
-class NWBOntologyManager:
-    """Central orchestrator for all ontology operations in the knowledge graph system."""
+# ontology_foundation/nwb_ontology_manager.py
+from typing import Dict, Any, List
+from .interfaces import OntologyFoundationInterface
+from .multi_ontology_hub import MultiOntologyIntegrationHub
+from .semantic_alignment import SemanticAlignmentEngine
+from .neuro_reasoning import NeuroReasoningEngine
 
-    def __init__(self, config: OntologyConfig):
-        self.multi_ontology_hub = MultiOntologyIntegrationHub(config)
-        self.semantic_alignment_engine = SemanticAlignmentEngine()
-        self.nwb_semantic_extensions = NWBSemanticExtensions()
-        self.neuro_reasoning_engine = NeuroReasoningEngine()
+class NWBOntologyManager(OntologyFoundationInterface):
+    """Central orchestrator for all ontology operations - Module 1 Entry Point."""
 
-    def initialize_ontology_foundation(self):
-        """Initialize comprehensive ontology foundation for NWB data processing."""
-        # Load and integrate core neuroscience ontologies
-        self.multi_ontology_hub.load_core_ontologies()
+    def __init__(self):
+        self._initialized = False
+        self._config = None
+        self._components = {}
 
-        # Establish semantic alignments with NWB-LinkML
-        self.semantic_alignment_engine.align_with_nwb_linkml()
+    def initialize(self, config: Dict[str, Any]) -> None:
+        """Initialize module with configuration."""
+        self._config = config
 
-        # Initialize NWB-specific extensions
-        self.nwb_semantic_extensions.initialize_extensions()
+        # Initialize components with dependency injection
+        self._components = {
+            'multi_ontology_hub': MultiOntologyIntegrationHub(config.get('ontologies', {})),
+            'semantic_alignment_engine': SemanticAlignmentEngine(config.get('alignment', {})),
+            'neuro_reasoning_engine': NeuroReasoningEngine(config.get('reasoning', {}))
+        }
 
-        # Configure reasoning rules
-        self.neuro_reasoning_engine.setup_reasoning_rules()
+        # Initialize all components
+        for component in self._components.values():
+            component.initialize()
+
+        self._initialized = True
+
+    def health_check(self) -> Dict[str, Any]:
+        """Return module health status."""
+        if not self._initialized:
+            return {"status": "not_initialized", "components": {}}
+
+        component_health = {}
+        for name, component in self._components.items():
+            component_health[name] = component.health_check()
+
+        overall_status = "healthy" if all(
+            h["status"] == "healthy" for h in component_health.values()
+        ) else "unhealthy"
+
+        return {
+            "status": overall_status,
+            "components": component_health,
+            "module": "ontology_foundation"
+        }
+
+    def get_dependencies(self) -> List[str]:
+        """Return list of required module dependencies."""
+        return []  # Foundation module has no dependencies
+
+    def load_ontologies(self, ontology_configs: Dict[str, Any]) -> bool:
+        """Load and initialize domain ontologies."""
+        return self._components['multi_ontology_hub'].load_core_ontologies(ontology_configs)
+
+    def align_with_schema(self, schema_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create semantic alignments with NWB-LinkML schema."""
+        return self._components['semantic_alignment_engine'].align_with_nwb_linkml(schema_data)
+
+    def get_reasoning_engine(self) -> NeuroReasoningEngine:
+        """Get neuroscience reasoning engine instance."""
+        return self._components['neuro_reasoning_engine']
 ```
 
 ### Multi-Ontology Integration Hub
@@ -1708,7 +1973,172 @@ class KnowledgeGraphExporter:
         }
 ````
 
+## 🎼 Module Orchestration and Dependency Injection
+
+### Module Manager
+
+```python
+# knowledge_graph/module_manager.py
+from typing import Dict, Any, List, Type
+import logging
+
+class ModuleManager:
+    """Central orchestrator for all knowledge graph modules."""
+
+    def __init__(self):
+        self.modules = {}
+        self.module_configs = {}
+        self.dependency_graph = {}
+        self.logger = logging.getLogger(__name__)
+
+    def register_module(self, name: str, module_class: Type, config: Dict[str, Any]):
+        """Register a module with its configuration."""
+        self.module_configs[name] = config
+        module_instance = module_class()
+
+        # Store dependency information
+        self.dependency_graph[name] = module_instance.get_dependencies()
+        self.modules[name] = module_instance
+
+    def initialize_all(self) -> bool:
+        """Initialize all modules in dependency order."""
+        initialization_order = self._calculate_initialization_order()
+
+        for module_name in initialization_order:
+            try:
+                self.logger.info(f"Initializing module: {module_name}")
+                module = self.modules[module_name]
+                config = self.module_configs[module_name]
+
+                # Inject dependencies
+                config['dependencies'] = self._get_module_dependencies(module_name)
+
+                module.initialize(config)
+                self.logger.info(f"Successfully initialized: {module_name}")
+
+            except Exception as e:
+                self.logger.error(f"Failed to initialize {module_name}: {e}")
+                return False
+
+        return True
+
+    def get_module(self, name: str):
+        """Get initialized module by name."""
+        return self.modules.get(name)
+
+    def health_check_all(self) -> Dict[str, Any]:
+        """Check health of all modules."""
+        health_status = {}
+        for name, module in self.modules.items():
+            health_status[name] = module.health_check()
+
+        overall_healthy = all(
+            status.get("status") == "healthy"
+            for status in health_status.values()
+        )
+
+        return {
+            "overall_status": "healthy" if overall_healthy else "unhealthy",
+            "modules": health_status
+        }
+
+    def _calculate_initialization_order(self) -> List[str]:
+        """Calculate module initialization order based on dependencies."""
+        # Topological sort of dependency graph
+        in_degree = {name: 0 for name in self.modules.keys()}
+
+        # Calculate in-degrees
+        for module_name, deps in self.dependency_graph.items():
+            for dep in deps:
+                if dep in in_degree:
+                    in_degree[module_name] += 1
+
+        # Topological sort
+        queue = [name for name, degree in in_degree.items() if degree == 0]
+        result = []
+
+        while queue:
+            current = queue.pop(0)
+            result.append(current)
+
+            # Update in-degrees for dependent modules
+            for module_name, deps in self.dependency_graph.items():
+                if current in deps:
+                    in_degree[module_name] -= 1
+                    if in_degree[module_name] == 0:
+                        queue.append(module_name)
+
+        return result
+
+    def _get_module_dependencies(self, module_name: str) -> Dict[str, Any]:
+        """Get initialized dependency modules for a given module."""
+        deps = self.dependency_graph.get(module_name, [])
+        return {dep_name: self.modules[dep_name] for dep_name in deps if dep_name in self.modules}
+```
+
+### Usage Example
+
+```python
+# main.py - Example usage of modular system
+from knowledge_graph.module_manager import ModuleManager
+from knowledge_graph.ontology_foundation import OntologyFoundationModule
+from knowledge_graph.schema_validation import SchemaValidationModule
+from knowledge_graph.graph_engine import GraphEngineModule
+
+def setup_knowledge_graph_system():
+    """Setup complete knowledge graph system with all modules."""
+
+    manager = ModuleManager()
+
+    # Register core modules in order
+    manager.register_module("ontology_foundation", OntologyFoundationModule, {
+        "enabled_ontologies": ["nifstd", "uberon", "chebi", "obi", "pato", "ncbitaxon"],
+        "cache_settings": {"enable_cache": True, "cache_ttl": 3600}
+    })
+
+    manager.register_module("schema_validation", SchemaValidationModule, {
+        "nwb_linkml": {"schema_version": "latest", "validation_level": "strict"},
+        "dynamic_discovery": {"enable_discovery": True, "confidence_threshold": 0.7}
+    })
+
+    manager.register_module("graph_engine", GraphEngineModule, {
+        "store_type": "memory",
+        "enable_inference": True,
+        "index_types": ["spatial", "temporal", "concept"]
+    })
+
+    # Initialize all modules
+    if manager.initialize_all():
+        print("Knowledge graph system initialized successfully!")
+
+        # Health check
+        health = manager.health_check_all()
+        print(f"System health: {health['overall_status']}")
+
+        return manager
+    else:
+        print("Failed to initialize knowledge graph system")
+        return None
+
+# Usage
+kg_system = setup_knowledge_graph_system()
+if kg_system:
+    # Get specific modules for use
+    ontology_module = kg_system.get_module("ontology_foundation")
+    graph_engine = kg_system.get_module("graph_engine")
+```
+
+## 🚀 Implementation Benefits
+
+This modular architecture provides:
+
+1. **Easy Implementation**: Start with core modules and add features incrementally
+2. **Simple Debugging**: Each module can be tested and debugged independently
+3. **Clear Traceability**: Issues can be traced to specific modules through health checks
+4. **Parallel Development**: Multiple developers can work on different modules
+5. **Flexible Deployment**: Deploy only the modules you need for specific use cases
+
 This comprehensive knowledge graph systems design provides semantic enrichment,
 metadata validation, and relationship modeling capabilities that integrate
 seamlessly with the MCP server architecture while maintaining complete
-provenance and confidence tracking.
+provenance and confidence tracking through a clean modular architecture.
