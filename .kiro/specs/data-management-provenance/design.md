@@ -29,6 +29,12 @@ Data Management and Provenance Systems
 │   ├── Repository Management
 │   ├── File Handling Utilities
 │   └── Error Recovery Systems
+├── Performance Monitoring and Optimization
+│   ├── Performance Metrics Collection
+│   ├── Storage Optimization Engine
+│   ├── Resource Management System
+│   ├── Scaling and Load Balancing
+│   └── Analytics and Bottleneck Detection
 └── Provenance Reporting
     ├── Audit Trail Generation
     ├── Metadata Provenance Reports
@@ -47,6 +53,9 @@ Input Data → Conversion Repository → Pipeline Tracking → Output Organizati
 
 Integration Flow:
 MCP Server → Agent Decisions → Provenance Recording → DataLad Commits → History Tracking
+
+Performance Monitoring Flow:
+Operations → Metrics Collection → Analytics Processing → Optimization Recommendations → System Tuning
 ```
 
 ## Core Components
@@ -1031,7 +1040,459 @@ def create_conversion_tracker(conversion_id: str, output_dir: str) -> Conversion
     return ConversionProvenanceTracker(conversion_id, output_dir)
 ```
 
-### 4. Integration with MCP Server
+### 4. Performance Monitoring and Optimization
+
+#### Performance Metrics Collection System
+
+```python
+# agentic_neurodata_conversion/data_management/performance_monitoring.py
+import time
+import psutil
+import threading
+from typing import Dict, Any, List, Optional, Callable
+from dataclasses import dataclass, asdict
+from pathlib import Path
+from collections import defaultdict, deque
+import logging
+import json
+import asyncio
+from datetime import datetime, timedelta
+
+@dataclass
+class PerformanceMetric:
+    """Individual performance metric record."""
+    timestamp: float
+    metric_type: str
+    operation: str
+    value: float
+    unit: str
+    context: Dict[str, Any]
+
+@dataclass
+class SystemResourceSnapshot:
+    """System resource usage snapshot."""
+    timestamp: float
+    cpu_percent: float
+    memory_usage_mb: float
+    memory_percent: float
+    disk_usage_gb: float
+    disk_percent: float
+    io_read_mb: float
+    io_write_mb: float
+
+class PerformanceCollector:
+    """Collects and aggregates performance metrics."""
+
+    def __init__(self, collection_interval: float = 5.0):
+        self.collection_interval = collection_interval
+        self.metrics_buffer = deque(maxlen=10000)  # Keep last 10k metrics
+        self.resource_history = deque(maxlen=1440)  # 24 hours at 1-minute intervals
+        self.operation_timers = {}
+        self.conversion_stats = defaultdict(list)
+        self.logger = logging.getLogger(__name__)
+        self._collecting = False
+        self._collection_thread = None
+
+    def start_collection(self):
+        """Start background metrics collection."""
+        if self._collecting:
+            return
+
+        self._collecting = True
+        self._collection_thread = threading.Thread(target=self._collection_loop, daemon=True)
+        self._collection_thread.start()
+        self.logger.info("Performance metrics collection started")
+
+    def stop_collection(self):
+        """Stop background metrics collection."""
+        self._collecting = False
+        if self._collection_thread:
+            self._collection_thread.join(timeout=5.0)
+        self.logger.info("Performance metrics collection stopped")
+
+    def _collection_loop(self):
+        """Background collection loop."""
+        while self._collecting:
+            try:
+                self._collect_system_metrics()
+                time.sleep(self.collection_interval)
+            except Exception as e:
+                self.logger.error(f"Error in metrics collection: {e}")
+
+    def _collect_system_metrics(self):
+        """Collect system resource metrics."""
+        try:
+            # CPU and Memory
+            cpu_percent = psutil.cpu_percent()
+            memory = psutil.virtual_memory()
+
+            # Disk usage
+            disk = psutil.disk_usage('/')
+
+            # I/O stats
+            io_stats = psutil.disk_io_counters()
+
+            snapshot = SystemResourceSnapshot(
+                timestamp=time.time(),
+                cpu_percent=cpu_percent,
+                memory_usage_mb=memory.used / (1024 * 1024),
+                memory_percent=memory.percent,
+                disk_usage_gb=disk.used / (1024 * 1024 * 1024),
+                disk_percent=(disk.used / disk.total) * 100,
+                io_read_mb=io_stats.read_bytes / (1024 * 1024) if io_stats else 0,
+                io_write_mb=io_stats.write_bytes / (1024 * 1024) if io_stats else 0
+            )
+
+            self.resource_history.append(snapshot)
+
+        except Exception as e:
+            self.logger.warning(f"Failed to collect system metrics: {e}")
+
+    def record_metric(self, metric_type: str, operation: str, value: float,
+                     unit: str, context: Dict[str, Any] = None):
+        """Record a performance metric."""
+        metric = PerformanceMetric(
+            timestamp=time.time(),
+            metric_type=metric_type,
+            operation=operation,
+            value=value,
+            unit=unit,
+            context=context or {}
+        )
+
+        self.metrics_buffer.append(metric)
+
+        # Special handling for conversion operations
+        if metric_type == "conversion_time":
+            self.conversion_stats[operation].append(value)
+
+    def start_timer(self, operation_id: str) -> str:
+        """Start timing an operation."""
+        timer_id = f"{operation_id}_{int(time.time() * 1000)}"
+        self.operation_timers[timer_id] = time.time()
+        return timer_id
+
+    def end_timer(self, timer_id: str, operation: str, context: Dict[str, Any] = None):
+        """End timing an operation and record the metric."""
+        if timer_id not in self.operation_timers:
+            self.logger.warning(f"Timer {timer_id} not found")
+            return
+
+        start_time = self.operation_timers.pop(timer_id)
+        duration = time.time() - start_time
+
+        self.record_metric(
+            metric_type="operation_time",
+            operation=operation,
+            value=duration,
+            unit="seconds",
+            context=context
+        )
+
+    def get_metrics_summary(self, hours: int = 24) -> Dict[str, Any]:
+        """Get performance metrics summary for the specified time period."""
+        cutoff_time = time.time() - (hours * 3600)
+        recent_metrics = [m for m in self.metrics_buffer if m.timestamp >= cutoff_time]
+
+        # Group metrics by type and operation
+        grouped_metrics = defaultdict(lambda: defaultdict(list))
+        for metric in recent_metrics:
+            grouped_metrics[metric.metric_type][metric.operation].append(metric.value)
+
+        summary = {
+            "time_period_hours": hours,
+            "total_metrics": len(recent_metrics),
+            "metric_types": {}
+        }
+
+        for metric_type, operations in grouped_metrics.items():
+            summary["metric_types"][metric_type] = {}
+            for operation, values in operations.items():
+                summary["metric_types"][metric_type][operation] = {
+                    "count": len(values),
+                    "avg": sum(values) / len(values),
+                    "min": min(values),
+                    "max": max(values),
+                    "recent": values[-5:]  # Last 5 values
+                }
+
+        return summary
+
+class StorageOptimizer:
+    """Handles storage optimization and cleanup operations."""
+
+    def __init__(self, base_path: Path):
+        self.base_path = Path(base_path)
+        self.logger = logging.getLogger(__name__)
+
+    def analyze_storage_usage(self) -> Dict[str, Any]:
+        """Analyze storage usage across all repositories."""
+        analysis = {
+            "total_size_gb": 0.0,
+            "repository_breakdown": {},
+            "file_type_breakdown": {},
+            "large_files": [],
+            "duplicates": [],
+            "temporary_files": []
+        }
+
+        try:
+            for repo_path in self.base_path.rglob("*"):
+                if repo_path.is_dir() and (repo_path / ".datalad").exists():
+                    repo_analysis = self._analyze_repository(repo_path)
+                    analysis["repository_breakdown"][str(repo_path)] = repo_analysis
+                    analysis["total_size_gb"] += repo_analysis["size_gb"]
+
+        except Exception as e:
+            self.logger.error(f"Storage analysis failed: {e}")
+
+        return analysis
+
+    def _analyze_repository(self, repo_path: Path) -> Dict[str, Any]:
+        """Analyze a single DataLad repository."""
+        analysis = {
+            "size_gb": 0.0,
+            "file_count": 0,
+            "annex_files": 0,
+            "git_files": 0,
+            "temp_files": 0,
+            "large_files": []
+        }
+
+        try:
+            for file_path in repo_path.rglob("*"):
+                if file_path.is_file():
+                    size = file_path.stat().st_size
+                    analysis["size_gb"] += size / (1024 * 1024 * 1024)
+                    analysis["file_count"] += 1
+
+                    # Check if file is in git-annex
+                    if file_path.is_symlink():
+                        analysis["annex_files"] += 1
+                    else:
+                        analysis["git_files"] += 1
+
+                    # Check for temporary files
+                    if any(pattern in file_path.name for pattern in ['.tmp', '.temp', '.bak']):
+                        analysis["temp_files"] += 1
+
+                    # Track large files (>100MB)
+                    if size > 100 * 1024 * 1024:
+                        analysis["large_files"].append({
+                            "path": str(file_path),
+                            "size_mb": size / (1024 * 1024)
+                        })
+
+        except Exception as e:
+            self.logger.warning(f"Repository analysis failed for {repo_path}: {e}")
+
+        return analysis
+
+    def cleanup_temporary_files(self, dry_run: bool = True) -> Dict[str, Any]:
+        """Clean up temporary files across repositories."""
+        cleanup_report = {
+            "files_found": 0,
+            "total_size_mb": 0.0,
+            "files_removed": 0,
+            "space_freed_mb": 0.0,
+            "errors": []
+        }
+
+        temp_patterns = ['.tmp', '.temp', '.bak', '.swp', '~']
+
+        try:
+            for temp_file in self.base_path.rglob("*"):
+                if temp_file.is_file() and any(pattern in temp_file.name for pattern in temp_patterns):
+                    size_mb = temp_file.stat().st_size / (1024 * 1024)
+                    cleanup_report["files_found"] += 1
+                    cleanup_report["total_size_mb"] += size_mb
+
+                    if not dry_run:
+                        try:
+                            temp_file.unlink()
+                            cleanup_report["files_removed"] += 1
+                            cleanup_report["space_freed_mb"] += size_mb
+                        except Exception as e:
+                            cleanup_report["errors"].append(f"Failed to remove {temp_file}: {e}")
+
+        except Exception as e:
+            self.logger.error(f"Cleanup operation failed: {e}")
+            cleanup_report["errors"].append(str(e))
+
+        return cleanup_report
+
+class ResourceManager:
+    """Manages system resources and implements intelligent caching."""
+
+    def __init__(self, max_memory_gb: float = 8.0, max_concurrent_ops: int = 3):
+        self.max_memory_gb = max_memory_gb
+        self.max_concurrent_ops = max_concurrent_ops
+        self.active_operations = set()
+        self.cache = {}
+        self.cache_stats = defaultdict(int)
+        self.logger = logging.getLogger(__name__)
+
+    def request_resources(self, operation_id: str, memory_estimate_gb: float = 1.0) -> bool:
+        """Request resources for an operation."""
+        current_memory = psutil.virtual_memory().percent / 100 * psutil.virtual_memory().total / (1024**3)
+
+        # Check memory availability
+        if current_memory + memory_estimate_gb > self.max_memory_gb:
+            self.logger.warning(f"Memory limit exceeded for operation {operation_id}")
+            return False
+
+        # Check concurrent operation limit
+        if len(self.active_operations) >= self.max_concurrent_ops:
+            self.logger.warning(f"Concurrent operation limit exceeded for {operation_id}")
+            return False
+
+        self.active_operations.add(operation_id)
+        self.logger.info(f"Resources allocated for operation {operation_id}")
+        return True
+
+    def release_resources(self, operation_id: str):
+        """Release resources for an operation."""
+        self.active_operations.discard(operation_id)
+        self.logger.info(f"Resources released for operation {operation_id}")
+
+    def get_cached_data(self, cache_key: str) -> Optional[Any]:
+        """Get data from cache."""
+        if cache_key in self.cache:
+            self.cache_stats["hits"] += 1
+            return self.cache[cache_key]
+        else:
+            self.cache_stats["misses"] += 1
+            return None
+
+    def set_cached_data(self, cache_key: str, data: Any, ttl_hours: int = 24):
+        """Set data in cache with TTL."""
+        expiry = time.time() + (ttl_hours * 3600)
+        self.cache[cache_key] = {
+            "data": data,
+            "expiry": expiry
+        }
+
+    def cleanup_expired_cache(self):
+        """Remove expired cache entries."""
+        current_time = time.time()
+        expired_keys = [k for k, v in self.cache.items() if v["expiry"] < current_time]
+
+        for key in expired_keys:
+            del self.cache[key]
+
+        if expired_keys:
+            self.logger.info(f"Cleaned up {len(expired_keys)} expired cache entries")
+
+class PerformanceDashboard:
+    """Generates performance analytics and reports."""
+
+    def __init__(self, collector: PerformanceCollector, optimizer: StorageOptimizer):
+        self.collector = collector
+        self.optimizer = optimizer
+        self.logger = logging.getLogger(__name__)
+
+    def generate_performance_report(self) -> Dict[str, Any]:
+        """Generate comprehensive performance report."""
+        metrics_summary = self.collector.get_metrics_summary(24)
+        storage_analysis = self.optimizer.analyze_storage_usage()
+
+        # Calculate recent resource usage trends
+        recent_resources = list(self.collector.resource_history)[-60:]  # Last hour
+
+        avg_cpu = sum(r.cpu_percent for r in recent_resources) / len(recent_resources) if recent_resources else 0
+        avg_memory = sum(r.memory_percent for r in recent_resources) / len(recent_resources) if recent_resources else 0
+
+        report = {
+            "timestamp": datetime.now().isoformat(),
+            "system_health": {
+                "avg_cpu_percent": avg_cpu,
+                "avg_memory_percent": avg_memory,
+                "total_storage_gb": storage_analysis["total_size_gb"],
+                "active_repositories": len(storage_analysis["repository_breakdown"])
+            },
+            "performance_metrics": metrics_summary,
+            "storage_analysis": storage_analysis,
+            "optimization_recommendations": self._generate_recommendations(metrics_summary, storage_analysis)
+        }
+
+        return report
+
+    def _generate_recommendations(self, metrics: Dict[str, Any], storage: Dict[str, Any]) -> List[str]:
+        """Generate optimization recommendations based on current metrics."""
+        recommendations = []
+
+        # Storage recommendations
+        if storage["total_size_gb"] > 100:
+            recommendations.append("Consider archiving old conversion repositories to free up space")
+
+        temp_files = sum(repo.get("temp_files", 0) for repo in storage["repository_breakdown"].values())
+        if temp_files > 50:
+            recommendations.append(f"Clean up {temp_files} temporary files to improve performance")
+
+        # Performance recommendations
+        operation_times = metrics.get("metric_types", {}).get("operation_time", {})
+        slow_operations = [op for op, stats in operation_times.items() if stats["avg"] > 30]
+
+        if slow_operations:
+            recommendations.append(f"Optimize slow operations: {', '.join(slow_operations)}")
+
+        return recommendations
+```
+
+#### DataLad Performance Integration
+
+```python
+# agentic_neurodata_conversion/data_management/datalad_performance.py
+from .performance_monitoring import PerformanceCollector
+from .datalad_wrapper import DataLadWrapper
+import functools
+import time
+
+class PerformanceAwareDataLadWrapper(DataLadWrapper):
+    """DataLad wrapper with integrated performance monitoring."""
+
+    def __init__(self, performance_collector: PerformanceCollector):
+        super().__init__()
+        self.performance_collector = performance_collector
+
+    def _timed_operation(self, operation_name: str):
+        """Decorator for timing DataLad operations."""
+        def decorator(func):
+            @functools.wraps(func)
+            def wrapper(*args, **kwargs):
+                timer_id = self.performance_collector.start_timer(f"datalad_{operation_name}")
+                try:
+                    result = func(*args, **kwargs)
+                    self.performance_collector.end_timer(
+                        timer_id,
+                        f"datalad_{operation_name}",
+                        {"success": True, "args_count": len(args)}
+                    )
+                    return result
+                except Exception as e:
+                    self.performance_collector.end_timer(
+                        timer_id,
+                        f"datalad_{operation_name}",
+                        {"success": False, "error": str(e)}
+                    )
+                    raise
+            return wrapper
+        return decorator
+
+    @_timed_operation("create_dataset")
+    def safe_create_dataset(self, *args, **kwargs):
+        return super().safe_create_dataset(*args, **kwargs)
+
+    @_timed_operation("save_dataset")
+    def safe_save(self, *args, **kwargs):
+        return super().safe_save(*args, **kwargs)
+
+    @_timed_operation("get_data")
+    def safe_get(self, *args, **kwargs):
+        return super().safe_get(*args, **kwargs)
+```
+
+### 5. Integration with MCP Server
 
 #### MCP Server Provenance Integration
 

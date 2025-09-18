@@ -18,6 +18,14 @@ Client Examples and Integration Patterns
 │   ├── Pipeline State Management Examples
 │   ├── Error Handling and Recovery Patterns
 │   └── Configuration Examples
+├── AI-Enhanced User Experience
+│   ├── Intelligent Parameter Recommendations
+│   ├── Error Diagnosis and Troubleshooting
+│   ├── Workflow Optimization Suggestions
+│   ├── Auto-Generated Documentation
+│   ├── Metadata Assistance and Validation
+│   ├── File Mapping Intelligence
+│   └── Contextual Help and Tutorials
 ├── Integration Utilities
 │   ├── Jupyter Notebook Integration
 │   ├── Workflow System Adapters
@@ -39,6 +47,8 @@ Client Examples and Integration Patterns
 
 ```
 Client Application → Python Client Library → HTTP/API Layer → MCP Server
+                           ↓
+                    AI Assistant Layer → Smart Recommendations → Context Understanding
                            ↓
                     State Management → Progress Tracking → Error Recovery
                            ↓
@@ -509,7 +519,568 @@ class MCPClient:
             raise
 ```
 
-### 2. Integration Utilities
+### 2. AI-Enhanced User Experience
+
+#### AI Assistant Framework
+
+The AI-Enhanced User Experience layer provides intelligent assistance throughout the conversion workflow, making the system accessible to non-technical researchers while improving efficiency for expert users.
+
+```python
+# agentic_neurodata_conversion/client/ai_assistant.py
+import asyncio
+import logging
+from typing import Dict, Any, List, Optional, Tuple
+from dataclasses import dataclass
+from enum import Enum
+import json
+from pathlib import Path
+
+class AssistanceType(Enum):
+    """Types of AI assistance available."""
+    PARAMETER_RECOMMENDATION = "parameter_recommendation"
+    ERROR_DIAGNOSIS = "error_diagnosis"
+    WORKFLOW_OPTIMIZATION = "workflow_optimization"
+    METADATA_SUGGESTION = "metadata_suggestion"
+    FILE_MAPPING = "file_mapping"
+    DOCUMENTATION_GENERATION = "documentation_generation"
+    CONTEXTUAL_HELP = "contextual_help"
+
+@dataclass
+class AIRecommendation:
+    """AI-generated recommendation."""
+    type: AssistanceType
+    confidence: float
+    suggestion: str
+    reasoning: str
+    parameters: Dict[str, Any]
+    alternatives: List[str] = None
+
+class AIAssistant:
+    """AI assistant for enhanced user experience."""
+
+    def __init__(self, llm_client, knowledge_base: Optional[Dict] = None):
+        self.llm_client = llm_client
+        self.knowledge_base = knowledge_base or {}
+        self.user_patterns = {}
+        self.session_history = []
+        self.logger = logging.getLogger(__name__)
+
+    async def analyze_dataset_context(self, dataset_dir: str,
+                                    user_context: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Analyze dataset and user context for intelligent recommendations."""
+
+        # File structure analysis
+        file_analysis = await self._analyze_file_structure(dataset_dir)
+
+        # User context integration
+        context = {
+            "file_analysis": file_analysis,
+            "user_context": user_context or {},
+            "session_history": self.session_history[-5:],  # Last 5 interactions
+            "user_patterns": self.user_patterns
+        }
+
+        return context
+
+    async def recommend_parameters(self, dataset_context: Dict[str, Any]) -> AIRecommendation:
+        """Generate AI-powered parameter recommendations."""
+
+        prompt = f"""
+        Based on the dataset analysis:
+        {json.dumps(dataset_context['file_analysis'], indent=2)}
+
+        And user context:
+        {json.dumps(dataset_context['user_context'], indent=2)}
+
+        Recommend optimal conversion parameters for this neuroscience dataset.
+        Consider:
+        1. Data format and structure
+        2. Experimental setup
+        3. Best practices for NWB conversion
+        4. User experience level
+
+        Provide specific parameter values with reasoning.
+        """
+
+        response = await self.llm_client.generate(prompt)
+
+        return AIRecommendation(
+            type=AssistanceType.PARAMETER_RECOMMENDATION,
+            confidence=0.85,
+            suggestion=response.get("parameters", {}),
+            reasoning=response.get("reasoning", ""),
+            parameters=response.get("recommended_config", {})
+        )
+
+    async def diagnose_error(self, error_info: Dict[str, Any],
+                           context: Dict[str, Any]) -> AIRecommendation:
+        """Provide intelligent error diagnosis and solutions."""
+
+        prompt = f"""
+        Error encountered during neuroscience data conversion:
+
+        Error Type: {error_info.get('type', 'Unknown')}
+        Error Message: {error_info.get('message', '')}
+        Stack Trace: {error_info.get('traceback', '')[:1000]}
+
+        Context:
+        - Dataset: {context.get('dataset_dir', '')}
+        - Files: {list(context.get('files_map', {}).keys())}
+        - Current Step: {context.get('current_step', '')}
+        - Configuration: {json.dumps(context.get('config', {}), indent=2)[:500]}
+
+        Provide:
+        1. Root cause analysis
+        2. Specific remediation steps
+        3. Prevention strategies
+        4. Alternative approaches if needed
+
+        Make suggestions accessible to non-technical users.
+        """
+
+        response = await self.llm_client.generate(prompt)
+
+        return AIRecommendation(
+            type=AssistanceType.ERROR_DIAGNOSIS,
+            confidence=0.90,
+            suggestion=response.get("solution", ""),
+            reasoning=response.get("analysis", ""),
+            parameters={
+                "remediation_steps": response.get("steps", []),
+                "prevention": response.get("prevention", []),
+                "alternatives": response.get("alternatives", [])
+            }
+        )
+
+    async def suggest_workflow_optimizations(self,
+                                           workflow_history: List[Dict]) -> AIRecommendation:
+        """Analyze workflow patterns and suggest optimizations."""
+
+        # Analyze execution times and success rates
+        performance_analysis = self._analyze_workflow_performance(workflow_history)
+
+        prompt = f"""
+        Analyze this conversion workflow performance:
+        {json.dumps(performance_analysis, indent=2)}
+
+        Recent workflow history:
+        {json.dumps(workflow_history[-10:], indent=2)}
+
+        Identify:
+        1. Performance bottlenecks
+        2. Repeated error patterns
+        3. Inefficient parameter choices
+        4. Workflow optimization opportunities
+
+        Suggest specific improvements with expected benefits.
+        """
+
+        response = await self.llm_client.generate(prompt)
+
+        return AIRecommendation(
+            type=AssistanceType.WORKFLOW_OPTIMIZATION,
+            confidence=0.80,
+            suggestion=response.get("optimizations", ""),
+            reasoning=response.get("analysis", ""),
+            parameters={
+                "bottlenecks": response.get("bottlenecks", []),
+                "recommendations": response.get("recommendations", []),
+                "expected_improvements": response.get("improvements", {})
+            }
+        )
+
+    async def generate_metadata_suggestions(self,
+                                          partial_metadata: Dict[str, Any],
+                                          dataset_analysis: Dict[str, Any]) -> AIRecommendation:
+        """Generate intelligent metadata suggestions."""
+
+        prompt = f"""
+        Based on dataset analysis:
+        {json.dumps(dataset_analysis, indent=2)}
+
+        And existing metadata:
+        {json.dumps(partial_metadata, indent=2)}
+
+        Suggest missing or improved metadata fields for NWB compliance:
+        1. Required fields that are missing
+        2. Recommended optional fields for better documentation
+        3. Validation of existing field values
+        4. Format corrections needed
+
+        Focus on neuroscience experimental metadata standards.
+        """
+
+        response = await self.llm_client.generate(prompt)
+
+        return AIRecommendation(
+            type=AssistanceType.METADATA_SUGGESTION,
+            confidence=0.88,
+            suggestion=response.get("suggestions", {}),
+            reasoning=response.get("reasoning", ""),
+            parameters={
+                "missing_required": response.get("missing_required", []),
+                "recommended_optional": response.get("recommended_optional", []),
+                "validation_issues": response.get("validation_issues", []),
+                "completed_metadata": response.get("completed_metadata", {})
+            }
+        )
+
+    async def recommend_file_mappings(self, file_analysis: Dict[str, Any]) -> AIRecommendation:
+        """Intelligently recommend file-to-data-type mappings."""
+
+        prompt = f"""
+        Analyze these files for neuroscience data conversion:
+        {json.dumps(file_analysis, indent=2)}
+
+        Recommend file-to-data-type mappings based on:
+        1. File extensions and formats
+        2. File sizes and patterns
+        3. Directory structure
+        4. Filename conventions
+        5. Common neuroscience data organization patterns
+
+        Map files to appropriate NWB data types (recording, behavior, stimuli, etc.).
+        """
+
+        response = await self.llm_client.generate(prompt)
+
+        return AIRecommendation(
+            type=AssistanceType.FILE_MAPPING,
+            confidence=0.85,
+            suggestion=response.get("mappings", {}),
+            reasoning=response.get("analysis", ""),
+            parameters={
+                "recommended_mappings": response.get("mappings", {}),
+                "confidence_scores": response.get("confidence", {}),
+                "ambiguous_files": response.get("ambiguous", [])
+            }
+        )
+
+    async def generate_documentation(self, workflow_result: Dict[str, Any]) -> AIRecommendation:
+        """Auto-generate workflow documentation and tutorials."""
+
+        prompt = f"""
+        Generate user-friendly documentation for this conversion workflow:
+
+        Workflow Summary:
+        {json.dumps(workflow_result.get('summary', {}), indent=2)}
+
+        Configuration Used:
+        {json.dumps(workflow_result.get('config', {}), indent=2)}
+
+        Results:
+        {json.dumps(workflow_result.get('results', {}), indent=2)[:1000]}
+
+        Create:
+        1. Step-by-step workflow documentation
+        2. Parameter explanations in plain language
+        3. Troubleshooting guide for common issues
+        4. Reproducibility instructions
+        5. Quality assessment summary
+
+        Write for researchers with varying technical backgrounds.
+        """
+
+        response = await self.llm_client.generate(prompt)
+
+        return AIRecommendation(
+            type=AssistanceType.DOCUMENTATION_GENERATION,
+            confidence=0.92,
+            suggestion=response.get("documentation", ""),
+            reasoning="Auto-generated based on workflow execution",
+            parameters={
+                "tutorial": response.get("tutorial", ""),
+                "troubleshooting": response.get("troubleshooting", ""),
+                "reproducibility": response.get("reproducibility", ""),
+                "quality_summary": response.get("quality_summary", "")
+            }
+        )
+
+    async def provide_contextual_help(self, user_action: str,
+                                    current_context: Dict[str, Any]) -> AIRecommendation:
+        """Provide contextual help based on user behavior."""
+
+        # Analyze user patterns
+        self._update_user_patterns(user_action, current_context)
+
+        prompt = f"""
+        User is performing: {user_action}
+
+        Current context:
+        {json.dumps(current_context, indent=2)}
+
+        User patterns:
+        {json.dumps(self.user_patterns, indent=2)}
+
+        Provide contextual help:
+        1. Explain what this action does
+        2. Common mistakes to avoid
+        3. Next recommended steps
+        4. Related features they might find useful
+        5. Tips based on their usage patterns
+
+        Tailor explanation to their apparent experience level.
+        """
+
+        response = await self.llm_client.generate(prompt)
+
+        return AIRecommendation(
+            type=AssistanceType.CONTEXTUAL_HELP,
+            confidence=0.85,
+            suggestion=response.get("help_content", ""),
+            reasoning=response.get("context_analysis", ""),
+            parameters={
+                "tips": response.get("tips", []),
+                "next_steps": response.get("next_steps", []),
+                "related_features": response.get("related_features", []),
+                "experience_level": response.get("experience_level", "intermediate")
+            }
+        )
+
+    def _update_user_patterns(self, action: str, context: Dict[str, Any]):
+        """Update user behavior patterns for personalization."""
+
+        if action not in self.user_patterns:
+            self.user_patterns[action] = {
+                "count": 0,
+                "success_rate": 0.0,
+                "common_errors": [],
+                "preferred_settings": {}
+            }
+
+        self.user_patterns[action]["count"] += 1
+
+        # Update session history
+        self.session_history.append({
+            "action": action,
+            "context": context,
+            "timestamp": time.time()
+        })
+
+        # Keep only recent history
+        if len(self.session_history) > 50:
+            self.session_history = self.session_history[-50:]
+
+    async def _analyze_file_structure(self, dataset_dir: str) -> Dict[str, Any]:
+        """Analyze dataset file structure for context."""
+
+        analysis = {
+            "total_files": 0,
+            "file_types": {},
+            "size_distribution": {},
+            "directory_structure": {},
+            "naming_patterns": []
+        }
+
+        try:
+            dataset_path = Path(dataset_dir)
+            for file_path in dataset_path.rglob("*"):
+                if file_path.is_file():
+                    analysis["total_files"] += 1
+
+                    # File type analysis
+                    suffix = file_path.suffix.lower()
+                    analysis["file_types"][suffix] = analysis["file_types"].get(suffix, 0) + 1
+
+                    # Size analysis
+                    size = file_path.stat().st_size
+                    size_category = self._categorize_file_size(size)
+                    analysis["size_distribution"][size_category] = \
+                        analysis["size_distribution"].get(size_category, 0) + 1
+
+                    # Directory structure
+                    rel_path = str(file_path.relative_to(dataset_path))
+                    analysis["directory_structure"][rel_path] = {
+                        "size": size,
+                        "type": suffix
+                    }
+
+        except Exception as e:
+            self.logger.warning(f"File analysis failed: {e}")
+
+        return analysis
+
+    def _categorize_file_size(self, size_bytes: int) -> str:
+        """Categorize file size for analysis."""
+        if size_bytes < 1024 * 1024:  # < 1MB
+            return "small"
+        elif size_bytes < 100 * 1024 * 1024:  # < 100MB
+            return "medium"
+        elif size_bytes < 1024 * 1024 * 1024:  # < 1GB
+            return "large"
+        else:
+            return "very_large"
+
+    def _analyze_workflow_performance(self, workflow_history: List[Dict]) -> Dict[str, Any]:
+        """Analyze workflow performance patterns."""
+
+        if not workflow_history:
+            return {}
+
+        total_workflows = len(workflow_history)
+        successful_workflows = sum(1 for w in workflow_history if w.get("success", False))
+
+        analysis = {
+            "total_workflows": total_workflows,
+            "success_rate": successful_workflows / total_workflows,
+            "average_duration": sum(w.get("duration", 0) for w in workflow_history) / total_workflows,
+            "common_errors": {},
+            "performance_trends": []
+        }
+
+        # Analyze error patterns
+        for workflow in workflow_history:
+            if not workflow.get("success", False) and "error" in workflow:
+                error_type = workflow["error"].get("type", "unknown")
+                analysis["common_errors"][error_type] = \
+                    analysis["common_errors"].get(error_type, 0) + 1
+
+        return analysis
+
+# Enhanced MCPClient with AI assistance
+class AIEnhancedMCPClient(MCPClient):
+    """MCP Client with AI-enhanced user experience."""
+
+    def __init__(self, config: Optional[ClientConfig] = None,
+                 enable_ai_assistance: bool = True):
+        super().__init__(config)
+
+        if enable_ai_assistance:
+            # Initialize AI assistant (would need LLM client configuration)
+            self.ai_assistant = AIAssistant(llm_client=self._get_llm_client())
+            self.ai_enabled = True
+        else:
+            self.ai_assistant = None
+            self.ai_enabled = False
+
+    async def analyze_dataset_with_ai(self, dataset_dir: str,
+                                    user_context: Dict[str, Any] = None) -> ConversionResult:
+        """Analyze dataset with AI-powered recommendations."""
+
+        # Standard analysis
+        analysis_result = await self.analyze_dataset(dataset_dir)
+
+        if self.ai_enabled and analysis_result.success:
+            # Get AI recommendations
+            dataset_context = await self.ai_assistant.analyze_dataset_context(
+                dataset_dir, user_context
+            )
+
+            parameter_recommendation = await self.ai_assistant.recommend_parameters(
+                dataset_context
+            )
+
+            file_mapping_recommendation = await self.ai_assistant.recommend_file_mappings(
+                dataset_context["file_analysis"]
+            )
+
+            # Enhance result with AI insights
+            analysis_result.data["ai_recommendations"] = {
+                "parameters": parameter_recommendation.__dict__,
+                "file_mappings": file_mapping_recommendation.__dict__,
+                "confidence_score": (parameter_recommendation.confidence +
+                                   file_mapping_recommendation.confidence) / 2
+            }
+
+        return analysis_result
+
+    async def handle_error_with_ai(self, error_info: Dict[str, Any],
+                                 context: Dict[str, Any]) -> AIRecommendation:
+        """Handle errors with AI-powered diagnosis."""
+
+        if not self.ai_enabled:
+            return None
+
+        diagnosis = await self.ai_assistant.diagnose_error(error_info, context)
+
+        # Log AI diagnosis
+        self.logger.info(f"AI Error Diagnosis: {diagnosis.suggestion}")
+
+        return diagnosis
+
+    async def get_workflow_suggestions(self) -> AIRecommendation:
+        """Get AI-powered workflow optimization suggestions."""
+
+        if not self.ai_enabled:
+            return None
+
+        workflow_history = getattr(self, 'workflow_history', [])
+
+        if len(workflow_history) >= 3:  # Need some history for analysis
+            suggestions = await self.ai_assistant.suggest_workflow_optimizations(
+                workflow_history
+            )
+            return suggestions
+
+        return None
+
+    def _get_llm_client(self):
+        """Get LLM client for AI assistance (placeholder)."""
+        # This would initialize the actual LLM client
+        # Could be OpenAI, Anthropic, or local model
+        return None
+```
+
+#### AI-Enhanced Jupyter Integration
+
+```python
+# agentic_neurodata_conversion/client/ai_jupyter_integration.py
+from .jupyter_integration import JupyterMCPClient
+from .ai_assistant import AIEnhancedMCPClient, AIRecommendation
+from IPython.display import display, HTML, Markdown
+import ipywidgets as widgets
+
+class AIJupyterMCPClient(AIEnhancedMCPClient, JupyterMCPClient):
+    """Jupyter client with AI-enhanced user experience."""
+
+    def __init__(self, config: Optional[ClientConfig] = None):
+        super().__init__(config, enable_ai_assistance=True)
+        self._setup_ai_widgets()
+
+    def _setup_ai_widgets(self):
+        """Setup AI-specific widgets for Jupyter."""
+
+        self.recommendation_widget = widgets.HTML(
+            value="",
+            description="AI Suggestions:"
+        )
+
+        self.help_widget = widgets.HTML(
+            value="",
+            description="AI Help:"
+        )
+
+    def display_ai_recommendation(self, recommendation: AIRecommendation):
+        """Display AI recommendation in notebook."""
+
+        confidence_color = "green" if recommendation.confidence > 0.8 else "orange"
+
+        html_content = f"""
+        <div style="border: 2px solid {confidence_color}; padding: 15px; margin: 10px 0; border-radius: 8px; background-color: #f9f9f9;">
+            <h4 style="color: {confidence_color};">🤖 AI Recommendation (Confidence: {recommendation.confidence:.0%})</h4>
+            <p><strong>Type:</strong> {recommendation.type.value.replace('_', ' ').title()}</p>
+            <p><strong>Suggestion:</strong> {recommendation.suggestion}</p>
+            <p><strong>Reasoning:</strong> {recommendation.reasoning}</p>
+            {self._format_parameters(recommendation.parameters)}
+        </div>
+        """
+
+        display(HTML(html_content))
+
+    def _format_parameters(self, parameters: Dict[str, Any]) -> str:
+        """Format parameters for display."""
+        if not parameters:
+            return ""
+
+        html = "<details><summary><strong>Details:</strong></summary><ul>"
+        for key, value in parameters.items():
+            html += f"<li><strong>{key}:</strong> {value}</li>"
+        html += "</ul></details>"
+
+        return html
+```
+
+### 3. Integration Utilities
 
 #### Jupyter Notebook Integration
 

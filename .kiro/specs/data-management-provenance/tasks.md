@@ -126,10 +126,23 @@
   - Create complete audit trails for successful conversions
   - _Requirements: 7.1, 7.2, 7.3, 7.4_
 
-- [ ] 14. Test and validate complete data management system
+- [ ] 14. Implement performance monitoring and optimization system
+  - Create `PerformanceCollector` class in
+    `agentic_neurodata_conversion/data_management/performance_monitoring.py`
+  - Implement system resource monitoring with CPU, memory, disk, and I/O tracking
+  - Build storage optimization engine with cleanup utilities and duplicate detection
+  - Create resource management system with intelligent caching and operation limits
+  - Add performance-aware DataLad wrapper with timed operations and metrics integration
+  - Implement performance dashboard with analytics and optimization recommendations
+  - Create automated alerting system for performance thresholds and resource limits
+  - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7_
+
+- [ ] 15. Test and validate complete data management system
   - Create comprehensive test suite for DataLad operations and provenance
     tracking
   - Test conversion repository creation and artifact management
   - Validate provenance recording accuracy and completeness
   - Perform integration testing with MCP server and agent workflows
-  - _Requirements: 1.4, 2.4, 3.4, 4.4_
+  - Test performance monitoring accuracy and optimization effectiveness
+  - Validate resource management and caching functionality
+  - _Requirements: 1.4, 2.4, 3.4, 4.4, 8.1, 8.5_
