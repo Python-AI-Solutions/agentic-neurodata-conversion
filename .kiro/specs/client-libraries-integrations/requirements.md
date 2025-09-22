@@ -161,3 +161,18 @@ datasets reliably.
    guidance on data preparation and common issues
 4. WHEN working with different formats THEN the client SHALL automatically
    detect and handle various neuroscience data formats through the MCP server
+
+### Requirement 10
+
+**User Story:** As a non-technical researcher, I want AI assistance in the client interface, so that I can perform complex conversions without deep technical knowledge.
+
+#### Acceptance Criteria
+
+1. WHEN configuring conversions THEN the client SHALL provide AI-powered parameter recommendations based on dataset characteristics and experimental context
+2. WHEN encountering errors THEN the client SHALL offer intelligent troubleshooting suggestions with specific remediation steps
+3. WHEN optimizing workflows THEN the client SHALL learn from usage patterns and suggest improvements for conversion efficiency
+4. WHEN documenting processes THEN the client SHALL auto-generate workflow documentation and tutorials in plain language
+5. WHEN handling metadata THEN the client SHALL use AI to suggest missing metadata fields and validate experimental descriptions
+6. WHEN selecting file mappings THEN the client SHALL intelligently recommend file-to-data-type mappings based on file analysis
+7. WHEN reviewing results THEN the client SHALL provide AI-generated summaries of conversion quality and potential issues
+8. WHEN learning the system THEN the client SHALL offer contextual help and guided tutorials based on user behavior patterns
