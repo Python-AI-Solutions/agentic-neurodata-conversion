@@ -1,3 +1,4 @@
+
 # Knowledge Graph Systems Requirements
 
 ## Introduction
@@ -36,7 +37,6 @@ This spec focuses on the knowledge graph systems that enrich metadata, provide s
 1. WHEN validating instances THEN the system SHALL validate LinkML instances (YAML/JSON) against the NWB-LinkML schema
 2. WHEN producing RDF THEN the system SHALL generate RDF using the JSON-LD @context produced from the NWB-LinkML schema to ensure consistent IRIs
 3. WHEN validating graphs THEN the system SHALL run SHACL validation using shapes generated from the NWB-LinkML schema and produce detailed reports
-
 
 ### Requirement 4 - Basic RDF Generation
 
