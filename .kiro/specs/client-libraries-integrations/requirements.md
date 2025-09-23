@@ -83,11 +83,9 @@ allow the conversion pipeline to work with external tools and systems.
 
 1. WHEN integrating with notebooks THEN the client SHALL work seamlessly in
    Jupyter notebooks with appropriate progress indicators
-2. WHEN integrating with workflows THEN the client SHALL support integration
-   with workflow management systems (Snakemake, Nextflow, etc.)
-3. WHEN integrating with data platforms THEN the client SHALL provide interfaces
+2. WHEN integrating with data platforms THEN the client SHALL provide interfaces
    for working with cloud storage and data repositories
-4. WHEN integrating with analysis tools THEN the client SHALL support exporting
+3. WHEN integrating with analysis tools THEN the client SHALL support exporting
    results in formats compatible with common neuroscience analysis tools
 
 ### Requirement 6
