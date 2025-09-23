@@ -48,7 +48,7 @@ This specification defines comprehensive testing strategies and quality assuranc
 
 #### Acceptance Criteria
 
-1. WHEN running end-to-end tests THEN the system SHALL use DataLad-managed test datasets including Open Ephys recordings (multi-channel, multi-session), SpikeGLX datasets with different probe configurations, Neuralynx data with video synchronization, calcium imaging data (Suite2p, CaImAn processed), behavioral tracking data (DeepLabCut, SLEAP), multimodal recordings (ephys + imaging + behavior), datasets with missing/corrupted segments, and legacy format migrations, maintaining version control for reproducibility
+1. WHEN running end-to-end tests THEN the system SHALL use DataLad-managed test datasets including Open Ephys recordings (multi-channel, multi-session), SpikeGLX datasets with different probe configurations, behavioral tracking data (DeepLabCut, SLEAP), multimodal recordings (ephys + behavior), datasets with missing/corrupted segments, and legacy format migrations, maintaining version control for reproducibility
 
 2. WHEN testing different data formats THEN the system SHALL include test datasets representing major neuroscience data formats with binary formats (DAT, BIN, proprietary), HDF5-based formats (with various schemas), text-based formats (CSV, TSV, JSON), video formats (AVI, MP4, MOV), image stacks (TIFF, PNG sequences), time series data (continuous, event-based), metadata formats (JSON, XML, YAML), and mixed format datasets, covering at least 15 distinct format combinations
 
@@ -72,7 +72,7 @@ This specification defines comprehensive testing strategies and quality assuranc
 
 3. WHEN testing integration scenarios THEN the system SHALL verify that clients handle server errors (400, 401, 403, 404, 500, 503), network issues (DNS failure, connection refused, timeout), partial failures (some endpoints working), server maintenance windows, protocol version mismatches, concurrent request limits, data corruption during transfer, and graceful degradation strategies, with automated recovery testing
 
-4. WHEN testing different usage patterns THEN the system SHALL validate that clients work correctly in Jupyter notebooks with async operations, Python scripts with different versions (3.8-3.12), R environments through reticulate, MATLAB through Python engine, web applications through REST API, workflow systems (Snakemake, Nextflow), container environments (Docker, Singularity), and cloud platforms (AWS, GCP, Azure), with platform-specific test suites
+4. WHEN testing different usage patterns THEN the system SHALL validate that clients work correctly in Jupyter notebooks with async operations, Python scripts with different versions (3.8-3.12), web applications through REST API, workflow systems (Snakemake, Nextflow), container environments (Docker, Singularity), with platform-specific test suites
 
 5. WHEN testing client resilience THEN the system SHALL verify timeout handling with configurable limits, automatic retry with jitter, circuit breaker implementation, fallback mechanisms, connection pool exhaustion handling, memory leak prevention, thread safety in concurrent use, and resource cleanup on failure, with chaos engineering tests
 
@@ -96,25 +96,8 @@ This specification defines comprehensive testing strategies and quality assuranc
 
 6. WHEN optimizing test execution THEN the system SHALL implement test selection based on changed files, parallel test execution strategies, test result caching, incremental testing approaches, fail-fast mechanisms, priority-based test ordering, resource-aware scheduling, and distributed test execution, reducing feedback time by 50%
 
-### Requirement 6: Performance and Load Testing
 
-**User Story:** As a developer, I want comprehensive performance and load testing, so that I can ensure the system performs well under realistic and stress conditions.
-
-#### Acceptance Criteria
-
-1. WHEN testing performance THEN the system SHALL measure conversion times for datasets of 1MB, 10MB, 100MB, 1GB, 10GB, 100GB, with linear or better scaling, memory usage staying within 2x data size, CPU utilization efficiency >70%, disk I/O optimization with minimal seeks, network bandwidth utilization <80%, cache hit rates >60%, and response time percentiles (p50, p90, p99), establishing SLAs for each metric
-
-2. WHEN testing scalability THEN the system SHALL verify that the MCP server can handle 1, 10, 100, 1000 concurrent conversion requests, scale horizontally to multiple nodes, maintain performance with 10,000 registered datasets, handle 1M metadata queries per hour, support 100 active WebSocket connections, process event streams at 10,000 events/sec, maintain sub-second response times at scale, and demonstrate linear scaling with resources, with auto-scaling validation
-
-3. WHEN testing resource usage THEN the system SHALL monitor memory usage patterns including heap growth, garbage collection impact, memory leaks over time, CPU utilization across cores, disk I/O patterns and queue depths, network socket usage, file descriptor limits, thread pool utilization, database connection pooling, and cache memory effectiveness, with resource leak detection
-
-4. WHEN testing limits THEN the system SHALL identify performance bottlenecks through profiling (CPU, memory, I/O), maximum concurrent users supported, largest dataset size processable, throughput ceilings for each operation, resource exhaustion points, degradation patterns under stress, recovery time after overload, and scaling limits of current architecture, with bottleneck remediation recommendations
-
-5. WHEN testing under stress THEN the system SHALL validate behavior during memory pressure scenarios, CPU throttling conditions, disk space exhaustion, network saturation, database overload, cache invalidation storms, thundering herd scenarios, and coordinated service failures, ensuring graceful degradation
-
-6. WHEN testing performance optimization THEN the system SHALL measure impact of caching strategies, query optimization, index effectiveness, compression algorithms, parallel processing, batch operations, connection pooling, and code optimizations, with A/B testing of performance improvements
-
-### Requirement 7: Evaluation and Validation Testing
+### Requirement 6: Evaluation and Validation Testing
 
 **User Story:** As a researcher, I want comprehensive evaluation and validation testing, so that I can trust that conversions produce high-quality, standards-compliant, and scientifically accurate NWB files.
 
@@ -132,7 +115,7 @@ This specification defines comprehensive testing strategies and quality assuranc
 
 6. WHEN testing compliance standards THEN the system SHALL validate FAIR principle compliance (findability, accessibility, interoperability, reusability), BIDS compatibility where applicable, DANDI upload requirements, journal data requirements, funder data mandates, ethical compliance markers, privacy regulation compliance, and license compatibility, with compliance certification support
 
-### Requirement 8: Testing Utilities and Infrastructure
+### Requirement 7: Testing Utilities and Infrastructure
 
 **User Story:** As a developer, I want comprehensive testing utilities and fixtures, so that I can easily create and maintain tests for different components without duplicating effort.
 
@@ -142,15 +125,14 @@ This specification defines comprehensive testing strategies and quality assuranc
 
 2. WHEN testing with datasets THEN the system SHALL provide fixtures for minimal valid datasets, corrupted data edge cases, large-scale performance testing data, multi-modal data combinations, time-series data generators, metadata variation examples, format conversion test cases, and regression test baselines, with 100+ predefined fixtures
 
-3. WHEN testing agents THEN the system SHALL provide mock LLM services with response libraries, deterministic mode switches, conversation state management, token counting utilities, latency simulation, error injection capabilities, response variation testing, and prompt capture tools, supporting all major LLM providers
 
-4. WHEN debugging tests THEN the system SHALL provide utilities for test state inspection with variable watches, execution trace visualization with call graphs, network call recording and replay, filesystem operation logs with diffs, database query logs with execution plans, memory snapshot analysis with leak detection, performance profiling integration with flame graphs, and failure reproduction scripts with minimal test cases, improving debugging efficiency by 60%
+3. WHEN debugging tests THEN the system SHALL provide utilities for test state inspection with variable watches, execution trace visualization with call graphs, network call recording and replay, filesystem operation logs with diffs, database query logs with execution plans, memory snapshot analysis with leak detection, performance profiling integration with flame graphs, and failure reproduction scripts with minimal test cases, improving debugging efficiency by 60%
 
-5. WHEN managing test data THEN the system SHALL provide data generation strategies (random, sequential, boundary), data anonymization utilities for sensitive information, data versioning with DataLad integration, data validation helpers with schema checking, data transformation utilities for format conversion, data comparison tools for regression testing, synthetic data generators for edge cases, and data cleanup tools for test isolation, supporting 50+ data scenarios
+4. WHEN managing test data THEN the system SHALL provide data generation strategies (random, sequential, boundary), data anonymization utilities for sensitive information, data versioning with DataLad integration, data validation helpers with schema checking, data transformation utilities for format conversion, data comparison tools for regression testing, synthetic data generators for edge cases, and data cleanup tools for test isolation, supporting 50+ data scenarios
 
-6. WHEN building custom test tools THEN the system SHALL provide extensible test frameworks, plugin architectures for custom assertions, test report customization APIs, test discovery mechanisms, test scheduling interfaces, result aggregation systems, metric collection frameworks, and integration points for third-party tools, with comprehensive documentation and examples
+5. WHEN building custom test tools THEN the system SHALL provide extensible test frameworks, plugin architectures for custom assertions, test report customization APIs, test discovery mechanisms, test scheduling interfaces, result aggregation systems, metric collection frameworks, and integration points for third-party tools, with comprehensive documentation and examples
 
-### Requirement 9: Monitoring and Observability Testing
+### Requirement 8: Monitoring and Observability Testing
 
 **User Story:** As a maintainer, I want comprehensive monitoring and observability testing, so that I can ensure the system provides adequate visibility into its operation and can be effectively debugged in production.
 
@@ -166,22 +148,3 @@ This specification defines comprehensive testing strategies and quality assuranc
 
 5. WHEN testing distributed tracing THEN the system SHALL verify trace propagation across services, span relationship accuracy, timing information precision, baggage data preservation, sampling strategies, trace storage and retrieval, query capabilities, and visualization accuracy, supporting OpenTelemetry standards
 
-6. WHEN testing observability integration THEN the system SHALL validate integration with monitoring platforms (Prometheus, Grafana), log aggregators (ELK, Splunk), APM tools (Datadog, New Relic), error trackers (Sentry, Rollbar), trace collectors (Jaeger, Zipkin), custom dashboards, alerting systems, and automated response systems, with data consistency validation
-
-### Requirement 10: Regression and Compatibility Testing
-
-**User Story:** As a developer, I want comprehensive regression and compatibility testing, so that I can ensure changes don't break existing functionality and the system works across different environments and dependency versions.
-
-#### Acceptance Criteria
-
-1. WHEN making changes THEN the system SHALL run regression tests including all previous bug fixes with test cases, critical user workflows end-to-end, API backward compatibility checks, data format compatibility verification, configuration migration testing, performance regression detection, behavior change detection, and visual regression testing for UIs, with automatic bisection for regression identification
-
-2. WHEN updating dependencies THEN the system SHALL verify compatibility with NeuroConv (current, previous, next versions), PyNWB (last 3 major versions), NumPy/SciPy ecosystem updates, Python version transitions, OS-level dependency changes, database version upgrades, container runtime updates, and transitive dependency impacts, using dependency matrix testing
-
-3. WHEN testing environments THEN the system SHALL validate functionality across Ubuntu 20.04/22.04/24.04, macOS 12/13/14 (Intel and ARM), Windows 10/11 (native and WSL), Docker containers (multiple base images), Kubernetes clusters, HPC environments (SLURM, PBS), cloud platforms (AWS, GCP, Azure), and development environments (local, remote, cloud IDEs), with platform-specific test suites
-
-4. WHEN testing backwards compatibility THEN the system SHALL ensure that API changes follow semantic versioning, deprecated features work for 2 major versions, data formats remain readable across versions, configuration files auto-migrate, database schemas upgrade smoothly, client libraries remain compatible, error codes remain stable, and behavior changes are documented, with compatibility matrix maintenance
-
-5. WHEN testing upgrade paths THEN the system SHALL validate zero-downtime upgrades, data migration correctness, rollback capabilities, state preservation during upgrades, configuration compatibility, plugin compatibility, performance after upgrade, and upgrade failure recovery, with automated upgrade testing
-
-6. WHEN testing interoperability THEN the system SHALL verify compatibility with external tools (MATLAB, R, Julia), workflow systems (Snakemake, Nextflow, CWL), data standards (BIDS, DANDI), cloud storage (S3, GCS, Azure Blob), authentication systems (OAuth, SAML, LDAP), container registries, CI/CD systems, and monitoring tools, with integration test suites

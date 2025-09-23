@@ -30,17 +30,17 @@ This specification establishes the foundational project structure, packaging, de
 
 #### Acceptance Criteria
 
-1. WHEN writing new code THEN the system SHALL enforce consistent coding standards through automated tools including ruff for linting with custom rule sets, black for code formatting with line length 100, isort for import organization, mypy for static type checking with strict mode, pylint for additional code quality checks, bandit for security scanning, vulture for dead code detection, and complexity analysis with maximum cyclomatic complexity of 10
+1. WHEN writing new code THEN the system SHALL enforce consistent coding standards through automated tools including ruff for linting, code formatting with line length 100, and import organization, mypy for static type checking with strict mode, pylint for additional code quality checks, bandit for security scanning, vulture for dead code detection, and complexity analysis with maximum cyclomatic complexity of 10
 
 2. WHEN committing changes THEN the system SHALL validate code quality through pre-commit hooks including code formatting verification, linting checks passing, type checking success, test execution for changed files, documentation generation, commit message format validation (Conventional Commits), branch naming conventions, file size limits, and secret scanning, with ability to bypass for emergencies using `--no-verify`
 
-3. WHEN developing features THEN the system SHALL follow established patterns for MCP tool implementation using decorator-based registration (`@mcp_tool`), structured JSON Schema interfaces, standardized error responses, consistent logging patterns, proper async/await usage, dependency injection patterns, factory patterns for object creation, strategy patterns for algorithm selection, observer patterns for event handling, and repository patterns for data access
+3. WHEN developing features THEN the system SHALL follow established patterns for MCP tool implementation using decorator-based registration (`@mcp_tool`), structured JSON Schema interfaces, standardized error responses, consistent logging patterns, proper async/await usage, dependency injection patterns, factory patterns for object creation, strategy patterns for algorithm selection, observer patterns for event handling, and repository patterns for data access.
 
-4. WHEN creating new modules THEN the system SHALL provide templates via cookiecutter or copier for MCP tools with boilerplate code, agents with standard interfaces, client libraries with protocol handling, test suites with fixtures, documentation with autodoc setup, CI/CD pipelines with standard stages, Docker containers with best practices, and Kubernetes manifests with resource limits
+4. WHEN creating new modules for data conversion THEN the system SHALL provide scaffolding via copier or cookiecutter templates (e.g., catalystneuro cookiecutter) with boilerplate code and standard interfaces. The system SHALL ensure the pixi environment contains all necessary tools for development and testing. Additional templates for CI/CD pipelines, Dockerfiles, and Kubernetes manifests MAY be introduced later if operational needs require them.
 
 5. WHEN handling errors THEN the system SHALL implement consistent error handling with typed exceptions hierarchy, error codes with documentation, structured error responses, error recovery strategies, retry mechanisms with backoff, circuit breaker patterns, error aggregation and reporting, user-friendly error messages, debug information in development, and sanitized errors in production
 
-6. WHEN documenting code THEN the system SHALL require comprehensive documentation including docstrings for all public APIs (Google style), type hints for all functions, inline comments for complex logic, README files per module, architecture decision records (ADRs), API documentation generation, example usage in docstrings, performance considerations noted, deprecation warnings, and migration guides
+6. WHEN documenting code THEN the system SHALL require comprehensive documentation including docstrings for all public APIs (Google style), type hints for all functions, inline comments for complex logic, architecture decision records (ADRs), API documentation generation, example usage in docstrings, performance considerations noted, deprecation warnings, and migration guides
 
 ### Requirement 3: Advanced Development Tooling and Infrastructure
 
@@ -54,11 +54,7 @@ This specification establishes the foundational project structure, packaging, de
 
 3. WHEN debugging THEN the system SHALL provide comprehensive logging infrastructure including structured logging with JSON output, log levels per module, correlation ID tracking, distributed tracing integration, performance metrics in logs, log aggregation support, log sampling for volume control, debug mode toggles, remote debugging support, and interactive debugging tools for MCP server operations and agent interactions
 
-4. WHEN deploying THEN the system SHALL include containerization with multi-stage Docker builds, minimal base images (distroless), layer caching optimization, security scanning, SBOM generation, Kubernetes-ready configurations, Helm chart packaging, configurable host/port via environment variables, health check endpoints, graceful shutdown handling, and cloud-native deployment manifests
 
-5. WHEN profiling performance THEN the system SHALL provide profiling tools including CPU profiling with cProfile/py-spy, memory profiling with memory_profiler/tracemalloc, line profiling for hot paths, async profiling for coroutines, flame graph generation, continuous profiling integration, performance regression detection, load testing harnesses, bottleneck analysis reports, and optimization recommendations
-
-6. WHEN developing locally THEN the system SHALL support multiple development modes including hot-reload for rapid iteration, debug mode with verbose output, mock mode for offline development, integration mode with real services, hybrid mode with selective mocking, performance mode with profiling, security mode with additional checks, and production-like mode for testing
 
 ### Requirement 4: Collaborative Development Workflows and Processes
 
@@ -66,17 +62,15 @@ This specification establishes the foundational project structure, packaging, de
 
 #### Acceptance Criteria
 
-1. WHEN collaborating THEN the system SHALL provide clear branching and merge strategies including GitFlow for releases, feature branches with naming conventions (`feature/ABC-123-description`), bugfix branches for patches, hotfix procedures for production issues, release branches for stabilization, protected main branch, required pull request reviews, automated merge conflict resolution, branch cleanup automation, and commit signing requirements
 
-2. WHEN reviewing code THEN the system SHALL include automated CI/CD pipelines that run on every pull request with unit tests (<5 minutes), integration tests (<15 minutes), code quality checks, security scanning, documentation building, license compliance, performance benchmarks, visual regression tests for UIs, accessibility testing, and deployment preview generation, with required checks before merge
+1. WHEN reviewing code THEN the system SHALL include automated CI/CD pipelines that run on every pull request with unit tests (<5 minutes), integration tests (<15 minutes), code quality checks, security scanning, documentation building, license compliance, performance benchmarks, visual regression tests for UIs, accessibility testing, and deployment preview generation, with required checks before merge
 
-3. WHEN managing releases THEN the system SHALL provide versioning using semantic versioning (MAJOR.MINOR.PATCH), automated changelog generation from commits, release candidate workflows, feature flag management, gradual rollout strategies, rollback procedures, release notes automation, asset building and publishing, container registry pushes, and documentation deployment, for MCP server API and agent interfaces
 
-4. WHEN onboarding THEN the system SHALL include comprehensive setup documentation with system requirements clearly stated, step-by-step installation guides, IDE configuration (VSCode, PyCharm), development environment setup scripts, common troubleshooting solutions, architecture overview with diagrams, coding standards guide, contribution guidelines, first good issues labeled, and mentorship program structure
+2. WHEN onboarding THEN the system SHALL include comprehensive setup documentation with system requirements clearly stated, step-by-step installation guides, IDE configuration (VSCode, PyCharm), development environment setup scripts, common troubleshooting solutions, architecture overview with diagrams, coding standards guide, contribution guidelines, first good issues labeled, and mentorship program structure
 
-5. WHEN coordinating work THEN the system SHALL implement project management integration with issue tracking systems (GitHub Issues, Jira), project boards for sprint planning, automated issue labeling, PR-to-issue linking, time tracking integration, milestone management, dependency tracking, team notifications, standup bot integration, and metrics dashboards
+3. WHEN coordinating work THEN the system SHALL implement project management integration with issue tracking systems (GitHub Issues, Jira), project boards for sprint planning, automated issue labeling, PR-to-issue linking, time tracking integration, milestone management, dependency tracking, team notifications, standup bot integration, and metrics dashboards
 
-6. WHEN ensuring quality THEN the system SHALL maintain quality gates including code coverage thresholds (>80%), performance benchmarks, security scan requirements, documentation coverage, API compatibility checks, breaking change detection, dependency update reviews, architecture conformance, technical debt tracking, and quality trend monitoring
+4. WHEN ensuring quality THEN the system SHALL maintain quality gates including code coverage thresholds (>80%), performance benchmarks, security scan requirements, documentation coverage, API compatibility checks, breaking change detection, dependency update reviews, architecture conformance, technical debt tracking, and quality trend monitoring
 
 ### Requirement 5: Documentation Infrastructure and Knowledge Management
 
@@ -92,7 +86,6 @@ This specification establishes the foundational project structure, packaging, de
 
 4. WHEN understanding the architecture THEN the system SHALL provide clear documentation of system boundaries and interfaces, component responsibilities (SRP), communication patterns (sync/async), state management strategies, error handling philosophy, scalability considerations, security architecture, deployment options, monitoring strategies, and extension points
 
-5. WHEN learning the system THEN the system SHALL offer multiple learning paths including quick start guides (<30 minutes), comprehensive tutorials, hands-on workshops, reference documentation, API playground, interactive examples, code walkthroughs, architecture deep dives, best practices guides, and case studies
 
 6. WHEN maintaining documentation THEN the system SHALL ensure documentation quality through automated link checking, code example validation, API documentation generation, version-specific documentation, translation management, search functionality, feedback mechanisms, documentation metrics, regular review cycles, and documentation-as-code practices
 
@@ -120,7 +113,7 @@ This specification establishes the foundational project structure, packaging, de
 
 #### Acceptance Criteria
 
-1. WHEN providing examples THEN the system SHALL include a dedicated examples directory with client integration patterns organized by language (`examples/python/`, `examples/javascript/`, `examples/r/`), use case (`examples/use_cases/`), deployment scenario (`examples/deployment/`), workflow patterns (`examples/workflows/`), performance optimization (`examples/performance/`), error handling (`examples/error_handling/`), testing strategies (`examples/testing/`), and migration guides (`examples/migration/`)
+1. WHEN providing examples THEN the system SHALL include a dedicated examples directory with client integration patterns organized by language (`examples/python`), use case (`examples/use_cases/`), deployment scenario (`examples/deployment/`), workflow patterns (`examples/workflows/`), performance optimization (`examples/performance/`), error handling (`examples/error_handling/`), testing strategies (`examples/testing/`), and migration guides (`examples/migration/`)
 
 2. WHEN documenting integration THEN the system SHALL provide clear documentation structure for third-party developers including API reference with interactive documentation, authentication guides with examples, rate limiting documentation, webhook integration guides, SDK documentation per language, postman/insomnia collections, GraphQL playground if applicable, OpenAPI specifications, AsyncAPI for events, and integration test suites
 
