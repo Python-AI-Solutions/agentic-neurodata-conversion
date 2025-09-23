@@ -30,25 +30,18 @@ results. I only download the parts of a dataset I want to use for testing.
 
 ### Requirement 2
 
-**User Story:** As a researcher, I want comprehensive provenance tracking for my
-conversions, so that I can understand the origin and confidence level of every
-piece of metadata in my final NWB file.
+**User Story:** As a researcher, I want basic provenance tracking for my
+conversions, so that I can understand the source and modifications of metadata
+in my final NWB file.
 
 #### Acceptance Criteria
 
-1. WHEN any metadata field is populated THEN the system SHALL record the
-   confidence level (definitive, high_evidence, human_confirmed, human_override,
-   medium_evidence, heuristic, low_evidence, placeholder, unknown), source type,
-   derivation method, and complete reasoning chain
-2. WHEN tracking changes THEN the system SHALL maintain complete audit trails of
-   all modifications, decisions, data transformations, and evidence conflicts
-   with resolution methods
-3. WHEN providing transparency THEN the system SHALL clearly distinguish between
-   evidence-based decisions and human overrides, presenting evidence summaries
-   for human review when conflicts exist
-4. WHEN generating reports THEN the system SHALL include detailed provenance
-   summaries with decision chains, evidence quality assessment, and confidence
-   distributions allowing users to verify and validate all automated decisions
+1. WHEN metadata is populated THEN the system SHALL record the source type and
+   basic confidence level (high, medium, low, unknown)
+2. WHEN tracking changes THEN the system SHALL maintain audit trails of
+   modifications and data transformations
+3. WHEN generating reports THEN the system SHALL include basic provenance
+   summaries showing data sources and transformation steps
 
 ### Requirement 3
 
@@ -104,23 +97,6 @@ pitfalls.
 
 ### Requirement 6
 
-**User Story:** As a team member, I want development data infrastructure that
-supports collaborative development, so that all team members can access
-consistent test data and evaluation datasets.
-
-#### Acceptance Criteria
-
-1. WHEN setting up development THEN the system SHALL provide automated setup of
-   DataLad infrastructure with proper directory structure
-2. WHEN adding datasets THEN the system SHALL provide utilities for adding test
-   datasets, evaluation data, and conversion examples
-3. WHEN collaborating THEN the system SHALL ensure all team members can access
-   the same versioned datasets and evaluation data
-4. WHEN updating data THEN the system SHALL provide clear processes for updating
-   test datasets and evaluation benchmarks
-
-### Requirement 7
-
 **User Story:** As a researcher, I want conversion provenance that integrates
 with the MCP server workflow, so that all agent interactions and decisions are
 properly tracked.
@@ -136,16 +112,13 @@ properly tracked.
 4. WHEN conversions succeed THEN the provenance system SHALL provide complete
    audit trails that can be used for reproducibility
 
-### Requirement 8
+### Requirement 7
 
-**User Story:** As a system administrator, I want comprehensive performance monitoring and optimization tools, so that the data management system operates efficiently under varying loads and dataset sizes.
+**User Story:** As a system administrator, I want basic performance monitoring and optimization, so that I can track conversion progress and manage system resources effectively.
 
 #### Acceptance Criteria
 
-1. WHEN monitoring performance THEN the system SHALL track conversion throughput, storage utilization, and query response times with configurable alerting thresholds and real-time dashboard visualization
-2. WHEN optimizing storage THEN the system SHALL provide automated cleanup of temporary files, duplicate detection across repositories, and storage optimization recommendations with projected space savings
-3. WHEN managing resources THEN the system SHALL implement intelligent caching strategies for frequently accessed datasets, provenance queries, and metadata lookups with configurable cache policies
-4. WHEN scaling operations THEN the system SHALL support horizontal scaling with load balancing across multiple DataLad repositories and automatic resource allocation based on demand
-5. WHEN analyzing bottlenecks THEN the system SHALL provide performance analytics dashboards with conversion pipeline bottleneck identification, timing analysis, and optimization recommendations
-6. WHEN handling large datasets THEN the system SHALL optimize memory usage through streaming processing, chunked operations, and intelligent data loading strategies
-7. WHEN monitoring DataLad operations THEN the system SHALL track git-annex performance, repository health metrics, and subdataset synchronization efficiency with automated issue detection
+1. WHEN monitoring conversions THEN the system SHALL track conversion throughput, storage usage, and basic response times
+2. WHEN managing storage THEN the system SHALL provide automated cleanup of temporary files and basic duplicate detection
+3. WHEN handling large datasets THEN the system SHALL implement basic memory optimization through chunked operations
+4. WHEN identifying issues THEN the system SHALL log DataLad operation status, performance metrics, and error conditions
