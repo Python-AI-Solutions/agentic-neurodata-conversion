@@ -72,7 +72,7 @@ This specification defines comprehensive testing strategies and quality assuranc
 
 3. WHEN testing integration scenarios THEN the system SHALL verify that clients handle server errors (400, 401, 403, 404, 500, 503), network issues (DNS failure, connection refused, timeout), partial failures (some endpoints working), server maintenance windows, protocol version mismatches, concurrent request limits, data corruption during transfer, and graceful degradation strategies, with automated recovery testing
 
-4. WHEN testing different usage patterns THEN the system SHALL validate that clients work correctly in Jupyter notebooks with async operations, Python scripts with different versions (3.8-3.12), R environments through reticulate, MATLAB through Python engine, web applications through REST API, workflow systems (Snakemake, Nextflow), container environments (Docker, Singularity), and cloud platforms (AWS, GCP, Azure), with platform-specific test suites
+4. WHEN testing different usage patterns THEN the system SHALL validate that clients work correctly in Jupyter notebooks with async operations, Python scripts with different versions (3.8-3.12), MATLAB through Python engine, web applications through REST API, workflow systems (Snakemake, Nextflow), container environments (Docker, Singularity), with platform-specific test suites
 
 5. WHEN testing client resilience THEN the system SHALL verify timeout handling with configurable limits, automatic retry with jitter, circuit breaker implementation, fallback mechanisms, connection pool exhaustion handling, memory leak prevention, thread safety in concurrent use, and resource cleanup on failure, with chaos engineering tests
 
@@ -84,7 +84,7 @@ This specification defines comprehensive testing strategies and quality assuranc
 
 #### Acceptance Criteria
 
-1. WHEN code is committed THEN the system SHALL run automated tests including unit tests (within 5 minutes), integration tests (within 15 minutes), code quality checks (linting, formatting, type checking), security scanning (SAST, dependency scanning), documentation generation and validation, license compliance checking, commit message validation, and branch protection rule enforcement, with parallel execution where possible
+1. WHEN code is committed THEN the system SHALL run automated tests including unit tests (within 5 minutes), integration tests (within 15 minutes), code quality checks (linting, formatting, type checking), security scanning (SAST, dependency scanning), documentation generation and validation.
 
 2. WHEN tests fail THEN the system SHALL provide clear error messages with failure context and reproduction steps, automated issue creation for persistent failures, notification to relevant developers, suggested fixes when detectable, links to similar historical failures, test output artifacts (logs, screenshots), bisection to identify breaking commit, and rollback capabilities for critical failures, with mean time to resolution tracking
 
@@ -96,25 +96,9 @@ This specification defines comprehensive testing strategies and quality assuranc
 
 6. WHEN optimizing test execution THEN the system SHALL implement test selection based on changed files, parallel test execution strategies, test result caching, incremental testing approaches, fail-fast mechanisms, priority-based test ordering, resource-aware scheduling, and distributed test execution, reducing feedback time by 50%
 
-### Requirement 6: Performance and Load Testing
 
-**User Story:** As a developer, I want comprehensive performance and load testing, so that I can ensure the system performs well under realistic and stress conditions.
 
-#### Acceptance Criteria
-
-1. WHEN testing performance THEN the system SHALL measure conversion times for datasets of 1MB, 10MB, 100MB, 1GB, 10GB, 100GB, with linear or better scaling, memory usage staying within 2x data size, CPU utilization efficiency >70%, disk I/O optimization with minimal seeks, network bandwidth utilization <80%, cache hit rates >60%, and response time percentiles (p50, p90, p99), establishing SLAs for each metric
-
-2. WHEN testing scalability THEN the system SHALL verify that the MCP server can handle 1, 10, 100, 1000 concurrent conversion requests, scale horizontally to multiple nodes, maintain performance with 10,000 registered datasets, handle 1M metadata queries per hour, support 100 active WebSocket connections, process event streams at 10,000 events/sec, maintain sub-second response times at scale, and demonstrate linear scaling with resources, with auto-scaling validation
-
-3. WHEN testing resource usage THEN the system SHALL monitor memory usage patterns including heap growth, garbage collection impact, memory leaks over time, CPU utilization across cores, disk I/O patterns and queue depths, network socket usage, file descriptor limits, thread pool utilization, database connection pooling, and cache memory effectiveness, with resource leak detection
-
-4. WHEN testing limits THEN the system SHALL identify performance bottlenecks through profiling (CPU, memory, I/O), maximum concurrent users supported, largest dataset size processable, throughput ceilings for each operation, resource exhaustion points, degradation patterns under stress, recovery time after overload, and scaling limits of current architecture, with bottleneck remediation recommendations
-
-5. WHEN testing under stress THEN the system SHALL validate behavior during memory pressure scenarios, CPU throttling conditions, disk space exhaustion, network saturation, database overload, cache invalidation storms, thundering herd scenarios, and coordinated service failures, ensuring graceful degradation
-
-6. WHEN testing performance optimization THEN the system SHALL measure impact of caching strategies, query optimization, index effectiveness, compression algorithms, parallel processing, batch operations, connection pooling, and code optimizations, with A/B testing of performance improvements
-
-### Requirement 7: Evaluation and Validation Testing
+### Requirement 6: Evaluation and Validation Testing
 
 **User Story:** As a researcher, I want comprehensive evaluation and validation testing, so that I can trust that conversions produce high-quality, standards-compliant, and scientifically accurate NWB files.
 
@@ -132,7 +116,7 @@ This specification defines comprehensive testing strategies and quality assuranc
 
 6. WHEN testing compliance standards THEN the system SHALL validate FAIR principle compliance (findability, accessibility, interoperability, reusability), BIDS compatibility where applicable, DANDI upload requirements, journal data requirements, funder data mandates, ethical compliance markers, privacy regulation compliance, and license compatibility, with compliance certification support
 
-### Requirement 8: Testing Utilities and Infrastructure
+### Requirement 7: Testing Utilities and Infrastructure
 
 **User Story:** As a developer, I want comprehensive testing utilities and fixtures, so that I can easily create and maintain tests for different components without duplicating effort.
 

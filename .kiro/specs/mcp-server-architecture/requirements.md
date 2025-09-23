@@ -126,11 +126,10 @@ This specification defines the requirements for the MCP (Model Context Protocol)
 
 3. WHEN deploying THEN the MCP server SHALL support containerization with Docker/OCI compliance, Kubernetes operators and CRDs, Helm charts with values customization, cloud-native deployments (AWS/GCP/Azure), serverless deployments where applicable, multi-region deployments, blue-green deployments, and infrastructure as code, with deployment automation
 
-4. WHEN integrating THEN the MCP server SHALL provide configuration for LLM providers (OpenAI, Anthropic, local models), authentication providers (OAuth, SAML, LDAP), storage backends (S3, GCS, Azure Blob), database connections (PostgreSQL, MongoDB), message queues (RabbitMQ, Kafka), monitoring systems (Prometheus, Datadog), and custom plugins, with secure credential management
 
-5. WHEN managing configuration THEN the MCP server SHALL implement configuration discovery via service mesh, centralized configuration with Consul/etcd, configuration encryption for secrets, configuration templating with variables, configuration validation hooks, configuration drift detection, compliance checking, and disaster recovery procedures
+4. WHEN managing configuration THEN the MCP server SHALL implement configuration discovery via service mesh, centralized configuration with Consul/etcd, configuration encryption for secrets, configuration templating with variables, configuration validation hooks, configuration drift detection, compliance checking, and disaster recovery procedures
 
-6. WHEN extending functionality THEN the MCP server SHALL support plugin architecture with defined interfaces, custom agent development SDK, workflow DSL for complex pipelines, custom validator implementation, format detector extensions, report template customization, API extension mechanisms, and marketplace for community extensions
+5. WHEN extending functionality THEN the MCP server SHALL support plugin architecture with defined interfaces, custom agent development SDK, workflow DSL for complex pipelines, custom validator implementation, format detector extensions, report template customization, API extension mechanisms, and marketplace for community extensions
 
 ### Requirement 8: Clean Architecture and Separation of Concerns
 
