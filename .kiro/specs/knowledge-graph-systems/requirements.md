@@ -88,7 +88,7 @@ basic NWB content that extends beyond the standard schema, so that core experime
 #### Acceptance Criteria
 
 1. WHEN encountering unknown NWB data structures THEN the system SHALL automatically discover basic entity types and properties through runtime schema analysis including neurodata_type detection and structural pattern recognition
-2. WHEN processing basic metadata fields THEN the system SHALL create adaptive RDF representations that preserve data types and maintain basic semantic relationshipsRequirement 8 - Essential Error Handling
+2. WHEN processing basic metadata fields THEN the system SHALL create adaptive RDF representations that preserve data types and maintain basic semantic relationships
 
 ### Requirement 9 - Basic Data Quality Assurance
 
