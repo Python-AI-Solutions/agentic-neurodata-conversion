@@ -65,7 +65,7 @@ key formats, so that the semantic information can be consumed by different tools
 
 #### Acceptance Criteria
 
-1. WHEN queired by agents THEN system SHALL use knowledge graph to provide clean APIs for metadata enrichment and validation, including schema/shape validation APIs
+1. WHEN queried by agents THEN system SHALL use knowledge graph to provide clean APIs for metadata enrichment and validation, including schema/shape validation APIs
 2. WHEN integrating with MCP server THEN system SHALL use knowledge graph to expose functionality through appropriate MCP tools
 3. WHEN processing requests THEN the system SHALL use knowledge graph to handle concurrent access and maintain consistency
 4. WHEN providing results THEN the system SHALL use knowledge graph to return structured responses compatible with agent and MCP server interfaces
