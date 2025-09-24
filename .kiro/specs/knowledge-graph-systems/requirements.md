@@ -1,4 +1,3 @@
-
 # Knowledge Graph Systems Requirements
 
 ## Introduction
@@ -13,9 +12,9 @@ This spec focuses on the knowledge graph systems that enrich metadata, provide s
 
 #### Acceptance Criteria
 
-1. WHEN metadata has gaps THEN the knowledge graph SHALL suggest enrichments based on strain-to-species mappings, device specifications, and experimental protocols with evidence quality assessment and conflict detection
-2. WHEN making suggestions THEN the knowledge graph SHALL provide enhanced confidence levels, complete reasoning chains, evidence hierarchy, and support for iterative refinement workflows
-3. WHEN storing relationships THEN the knowledge graph SHALL maintain entities (Dataset, Session, Subject, Device, Lab, Protocol) with semantic relationships and complete provenance using PROV-O ontology and LinkML schema versioning metadata
+1. WHEN metadata has gaps THEN the system SHALL use knowledge graph to suggest enrichments based on strain-to-species mappings, device specifications, and experimental protocols with evidence quality assessment and conflict detection
+2. WHEN making suggestions THEN the system SHALL use knowledge graph to provide enhanced confidence levels, complete reasoning chains, evidence hierarchy, and support for iterative refinement workflows
+3. WHEN storing relationships THEN the system SHALL use knowledge graph to maintain entities (Dataset, Session, Subject, Device, Lab, Protocol) with semantic relationships and complete provenance using PROV-O ontology and LinkML schema versioning metadata
 
 ### Requirement 2 - SPARQL Query Engine
 
@@ -23,10 +22,10 @@ This spec focuses on the knowledge graph systems that enrich metadata, provide s
 
 #### Acceptance Criteria
 
-1. WHEN querying knowledge THEN the knowledge graph SHALL support SPARQL queries for complex metadata validation and enrichment rules; SHACL shapes generated
+1. WHEN querying knowledge THEN the system SHALL use knowledge graph to support SPARQL queries for complex metadata validation and enrichment rules; SHACL shapes generated
    from NWB-LinkML SHALL be used for structural validation
-2. WHEN implementing rules THEN the knowledge graph SHALL allow definition of custom validation rules and enrichment patterns
-3. WHEN executing queries THEN the knowledge graph SHALL provide efficient query execution with appropriate indexing and optimization
+2. WHEN implementing rules THEN system SHALL use knowledge graph to allow definition of custom validation rules and enrichment patterns
+3. WHEN executing queries THEN system SHALL use knowledge graph to provide efficient query execution with appropriate indexing and optimization
 
 ### Requirement 3 - Schema-driven Validation
 
@@ -35,7 +34,7 @@ This spec focuses on the knowledge graph systems that enrich metadata, provide s
 #### Acceptance Criteria
 
 1. WHEN validating instances THEN the system SHALL validate LinkML instances (YAML/JSON) against the NWB-LinkML schema
-2. WHEN producing RDF THEN the system SHALL generate RDF using the JSON-LD @context produced from the NWB-LinkML schema to ensure consistent IRIs
+2. WHEN producing RDF THEN the system SHALL generate RDF using the refrence from the NWB-LinkML schema to ensure consistent IRIs
 3. WHEN validating graphs THEN the system SHALL run SHACL validation using shapes generated from the NWB-LinkML schema and produce detailed reports
 
 ### Requirement 4 - Basic RDF Generation
@@ -56,9 +55,9 @@ key formats, so that the semantic information can be consumed by different tools
 
 #### Acceptance Criteria
 
-1. WHEN processing NWB data THEN the knowledge graph SHALL integrate core neuroscience ontologies including NIFSTD (Neuroscience Information Framework), UBERON (anatomy), CHEBI (chemical entities), and NCBITaxon (species) with basic
+1. WHEN processing NWB data THEN the system SHALL use knowledge graph to integrate core neuroscience ontologies including NIFSTD (Neuroscience Information Framework), UBERON (anatomy), CHEBI (chemical entities), and NCBITaxon (species) with basic
    concept mapping and semantic bridging
-2. WHEN creating semantic mappings THEN the knowledge graph SHALL establish basic relationships between NWB-LinkML classes/slots and ontology concepts using OWL equivalence and subsumption with confidence scoring
+2. WHEN creating semantic mappings THEN system SHALL use knowledge graph to  establish basic relationships between NWB-LinkML classes/slots and ontology concepts using OWL equivalence and subsumption with confidence scoring
 
 ### Requirement 6- MCP Server Integration
 
@@ -66,10 +65,10 @@ key formats, so that the semantic information can be consumed by different tools
 
 #### Acceptance Criteria
 
-1. WHEN called by agents THEN the knowledge graph SHALL provide clean APIs for metadata enrichment and validation, including schema/shape validation APIs
-2. WHEN integrating with MCP server THEN the knowledge graph SHALL expose functionality through appropriate MCP tools
-3. WHEN processing requests THEN the knowledge graph SHALL handle concurrent access and maintain consistency
-4. WHEN providing results THEN the knowledge graph SHALL return structured responses compatible with agent and MCP server interfaces
+1. WHEN called by agents THEN system SHALL use knowledge graph to provide clean APIs for metadata enrichment and validation, including schema/shape validation APIs
+2. WHEN integrating with MCP server THEN system SHALL use knowledge graph to expose functionality through appropriate MCP tools
+3. WHEN processing requests THEN the system SHALL use knowledge graph to handle concurrent access and maintain consistency
+4. WHEN providing results THEN the system SHALL use knowledge graph to return structured responses compatible with agent and MCP server interfaces
 
 ### Requirement 7 - Schema and Artifact Management
 
