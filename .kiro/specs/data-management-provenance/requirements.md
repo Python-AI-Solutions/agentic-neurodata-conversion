@@ -30,18 +30,14 @@ results. I only download the parts of a dataset I want to use for testing.
 
 ### Requirement 2
 
-**User Story:** As a researcher, I want basic provenance tracking for my
-conversions, so that I can understand the source and modifications of metadata
-in my final NWB file.
+**User Story:** As a researcher, I want comprehensive provenance tracking for my conversions, so that I can understand the origin and confidence level of every piece of metadata in my final NWB file.
 
 #### Acceptance Criteria
 
-1. WHEN metadata is populated THEN the system SHALL record the source type and
-   basic confidence level (high, medium, low, unknown)
-2. WHEN tracking changes THEN the system SHALL maintain audit trails of
-   modifications and data transformations
-3. WHEN generating reports THEN the system SHALL include basic provenance
-   summaries showing data sources and transformation steps
+1. WHEN any metadata field is populated THEN the system SHALL record the confidence level (definitive, high_evidence, human_confirmed, human_override, medium_evidence, heuristic, low_evidence, placeholder, unknown), source type, derivation method, and complete reasoning chain
+2. WHEN tracking changes THEN the system SHALL maintain complete audit trails of all modifications, decisions, data transformations, and evidence conflicts with resolution methods
+3. WHEN providing transparency THEN the system SHALL clearly distinguish between evidence-based decisions and human overrides, presenting evidence summaries for human review when conflicts exist
+4. WHEN generating reports THEN the system SHALL include detailed provenance summaries with decision chains, evidence quality assessment, and confidence distributions allowing users to verify and validate all automated decisions
 
 ### Requirement 3
 
