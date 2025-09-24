@@ -45,15 +45,15 @@ This spec focuses on the evaluation and reporting systems that assess conversion
 2. WHEN formatting outputs THEN the system SHALL support multiple formats (Markdown, HTML, PDF, JSON) with custom report templates, variable substitution, and consistent formatting across all output formats
 3. WHEN customizing reports THEN the system SHALL apply templates and branding configuration while optimizing report size and preserving essential information
 
-### Requirement 5 - Interactive Visualization
+### Requirement 5 - Simple HTML Visualization
 
-**User Story:** As a data analyst, I want interactive quality dashboards and visualizations, so that I can explore quality metrics and understand complex relationships in the data.
+**User Story:** As a data analyst, I want simple HTML quality reports with basic visualizations, so that I can quickly review quality metrics in any web browser.
 
 #### Acceptance Criteria
 
-1. WHEN creating visualizations THEN the system SHALL generate interactive quality dashboards with drill-down capabilities and navigable relationship visualizations
-2. WHEN presenting metrics THEN the system SHALL use appropriate chart types and color coding for clarity with responsive design compatible with modern browsers
-3. WHEN exporting visualizations THEN the system SHALL support static and interactive formats with accessibility features and optimized performance for large datasets
+1. WHEN creating visualizations THEN the system SHALL generate simple HTML reports with embedded charts using lightweight JavaScript libraries
+2. WHEN presenting metrics THEN the system SHALL use basic chart types (bar, line, pie) with clear color coding and responsive HTML layout
+3. WHEN accessing reports THEN the system SHALL ensure HTML files work offline without external dependencies and display correctly
 
 ### Requirement 6 - MCP Server Integration
 
