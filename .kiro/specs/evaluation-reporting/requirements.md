@@ -53,7 +53,7 @@ This spec focuses on the evaluation and reporting systems that assess conversion
 
 1. WHEN creating visualizations THEN the system SHALL generate simple HTML reports with embedded charts using lightweight JavaScript libraries
 2. WHEN presenting metrics THEN the system SHALL use basic chart types (bar, line, pie) with clear color coding and responsive HTML layout
-3. WHEN accessing reports THEN the system SHALL ensure HTML files work offline without external dependencies and display correctly on mobile devices
+3. WHEN accessing reports THEN the system SHALL ensure HTML files work offline without external dependencies and display correctly
 
 ### Requirement 6 - MCP Server Integration
 
