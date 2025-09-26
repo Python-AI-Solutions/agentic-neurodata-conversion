@@ -34,6 +34,7 @@ pbr = ">=7.0.1,<8"
 [pypi-dependencies]
 # Install the package itself in editable mode
 agentic-neurodata-conversion = { path = ".", editable = true }
+specify-cli = { git = "https://github.com/github/spec-kit" }
 
 # Core Python dependencies
 pydantic = ">=2.0.0"

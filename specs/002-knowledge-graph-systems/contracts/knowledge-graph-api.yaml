@@ -1,0 +1,620 @@
+openapi: 3.0.3
+info:
+  title: Knowledge Graph Systems API
+  version: 1.0.0
+  description: |
+    API for NWB Knowledge Graph Systems providing metadata enrichment,
+    SPARQL queries, schema validation, and MCP server integration.
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Development server
+
+paths:
+  /enrich/metadata:
+    post:
+      summary: Enrich metadata using knowledge graph
+      operationId: enrichMetadata
+      tags:
+        - Metadata Enrichment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MetadataEnrichmentRequest'
+      responses:
+        '200':
+          description: Metadata enrichment completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetadataEnrichmentResponse'
+        '400':
+          description: Invalid request data
+        '503':
+          description: External ontology services unavailable (fail-fast)
+
+  /enrich/suggestions:
+    get:
+      summary: Get enrichment suggestions for dataset
+      operationId: getEnrichmentSuggestions
+      tags:
+        - Metadata Enrichment
+      parameters:
+        - name: dataset_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: confidence_threshold
+          in: query
+          schema:
+            type: number
+            minimum: 0.0
+            maximum: 1.0
+            default: 0.8
+      responses:
+        '200':
+          description: Enrichment suggestions retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnrichmentSuggestionsResponse'
+
+  /validate/schema:
+    post:
+      summary: Validate NWB data against schema
+      operationId: validateSchema
+      tags:
+        - Schema Validation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SchemaValidationRequest'
+      responses:
+        '200':
+          description: Schema validation completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemaValidationResponse'
+
+  /validate/shacl:
+    post:
+      summary: Validate RDF data using SHACL shapes
+      operationId: validateShacl
+      tags:
+        - Schema Validation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShaclValidationRequest'
+      responses:
+        '200':
+          description: SHACL validation completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShaclValidationResponse'
+
+  /query/sparql:
+    post:
+      summary: Execute SPARQL query against knowledge graph
+      operationId: executeSparqlQuery
+      tags:
+        - SPARQL Queries
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SparqlQueryRequest'
+      responses:
+        '200':
+          description: SPARQL query executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SparqlQueryResponse'
+        '400':
+          description: Invalid SPARQL query syntax
+
+  /query/templates:
+    get:
+      summary: Get available SPARQL query templates
+      operationId: getQueryTemplates
+      tags:
+        - SPARQL Queries
+      responses:
+        '200':
+          description: Query templates retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryTemplatesResponse'
+
+  /generate/jsonld:
+    post:
+      summary: Generate JSON-LD representation
+      operationId: generateJsonLd
+      tags:
+        - Knowledge Graph Generation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonLdGenerationRequest'
+      responses:
+        '200':
+          description: JSON-LD generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonLdGenerationResponse'
+
+  /generate/ttl:
+    post:
+      summary: Generate TTL (Turtle) representation
+      operationId: generateTtl
+      tags:
+        - Knowledge Graph Generation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TtlGenerationRequest'
+      responses:
+        '200':
+          description: TTL generated successfully
+          content:
+            text/turtle:
+              schema:
+                type: string
+
+  /schema/versions:
+    get:
+      summary: Get available NWB-LinkML schema versions
+      operationId: getSchemaVersions
+      tags:
+        - Schema Management
+      responses:
+        '200':
+          description: Schema versions retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemaVersionsResponse'
+
+  /schema/artifacts:
+    post:
+      summary: Generate schema artifacts (JSON-LD, SHACL, OWL)
+      operationId: generateSchemaArtifacts
+      tags:
+        - Schema Management
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SchemaArtifactsRequest'
+      responses:
+        '200':
+          description: Schema artifacts generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemaArtifactsResponse'
+
+  /quality/assess:
+    post:
+      summary: Perform data quality assessment
+      operationId: assessQuality
+      tags:
+        - Quality Assessment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QualityAssessmentRequest'
+      responses:
+        '200':
+          description: Quality assessment completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QualityAssessmentResponse'
+
+  /quality/reports/{dataset_id}:
+    get:
+      summary: Get quality report for dataset
+      operationId: getQualityReport
+      tags:
+        - Quality Assessment
+      parameters:
+        - name: dataset_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Quality report retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QualityReportResponse'
+
+components:
+  schemas:
+    MetadataEnrichmentRequest:
+      type: object
+      required:
+        - dataset_id
+        - metadata
+      properties:
+        dataset_id:
+          type: string
+          format: uuid
+        metadata:
+          type: object
+          description: NWB metadata to enrich
+        ontologies:
+          type: array
+          items:
+            type: string
+          description: Specific ontologies to use for enrichment
+
+    MetadataEnrichmentResponse:
+      type: object
+      properties:
+        dataset_id:
+          type: string
+          format: uuid
+        enriched_metadata:
+          type: object
+        suggestions:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnrichmentSuggestion'
+        provenance:
+          $ref: '#/components/schemas/ProvenanceInfo'
+
+    EnrichmentSuggestion:
+      type: object
+      properties:
+        field:
+          type: string
+        current_value:
+          type: string
+        suggested_value:
+          type: string
+        confidence_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+        evidence:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvidenceItem'
+
+    EvidenceItem:
+      type: object
+      properties:
+        source:
+          type: string
+        reasoning:
+          type: string
+        confidence:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+
+    EnrichmentSuggestionsResponse:
+      type: object
+      properties:
+        dataset_id:
+          type: string
+          format: uuid
+        suggestions:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnrichmentSuggestion'
+
+    SchemaValidationRequest:
+      type: object
+      required:
+        - data
+        - schema_version
+      properties:
+        data:
+          type: object
+          description: NWB data to validate
+        schema_version:
+          type: string
+          description: NWB-LinkML schema version
+
+    SchemaValidationResponse:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationError'
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationWarning'
+
+    ShaclValidationRequest:
+      type: object
+      required:
+        - rdf_data
+        - shapes
+      properties:
+        rdf_data:
+          type: string
+          description: RDF data in turtle format
+        shapes:
+          type: string
+          description: SHACL shapes
+
+    ShaclValidationResponse:
+      type: object
+      properties:
+        conforms:
+          type: boolean
+        validation_report:
+          type: object
+          description: SHACL validation report
+
+    ValidationError:
+      type: object
+      properties:
+        path:
+          type: string
+        message:
+          type: string
+        severity:
+          type: string
+          enum: [error, warning, info]
+
+    ValidationWarning:
+      type: object
+      properties:
+        path:
+          type: string
+        message:
+          type: string
+
+    SparqlQueryRequest:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          description: SPARQL query string
+        format:
+          type: string
+          enum: [json, xml, csv, tsv]
+          default: json
+
+    SparqlQueryResponse:
+      type: object
+      properties:
+        results:
+          type: object
+          description: Query results in requested format
+        execution_time:
+          type: number
+          description: Query execution time in milliseconds
+
+    QueryTemplatesResponse:
+      type: object
+      properties:
+        templates:
+          type: array
+          items:
+            $ref: '#/components/schemas/QueryTemplate'
+
+    QueryTemplate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        query:
+          type: string
+        parameters:
+          type: array
+          items:
+            type: string
+
+    JsonLdGenerationRequest:
+      type: object
+      required:
+        - dataset_id
+      properties:
+        dataset_id:
+          type: string
+          format: uuid
+        include_provenance:
+          type: boolean
+          default: true
+
+    JsonLdGenerationResponse:
+      type: object
+      properties:
+        jsonld:
+          type: object
+          description: Generated JSON-LD representation
+        context:
+          type: object
+          description: JSON-LD context
+
+    TtlGenerationRequest:
+      type: object
+      required:
+        - dataset_id
+      properties:
+        dataset_id:
+          type: string
+          format: uuid
+        include_provenance:
+          type: boolean
+          default: true
+
+    SchemaVersionsResponse:
+      type: object
+      properties:
+        versions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SchemaVersion'
+
+    SchemaVersion:
+      type: object
+      properties:
+        version:
+          type: string
+        release_date:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [draft, published, deprecated]
+
+    SchemaArtifactsRequest:
+      type: object
+      required:
+        - schema_version
+      properties:
+        schema_version:
+          type: string
+        artifacts:
+          type: array
+          items:
+            type: string
+            enum: [jsonld, shacl, owl]
+
+    SchemaArtifactsResponse:
+      type: object
+      properties:
+        schema_version:
+          type: string
+        artifacts:
+          type: object
+          properties:
+            jsonld:
+              type: object
+            shacl:
+              type: object
+            owl:
+              type: object
+
+    QualityAssessmentRequest:
+      type: object
+      required:
+        - dataset_id
+      properties:
+        dataset_id:
+          type: string
+          format: uuid
+        assessments:
+          type: array
+          items:
+            type: string
+            enum: [completeness, consistency, accuracy, semantic_validity]
+
+    QualityAssessmentResponse:
+      type: object
+      properties:
+        dataset_id:
+          type: string
+          format: uuid
+        overall_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+        assessments:
+          type: array
+          items:
+            $ref: '#/components/schemas/QualityResult'
+
+    QualityResult:
+      type: object
+      properties:
+        type:
+          type: string
+        score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+        status:
+          type: string
+          enum: [pass, fail, warning]
+        issues:
+          type: array
+          items:
+            type: string
+
+    QualityReportResponse:
+      type: object
+      properties:
+        dataset_id:
+          type: string
+          format: uuid
+        report_date:
+          type: string
+          format: date-time
+        overall_score:
+          type: number
+        detailed_results:
+          type: array
+          items:
+            $ref: '#/components/schemas/QualityResult'
+        recommendations:
+          type: array
+          items:
+            type: string
+
+    ProvenanceInfo:
+      type: object
+      properties:
+        activity_id:
+          type: string
+          format: uuid
+        agent:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        inputs:
+          type: array
+          items:
+            type: string
+        outputs:
+          type: array
+          items:
+            type: string
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+
+security:
+  - BearerAuth: []
