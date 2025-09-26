@@ -1,0 +1,429 @@
+openapi: 3.0.3
+info:
+  title: MCP Knowledge Graph Tools
+  version: 1.0.0
+  description: |
+    MCP server tools for knowledge graph operations integrated with
+    agentic neurodata conversion pipeline.
+
+paths:
+  /mcp/tools/enrich-metadata:
+    post:
+      summary: MCP tool for metadata enrichment
+      operationId: mcpEnrichMetadata
+      tags:
+        - MCP Tools
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/McpToolRequest'
+      responses:
+        '200':
+          description: Tool execution completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/McpToolResponse'
+
+  /mcp/tools/validate-schema:
+    post:
+      summary: MCP tool for schema validation
+      operationId: mcpValidateSchema
+      tags:
+        - MCP Tools
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/McpToolRequest'
+      responses:
+        '200':
+          description: Tool execution completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/McpToolResponse'
+
+  /mcp/tools/query-knowledge-graph:
+    post:
+      summary: MCP tool for SPARQL queries
+      operationId: mcpQueryKnowledgeGraph
+      tags:
+        - MCP Tools
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/McpToolRequest'
+      responses:
+        '200':
+          description: Tool execution completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/McpToolResponse'
+
+  /mcp/tools/generate-rdf:
+    post:
+      summary: MCP tool for RDF generation
+      operationId: mcpGenerateRdf
+      tags:
+        - MCP Tools
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/McpToolRequest'
+      responses:
+        '200':
+          description: Tool execution completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/McpToolResponse'
+
+  /mcp/tools/assess-quality:
+    post:
+      summary: MCP tool for data quality assessment
+      operationId: mcpAssessQuality
+      tags:
+        - MCP Tools
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/McpToolRequest'
+      responses:
+        '200':
+          description: Tool execution completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/McpToolResponse'
+
+  /mcp/resources/ontologies:
+    get:
+      summary: List available ontology resources
+      operationId: mcpListOntologies
+      tags:
+        - MCP Resources
+      responses:
+        '200':
+          description: Ontology resources retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/McpResourceList'
+
+  /mcp/resources/schemas:
+    get:
+      summary: List available schema resources
+      operationId: mcpListSchemas
+      tags:
+        - MCP Resources
+      responses:
+        '200':
+          description: Schema resources retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/McpResourceList'
+
+  /mcp/resources/templates:
+    get:
+      summary: List available query templates
+      operationId: mcpListTemplates
+      tags:
+        - MCP Resources
+      responses:
+        '200':
+          description: Template resources retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/McpResourceList'
+
+  /mcp/prompts/enrich-metadata:
+    get:
+      summary: Get metadata enrichment prompt template
+      operationId: mcpGetEnrichmentPrompt
+      tags:
+        - MCP Prompts
+      parameters:
+        - name: context
+          in: query
+          schema:
+            type: string
+            enum: [dataset, session, subject, device]
+      responses:
+        '200':
+          description: Prompt template retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/McpPromptTemplate'
+
+  /mcp/prompts/validate-quality:
+    get:
+      summary: Get quality validation prompt template
+      operationId: mcpGetValidationPrompt
+      tags:
+        - MCP Prompts
+      parameters:
+        - name: validation_type
+          in: query
+          schema:
+            type: string
+            enum: [schema, semantic, completeness]
+      responses:
+        '200':
+          description: Prompt template retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/McpPromptTemplate'
+
+components:
+  schemas:
+    McpToolRequest:
+      type: object
+      required:
+        - arguments
+      properties:
+        arguments:
+          type: object
+          description: Tool-specific arguments
+          additionalProperties: true
+
+    McpToolResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/McpContent'
+        isError:
+          type: boolean
+          default: false
+
+    McpContent:
+      type: object
+      required:
+        - type
+        - text
+      properties:
+        type:
+          type: string
+          enum: [text]
+        text:
+          type: string
+        annotations:
+          type: object
+          properties:
+            confidence:
+              type: number
+              minimum: 0.0
+              maximum: 1.0
+            sources:
+              type: array
+              items:
+                type: string
+
+    McpResourceList:
+      type: object
+      properties:
+        resources:
+          type: array
+          items:
+            $ref: '#/components/schemas/McpResource'
+
+    McpResource:
+      type: object
+      required:
+        - uri
+        - name
+      properties:
+        uri:
+          type: string
+          format: uri
+        name:
+          type: string
+        description:
+          type: string
+        mimeType:
+          type: string
+
+    McpPromptTemplate:
+      type: object
+      required:
+        - name
+        - description
+        - messages
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/McpPromptMessage'
+        arguments:
+          type: array
+          items:
+            $ref: '#/components/schemas/McpPromptArgument'
+
+    McpPromptMessage:
+      type: object
+      required:
+        - role
+        - content
+      properties:
+        role:
+          type: string
+          enum: [user, assistant, system]
+        content:
+          $ref: '#/components/schemas/McpPromptContent'
+
+    McpPromptContent:
+      type: object
+      required:
+        - type
+        - text
+      properties:
+        type:
+          type: string
+          enum: [text, image]
+        text:
+          type: string
+
+    McpPromptArgument:
+      type: object
+      required:
+        - name
+        - description
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        required:
+          type: boolean
+          default: false
+
+# MCP Tool Definitions for Documentation
+x-mcp-tools:
+  enrich-metadata:
+    name: enrich_metadata
+    description: Enrich NWB metadata using knowledge graph and external ontologies
+    inputSchema:
+      type: object
+      required: [dataset_id, metadata]
+      properties:
+        dataset_id:
+          type: string
+          format: uuid
+          description: Unique identifier for the dataset
+        metadata:
+          type: object
+          description: NWB metadata object to enrich
+        ontologies:
+          type: array
+          items:
+            type: string
+          description: Specific ontologies to use (optional)
+        confidence_threshold:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          default: 0.8
+          description: Minimum confidence for suggestions
+
+  validate-schema:
+    name: validate_schema
+    description: Validate NWB data against LinkML schema using SHACL shapes
+    inputSchema:
+      type: object
+      required: [data, schema_version]
+      properties:
+        data:
+          type: object
+          description: NWB data to validate
+        schema_version:
+          type: string
+          description: NWB-LinkML schema version to validate against
+        validation_level:
+          type: string
+          enum: [basic, comprehensive]
+          default: comprehensive
+
+  query-knowledge-graph:
+    name: query_knowledge_graph
+    description: Execute SPARQL queries against the knowledge graph
+    inputSchema:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+          description: SPARQL query string
+        format:
+          type: string
+          enum: [json, turtle, xml]
+          default: json
+          description: Result format
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 10000
+          default: 100
+          description: Maximum number of results
+
+  generate-rdf:
+    name: generate_rdf
+    description: Generate RDF representation of NWB data
+    inputSchema:
+      type: object
+      required: [dataset_id]
+      properties:
+        dataset_id:
+          type: string
+          format: uuid
+          description: Dataset to generate RDF for
+        format:
+          type: string
+          enum: [jsonld, turtle, ntriples]
+          default: jsonld
+          description: RDF serialization format
+        include_provenance:
+          type: boolean
+          default: true
+          description: Include provenance information
+
+  assess-quality:
+    name: assess_quality
+    description: Perform comprehensive data quality assessment
+    inputSchema:
+      type: object
+      required: [dataset_id]
+      properties:
+        dataset_id:
+          type: string
+          format: uuid
+          description: Dataset to assess
+        assessments:
+          type: array
+          items:
+            type: string
+            enum: [completeness, consistency, accuracy, semantic_validity]
+          description: Types of quality assessments to perform
+        generate_report:
+          type: boolean
+          default: true
+          description: Generate detailed quality report

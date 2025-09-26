@@ -1,0 +1,258 @@
+openapi: 3.0.3
+info:
+  title: Knowledge Graph API
+  description: MCP tool endpoints for NWB knowledge graph operations
+  version: 1.0.0
+
+paths:
+  /knowledge-graphs:
+    post:
+      summary: Create knowledge graph from NWB file
+      operationId: createKnowledgeGraph
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nwb_file_path:
+                  type: string
+                  description: Path to NWB file
+                schema_version:
+                  type: string
+                  description: NWB-LinkML schema version
+              required: [nwb_file_path, schema_version]
+      responses:
+        '201':
+          description: Knowledge graph created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeGraph'
+        '400':
+          description: Invalid request parameters
+        '500':
+          description: Internal server error
+
+    get:
+      summary: List knowledge graphs
+      operationId: listKnowledgeGraphs
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [building, ready, error]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: List of knowledge graphs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  graphs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/KnowledgeGraph'
+                  total:
+                    type: integer
+
+  /knowledge-graphs/{graph_id}:
+    get:
+      summary: Get knowledge graph details
+      operationId: getKnowledgeGraph
+      parameters:
+        - name: graph_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Knowledge graph details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeGraph'
+        '404':
+          description: Knowledge graph not found
+
+  /knowledge-graphs/{graph_id}/enrich:
+    post:
+      summary: Enrich metadata using knowledge graph
+      operationId: enrichMetadata
+      parameters:
+        - name: graph_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                entity_ids:
+                  type: array
+                  items:
+                    type: string
+                  description: Entity IRIs to enrich
+                confidence_threshold:
+                  type: number
+                  minimum: 0.0
+                  maximum: 1.0
+                  default: 0.8
+              required: [entity_ids]
+      responses:
+        '200':
+          description: Enrichment suggestions generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  suggestions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EnrichmentSuggestion'
+
+  /knowledge-graphs/{graph_id}/sparql:
+    post:
+      summary: Execute SPARQL query
+      operationId: executeSparqlQuery
+      parameters:
+        - name: graph_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+                  description: SPARQL query string
+                format:
+                  type: string
+                  enum: [json, xml, turtle, csv]
+                  default: json
+              required: [query]
+      responses:
+        '200':
+          description: Query results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bindings:
+                    type: array
+                    items:
+                      type: object
+                  execution_time_ms:
+                    type: integer
+
+  /knowledge-graphs/{graph_id}/validate:
+    post:
+      summary: Validate knowledge graph using SHACL
+      operationId: validateKnowledgeGraph
+      parameters:
+        - name: graph_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Validation results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conforms:
+                    type: boolean
+                  violations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ValidationViolation'
+
+components:
+  schemas:
+    KnowledgeGraph:
+      type: object
+      properties:
+        graph_id:
+          type: string
+        nwb_file_path:
+          type: string
+        schema_version:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [building, ready, error]
+        triple_count:
+          type: integer
+        quality_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+
+    EnrichmentSuggestion:
+      type: object
+      properties:
+        suggestion_id:
+          type: string
+        entity_id:
+          type: string
+        property_name:
+          type: string
+        suggested_value:
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+        confidence:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+        source_ontology:
+          type: string
+          enum: [NIFSTD, UBERON, CHEBI, NCBITaxon]
+        evidence:
+          type: object
+        status:
+          type: string
+          enum: [pending, accepted, rejected]
+
+    ValidationViolation:
+      type: object
+      properties:
+        focus_node:
+          type: string
+        property_path:
+          type: string
+        severity:
+          type: string
+          enum: [Violation, Warning, Info]
+        message:
+          type: string
