@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Multi-agent system for converting neuroscience data to NWB format using MCP server architecture"
 authors = ["Agentic Neurodata Conversion Team <support@pythonaisolutions.com>"]
 channels = ["conda-forge", "pyviz", "pytorch"]
-platforms = ["linux-64", "osx-arm64"]
+platforms = ["win-64","linux-64", "osx-arm64"]
 
 [system-requirements]
 libc = { family="glibc", version="2.17" }
