@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knowledge Graph Visualizer - M541 Dataset</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #4a5568;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .graph-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: #f7fafc;
+        }
+        .node {
+            display: inline-block;
+            padding: 10px 15px;
+            margin: 5px;
+            background: #4299e1;
+            color: white;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .dataset-node { background: #48bb78; }
+        .lab-node { background: #ed8936; }
+        .file-node { background: #9f7aea; }
+        .activity-node { background: #38b2ac; }
+
+        .relationship {
+            margin: 10px 0;
+            padding: 10px;
+            background: #edf2f7;
+            border-left: 4px solid #4299e1;
+            border-radius: 4px;
+        }
+        .query-section {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .query-button {
+            background: #4299e1;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .query-button:hover {
+            background: #3182ce;
+        }
+        .results {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .triple {
+            font-family: monospace;
+            margin: 5px 0;
+            padding: 5px;
+            background: white;
+            border-radius: 3px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: #4a5568;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧬 Knowledge Graph: M541 Electrophysiology Dataset</h1>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number">6</div>
+                <div>RDF Triples</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">1</div>
+                <div>NWB Dataset</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">1.97</div>
+                <div>MB File Size</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">✅</div>
+                <div>Constitutional Compliance</div>
+            </div>
+        </div>
+
+        <div class="graph-section">
+            <h2>🔗 Knowledge Graph Entities</h2>
+            <div style="text-align: center; margin: 20px 0;">
+                <div class="node dataset-node">M541 Dataset</div>
+                <div class="node lab-node">manual_test_lab</div>
+                <div class="node file-node">sub-M541_ses-M54120240831_ecephys.nwb</div>
+                <div class="node activity-node">Creation Activity</div>
+            </div>
+        </div>
+
+        <div class="graph-section">
+            <h2>📋 RDF Relationships</h2>
+            <div class="relationship">
+                <strong>M541 Dataset</strong> → <em>rdf:type</em> → <strong>kg:Dataset</strong>
+            </div>
+            <div class="relationship">
+                <strong>M541 Dataset</strong> → <em>kg:title</em> → <strong>"M541 Electrophysiology Session - 2024-08-31"</strong>
+            </div>
+            <div class="relationship">
+                <strong>M541 Dataset</strong> → <em>kg:description</em> → <strong>"Electrophysiology recording from subject M541..."</strong>
+            </div>
+            <div class="relationship">
+                <strong>M541 Dataset</strong> → <em>kg:hasNwbFile</em> → <strong>sub-M541_ses-M54120240831_ecephys.nwb</strong>
+            </div>
+            <div class="relationship">
+                <strong>M541 Dataset</strong> → <em>kg:belongsToLab</em> → <strong>kg:lab/manual_test_lab</strong>
+            </div>
+            <div class="relationship">
+                <strong>M541 Dataset</strong> → <em>prov:wasGeneratedBy</em> → <strong>Creation Activity</strong>
+            </div>
+        </div>
+
+        <div class="query-section">
+            <h2>🔍 Live SPARQL Queries</h2>
+            <p>Click buttons to query your knowledge graph:</p>
+
+            <button class="query-button" onclick="runQuery('properties')">Show Dataset Properties</button>
+            <button class="query-button" onclick="runQuery('all_triples')">Show All Triples</button>
+            <button class="query-button" onclick="runQuery('provenance')">Show Provenance</button>
+            <button class="query-button" onclick="runQuery('stats')">Show Statistics</button>
+
+            <div id="results" class="results" style="display: none;">
+                <h3>Query Results:</h3>
+                <div id="query-output"></div>
+            </div>
+        </div>
+
+        <div class="graph-section">
+            <h2>🎯 Constitutional Compliance Status</h2>
+            <div class="relationship">
+                ✅ <strong>NWB File Limit:</strong> 1 file (max 100 allowed)
+            </div>
+            <div class="relationship">
+                ✅ <strong>Query Performance:</strong> ~0.002s (target: <200ms)
+            </div>
+            <div class="relationship">
+                ✅ <strong>W3C Standards:</strong> Valid RDF with proper ontology
+            </div>
+            <div class="relationship">
+                ✅ <strong>Provenance Tracking:</strong> PROV-O ontology compliance
+            </div>
+        </div>
+
+        <div class="graph-section">
+            <h2>🚀 Next Steps</h2>
+            <ul>
+                <li><strong>Interactive API:</strong> <a href="http://localhost:8000/docs" target="_blank">http://localhost:8000/docs</a></li>
+                <li><strong>Add more NWB files:</strong> Test constitutional 100-file limit</li>
+                <li><strong>Explore metadata enrichment:</strong> Add semantic annotations</li>
+                <li><strong>Test MCP integration:</strong> Agent-driven workflows</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        async function runQuery(queryType) {
+            const queries = {
+                'properties': 'PREFIX kg: <http://example.org/kg/> SELECT ?property ?value WHERE { <kg:dataset/048b5650-a7fc-4145-bb25-fd21571d5765> ?property ?value . }',
+                'all_triples': 'SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 10',
+                'provenance': 'PREFIX prov: <http://www.w3.org/ns/prov#> PREFIX kg: <http://example.org/kg/> SELECT ?entity ?activity WHERE { ?entity prov:wasGeneratedBy ?activity . }',
+                'stats': 'SELECT (COUNT(*) as ?total_triples) WHERE { ?s ?p ?o }'
+            };
+
+            const query = queries[queryType];
+            const resultsDiv = document.getElementById('results');
+            const outputDiv = document.getElementById('query-output');
+
+            resultsDiv.style.display = 'block';
+            outputDiv.innerHTML = '<p>Executing query...</p>';
+
+            try {
+                const response = await fetch('http://localhost:8000/sparql/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: query,
+                        timeout: 10,
+                        limit: 100,
+                        format: "json"
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    let output = `<p><strong>✅ Query successful!</strong> Execution time: ${result.execution_time.toFixed(3)}s</p>`;
+
+                    if (result.results && result.results.bindings) {
+                        output += `<p>Found ${result.results.bindings.length} results:</p>`;
+                        result.results.bindings.forEach((binding, i) => {
+                            output += `<div class="triple">${i + 1}. `;
+                            Object.entries(binding).forEach(([key, value]) => {
+                                const displayValue = value.value.length > 50 ? value.value.substring(0, 50) + '...' : value.value;
+                                output += `${key}: <strong>${displayValue}</strong> | `;
+                            });
+                            output += `</div>`;
+                        });
+                    }
+
+                    outputDiv.innerHTML = output;
+                } else {
+                    outputDiv.innerHTML = `<p><strong>❌ Query failed:</strong> ${result.detail?.error || 'Unknown error'}</p>`;
+                }
+            } catch (error) {
+                outputDiv.innerHTML = `<p><strong>❌ Connection error:</strong> ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

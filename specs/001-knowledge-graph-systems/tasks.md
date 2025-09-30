@@ -46,11 +46,11 @@
 
 ## Phase 3.1: Setup
 
-- [ ] T001 Create knowledge graph project structure per implementation plan in src/knowledge_graph/
-- [ ] T002 Initialize Python 3.12+ project with semantic web dependencies (rdflib, linkml, pyshacl, fastapi, mcp)
-- [ ] T003 [P] Configure linting and formatting tools (ruff, mypy) for constitutional compliance
-- [ ] T004 [P] Set up LinkML schema processing pipeline in src/knowledge_graph/schema/
-- [ ] T005 [P] Configure SHACL validation framework with pyshacl in src/knowledge_graph/validation/
+- [x] T001 Create knowledge graph project structure per implementation plan in src/knowledge_graph/
+- [x] T002 Initialize Python 3.12+ project with semantic web dependencies (rdflib, linkml, pyshacl, fastapi, mcp)
+- [x] T003 [P] Configure linting and formatting tools (ruff, mypy) for constitutional compliance
+- [x] T004 [P] Set up LinkML schema processing pipeline in src/knowledge_graph/schema/
+- [x] T005 [P] Configure SHACL validation framework with pyshacl in src/knowledge_graph/validation/
 
 ## Phase 3.2: Tests First (TDD) ⚠️ MUST COMPLETE BEFORE 3.3
 

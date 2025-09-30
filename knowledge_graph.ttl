@@ -1,0 +1,17 @@
+@prefix kg: <http://example.org/kg/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+
+<kg:dataset/048b5650-a7fc-4145-bb25-fd21571d5765>
+    <http://knowledge-graph.org/ontology/title> "M541 Electrophysiology Session - 2024-08-31" ;
+    prov:wasGeneratedBy <kg:activity/dataset_creation_None> ;
+    <http://knowledge-graph.org/ontology/belongsToLab> <kg:lab/manual_test_lab> ;
+    <http://knowledge-graph.org/ontology/hasNwbFile> "sub-M541_ses-M54120240831_ecephys.nwb" ;
+    rdf:type <http://knowledge-graph.org/ontology/Dataset> ;
+    <http://knowledge-graph.org/ontology/description> "Electrophysiology recording from subject M541, session from August 31, 2024" .
+
+<kg:activity/dataset_creation_None>
+    prov:startedAtTime "2025-09-30T06:32:39.907126" ;
+    rdf:type prov:Activity .
