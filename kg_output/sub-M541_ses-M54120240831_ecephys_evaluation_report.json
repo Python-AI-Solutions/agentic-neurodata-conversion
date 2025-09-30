@@ -1,0 +1,44 @@
+{
+  "summary": {
+    "status": "FAIL",
+    "file_path": "/Users/adityapatane/agentic-neurodata-conversion-3/sub-M541_ses-M54120240831_ecephys.nwb",
+    "total_issues": 10,
+    "critical_issues": 2
+  },
+  "validation_results": {
+    "critical": [
+      "Data may be in the wrong orientation. Time should be in the first dimension, and is usually the longest dimension. Here, another dimension is longer.",
+      "Data may be in the wrong orientation. Time should be in the first dimension, and is usually the longest dimension. Here, another dimension is longer."
+    ],
+    "errors": [],
+    "warnings": [],
+    "info": [
+      "Description is missing.",
+      "Description ('no description') is a placeholder.",
+      "Description ('no description') is a placeholder.",
+      "Description ('no description') is a placeholder.",
+      "Experiment description is missing.",
+      "Metadata /general/institution is missing.",
+      "Metadata /general/keywords is missing.",
+      "Subject is missing age and date_of_birth. Please specify at least one of these fields."
+    ],
+    "critical_count": 2,
+    "error_count": 0,
+    "warning_count": 0,
+    "info_count": 8
+  },
+  "hierarchy_info": {
+    "total_groups": 40,
+    "total_datasets": 73,
+    "total_links": 8
+  },
+  "graph_metrics": {
+    "node_count": 9,
+    "edge_count": 6,
+    "density": 0.08333333333333333,
+    "avg_degree": 1.3333333333333333
+  },
+  "recommendations": [
+    "Critical issues must be resolved before using this file"
+  ]
+}

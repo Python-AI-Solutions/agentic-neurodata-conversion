@@ -1,0 +1,55 @@
+@prefix nwb: <http://purl.org/nwb/2.5.0/> .
+
+nwb:b03926dd-85f3-43ea-a5cd-6ae9803c2811 a nwb:NWBFile ;
+    nwb:has_acquisition nwb:ElectricalSeriesAPImec0,
+        nwb:ElectricalSeriesAPImec1,
+        nwb:EventsNIDQDigitalChannelXD0,
+        nwb:EventsNIDQDigitalChannelXD2,
+        nwb:EventsNIDQDigitalChannelXD3,
+        nwb:TimeSeriesNIDQ ;
+    nwb:identifier "b03926dd-85f3-43ea-a5cd-6ae9803c2811" ;
+    nwb:session_description "AllNovel" ;
+    nwb:session_start_time "2024-08-31 18:02:46-04:00" .
+
+nwb:ElectricalSeriesAPImec0 a nwb:TimeSeries ;
+    nwb:data_dtype "int16" ;
+    nwb:data_shape "(100, 384)" ;
+    nwb:description "Acquisition traces for the ElectricalSeriesAPImec0." ;
+    nwb:name "ElectricalSeriesAPImec0" ;
+    nwb:unit "volts" .
+
+nwb:ElectricalSeriesAPImec1 a nwb:TimeSeries ;
+    nwb:data_dtype "int16" ;
+    nwb:data_shape "(100, 384)" ;
+    nwb:description "Acquisition traces for the ElectricalSeriesAPImec1." ;
+    nwb:name "ElectricalSeriesAPImec1" ;
+    nwb:unit "volts" .
+
+nwb:EventsNIDQDigitalChannelXD0 a nwb:TimeSeries ;
+    nwb:data_dtype "uint64" ;
+    nwb:data_shape "(12381,)" ;
+    nwb:description "On and Off Events from channel XD0" ;
+    nwb:name "EventsNIDQDigitalChannelXD0" ;
+    nwb:timestamps_shape "(12381,)" .
+
+nwb:EventsNIDQDigitalChannelXD2 a nwb:TimeSeries ;
+    nwb:data_dtype "uint64" ;
+    nwb:data_shape "(32124,)" ;
+    nwb:description "On and Off Events from channel XD2" ;
+    nwb:name "EventsNIDQDigitalChannelXD2" ;
+    nwb:timestamps_shape "(32124,)" .
+
+nwb:EventsNIDQDigitalChannelXD3 a nwb:TimeSeries ;
+    nwb:data_dtype "uint64" ;
+    nwb:data_shape "(32098,)" ;
+    nwb:description "On and Off Events from channel XD3" ;
+    nwb:name "EventsNIDQDigitalChannelXD3" ;
+    nwb:timestamps_shape "(32098,)" .
+
+nwb:TimeSeriesNIDQ a nwb:TimeSeries ;
+    nwb:data_dtype "int16" ;
+    nwb:data_shape "(100, 8)" ;
+    nwb:description "Analog data from the NIDQ board. Channels are ['XA0' 'XA1' 'XA2' 'XA3' 'XA4' 'XA5' 'XA6' 'XA7'] in that order." ;
+    nwb:name "TimeSeriesNIDQ" ;
+    nwb:unit "V" .
+

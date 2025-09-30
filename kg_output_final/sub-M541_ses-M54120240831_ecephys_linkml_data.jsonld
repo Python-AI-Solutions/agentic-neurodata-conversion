@@ -1,0 +1,1177 @@
+{
+  "@context": {
+    "nwb": "http://purl.org/nwb/2.5.0/"
+  },
+  "@graph": [
+    {
+      "@type": "NWBFile",
+      "@id": "b03926dd-85f3-43ea-a5cd-6ae9803c2811",
+      "identifier": "b03926dd-85f3-43ea-a5cd-6ae9803c2811",
+      "path": "/",
+      "session_description": "AllNovel",
+      "session_start_time": "2024-08-31 18:02:46-04:00",
+      "has_children": [
+        "_acquisition",
+        "_analysis",
+        "_general",
+        "_intervals",
+        "_processing",
+        "_specifications",
+        "_stimulus",
+        "_file_create_date",
+        "_identifier",
+        "_session_description",
+        "_session_start_time",
+        "_timestamps_reference_time"
+      ]
+    },
+    {
+      "@type": "Group",
+      "@id": "_acquisition",
+      "name": "acquisition",
+      "path": "/acquisition",
+      "has_children": [
+        "_acquisition_ElectricalSeriesAPImec0",
+        "_acquisition_ElectricalSeriesAPImec1",
+        "_acquisition_EventsNIDQDigitalChannelXD0",
+        "_acquisition_EventsNIDQDigitalChannelXD2",
+        "_acquisition_EventsNIDQDigitalChannelXD3",
+        "_acquisition_TimeSeriesNIDQ"
+      ]
+    },
+    {
+      "@type": "TimeSeries",
+      "@id": "_acquisition_ElectricalSeriesAPImec0",
+      "name": "ElectricalSeriesAPImec0",
+      "path": "/acquisition/ElectricalSeriesAPImec0",
+      "comments": "no comments",
+      "description": "Acquisition traces for the ElectricalSeriesAPImec0.",
+      "namespace": "core",
+      "neurodata_type": "ElectricalSeries",
+      "object_id": "529beeb7-737e-4fec-ade1-8e580c824b34",
+      "has_children": [
+        "_acquisition_ElectricalSeriesAPImec0_data",
+        "_acquisition_ElectricalSeriesAPImec0_electrodes",
+        "_acquisition_ElectricalSeriesAPImec0_starting_time"
+      ]
+    },
+    {
+      "@type": "TimeSeries",
+      "@id": "_acquisition_ElectricalSeriesAPImec1",
+      "name": "ElectricalSeriesAPImec1",
+      "path": "/acquisition/ElectricalSeriesAPImec1",
+      "comments": "no comments",
+      "description": "Acquisition traces for the ElectricalSeriesAPImec1.",
+      "namespace": "core",
+      "neurodata_type": "ElectricalSeries",
+      "object_id": "1b4f90e7-0755-45e8-a9aa-f52c94ee3e82",
+      "has_children": [
+        "_acquisition_ElectricalSeriesAPImec1_data",
+        "_acquisition_ElectricalSeriesAPImec1_electrodes",
+        "_acquisition_ElectricalSeriesAPImec1_starting_time"
+      ]
+    },
+    {
+      "@type": "TimeSeries",
+      "@id": "_acquisition_EventsNIDQDigitalChannelXD0",
+      "name": "EventsNIDQDigitalChannelXD0",
+      "path": "/acquisition/EventsNIDQDigitalChannelXD0",
+      "description": "On and Off Events from channel XD0",
+      "namespace": "ndx-events",
+      "neurodata_type": "LabeledEvents",
+      "object_id": "7348d61b-4197-4c31-a516-52d27e072dc6",
+      "has_children": [
+        "_acquisition_EventsNIDQDigitalChannelXD0_data",
+        "_acquisition_EventsNIDQDigitalChannelXD0_timestamps"
+      ]
+    },
+    {
+      "@type": "TimeSeries",
+      "@id": "_acquisition_EventsNIDQDigitalChannelXD2",
+      "name": "EventsNIDQDigitalChannelXD2",
+      "path": "/acquisition/EventsNIDQDigitalChannelXD2",
+      "description": "On and Off Events from channel XD2",
+      "namespace": "ndx-events",
+      "neurodata_type": "LabeledEvents",
+      "object_id": "869fb460-cb1d-45d0-bff1-546a1d279874",
+      "has_children": [
+        "_acquisition_EventsNIDQDigitalChannelXD2_data",
+        "_acquisition_EventsNIDQDigitalChannelXD2_timestamps"
+      ]
+    },
+    {
+      "@type": "TimeSeries",
+      "@id": "_acquisition_EventsNIDQDigitalChannelXD3",
+      "name": "EventsNIDQDigitalChannelXD3",
+      "path": "/acquisition/EventsNIDQDigitalChannelXD3",
+      "description": "On and Off Events from channel XD3",
+      "namespace": "ndx-events",
+      "neurodata_type": "LabeledEvents",
+      "object_id": "998558c7-0929-4f0d-8534-14191a3572b4",
+      "has_children": [
+        "_acquisition_EventsNIDQDigitalChannelXD3_data",
+        "_acquisition_EventsNIDQDigitalChannelXD3_timestamps"
+      ]
+    },
+    {
+      "@type": "TimeSeries",
+      "@id": "_acquisition_TimeSeriesNIDQ",
+      "name": "TimeSeriesNIDQ",
+      "path": "/acquisition/TimeSeriesNIDQ",
+      "comments": "no comments",
+      "description": "Analog data from the NIDQ board. Channels are ['XA0' 'XA1' 'XA2' 'XA3' 'XA4' 'XA5' 'XA6' 'XA7'] in that order.",
+      "namespace": "core",
+      "neurodata_type": "TimeSeries",
+      "object_id": "e1d0ed81-b106-411b-ba1b-879cefd1e199",
+      "has_children": [
+        "_acquisition_TimeSeriesNIDQ_data",
+        "_acquisition_TimeSeriesNIDQ_starting_time"
+      ]
+    },
+    {
+      "@type": "Group",
+      "@id": "_analysis",
+      "name": "analysis",
+      "path": "/analysis"
+    },
+    {
+      "@type": "Group",
+      "@id": "_general",
+      "name": "general",
+      "path": "/general",
+      "has_children": [
+        "_general_devices",
+        "_general_extracellular_ephys",
+        "_general_subject",
+        "_general_experimenter",
+        "_general_session_id",
+        "_general_source_script"
+      ]
+    },
+    {
+      "@type": "General",
+      "@id": "_general_devices",
+      "name": "devices",
+      "path": "/general/devices",
+      "has_children": [
+        "_general_devices_NIDQBoard",
+        "_general_devices_NeuropixelsImec0",
+        "_general_devices_NeuropixelsImec1"
+      ]
+    },
+    {
+      "@type": "Device",
+      "@id": "_general_devices_NIDQBoard",
+      "name": "NIDQBoard",
+      "path": "/general/devices/NIDQBoard",
+      "description": "A NIDQ board used in conjunction with SpikeGLX.",
+      "manufacturer": "National Instruments",
+      "namespace": "core",
+      "neurodata_type": "Device",
+      "object_id": "e8dfea6c-8fa8-4496-afda-009b7b469443"
+    },
+    {
+      "@type": "Device",
+      "@id": "_general_devices_NeuropixelsImec0",
+      "name": "NeuropixelsImec0",
+      "path": "/general/devices/NeuropixelsImec0",
+      "description": "{\"probe_type\": \"2013\", \"probe_type_description\": \"Neuropixels 2.0 - Four Shank\", \"flex_part_number\": \"NPM_FLEX_01\", \"connected_base_station_part_number\": \"NP2_QBSC_00\"}",
+      "manufacturer": "Imec",
+      "namespace": "core",
+      "neurodata_type": "Device",
+      "object_id": "276bbab1-1c49-4e00-a051-9d646224f233"
+    },
+    {
+      "@type": "Device",
+      "@id": "_general_devices_NeuropixelsImec1",
+      "name": "NeuropixelsImec1",
+      "path": "/general/devices/NeuropixelsImec1",
+      "description": "{\"probe_type\": \"2013\", \"probe_type_description\": \"Neuropixels 2.0 - Four Shank\", \"flex_part_number\": \"NPM_FLEX_01\", \"connected_base_station_part_number\": \"NP2_QBSC_00\"}",
+      "manufacturer": "Imec",
+      "namespace": "core",
+      "neurodata_type": "Device",
+      "object_id": "54b4ec4d-4c42-405b-ac89-6f59e3d99b0d"
+    },
+    {
+      "@type": "General",
+      "@id": "_general_extracellular_ephys",
+      "name": "extracellular_ephys",
+      "path": "/general/extracellular_ephys",
+      "has_children": [
+        "_general_extracellular_ephys_NeuropixelsImec0Shank0",
+        "_general_extracellular_ephys_NeuropixelsImec0Shank1",
+        "_general_extracellular_ephys_NeuropixelsImec0Shank2",
+        "_general_extracellular_ephys_NeuropixelsImec0Shank3",
+        "_general_extracellular_ephys_NeuropixelsImec1Shank0",
+        "_general_extracellular_ephys_NeuropixelsImec1Shank1",
+        "_general_extracellular_ephys_NeuropixelsImec1Shank2",
+        "_general_extracellular_ephys_NeuropixelsImec1Shank3",
+        "_general_extracellular_ephys_electrodes"
+      ]
+    },
+    {
+      "@type": "General",
+      "@id": "_general_extracellular_ephys_NeuropixelsImec0Shank0",
+      "name": "NeuropixelsImec0Shank0",
+      "path": "/general/extracellular_ephys/NeuropixelsImec0Shank0",
+      "description": "A group representing probe/shank 'NeuropixelsImec0Shank0'.",
+      "location": "right dCA1",
+      "namespace": "core",
+      "neurodata_type": "ElectrodeGroup",
+      "object_id": "1c90f9e0-9d03-4162-bcf8-cfc97940db71"
+    },
+    {
+      "@type": "General",
+      "@id": "_general_extracellular_ephys_NeuropixelsImec0Shank1",
+      "name": "NeuropixelsImec0Shank1",
+      "path": "/general/extracellular_ephys/NeuropixelsImec0Shank1",
+      "description": "A group representing probe/shank 'NeuropixelsImec0Shank1'.",
+      "location": "right dCA1",
+      "namespace": "core",
+      "neurodata_type": "ElectrodeGroup",
+      "object_id": "1a2c68ae-20b1-458e-a6f8-38327742c54b"
+    },
+    {
+      "@type": "General",
+      "@id": "_general_extracellular_ephys_NeuropixelsImec0Shank2",
+      "name": "NeuropixelsImec0Shank2",
+      "path": "/general/extracellular_ephys/NeuropixelsImec0Shank2",
+      "description": "A group representing probe/shank 'NeuropixelsImec0Shank2'.",
+      "location": "right dCA1",
+      "namespace": "core",
+      "neurodata_type": "ElectrodeGroup",
+      "object_id": "9ecd6c39-4ebe-4dad-ab78-f4b4b1164661"
+    },
+    {
+      "@type": "General",
+      "@id": "_general_extracellular_ephys_NeuropixelsImec0Shank3",
+      "name": "NeuropixelsImec0Shank3",
+      "path": "/general/extracellular_ephys/NeuropixelsImec0Shank3",
+      "description": "A group representing probe/shank 'NeuropixelsImec0Shank3'.",
+      "location": "right dCA1",
+      "namespace": "core",
+      "neurodata_type": "ElectrodeGroup",
+      "object_id": "43c94783-3a45-4dff-8856-2030a5d9b719"
+    },
+    {
+      "@type": "General",
+      "@id": "_general_extracellular_ephys_NeuropixelsImec1Shank0",
+      "name": "NeuropixelsImec1Shank0",
+      "path": "/general/extracellular_ephys/NeuropixelsImec1Shank0",
+      "description": "A group representing probe/shank 'NeuropixelsImec1Shank0'.",
+      "location": "left dCA1",
+      "namespace": "core",
+      "neurodata_type": "ElectrodeGroup",
+      "object_id": "ef842660-2f57-4291-be08-4b64c05fed08"
+    },
+    {
+      "@type": "General",
+      "@id": "_general_extracellular_ephys_NeuropixelsImec1Shank1",
+      "name": "NeuropixelsImec1Shank1",
+      "path": "/general/extracellular_ephys/NeuropixelsImec1Shank1",
+      "description": "A group representing probe/shank 'NeuropixelsImec1Shank1'.",
+      "location": "left dCA1",
+      "namespace": "core",
+      "neurodata_type": "ElectrodeGroup",
+      "object_id": "3b5fcfec-112a-404f-bb23-b0f3667e9b5c"
+    },
+    {
+      "@type": "General",
+      "@id": "_general_extracellular_ephys_NeuropixelsImec1Shank2",
+      "name": "NeuropixelsImec1Shank2",
+      "path": "/general/extracellular_ephys/NeuropixelsImec1Shank2",
+      "description": "A group representing probe/shank 'NeuropixelsImec1Shank2'.",
+      "location": "left dCA1",
+      "namespace": "core",
+      "neurodata_type": "ElectrodeGroup",
+      "object_id": "4893fbae-0521-498c-9370-4592206f5557"
+    },
+    {
+      "@type": "General",
+      "@id": "_general_extracellular_ephys_NeuropixelsImec1Shank3",
+      "name": "NeuropixelsImec1Shank3",
+      "path": "/general/extracellular_ephys/NeuropixelsImec1Shank3",
+      "description": "A group representing probe/shank 'NeuropixelsImec1Shank3'.",
+      "location": "left dCA1",
+      "namespace": "core",
+      "neurodata_type": "ElectrodeGroup",
+      "object_id": "e784f57d-c4bc-4f8e-ad4c-6a5b56fd8c49"
+    },
+    {
+      "@type": "Electrodes",
+      "@id": "_general_extracellular_ephys_electrodes",
+      "name": "electrodes",
+      "path": "/general/extracellular_ephys/electrodes",
+      "colnames": "['location' 'group' 'group_name' 'channel_name' 'contact_ids' 'rel_y'\n 'shank_ids' 'inter_sample_shift' 'gain_to_physical_unit' 'rel_x'\n 'contact_shapes' 'offset_to_physical_unit' 'physical_unit']",
+      "description": "metadata about extracellular electrodes",
+      "namespace": "hdmf-common",
+      "neurodata_type": "DynamicTable",
+      "object_id": "64facccc-7ee0-4fcb-b266-f95b85bab76a",
+      "has_children": [
+        "_general_extracellular_ephys_electrodes_channel_name",
+        "_general_extracellular_ephys_electrodes_contact_ids",
+        "_general_extracellular_ephys_electrodes_contact_shapes",
+        "_general_extracellular_ephys_electrodes_gain_to_physical_unit",
+        "_general_extracellular_ephys_electrodes_group",
+        "_general_extracellular_ephys_electrodes_group_name",
+        "_general_extracellular_ephys_electrodes_id",
+        "_general_extracellular_ephys_electrodes_inter_sample_shift",
+        "_general_extracellular_ephys_electrodes_location",
+        "_general_extracellular_ephys_electrodes_offset_to_physical_unit",
+        "_general_extracellular_ephys_electrodes_physical_unit",
+        "_general_extracellular_ephys_electrodes_rel_x",
+        "_general_extracellular_ephys_electrodes_rel_y",
+        "_general_extracellular_ephys_electrodes_shank_ids"
+      ]
+    },
+    {
+      "@type": "Subject",
+      "@id": "_general_subject",
+      "name": "subject",
+      "path": "/general/subject",
+      "namespace": "core",
+      "neurodata_type": "Subject",
+      "object_id": "bde71fff-0256-47bd-ae5f-2ba92ca8990a",
+      "has_children": [
+        "_general_subject_sex",
+        "_general_subject_species",
+        "_general_subject_strain",
+        "_general_subject_subject_id"
+      ]
+    },
+    {
+      "@type": "Group",
+      "@id": "_intervals",
+      "name": "intervals",
+      "path": "/intervals",
+      "has_children": [
+        "_intervals_epochs",
+        "_intervals_trials"
+      ]
+    },
+    {
+      "@type": "Group",
+      "@id": "_intervals_epochs",
+      "name": "epochs",
+      "path": "/intervals/epochs",
+      "colnames": "['start_time' 'stop_time' 'block_id' 'block_details']",
+      "description": "Each block in this experiment involves a repetition of a subset of odor IDs, though the order of presentation may be randomized.",
+      "namespace": "core",
+      "neurodata_type": "TimeIntervals",
+      "object_id": "f4cd0bdc-ce73-4798-95c1-ed054e188e91",
+      "has_children": [
+        "_intervals_epochs_block_details",
+        "_intervals_epochs_block_id",
+        "_intervals_epochs_id",
+        "_intervals_epochs_start_time",
+        "_intervals_epochs_stop_time"
+      ]
+    },
+    {
+      "@type": "Group",
+      "@id": "_intervals_trials",
+      "name": "trials",
+      "path": "/intervals/trials",
+      "colnames": "['start_time' 'stop_time' 'odorant_id' 'odorant' 'concentration']",
+      "description": "The on/off timing of presented odors IDs.",
+      "namespace": "core",
+      "neurodata_type": "TimeIntervals",
+      "object_id": "1e7b9ac4-cf08-4a79-a1e2-178415fe0352",
+      "has_children": [
+        "_intervals_trials_concentration",
+        "_intervals_trials_id",
+        "_intervals_trials_odorant",
+        "_intervals_trials_odorant_id",
+        "_intervals_trials_start_time",
+        "_intervals_trials_stop_time"
+      ]
+    },
+    {
+      "@type": "Group",
+      "@id": "_processing",
+      "name": "processing",
+      "path": "/processing"
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications",
+      "name": "specifications",
+      "path": "/specifications",
+      "has_children": [
+        "_specifications_core",
+        "_specifications_hdmf-common",
+        "_specifications_hdmf-experimental",
+        "_specifications_ndx-events"
+      ]
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_core",
+      "name": "core",
+      "path": "/specifications/core",
+      "has_children": [
+        "_specifications_core_2.8.0"
+      ]
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_core_2.8.0",
+      "name": "2.8.0",
+      "path": "/specifications/core/2.8.0",
+      "has_children": [
+        "_specifications_core_2.8.0_namespace",
+        "_specifications_core_2.8.0_nwb.base",
+        "_specifications_core_2.8.0_nwb.behavior",
+        "_specifications_core_2.8.0_nwb.device",
+        "_specifications_core_2.8.0_nwb.ecephys",
+        "_specifications_core_2.8.0_nwb.epoch",
+        "_specifications_core_2.8.0_nwb.file",
+        "_specifications_core_2.8.0_nwb.icephys",
+        "_specifications_core_2.8.0_nwb.image",
+        "_specifications_core_2.8.0_nwb.misc",
+        "_specifications_core_2.8.0_nwb.ogen",
+        "_specifications_core_2.8.0_nwb.ophys",
+        "_specifications_core_2.8.0_nwb.retinotopy"
+      ]
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_hdmf-common",
+      "name": "hdmf-common",
+      "path": "/specifications/hdmf-common",
+      "has_children": [
+        "_specifications_hdmf-common_1.8.0"
+      ]
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_hdmf-common_1.8.0",
+      "name": "1.8.0",
+      "path": "/specifications/hdmf-common/1.8.0",
+      "has_children": [
+        "_specifications_hdmf-common_1.8.0_base",
+        "_specifications_hdmf-common_1.8.0_namespace",
+        "_specifications_hdmf-common_1.8.0_sparse",
+        "_specifications_hdmf-common_1.8.0_table"
+      ]
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_hdmf-experimental",
+      "name": "hdmf-experimental",
+      "path": "/specifications/hdmf-experimental",
+      "has_children": [
+        "_specifications_hdmf-experimental_0.5.0"
+      ]
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_hdmf-experimental_0.5.0",
+      "name": "0.5.0",
+      "path": "/specifications/hdmf-experimental/0.5.0",
+      "has_children": [
+        "_specifications_hdmf-experimental_0.5.0_experimental",
+        "_specifications_hdmf-experimental_0.5.0_namespace",
+        "_specifications_hdmf-experimental_0.5.0_resources"
+      ]
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_ndx-events",
+      "name": "ndx-events",
+      "path": "/specifications/ndx-events",
+      "has_children": [
+        "_specifications_ndx-events_0.2.1"
+      ]
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_ndx-events_0.2.1",
+      "name": "0.2.1",
+      "path": "/specifications/ndx-events/0.2.1",
+      "has_children": [
+        "_specifications_ndx-events_0.2.1_namespace",
+        "_specifications_ndx-events_0.2.1_ndx-events.extensions"
+      ]
+    },
+    {
+      "@type": "Group",
+      "@id": "_stimulus",
+      "name": "stimulus",
+      "path": "/stimulus",
+      "has_children": [
+        "_stimulus_presentation",
+        "_stimulus_templates"
+      ]
+    },
+    {
+      "@type": "TimeSeries",
+      "@id": "_stimulus_presentation",
+      "name": "presentation",
+      "path": "/stimulus/presentation"
+    },
+    {
+      "@type": "TimeSeries",
+      "@id": "_stimulus_templates",
+      "name": "templates",
+      "path": "/stimulus/templates"
+    },
+    {
+      "@type": "TimeSeries",
+      "@id": "_acquisition_ElectricalSeriesAPImec0_data",
+      "name": "data",
+      "path": "/acquisition/ElectricalSeriesAPImec0/data",
+      "data_shape": "(100, 384)",
+      "data_dtype": "int16",
+      "size_bytes": 76800
+    },
+    {
+      "@type": "TimeSeries",
+      "@id": "_acquisition_ElectricalSeriesAPImec0_electrodes",
+      "name": "electrodes",
+      "path": "/acquisition/ElectricalSeriesAPImec0/electrodes",
+      "data_shape": "(384,)",
+      "data_dtype": "int64",
+      "size_bytes": 3072
+    },
+    {
+      "@type": "TimeSeries",
+      "@id": "_acquisition_ElectricalSeriesAPImec0_starting_time",
+      "name": "starting_time",
+      "path": "/acquisition/ElectricalSeriesAPImec0/starting_time",
+      "data_shape": "()",
+      "data_dtype": "float64",
+      "size_bytes": 8
+    },
+    {
+      "@type": "TimeSeries",
+      "@id": "_acquisition_ElectricalSeriesAPImec1_data",
+      "name": "data",
+      "path": "/acquisition/ElectricalSeriesAPImec1/data",
+      "data_shape": "(100, 384)",
+      "data_dtype": "int16",
+      "size_bytes": 76800
+    },
+    {
+      "@type": "TimeSeries",
+      "@id": "_acquisition_ElectricalSeriesAPImec1_electrodes",
+      "name": "electrodes",
+      "path": "/acquisition/ElectricalSeriesAPImec1/electrodes",
+      "data_shape": "(384,)",
+      "data_dtype": "int64",
+      "size_bytes": 3072
+    },
+    {
+      "@type": "TimeSeries",
+      "@id": "_acquisition_ElectricalSeriesAPImec1_starting_time",
+      "name": "starting_time",
+      "path": "/acquisition/ElectricalSeriesAPImec1/starting_time",
+      "data_shape": "()",
+      "data_dtype": "float64",
+      "size_bytes": 8
+    },
+    {
+      "@type": "TimeSeries",
+      "@id": "_acquisition_EventsNIDQDigitalChannelXD0_data",
+      "name": "data",
+      "path": "/acquisition/EventsNIDQDigitalChannelXD0/data",
+      "data_shape": "(12381,)",
+      "data_dtype": "uint64",
+      "size_bytes": 99048
+    },
+    {
+      "@type": "TimeSeries",
+      "@id": "_acquisition_EventsNIDQDigitalChannelXD0_timestamps",
+      "name": "timestamps",
+      "path": "/acquisition/EventsNIDQDigitalChannelXD0/timestamps",
+      "data_shape": "(12381,)",
+      "data_dtype": "float64",
+      "size_bytes": 99048
+    },
+    {
+      "@type": "TimeSeries",
+      "@id": "_acquisition_EventsNIDQDigitalChannelXD2_data",
+      "name": "data",
+      "path": "/acquisition/EventsNIDQDigitalChannelXD2/data",
+      "data_shape": "(32124,)",
+      "data_dtype": "uint64",
+      "size_bytes": 256992
+    },
+    {
+      "@type": "TimeSeries",
+      "@id": "_acquisition_EventsNIDQDigitalChannelXD2_timestamps",
+      "name": "timestamps",
+      "path": "/acquisition/EventsNIDQDigitalChannelXD2/timestamps",
+      "data_shape": "(32124,)",
+      "data_dtype": "float64",
+      "size_bytes": 256992
+    },
+    {
+      "@type": "TimeSeries",
+      "@id": "_acquisition_EventsNIDQDigitalChannelXD3_data",
+      "name": "data",
+      "path": "/acquisition/EventsNIDQDigitalChannelXD3/data",
+      "data_shape": "(32098,)",
+      "data_dtype": "uint64",
+      "size_bytes": 256784
+    },
+    {
+      "@type": "TimeSeries",
+      "@id": "_acquisition_EventsNIDQDigitalChannelXD3_timestamps",
+      "name": "timestamps",
+      "path": "/acquisition/EventsNIDQDigitalChannelXD3/timestamps",
+      "data_shape": "(32098,)",
+      "data_dtype": "float64",
+      "size_bytes": 256784
+    },
+    {
+      "@type": "TimeSeries",
+      "@id": "_acquisition_TimeSeriesNIDQ_data",
+      "name": "data",
+      "path": "/acquisition/TimeSeriesNIDQ/data",
+      "data_shape": "(100, 8)",
+      "data_dtype": "int16",
+      "size_bytes": 1600
+    },
+    {
+      "@type": "TimeSeries",
+      "@id": "_acquisition_TimeSeriesNIDQ_starting_time",
+      "name": "starting_time",
+      "path": "/acquisition/TimeSeriesNIDQ/starting_time",
+      "data_shape": "()",
+      "data_dtype": "float64",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Group",
+      "@id": "_file_create_date",
+      "name": "file_create_date",
+      "path": "/file_create_date",
+      "data_shape": "(1,)",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "General",
+      "@id": "_general_experimenter",
+      "name": "experimenter",
+      "path": "/general/experimenter",
+      "data_shape": "(1,)",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Electrodes",
+      "@id": "_general_extracellular_ephys_electrodes_channel_name",
+      "name": "channel_name",
+      "path": "/general/extracellular_ephys/electrodes/channel_name",
+      "data_shape": "(768,)",
+      "data_dtype": "object",
+      "size_bytes": 6144
+    },
+    {
+      "@type": "Electrodes",
+      "@id": "_general_extracellular_ephys_electrodes_contact_ids",
+      "name": "contact_ids",
+      "path": "/general/extracellular_ephys/electrodes/contact_ids",
+      "data_shape": "(768,)",
+      "data_dtype": "object",
+      "size_bytes": 6144
+    },
+    {
+      "@type": "Electrodes",
+      "@id": "_general_extracellular_ephys_electrodes_contact_shapes",
+      "name": "contact_shapes",
+      "path": "/general/extracellular_ephys/electrodes/contact_shapes",
+      "data_shape": "(768,)",
+      "data_dtype": "object",
+      "size_bytes": 6144
+    },
+    {
+      "@type": "Electrodes",
+      "@id": "_general_extracellular_ephys_electrodes_gain_to_physical_unit",
+      "name": "gain_to_physical_unit",
+      "path": "/general/extracellular_ephys/electrodes/gain_to_physical_unit",
+      "data_shape": "(768,)",
+      "data_dtype": "float64",
+      "size_bytes": 6144
+    },
+    {
+      "@type": "ElectrodeGroup",
+      "@id": "_general_extracellular_ephys_electrodes_group",
+      "name": "group",
+      "path": "/general/extracellular_ephys/electrodes/group",
+      "data_shape": "(768,)",
+      "data_dtype": "object",
+      "size_bytes": 6144
+    },
+    {
+      "@type": "ElectrodeGroup",
+      "@id": "_general_extracellular_ephys_electrodes_group_name",
+      "name": "group_name",
+      "path": "/general/extracellular_ephys/electrodes/group_name",
+      "data_shape": "(768,)",
+      "data_dtype": "object",
+      "size_bytes": 6144
+    },
+    {
+      "@type": "Electrodes",
+      "@id": "_general_extracellular_ephys_electrodes_id",
+      "name": "id",
+      "path": "/general/extracellular_ephys/electrodes/id",
+      "data_shape": "(768,)",
+      "data_dtype": "int64",
+      "size_bytes": 6144
+    },
+    {
+      "@type": "Electrodes",
+      "@id": "_general_extracellular_ephys_electrodes_inter_sample_shift",
+      "name": "inter_sample_shift",
+      "path": "/general/extracellular_ephys/electrodes/inter_sample_shift",
+      "data_shape": "(768,)",
+      "data_dtype": "float64",
+      "size_bytes": 6144
+    },
+    {
+      "@type": "Electrodes",
+      "@id": "_general_extracellular_ephys_electrodes_location",
+      "name": "location",
+      "path": "/general/extracellular_ephys/electrodes/location",
+      "data_shape": "(768,)",
+      "data_dtype": "object",
+      "size_bytes": 6144
+    },
+    {
+      "@type": "Electrodes",
+      "@id": "_general_extracellular_ephys_electrodes_offset_to_physical_unit",
+      "name": "offset_to_physical_unit",
+      "path": "/general/extracellular_ephys/electrodes/offset_to_physical_unit",
+      "data_shape": "(768,)",
+      "data_dtype": "float64",
+      "size_bytes": 6144
+    },
+    {
+      "@type": "Electrodes",
+      "@id": "_general_extracellular_ephys_electrodes_physical_unit",
+      "name": "physical_unit",
+      "path": "/general/extracellular_ephys/electrodes/physical_unit",
+      "data_shape": "(768,)",
+      "data_dtype": "object",
+      "size_bytes": 6144
+    },
+    {
+      "@type": "Electrodes",
+      "@id": "_general_extracellular_ephys_electrodes_rel_x",
+      "name": "rel_x",
+      "path": "/general/extracellular_ephys/electrodes/rel_x",
+      "data_shape": "(768,)",
+      "data_dtype": "float64",
+      "size_bytes": 6144
+    },
+    {
+      "@type": "Electrodes",
+      "@id": "_general_extracellular_ephys_electrodes_rel_y",
+      "name": "rel_y",
+      "path": "/general/extracellular_ephys/electrodes/rel_y",
+      "data_shape": "(768,)",
+      "data_dtype": "float64",
+      "size_bytes": 6144
+    },
+    {
+      "@type": "Electrodes",
+      "@id": "_general_extracellular_ephys_electrodes_shank_ids",
+      "name": "shank_ids",
+      "path": "/general/extracellular_ephys/electrodes/shank_ids",
+      "data_shape": "(768,)",
+      "data_dtype": "object",
+      "size_bytes": 6144
+    },
+    {
+      "@type": "General",
+      "@id": "_general_session_id",
+      "name": "session_id",
+      "path": "/general/session_id",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "General",
+      "@id": "_general_source_script",
+      "name": "source_script",
+      "path": "/general/source_script",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Subject",
+      "@id": "_general_subject_sex",
+      "name": "sex",
+      "path": "/general/subject/sex",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Subject",
+      "@id": "_general_subject_species",
+      "name": "species",
+      "path": "/general/subject/species",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Subject",
+      "@id": "_general_subject_strain",
+      "name": "strain",
+      "path": "/general/subject/strain",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Subject",
+      "@id": "_general_subject_subject_id",
+      "name": "subject_id",
+      "path": "/general/subject/subject_id",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Group",
+      "@id": "_identifier",
+      "name": "identifier",
+      "path": "/identifier",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Group",
+      "@id": "_intervals_epochs_block_details",
+      "name": "block_details",
+      "path": "/intervals/epochs/block_details",
+      "data_shape": "(3,)",
+      "data_dtype": "object",
+      "size_bytes": 24
+    },
+    {
+      "@type": "Group",
+      "@id": "_intervals_epochs_block_id",
+      "name": "block_id",
+      "path": "/intervals/epochs/block_id",
+      "data_shape": "(3,)",
+      "data_dtype": "object",
+      "size_bytes": 24
+    },
+    {
+      "@type": "Group",
+      "@id": "_intervals_epochs_id",
+      "name": "id",
+      "path": "/intervals/epochs/id",
+      "data_shape": "(3,)",
+      "data_dtype": "int64",
+      "size_bytes": 24
+    },
+    {
+      "@type": "Group",
+      "@id": "_intervals_epochs_start_time",
+      "name": "start_time",
+      "path": "/intervals/epochs/start_time",
+      "data_shape": "(3,)",
+      "data_dtype": "float64",
+      "size_bytes": 24
+    },
+    {
+      "@type": "Group",
+      "@id": "_intervals_epochs_stop_time",
+      "name": "stop_time",
+      "path": "/intervals/epochs/stop_time",
+      "data_shape": "(3,)",
+      "data_dtype": "float64",
+      "size_bytes": 24
+    },
+    {
+      "@type": "Group",
+      "@id": "_intervals_trials_concentration",
+      "name": "concentration",
+      "path": "/intervals/trials/concentration",
+      "data_shape": "(1212,)",
+      "data_dtype": "float64",
+      "size_bytes": 9696
+    },
+    {
+      "@type": "Group",
+      "@id": "_intervals_trials_id",
+      "name": "id",
+      "path": "/intervals/trials/id",
+      "data_shape": "(1212,)",
+      "data_dtype": "int64",
+      "size_bytes": 9696
+    },
+    {
+      "@type": "Group",
+      "@id": "_intervals_trials_odorant",
+      "name": "odorant",
+      "path": "/intervals/trials/odorant",
+      "data_shape": "(1212,)",
+      "data_dtype": "object",
+      "size_bytes": 9696
+    },
+    {
+      "@type": "Group",
+      "@id": "_intervals_trials_odorant_id",
+      "name": "odorant_id",
+      "path": "/intervals/trials/odorant_id",
+      "data_shape": "(1212,)",
+      "data_dtype": "object",
+      "size_bytes": 9696
+    },
+    {
+      "@type": "Group",
+      "@id": "_intervals_trials_start_time",
+      "name": "start_time",
+      "path": "/intervals/trials/start_time",
+      "data_shape": "(1212,)",
+      "data_dtype": "float64",
+      "size_bytes": 9696
+    },
+    {
+      "@type": "Group",
+      "@id": "_intervals_trials_stop_time",
+      "name": "stop_time",
+      "path": "/intervals/trials/stop_time",
+      "data_shape": "(1212,)",
+      "data_dtype": "float64",
+      "size_bytes": 9696
+    },
+    {
+      "@type": "Group",
+      "@id": "_session_description",
+      "name": "session_description",
+      "path": "/session_description",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Group",
+      "@id": "_session_start_time",
+      "name": "session_start_time",
+      "path": "/session_start_time",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_core_2.8.0_namespace",
+      "name": "namespace",
+      "path": "/specifications/core/2.8.0/namespace",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_core_2.8.0_nwb.base",
+      "name": "nwb.base",
+      "path": "/specifications/core/2.8.0/nwb.base",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_core_2.8.0_nwb.behavior",
+      "name": "nwb.behavior",
+      "path": "/specifications/core/2.8.0/nwb.behavior",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_core_2.8.0_nwb.device",
+      "name": "nwb.device",
+      "path": "/specifications/core/2.8.0/nwb.device",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_core_2.8.0_nwb.ecephys",
+      "name": "nwb.ecephys",
+      "path": "/specifications/core/2.8.0/nwb.ecephys",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_core_2.8.0_nwb.epoch",
+      "name": "nwb.epoch",
+      "path": "/specifications/core/2.8.0/nwb.epoch",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_core_2.8.0_nwb.file",
+      "name": "nwb.file",
+      "path": "/specifications/core/2.8.0/nwb.file",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_core_2.8.0_nwb.icephys",
+      "name": "nwb.icephys",
+      "path": "/specifications/core/2.8.0/nwb.icephys",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_core_2.8.0_nwb.image",
+      "name": "nwb.image",
+      "path": "/specifications/core/2.8.0/nwb.image",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_core_2.8.0_nwb.misc",
+      "name": "nwb.misc",
+      "path": "/specifications/core/2.8.0/nwb.misc",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_core_2.8.0_nwb.ogen",
+      "name": "nwb.ogen",
+      "path": "/specifications/core/2.8.0/nwb.ogen",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_core_2.8.0_nwb.ophys",
+      "name": "nwb.ophys",
+      "path": "/specifications/core/2.8.0/nwb.ophys",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_core_2.8.0_nwb.retinotopy",
+      "name": "nwb.retinotopy",
+      "path": "/specifications/core/2.8.0/nwb.retinotopy",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_hdmf-common_1.8.0_base",
+      "name": "base",
+      "path": "/specifications/hdmf-common/1.8.0/base",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_hdmf-common_1.8.0_namespace",
+      "name": "namespace",
+      "path": "/specifications/hdmf-common/1.8.0/namespace",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_hdmf-common_1.8.0_sparse",
+      "name": "sparse",
+      "path": "/specifications/hdmf-common/1.8.0/sparse",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_hdmf-common_1.8.0_table",
+      "name": "table",
+      "path": "/specifications/hdmf-common/1.8.0/table",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_hdmf-experimental_0.5.0_experimental",
+      "name": "experimental",
+      "path": "/specifications/hdmf-experimental/0.5.0/experimental",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_hdmf-experimental_0.5.0_namespace",
+      "name": "namespace",
+      "path": "/specifications/hdmf-experimental/0.5.0/namespace",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_hdmf-experimental_0.5.0_resources",
+      "name": "resources",
+      "path": "/specifications/hdmf-experimental/0.5.0/resources",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_ndx-events_0.2.1_namespace",
+      "name": "namespace",
+      "path": "/specifications/ndx-events/0.2.1/namespace",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Group",
+      "@id": "_specifications_ndx-events_0.2.1_ndx-events.extensions",
+      "name": "ndx-events.extensions",
+      "path": "/specifications/ndx-events/0.2.1/ndx-events.extensions",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    },
+    {
+      "@type": "Group",
+      "@id": "_timestamps_reference_time",
+      "name": "timestamps_reference_time",
+      "path": "/timestamps_reference_time",
+      "data_shape": "()",
+      "data_dtype": "object",
+      "size_bytes": 8
+    }
+  ]
+}

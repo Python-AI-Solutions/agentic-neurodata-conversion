@@ -1,0 +1,26 @@
+NWB EVALUATION REPORT
+================================================================================
+
+FILE: /Users/adityapatane/agentic-neurodata-conversion-3/sub-M541_ses-M54120240831_ecephys.nwb
+STATUS: FAIL
+TOTAL ISSUES: 10
+CRITICAL ISSUES: 2
+
+VALIDATION RESULTS
+--------------------------------------------------------------------------------
+Critical: 2
+Errors: 0
+Warnings: 0
+Info: 8
+
+STRUCTURE
+--------------------------------------------------------------------------------
+Groups: 40
+Datasets: 73
+Links: 8
+
+KNOWLEDGE GRAPH METRICS
+--------------------------------------------------------------------------------
+Nodes: 9
+Edges: 6
+Density: 0.0833

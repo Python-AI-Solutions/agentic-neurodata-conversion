@@ -1,0 +1,42 @@
+{
+  "positions": {
+    "http://purl.org/nwb/2.5.0/ElectricalSeriesAPImec0": {
+      "x": -21.457502991593554,
+      "y": 9.117989189950661
+    },
+    "http://purl.org/nwb/2.5.0/ElectricalSeriesAPImec1": {
+      "x": 93.85980560193114,
+      "y": -50.954540001620494
+    },
+    "http://purl.org/nwb/2.5.0/EventsNIDQDigitalChannelXD3": {
+      "x": 59.193316426894654,
+      "y": -117.53462711845718
+    },
+    "http://purl.org/nwb/2.5.0/TimeSeriesNIDQ": {
+      "x": -15.79380635045654,
+      "y": -120.79418422345418
+    },
+    "http://purl.org/nwb/2.5.0/TimeSeries": {
+      "x": -1029.9943650137584,
+      "y": -203.45918267652166
+    },
+    "http://purl.org/nwb/2.5.0/EventsNIDQDigitalChannelXD2": {
+      "x": -56.122867737098936,
+      "y": -57.4636807808372
+    },
+    "http://purl.org/nwb/2.5.0/b03926dd-85f3-43ea-a5cd-6ae9803c2811": {
+      "x": 18.86790898961958,
+      "y": -54.2089062065126
+    },
+    "http://purl.org/nwb/2.5.0/EventsNIDQDigitalChannelXD0": {
+      "x": 53.528403538366355,
+      "y": 12.375755410846327
+    },
+    "http://purl.org/nwb/2.5.0/NWBFile": {
+      "x": 844.1916324786946,
+      "y": 616.0688796860256
+    }
+  },
+  "converged": false,
+  "iterations": 1000
+}

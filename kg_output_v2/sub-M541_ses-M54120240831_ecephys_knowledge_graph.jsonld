@@ -1,0 +1,229 @@
+[
+  {
+    "@id": "http://purl.org/nwb/2.5.0/EventsNIDQDigitalChannelXD2",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "uint64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(32124,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "On and Off Events from channel XD2"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "EventsNIDQDigitalChannelXD2"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/timestamps_shape": [
+      {
+        "@value": "(32124,)"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/ElectricalSeriesAPImec0",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "int16"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(100, 384)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "Acquisition traces for the ElectricalSeriesAPImec0."
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "ElectricalSeriesAPImec0"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/unit": [
+      {
+        "@value": "volts"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/EventsNIDQDigitalChannelXD0",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "uint64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(12381,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "On and Off Events from channel XD0"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "EventsNIDQDigitalChannelXD0"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/timestamps_shape": [
+      {
+        "@value": "(12381,)"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/b03926dd-85f3-43ea-a5cd-6ae9803c2811",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/NWBFile"
+    ],
+    "http://purl.org/nwb/2.5.0/has_acquisition": [
+      {
+        "@id": "http://purl.org/nwb/2.5.0/ElectricalSeriesAPImec0"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/ElectricalSeriesAPImec1"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/EventsNIDQDigitalChannelXD0"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/EventsNIDQDigitalChannelXD2"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/EventsNIDQDigitalChannelXD3"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/TimeSeriesNIDQ"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/identifier": [
+      {
+        "@value": "b03926dd-85f3-43ea-a5cd-6ae9803c2811"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/session_description": [
+      {
+        "@value": "AllNovel"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/session_start_time": [
+      {
+        "@value": "2024-08-31 18:02:46-04:00"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/EventsNIDQDigitalChannelXD3",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "uint64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(32098,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "On and Off Events from channel XD3"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "EventsNIDQDigitalChannelXD3"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/timestamps_shape": [
+      {
+        "@value": "(32098,)"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/TimeSeriesNIDQ",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "int16"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(100, 8)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "Analog data from the NIDQ board. Channels are ['XA0' 'XA1' 'XA2' 'XA3' 'XA4' 'XA5' 'XA6' 'XA7'] in that order."
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "TimeSeriesNIDQ"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/unit": [
+      {
+        "@value": "V"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/ElectricalSeriesAPImec1",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "int16"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(100, 384)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "Acquisition traces for the ElectricalSeriesAPImec1."
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "ElectricalSeriesAPImec1"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/unit": [
+      {
+        "@value": "volts"
+      }
+    ]
+  }
+]

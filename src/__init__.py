@@ -1,3 +1,6 @@
-"""Agentic Neurodata Conversion with Knowledge Graph Systems."""
+"""NWB Knowledge Graph System.
 
-__version__ = "0.1.0"
+A production-ready desktop application for converting NWB files to knowledge graphs.
+"""
+
+__version__ = "1.0.0"

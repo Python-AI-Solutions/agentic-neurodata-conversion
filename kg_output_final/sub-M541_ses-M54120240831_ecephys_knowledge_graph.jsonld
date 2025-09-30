@@ -1,0 +1,3895 @@
+[
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_NeuropixelsImec0Shank2",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/General"
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "A group representing probe/shank 'NeuropixelsImec0Shank2'."
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/location": [
+      {
+        "@value": "right dCA1"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "NeuropixelsImec0Shank2"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/namespace": [
+      {
+        "@value": "core"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/neurodata_type": [
+      {
+        "@value": "ElectrodeGroup"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/object_id": [
+      {
+        "@value": "9ecd6c39-4ebe-4dad-ab78-f4b4b1164661"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/extracellular_ephys/NeuropixelsImec0Shank2"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_acquisition_ElectricalSeriesAPImec0_electrodes",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "int64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(384,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "electrodes"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/acquisition/ElectricalSeriesAPImec0/electrodes"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 3072
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_shank_ids",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Electrodes"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(768,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "shank_ids"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/extracellular_ephys/electrodes/shank_ids"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 6144
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_acquisition_ElectricalSeriesAPImec1_starting_time",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "float64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "starting_time"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/acquisition/ElectricalSeriesAPImec1/starting_time"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_contact_ids",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Electrodes"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(768,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "contact_ids"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/extracellular_ephys/electrodes/contact_ids"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 6144
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/has_children": [
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_devices"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_experimenter"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_session_id"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_source_script"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_subject"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "general"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_hdmf-common_1.8.0_sparse",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "sparse"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/hdmf-common/1.8.0/sparse"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_intervals_trials_start_time",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "float64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(1212,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "start_time"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/intervals/trials/start_time"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 9696
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_session_start_time",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "session_start_time"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/session_start_time"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_acquisition_EventsNIDQDigitalChannelXD3_data",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "uint64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(32098,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "data"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/acquisition/EventsNIDQDigitalChannelXD3/data"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 256784
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_acquisition_EventsNIDQDigitalChannelXD3_timestamps",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "float64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(32098,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "timestamps"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/acquisition/EventsNIDQDigitalChannelXD3/timestamps"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 256784
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_acquisition_EventsNIDQDigitalChannelXD2_data",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "uint64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(32124,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "data"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/acquisition/EventsNIDQDigitalChannelXD2/data"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 256992
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_devices",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/General"
+    ],
+    "http://purl.org/nwb/2.5.0/has_children": [
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_devices_NIDQBoard"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_devices_NeuropixelsImec0"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_devices_NeuropixelsImec1"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "devices"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/devices"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.ecephys",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "nwb.ecephys"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/core/2.8.0/nwb.ecephys"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_acquisition_EventsNIDQDigitalChannelXD3",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "On and Off Events from channel XD3"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/has_children": [
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_acquisition_EventsNIDQDigitalChannelXD3_data"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_acquisition_EventsNIDQDigitalChannelXD3_timestamps"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "EventsNIDQDigitalChannelXD3"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/namespace": [
+      {
+        "@value": "ndx-events"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/neurodata_type": [
+      {
+        "@value": "LabeledEvents"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/object_id": [
+      {
+        "@value": "998558c7-0929-4f0d-8534-14191a3572b4"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/acquisition/EventsNIDQDigitalChannelXD3"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/has_children": [
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_namespace"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.base"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.behavior"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.device"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.ecephys"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.epoch"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.file"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.icephys"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.image"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.misc"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.ogen"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.ophys"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.retinotopy"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "2.8.0"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/core/2.8.0"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_NeuropixelsImec0Shank0",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/General"
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "A group representing probe/shank 'NeuropixelsImec0Shank0'."
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/location": [
+      {
+        "@value": "right dCA1"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "NeuropixelsImec0Shank0"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/namespace": [
+      {
+        "@value": "core"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/neurodata_type": [
+      {
+        "@value": "ElectrodeGroup"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/object_id": [
+      {
+        "@value": "1c90f9e0-9d03-4162-bcf8-cfc97940db71"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/extracellular_ephys/NeuropixelsImec0Shank0"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.file",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "nwb.file"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/core/2.8.0/nwb.file"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_acquisition_ElectricalSeriesAPImec0",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/comments": [
+      {
+        "@value": "no comments"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "Acquisition traces for the ElectricalSeriesAPImec0."
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/has_children": [
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_acquisition_ElectricalSeriesAPImec0_data"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_acquisition_ElectricalSeriesAPImec0_electrodes"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_acquisition_ElectricalSeriesAPImec0_starting_time"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "ElectricalSeriesAPImec0"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/namespace": [
+      {
+        "@value": "core"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/neurodata_type": [
+      {
+        "@value": "ElectricalSeries"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/object_id": [
+      {
+        "@value": "529beeb7-737e-4fec-ade1-8e580c824b34"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/acquisition/ElectricalSeriesAPImec0"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_timestamps_reference_time",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "timestamps_reference_time"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/timestamps_reference_time"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_NeuropixelsImec0Shank1",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/General"
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "A group representing probe/shank 'NeuropixelsImec0Shank1'."
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/location": [
+      {
+        "@value": "right dCA1"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "NeuropixelsImec0Shank1"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/namespace": [
+      {
+        "@value": "core"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/neurodata_type": [
+      {
+        "@value": "ElectrodeGroup"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/object_id": [
+      {
+        "@value": "1a2c68ae-20b1-458e-a6f8-38327742c54b"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/extracellular_ephys/NeuropixelsImec0Shank1"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_NeuropixelsImec0Shank3",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/General"
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "A group representing probe/shank 'NeuropixelsImec0Shank3'."
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/location": [
+      {
+        "@value": "right dCA1"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "NeuropixelsImec0Shank3"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/namespace": [
+      {
+        "@value": "core"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/neurodata_type": [
+      {
+        "@value": "ElectrodeGroup"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/object_id": [
+      {
+        "@value": "43c94783-3a45-4dff-8856-2030a5d9b719"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/extracellular_ephys/NeuropixelsImec0Shank3"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_ndx-events_0.2.1_namespace",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "namespace"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/ndx-events/0.2.1/namespace"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_acquisition_TimeSeriesNIDQ",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/comments": [
+      {
+        "@value": "no comments"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "Analog data from the NIDQ board. Channels are ['XA0' 'XA1' 'XA2' 'XA3' 'XA4' 'XA5' 'XA6' 'XA7'] in that order."
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/has_children": [
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_acquisition_TimeSeriesNIDQ_data"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_acquisition_TimeSeriesNIDQ_starting_time"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "TimeSeriesNIDQ"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/namespace": [
+      {
+        "@value": "core"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/neurodata_type": [
+      {
+        "@value": "TimeSeries"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/object_id": [
+      {
+        "@value": "e1d0ed81-b106-411b-ba1b-879cefd1e199"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/acquisition/TimeSeriesNIDQ"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_acquisition_ElectricalSeriesAPImec0_data",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "int16"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(100, 384)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "data"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/acquisition/ElectricalSeriesAPImec0/data"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 76800
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_NeuropixelsImec1Shank1",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/General"
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "A group representing probe/shank 'NeuropixelsImec1Shank1'."
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/location": [
+      {
+        "@value": "left dCA1"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "NeuropixelsImec1Shank1"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/namespace": [
+      {
+        "@value": "core"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/neurodata_type": [
+      {
+        "@value": "ElectrodeGroup"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/object_id": [
+      {
+        "@value": "3b5fcfec-112a-404f-bb23-b0f3667e9b5c"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/extracellular_ephys/NeuropixelsImec1Shank1"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_devices_NeuropixelsImec0",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Device"
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "{\"probe_type\": \"2013\", \"probe_type_description\": \"Neuropixels 2.0 - Four Shank\", \"flex_part_number\": \"NPM_FLEX_01\", \"connected_base_station_part_number\": \"NP2_QBSC_00\"}"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/manufacturer": [
+      {
+        "@value": "Imec"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "NeuropixelsImec0"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/namespace": [
+      {
+        "@value": "core"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/neurodata_type": [
+      {
+        "@value": "Device"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/object_id": [
+      {
+        "@value": "276bbab1-1c49-4e00-a051-9d646224f233"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/devices/NeuropixelsImec0"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_hdmf-common_1.8.0",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/has_children": [
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_hdmf-common_1.8.0_base"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_hdmf-common_1.8.0_namespace"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_hdmf-common_1.8.0_sparse"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_hdmf-common_1.8.0_table"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "1.8.0"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/hdmf-common/1.8.0"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.device",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "nwb.device"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/core/2.8.0/nwb.device"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_acquisition_ElectricalSeriesAPImec1_electrodes",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "int64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(384,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "electrodes"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/acquisition/ElectricalSeriesAPImec1/electrodes"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 3072
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_rel_x",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Electrodes"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "float64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(768,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "rel_x"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/extracellular_ephys/electrodes/rel_x"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 6144
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_intervals_trials_id",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "int64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(1212,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "id"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/intervals/trials/id"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 9696
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_acquisition",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/has_children": [
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_acquisition_ElectricalSeriesAPImec0"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_acquisition_ElectricalSeriesAPImec1"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_acquisition_EventsNIDQDigitalChannelXD0"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_acquisition_EventsNIDQDigitalChannelXD2"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_acquisition_EventsNIDQDigitalChannelXD3"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_acquisition_TimeSeriesNIDQ"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "acquisition"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/acquisition"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_id",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Electrodes"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "int64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(768,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "id"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/extracellular_ephys/electrodes/id"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 6144
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_stimulus",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/has_children": [
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_stimulus_presentation"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_stimulus_templates"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "stimulus"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/stimulus"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_hdmf-experimental_0.5.0_resources",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "resources"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/hdmf-experimental/0.5.0/resources"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_group",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/ElectrodeGroup"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(768,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "group"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/extracellular_ephys/electrodes/group"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 6144
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_location",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Electrodes"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(768,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "location"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/extracellular_ephys/electrodes/location"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 6144
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_intervals_epochs_id",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "int64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(3,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "id"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/intervals/epochs/id"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 24
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_rel_y",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Electrodes"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "float64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(768,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "rel_y"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/extracellular_ephys/electrodes/rel_y"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 6144
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_acquisition_EventsNIDQDigitalChannelXD0_data",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "uint64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(12381,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "data"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/acquisition/EventsNIDQDigitalChannelXD0/data"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 99048
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_intervals",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/has_children": [
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_intervals_epochs"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_intervals_trials"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "intervals"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/intervals"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_contact_shapes",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Electrodes"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(768,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "contact_shapes"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/extracellular_ephys/electrodes/contact_shapes"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 6144
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_NeuropixelsImec1Shank2",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/General"
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "A group representing probe/shank 'NeuropixelsImec1Shank2'."
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/location": [
+      {
+        "@value": "left dCA1"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "NeuropixelsImec1Shank2"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/namespace": [
+      {
+        "@value": "core"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/neurodata_type": [
+      {
+        "@value": "ElectrodeGroup"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/object_id": [
+      {
+        "@value": "4893fbae-0521-498c-9370-4592206f5557"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/extracellular_ephys/NeuropixelsImec1Shank2"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.behavior",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "nwb.behavior"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/core/2.8.0/nwb.behavior"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_hdmf-experimental_0.5.0_experimental",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "experimental"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/hdmf-experimental/0.5.0/experimental"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_acquisition_ElectricalSeriesAPImec1",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/comments": [
+      {
+        "@value": "no comments"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "Acquisition traces for the ElectricalSeriesAPImec1."
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/has_children": [
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_acquisition_ElectricalSeriesAPImec1_data"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_acquisition_ElectricalSeriesAPImec1_electrodes"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_acquisition_ElectricalSeriesAPImec1_starting_time"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "ElectricalSeriesAPImec1"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/namespace": [
+      {
+        "@value": "core"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/neurodata_type": [
+      {
+        "@value": "ElectricalSeries"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/object_id": [
+      {
+        "@value": "1b4f90e7-0755-45e8-a9aa-f52c94ee3e82"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/acquisition/ElectricalSeriesAPImec1"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.ogen",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "nwb.ogen"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/core/2.8.0/nwb.ogen"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_source_script",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/General"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "source_script"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/source_script"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_subject",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Subject"
+    ],
+    "http://purl.org/nwb/2.5.0/has_children": [
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_subject_sex"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_subject_species"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_subject_strain"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_subject_subject_id"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "subject"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/namespace": [
+      {
+        "@value": "core"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/neurodata_type": [
+      {
+        "@value": "Subject"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/object_id": [
+      {
+        "@value": "bde71fff-0256-47bd-ae5f-2ba92ca8990a"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/subject"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_NeuropixelsImec1Shank3",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/General"
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "A group representing probe/shank 'NeuropixelsImec1Shank3'."
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/location": [
+      {
+        "@value": "left dCA1"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "NeuropixelsImec1Shank3"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/namespace": [
+      {
+        "@value": "core"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/neurodata_type": [
+      {
+        "@value": "ElectrodeGroup"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/object_id": [
+      {
+        "@value": "e784f57d-c4bc-4f8e-ad4c-6a5b56fd8c49"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/extracellular_ephys/NeuropixelsImec1Shank3"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_acquisition_TimeSeriesNIDQ_starting_time",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "float64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "starting_time"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/acquisition/TimeSeriesNIDQ/starting_time"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.ophys",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "nwb.ophys"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/core/2.8.0/nwb.ophys"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_gain_to_physical_unit",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Electrodes"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "float64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(768,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "gain_to_physical_unit"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/extracellular_ephys/electrodes/gain_to_physical_unit"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 6144
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.misc",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "nwb.misc"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/core/2.8.0/nwb.misc"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_ndx-events_0.2.1",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/has_children": [
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_ndx-events_0.2.1_namespace"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_ndx-events_0.2.1_ndx-events.extensions"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "0.2.1"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/ndx-events/0.2.1"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_hdmf-common",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/has_children": [
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_hdmf-common_1.8.0"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "hdmf-common"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/hdmf-common"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_offset_to_physical_unit",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Electrodes"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "float64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(768,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "offset_to_physical_unit"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/extracellular_ephys/electrodes/offset_to_physical_unit"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 6144
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_stimulus_presentation",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "presentation"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/stimulus/presentation"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_hdmf-experimental_0.5.0",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/has_children": [
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_hdmf-experimental_0.5.0_experimental"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_hdmf-experimental_0.5.0_namespace"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_hdmf-experimental_0.5.0_resources"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "0.5.0"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/hdmf-experimental/0.5.0"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_acquisition_EventsNIDQDigitalChannelXD0",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "On and Off Events from channel XD0"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/has_children": [
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_acquisition_EventsNIDQDigitalChannelXD0_data"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_acquisition_EventsNIDQDigitalChannelXD0_timestamps"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "EventsNIDQDigitalChannelXD0"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/namespace": [
+      {
+        "@value": "ndx-events"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/neurodata_type": [
+      {
+        "@value": "LabeledEvents"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/object_id": [
+      {
+        "@value": "7348d61b-4197-4c31-a516-52d27e072dc6"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/acquisition/EventsNIDQDigitalChannelXD0"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_acquisition_TimeSeriesNIDQ_data",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "int16"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(100, 8)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "data"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/acquisition/TimeSeriesNIDQ/data"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 1600
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_ndx-events_0.2.1_ndx-events.extensions",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "ndx-events.extensions"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/ndx-events/0.2.1/ndx-events.extensions"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_core",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/has_children": [
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "core"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/core"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_intervals_epochs_block_details",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(3,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "block_details"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/intervals/epochs/block_details"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 24
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_group_name",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/ElectrodeGroup"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(768,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "group_name"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/extracellular_ephys/electrodes/group_name"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 6144
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Electrodes"
+    ],
+    "http://purl.org/nwb/2.5.0/colnames": [
+      {
+        "@value": "['location' 'group' 'group_name' 'channel_name' 'contact_ids' 'rel_y'\n 'shank_ids' 'inter_sample_shift' 'gain_to_physical_unit' 'rel_x'\n 'contact_shapes' 'offset_to_physical_unit' 'physical_unit']"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "metadata about extracellular electrodes"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/has_children": [
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_channel_name"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_contact_ids"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_contact_shapes"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_gain_to_physical_unit"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_group"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_group_name"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_id"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_inter_sample_shift"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_location"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_offset_to_physical_unit"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_physical_unit"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_rel_x"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_rel_y"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_shank_ids"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "electrodes"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/namespace": [
+      {
+        "@value": "hdmf-common"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/neurodata_type": [
+      {
+        "@value": "DynamicTable"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/object_id": [
+      {
+        "@value": "64facccc-7ee0-4fcb-b266-f95b85bab76a"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/extracellular_ephys/electrodes"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_intervals_trials",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/colnames": [
+      {
+        "@value": "['start_time' 'stop_time' 'odorant_id' 'odorant' 'concentration']"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "The on/off timing of presented odors IDs."
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/has_children": [
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_intervals_trials_concentration"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_intervals_trials_id"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_intervals_trials_odorant"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_intervals_trials_odorant_id"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_intervals_trials_start_time"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_intervals_trials_stop_time"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "trials"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/namespace": [
+      {
+        "@value": "core"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/neurodata_type": [
+      {
+        "@value": "TimeIntervals"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/object_id": [
+      {
+        "@value": "1e7b9ac4-cf08-4a79-a1e2-178415fe0352"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/intervals/trials"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_hdmf-common_1.8.0_base",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "base"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/hdmf-common/1.8.0/base"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_acquisition_EventsNIDQDigitalChannelXD2_timestamps",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "float64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(32124,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "timestamps"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/acquisition/EventsNIDQDigitalChannelXD2/timestamps"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 256992
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_intervals_epochs_stop_time",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "float64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(3,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "stop_time"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/intervals/epochs/stop_time"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 24
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_processing",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "processing"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/processing"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_channel_name",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Electrodes"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(768,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "channel_name"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/extracellular_ephys/electrodes/channel_name"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 6144
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_session_id",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/General"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "session_id"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/session_id"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_subject_subject_id",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Subject"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "subject_id"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/subject/subject_id"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_acquisition_ElectricalSeriesAPImec1_data",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "int16"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(100, 384)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "data"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/acquisition/ElectricalSeriesAPImec1/data"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 76800
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_acquisition_ElectricalSeriesAPImec0_starting_time",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "float64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "starting_time"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/acquisition/ElectricalSeriesAPImec0/starting_time"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.base",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "nwb.base"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/core/2.8.0/nwb.base"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.retinotopy",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "nwb.retinotopy"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/core/2.8.0/nwb.retinotopy"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_inter_sample_shift",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Electrodes"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "float64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(768,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "inter_sample_shift"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/extracellular_ephys/electrodes/inter_sample_shift"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 6144
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_identifier",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "identifier"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/identifier"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_intervals_trials_odorant_id",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(1212,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "odorant_id"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/intervals/trials/odorant_id"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 9696
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_analysis",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "analysis"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/analysis"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_intervals_epochs_start_time",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "float64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(3,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "start_time"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/intervals/epochs/start_time"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 24
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_intervals_trials_concentration",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "float64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(1212,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "concentration"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/intervals/trials/concentration"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 9696
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_intervals_epochs_block_id",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(3,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "block_id"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/intervals/epochs/block_id"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 24
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/General"
+    ],
+    "http://purl.org/nwb/2.5.0/has_children": [
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_NeuropixelsImec0Shank0"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_NeuropixelsImec0Shank1"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_NeuropixelsImec0Shank2"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_NeuropixelsImec0Shank3"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_NeuropixelsImec1Shank0"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_NeuropixelsImec1Shank1"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_NeuropixelsImec1Shank2"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_NeuropixelsImec1Shank3"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "extracellular_ephys"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/extracellular_ephys"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_physical_unit",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Electrodes"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(768,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "physical_unit"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/extracellular_ephys/electrodes/physical_unit"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 6144
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.image",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "nwb.image"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/core/2.8.0/nwb.image"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_acquisition_EventsNIDQDigitalChannelXD0_timestamps",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "float64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(12381,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "timestamps"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/acquisition/EventsNIDQDigitalChannelXD0/timestamps"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 99048
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_devices_NeuropixelsImec1",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Device"
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "{\"probe_type\": \"2013\", \"probe_type_description\": \"Neuropixels 2.0 - Four Shank\", \"flex_part_number\": \"NPM_FLEX_01\", \"connected_base_station_part_number\": \"NP2_QBSC_00\"}"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/manufacturer": [
+      {
+        "@value": "Imec"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "NeuropixelsImec1"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/namespace": [
+      {
+        "@value": "core"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/neurodata_type": [
+      {
+        "@value": "Device"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/object_id": [
+      {
+        "@value": "54b4ec4d-4c42-405b-ac89-6f59e3d99b0d"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/devices/NeuropixelsImec1"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_file_create_date",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(1,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "file_create_date"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/file_create_date"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.epoch",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "nwb.epoch"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/core/2.8.0/nwb.epoch"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_ndx-events",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/has_children": [
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_ndx-events_0.2.1"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "ndx-events"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/ndx-events"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_subject_strain",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Subject"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "strain"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/subject/strain"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_devices_NIDQBoard",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Device"
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "A NIDQ board used in conjunction with SpikeGLX."
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/manufacturer": [
+      {
+        "@value": "National Instruments"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "NIDQBoard"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/namespace": [
+      {
+        "@value": "core"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/neurodata_type": [
+      {
+        "@value": "Device"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/object_id": [
+      {
+        "@value": "e8dfea6c-8fa8-4496-afda-009b7b469443"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/devices/NIDQBoard"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_experimenter",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/General"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(1,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "experimenter"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/experimenter"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_hdmf-common_1.8.0_namespace",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "namespace"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/hdmf-common/1.8.0/namespace"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_stimulus_templates",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "templates"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/stimulus/templates"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_namespace",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "namespace"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/core/2.8.0/namespace"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_NeuropixelsImec1Shank0",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/General"
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "A group representing probe/shank 'NeuropixelsImec1Shank0'."
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/location": [
+      {
+        "@value": "left dCA1"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "NeuropixelsImec1Shank0"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/namespace": [
+      {
+        "@value": "core"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/neurodata_type": [
+      {
+        "@value": "ElectrodeGroup"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/object_id": [
+      {
+        "@value": "ef842660-2f57-4291-be08-4b64c05fed08"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/extracellular_ephys/NeuropixelsImec1Shank0"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/b03926dd-85f3-43ea-a5cd-6ae9803c2811",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/NWBFile"
+    ],
+    "http://purl.org/nwb/2.5.0/has_children": [
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_acquisition"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_analysis"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_file_create_date"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_general"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_identifier"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_intervals"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_processing"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_session_description"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_session_start_time"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_stimulus"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_timestamps_reference_time"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/identifier": [
+      {
+        "@value": "b03926dd-85f3-43ea-a5cd-6ae9803c2811"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/session_description": [
+      {
+        "@value": "AllNovel"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/session_start_time": [
+      {
+        "@value": "2024-08-31 18:02:46-04:00"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_hdmf-experimental_0.5.0_namespace",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "namespace"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/hdmf-experimental/0.5.0/namespace"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_intervals_trials_odorant",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(1212,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "odorant"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/intervals/trials/odorant"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 9696
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_hdmf-experimental",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/has_children": [
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_hdmf-experimental_0.5.0"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "hdmf-experimental"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/hdmf-experimental"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_subject_sex",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Subject"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "sex"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/subject/sex"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_acquisition_EventsNIDQDigitalChannelXD2",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "On and Off Events from channel XD2"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/has_children": [
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_acquisition_EventsNIDQDigitalChannelXD2_data"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_acquisition_EventsNIDQDigitalChannelXD2_timestamps"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "EventsNIDQDigitalChannelXD2"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/namespace": [
+      {
+        "@value": "ndx-events"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/neurodata_type": [
+      {
+        "@value": "LabeledEvents"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/object_id": [
+      {
+        "@value": "869fb460-cb1d-45d0-bff1-546a1d279874"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/acquisition/EventsNIDQDigitalChannelXD2"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_hdmf-common_1.8.0_table",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "table"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/hdmf-common/1.8.0/table"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_session_description",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "session_description"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/session_description"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/has_children": [
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_core"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_hdmf-common"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_hdmf-experimental"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_specifications_ndx-events"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "specifications"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_intervals_epochs",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/colnames": [
+      {
+        "@value": "['start_time' 'stop_time' 'block_id' 'block_details']"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "Each block in this experiment involves a repetition of a subset of odor IDs, though the order of presentation may be randomized."
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/has_children": [
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_intervals_epochs_block_details"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_intervals_epochs_block_id"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_intervals_epochs_id"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_intervals_epochs_start_time"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/_intervals_epochs_stop_time"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "epochs"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/namespace": [
+      {
+        "@value": "core"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/neurodata_type": [
+      {
+        "@value": "TimeIntervals"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/object_id": [
+      {
+        "@value": "f4cd0bdc-ce73-4798-95c1-ed054e188e91"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/intervals/epochs"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_intervals_trials_stop_time",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "float64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(1212,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "stop_time"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/intervals/trials/stop_time"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 9696
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.icephys",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Group"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "nwb.icephys"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/specifications/core/2.8.0/nwb.icephys"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/_general_subject_species",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/Subject"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "object"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "()"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "species"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/path": [
+      {
+        "@value": "/general/subject/species"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/size_bytes": [
+      {
+        "@type": "http://www.w3.org/2001/XMLSchema#integer",
+        "@value": 8
+      }
+    ]
+  }
+]

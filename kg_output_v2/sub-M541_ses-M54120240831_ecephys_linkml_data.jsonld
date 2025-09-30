@@ -1,0 +1,79 @@
+{
+  "@context": {
+    "nwb": "http://purl.org/nwb/2.5.0/"
+  },
+  "@graph": [
+    {
+      "@type": "NWBFile",
+      "@id": "b03926dd-85f3-43ea-a5cd-6ae9803c2811",
+      "identifier": "b03926dd-85f3-43ea-a5cd-6ae9803c2811",
+      "session_description": "AllNovel",
+      "session_start_time": "2024-08-31 18:02:46-04:00",
+      "experimenter": [
+        "Mahopatra, Manish"
+      ],
+      "has_acquisition": [
+        "ElectricalSeriesAPImec0",
+        "ElectricalSeriesAPImec1",
+        "EventsNIDQDigitalChannelXD0",
+        "EventsNIDQDigitalChannelXD2",
+        "EventsNIDQDigitalChannelXD3",
+        "TimeSeriesNIDQ"
+      ]
+    },
+    {
+      "@type": "TimeSeries",
+      "@id": "ElectricalSeriesAPImec0",
+      "name": "ElectricalSeriesAPImec0",
+      "data_shape": "(100, 384)",
+      "data_dtype": "int16",
+      "description": "Acquisition traces for the ElectricalSeriesAPImec0.",
+      "unit": "volts"
+    },
+    {
+      "@type": "TimeSeries",
+      "@id": "ElectricalSeriesAPImec1",
+      "name": "ElectricalSeriesAPImec1",
+      "data_shape": "(100, 384)",
+      "data_dtype": "int16",
+      "description": "Acquisition traces for the ElectricalSeriesAPImec1.",
+      "unit": "volts"
+    },
+    {
+      "@type": "TimeSeries",
+      "@id": "EventsNIDQDigitalChannelXD0",
+      "name": "EventsNIDQDigitalChannelXD0",
+      "data_shape": "(12381,)",
+      "data_dtype": "uint64",
+      "timestamps_shape": "(12381,)",
+      "description": "On and Off Events from channel XD0"
+    },
+    {
+      "@type": "TimeSeries",
+      "@id": "EventsNIDQDigitalChannelXD2",
+      "name": "EventsNIDQDigitalChannelXD2",
+      "data_shape": "(32124,)",
+      "data_dtype": "uint64",
+      "timestamps_shape": "(32124,)",
+      "description": "On and Off Events from channel XD2"
+    },
+    {
+      "@type": "TimeSeries",
+      "@id": "EventsNIDQDigitalChannelXD3",
+      "name": "EventsNIDQDigitalChannelXD3",
+      "data_shape": "(32098,)",
+      "data_dtype": "uint64",
+      "timestamps_shape": "(32098,)",
+      "description": "On and Off Events from channel XD3"
+    },
+    {
+      "@type": "TimeSeries",
+      "@id": "TimeSeriesNIDQ",
+      "name": "TimeSeriesNIDQ",
+      "data_shape": "(100, 8)",
+      "data_dtype": "int16",
+      "description": "Analog data from the NIDQ board. Channels are ['XA0' 'XA1' 'XA2' 'XA3' 'XA4' 'XA5' 'XA6' 'XA7'] in that order.",
+      "unit": "V"
+    }
+  ]
+}

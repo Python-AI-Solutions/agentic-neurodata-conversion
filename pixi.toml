@@ -49,12 +49,20 @@ mcp = ">=1.0.0"
 neuroconv = ">=0.4.0"
 pynwb = ">=2.5.0"
 nwbinspector = ">=0.4.0"
+h5py = ">=3.0.0"
 
 # Knowledge graph and validation
 linkml = ">=1.5.0"
+linkml-runtime = ">=1.5.0"
 rdflib = ">=7.0.0"
 pyshacl = ">=0.25.0"
 owlrl = ">=6.0.0"
+networkx = ">=3.0.0"
+
+# Template and configuration
+jinja2 = ">=3.0.0"
+pyyaml = ">=6.0.0"
+tqdm = ">=4.60.0"
 
 # CLI and utilities
 click = ">=8.0.0"
@@ -73,6 +81,7 @@ pytest-xdist = ">=3.0.0"
 
 # Code quality tools
 ruff = ">=0.1.0"
+black = ">=23.0.0"
 mypy = ">=1.5.0"
 pre-commit = ">=3.0.0"
 

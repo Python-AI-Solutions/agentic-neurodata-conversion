@@ -1,0 +1,494 @@
+{
+  "positions": {
+    "http://purl.org/nwb/2.5.0/_general_devices_NeuropixelsImec0": {
+      "x": 76.22024909032356,
+      "y": 361.82238691338074
+    },
+    "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_shank_ids": {
+      "x": -244.43050003265833,
+      "y": 503.55730926479254
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.retinotopy": {
+      "x": 672.7502642708175,
+      "y": -609.3261963923418
+    },
+    "http://purl.org/nwb/2.5.0/_acquisition_EventsNIDQDigitalChannelXD0": {
+      "x": -172.06282624770134,
+      "y": -515.8232304052477
+    },
+    "http://purl.org/nwb/2.5.0/_acquisition_ElectricalSeriesAPImec0_starting_time": {
+      "x": -170.25650592735377,
+      "y": -573.937448734138
+    },
+    "http://purl.org/nwb/2.5.0/_general_devices_NeuropixelsImec1": {
+      "x": 14.837616838206323,
+      "y": 343.3083958361604
+    },
+    "http://purl.org/nwb/2.5.0/Device": {
+      "x": -2268.216831363613,
+      "y": 1412.8470188289186
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_hdmf-common_1.8.0_sparse": {
+      "x": 170.90685597996057,
+      "y": -440.51547856079077
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.image": {
+      "x": 656.3568522675388,
+      "y": -878.9741483682167
+    },
+    "http://purl.org/nwb/2.5.0/_general": {
+      "x": -39.816116623284486,
+      "y": 217.0915648543373
+    },
+    "http://purl.org/nwb/2.5.0/_acquisition_ElectricalSeriesAPImec1_electrodes": {
+      "x": -443.2872645674571,
+      "y": -714.8656289849994
+    },
+    "http://purl.org/nwb/2.5.0/_acquisition_ElectricalSeriesAPImec1_data": {
+      "x": -422.4043245089822,
+      "y": -614.2900099214672
+    },
+    "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_gain_to_physical_unit": {
+      "x": 41.126322287331256,
+      "y": 358.4021731872581
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.base": {
+      "x": 782.0719590476954,
+      "y": -611.5780067473337
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.ophys": {
+      "x": 821.484089087745,
+      "y": -499.1227291969379
+    },
+    "http://purl.org/nwb/2.5.0/_general_experimenter": {
+      "x": 8.493507746444159,
+      "y": 279.3172860713898
+    },
+    "http://purl.org/nwb/2.5.0/Group": {
+      "x": -1564.8099501608099,
+      "y": -1882.6624907785215
+    },
+    "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_group": {
+      "x": -277.41089753331227,
+      "y": 493.3769644184404
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0": {
+      "x": 771.4527004497154,
+      "y": -559.0297584128905
+    },
+    "http://purl.org/nwb/2.5.0/_identifier": {
+      "x": 7.209550613924565,
+      "y": -89.71886839227395
+    },
+    "http://purl.org/nwb/2.5.0/_file_create_date": {
+      "x": 30.170806225910813,
+      "y": -81.04336676886184
+    },
+    "http://purl.org/nwb/2.5.0/_intervals_epochs_stop_time": {
+      "x": 413.58518924851205,
+      "y": 271.32327990388893
+    },
+    "http://purl.org/nwb/2.5.0/_intervals_trials_stop_time": {
+      "x": 357.2509995297324,
+      "y": -69.15157462626678
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_hdmf-experimental_0.5.0_namespace": {
+      "x": 439.1737279620021,
+      "y": -236.90776117952205
+    },
+    "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_inter_sample_shift": {
+      "x": -371.0835045446075,
+      "y": 614.0104998621523
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_ndx-events": {
+      "x": 312.7599653642337,
+      "y": -418.7205322653753
+    },
+    "http://purl.org/nwb/2.5.0/_acquisition_ElectricalSeriesAPImec0": {
+      "x": -216.730429120441,
+      "y": -567.3672005232722
+    },
+    "http://purl.org/nwb/2.5.0/_acquisition_EventsNIDQDigitalChannelXD2_data": {
+      "x": -421.2824233436802,
+      "y": -520.2473416287153
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.icephys": {
+      "x": 738.2464342867872,
+      "y": -388.87983010351803
+    },
+    "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes": {
+      "x": -230.01592894912008,
+      "y": 611.2318582557871
+    },
+    "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_group_name": {
+      "x": -362.87613315587305,
+      "y": 707.6544187377688
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_namespace": {
+      "x": 728.2600618092007,
+      "y": -632.3727404224189
+    },
+    "http://purl.org/nwb/2.5.0/b03926dd-85f3-43ea-a5cd-6ae9803c2811": {
+      "x": 39.58008437353911,
+      "y": -142.86912256573368
+    },
+    "http://purl.org/nwb/2.5.0/_analysis": {
+      "x": -99.46706141395806,
+      "y": -239.3985932029662
+    },
+    "http://purl.org/nwb/2.5.0/_intervals_epochs": {
+      "x": 440.6999397970075,
+      "y": -92.71656101023856
+    },
+    "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_contact_shapes": {
+      "x": -191.64080321876284,
+      "y": 584.8443015908525
+    },
+    "http://purl.org/nwb/2.5.0/_acquisition_ElectricalSeriesAPImec1_starting_time": {
+      "x": -311.39502552672764,
+      "y": -569.9869641785056
+    },
+    "http://purl.org/nwb/2.5.0/TimeSeries": {
+      "x": -3104.131985635956,
+      "y": 13341.367968066608
+    },
+    "http://purl.org/nwb/2.5.0/_general_devices_NIDQBoard": {
+      "x": 182.34375325720038,
+      "y": 356.1799874874781
+    },
+    "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_NeuropixelsImec1Shank3": {
+      "x": -45.85769691264862,
+      "y": 480.18607265896725
+    },
+    "http://purl.org/nwb/2.5.0/_intervals": {
+      "x": 188.65045163021264,
+      "y": -43.392631291395816
+    },
+    "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_NeuropixelsImec1Shank0": {
+      "x": -4.339544653587396,
+      "y": 746.6007229108753
+    },
+    "http://purl.org/nwb/2.5.0/ElectrodeGroup": {
+      "x": 593.8242296009495,
+      "y": 2601.315446766217
+    },
+    "http://purl.org/nwb/2.5.0/_general_subject": {
+      "x": -136.82562283943128,
+      "y": 218.4666729822662
+    },
+    "http://purl.org/nwb/2.5.0/_intervals_trials_start_time": {
+      "x": 186.9925638017704,
+      "y": 17.870659892212792
+    },
+    "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_NeuropixelsImec1Shank2": {
+      "x": -2.2466183442500736,
+      "y": 471.8586576038066
+    },
+    "http://purl.org/nwb/2.5.0/_general_devices": {
+      "x": 42.776926862290985,
+      "y": 313.81352851426294
+    },
+    "http://purl.org/nwb/2.5.0/_acquisition_EventsNIDQDigitalChannelXD3_data": {
+      "x": -267.6819356026424,
+      "y": -661.1095585870123
+    },
+    "http://purl.org/nwb/2.5.0/_acquisition_ElectricalSeriesAPImec0_electrodes": {
+      "x": -313.9356249480533,
+      "y": -587.2141528182382
+    },
+    "http://purl.org/nwb/2.5.0/NWBFile": {
+      "x": -679.258620665833,
+      "y": -2179.2871862095494
+    },
+    "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_location": {
+      "x": -349.4455324482201,
+      "y": 653.3340681636317
+    },
+    "http://purl.org/nwb/2.5.0/_intervals_epochs_id": {
+      "x": 484.66580453962524,
+      "y": -70.53926504118542
+    },
+    "http://purl.org/nwb/2.5.0/_stimulus_presentation": {
+      "x": -85.73924734476466,
+      "y": -46.23708953785258
+    },
+    "http://purl.org/nwb/2.5.0/Electrodes": {
+      "x": -2301.053557334787,
+      "y": -1030.803949999566
+    },
+    "http://purl.org/nwb/2.5.0/_acquisition": {
+      "x": -238.03614696066472,
+      "y": -471.3470250547446
+    },
+    "http://purl.org/nwb/2.5.0/_acquisition_TimeSeriesNIDQ": {
+      "x": -420.93331440789797,
+      "y": -506.6830579392178
+    },
+    "http://purl.org/nwb/2.5.0/_general_subject_strain": {
+      "x": -430.25120926154034,
+      "y": 180.7429463783992
+    },
+    "http://purl.org/nwb/2.5.0/_acquisition_EventsNIDQDigitalChannelXD2": {
+      "x": -450.23655142225374,
+      "y": -578.0359612213018
+    },
+    "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_id": {
+      "x": -207.50652073300927,
+      "y": 701.399717166969
+    },
+    "http://purl.org/nwb/2.5.0/_acquisition_EventsNIDQDigitalChannelXD3_timestamps": {
+      "x": -490.5244286225983,
+      "y": -554.6046479226769
+    },
+    "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_NeuropixelsImec0Shank3": {
+      "x": -306.89380123585136,
+      "y": 540.9251968898604
+    },
+    "http://purl.org/nwb/2.5.0/General": {
+      "x": 2117.989835617836,
+      "y": 1252.3061346673412
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_hdmf-experimental_0.5.0": {
+      "x": 383.2489132616298,
+      "y": -213.81911836907176
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_hdmf-experimental_0.5.0_resources": {
+      "x": 392.35828782069296,
+      "y": -253.5915059775954
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_ndx-events_0.2.1": {
+      "x": 398.9535924690852,
+      "y": -495.23124579786594
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_ndx-events_0.2.1_ndx-events.extensions": {
+      "x": 440.0949760595248,
+      "y": -546.2668633375293
+    },
+    "http://purl.org/nwb/2.5.0/_acquisition_ElectricalSeriesAPImec0_data": {
+      "x": -238.6717521402838,
+      "y": -732.2838978012862
+    },
+    "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_NeuropixelsImec0Shank2": {
+      "x": -14.862784814430553,
+      "y": 586.3630302218583
+    },
+    "http://purl.org/nwb/2.5.0/_acquisition_ElectricalSeriesAPImec1": {
+      "x": -259.0282905669545,
+      "y": -498.2791806300919
+    },
+    "http://purl.org/nwb/2.5.0/_general_extracellular_ephys": {
+      "x": -92.83320532712418,
+      "y": 508.5340112125085
+    },
+    "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_NeuropixelsImec0Shank1": {
+      "x": -230.6070175760725,
+      "y": 346.6463287438979
+    },
+    "http://purl.org/nwb/2.5.0/_general_subject_subject_id": {
+      "x": -145.707313499056,
+      "y": -106.56081207275528
+    },
+    "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_rel_x": {
+      "x": -244.7851163503779,
+      "y": 688.59122000912
+    },
+    "http://purl.org/nwb/2.5.0/_general_source_script": {
+      "x": -51.90019547073797,
+      "y": 281.20479732373065
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_ndx-events_0.2.1_namespace": {
+      "x": 369.68085857712373,
+      "y": -544.0769432279773
+    },
+    "http://purl.org/nwb/2.5.0/_acquisition_EventsNIDQDigitalChannelXD0_data": {
+      "x": 9.360581325735652,
+      "y": -353.0103909196438
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_hdmf-common_1.8.0": {
+      "x": 115.22031394750357,
+      "y": -482.2577749055662
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_hdmf-common_1.8.0_table": {
+      "x": 211.93229843761495,
+      "y": -511.83169215590607
+    },
+    "http://purl.org/nwb/2.5.0/_stimulus": {
+      "x": -45.51585865502047,
+      "y": -90.58890948306443
+    },
+    "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_contact_ids": {
+      "x": -325.62310461661355,
+      "y": 621.8804993793328
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_hdmf-experimental_0.5.0_experimental": {
+      "x": 454.8711694780926,
+      "y": -182.39834675037795
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.epoch": {
+      "x": 652.9598924856566,
+      "y": -620.9930054735146
+    },
+    "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_rel_y": {
+      "x": -322.4400356731378,
+      "y": 677.1225558110016
+    },
+    "http://purl.org/nwb/2.5.0/_timestamps_reference_time": {
+      "x": 106.07611415257787,
+      "y": -143.32604155451483
+    },
+    "http://purl.org/nwb/2.5.0/_specifications": {
+      "x": 249.0975281421,
+      "y": -351.03384830158734
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_core": {
+      "x": 459.83314924078525,
+      "y": -391.9449014192938
+    },
+    "http://purl.org/nwb/2.5.0/_intervals_epochs_block_id": {
+      "x": 416.3417536961925,
+      "y": -135.31426636174098
+    },
+    "http://purl.org/nwb/2.5.0/_session_description": {
+      "x": -2.9381738104219295,
+      "y": -103.75683811465872
+    },
+    "http://purl.org/nwb/2.5.0/_intervals_trials_odorant_id": {
+      "x": 279.2584092114063,
+      "y": 95.08114900272018
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.misc": {
+      "x": 628.0261128817293,
+      "y": -569.2244224004407
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.file": {
+      "x": 907.9160714681478,
+      "y": -417.61155024310756
+    },
+    "http://purl.org/nwb/2.5.0/_session_start_time": {
+      "x": 82.70277849195398,
+      "y": -230.20891416393417
+    },
+    "http://purl.org/nwb/2.5.0/_intervals_trials": {
+      "x": 340.6861045532699,
+      "y": 35.27144289741369
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.device": {
+      "x": 731.7569034658326,
+      "y": -582.4723304445391
+    },
+    "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_NeuropixelsImec0Shank0": {
+      "x": -93.27999739563307,
+      "y": 526.8859744573244
+    },
+    "http://purl.org/nwb/2.5.0/_acquisition_TimeSeriesNIDQ_starting_time": {
+      "x": -324.41203003929627,
+      "y": -335.0776329131712
+    },
+    "http://purl.org/nwb/2.5.0/_acquisition_TimeSeriesNIDQ_data": {
+      "x": -211.45175006182905,
+      "y": -347.6305212407971
+    },
+    "http://purl.org/nwb/2.5.0/_general_subject_sex": {
+      "x": 7.433402366327046,
+      "y": 503.05331494507595
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_hdmf-experimental": {
+      "x": 362.53658248409323,
+      "y": -300.88915615522774
+    },
+    "http://purl.org/nwb/2.5.0/_acquisition_EventsNIDQDigitalChannelXD3": {
+      "x": -263.96911743106926,
+      "y": -591.3656771658307
+    },
+    "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_NeuropixelsImec1Shank1": {
+      "x": -43.275167111545514,
+      "y": 640.7757642576332
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_hdmf-common": {
+      "x": 144.5876120080615,
+      "y": -376.9897342519445
+    },
+    "http://purl.org/nwb/2.5.0/_acquisition_EventsNIDQDigitalChannelXD2_timestamps": {
+      "x": -234.90617647075078,
+      "y": -680.0968140534414
+    },
+    "http://purl.org/nwb/2.5.0/Subject": {
+      "x": -933.0481352390607,
+      "y": -2617.9244296578827
+    },
+    "http://purl.org/nwb/2.5.0/_intervals_trials_id": {
+      "x": 278.67027617402624,
+      "y": 117.87286656687657
+    },
+    "http://purl.org/nwb/2.5.0/_intervals_trials_concentration": {
+      "x": 318.1553647389769,
+      "y": 221.6858581269248
+    },
+    "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_offset_to_physical_unit": {
+      "x": -273.71009138476023,
+      "y": 674.7329231046
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.behavior": {
+      "x": 811.7398773378649,
+      "y": -548.560048884744
+    },
+    "http://purl.org/nwb/2.5.0/_acquisition_EventsNIDQDigitalChannelXD0_timestamps": {
+      "x": -439.09651285951213,
+      "y": -476.63286494274075
+    },
+    "http://purl.org/nwb/2.5.0/_processing": {
+      "x": 75.78417814463322,
+      "y": -250.08086341774822
+    },
+    "http://purl.org/nwb/2.5.0/_general_session_id": {
+      "x": 45.441063368123736,
+      "y": 235.01265262499362
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_hdmf-common_1.8.0_base": {
+      "x": 3.3765662265165,
+      "y": -405.3915602510111
+    },
+    "http://purl.org/nwb/2.5.0/_intervals_epochs_start_time": {
+      "x": 250.51192350194364,
+      "y": -58.57836366119099
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_hdmf-common_1.8.0_namespace": {
+      "x": 62.05164396053449,
+      "y": -528.0090412054658
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.ogen": {
+      "x": 774.9444149308214,
+      "y": -495.371866909499
+    },
+    "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_physical_unit": {
+      "x": -261.5739246070884,
+      "y": 542.0182645709662
+    },
+    "http://purl.org/nwb/2.5.0/_general_extracellular_ephys_electrodes_channel_name": {
+      "x": -513.3178877200285,
+      "y": 904.400553264813
+    },
+    "http://purl.org/nwb/2.5.0/_intervals_trials_odorant": {
+      "x": 259.9494336555557,
+      "y": -146.58338048228276
+    },
+    "http://purl.org/nwb/2.5.0/_general_subject_species": {
+      "x": -212.32503040121347,
+      "y": 84.54457089753839
+    },
+    "http://purl.org/nwb/2.5.0/_intervals_epochs_block_details": {
+      "x": 610.8988808241298,
+      "y": -261.16819532861234
+    },
+    "http://purl.org/nwb/2.5.0/_specifications_core_2.8.0_nwb.ecephys": {
+      "x": 642.8995967848227,
+      "y": -530.4524689185492
+    },
+    "http://purl.org/nwb/2.5.0/_stimulus_templates": {
+      "x": -51.22508591259853,
+      "y": -24.04301911930346
+    }
+  },
+  "converged": false,
+  "iterations": 1000
+}

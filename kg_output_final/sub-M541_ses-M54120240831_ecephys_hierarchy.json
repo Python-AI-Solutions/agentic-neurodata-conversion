@@ -1,0 +1,773 @@
+{
+  "root": "/",
+  "groups": [
+    {
+      "name": "acquisition",
+      "path": "/acquisition",
+      "parent_path": "/"
+    },
+    {
+      "name": "ElectricalSeriesAPImec0",
+      "path": "/acquisition/ElectricalSeriesAPImec0",
+      "parent_path": "/acquisition"
+    },
+    {
+      "name": "ElectricalSeriesAPImec1",
+      "path": "/acquisition/ElectricalSeriesAPImec1",
+      "parent_path": "/acquisition"
+    },
+    {
+      "name": "EventsNIDQDigitalChannelXD0",
+      "path": "/acquisition/EventsNIDQDigitalChannelXD0",
+      "parent_path": "/acquisition"
+    },
+    {
+      "name": "EventsNIDQDigitalChannelXD2",
+      "path": "/acquisition/EventsNIDQDigitalChannelXD2",
+      "parent_path": "/acquisition"
+    },
+    {
+      "name": "EventsNIDQDigitalChannelXD3",
+      "path": "/acquisition/EventsNIDQDigitalChannelXD3",
+      "parent_path": "/acquisition"
+    },
+    {
+      "name": "TimeSeriesNIDQ",
+      "path": "/acquisition/TimeSeriesNIDQ",
+      "parent_path": "/acquisition"
+    },
+    {
+      "name": "analysis",
+      "path": "/analysis",
+      "parent_path": "/"
+    },
+    {
+      "name": "general",
+      "path": "/general",
+      "parent_path": "/"
+    },
+    {
+      "name": "devices",
+      "path": "/general/devices",
+      "parent_path": "/general"
+    },
+    {
+      "name": "NIDQBoard",
+      "path": "/general/devices/NIDQBoard",
+      "parent_path": "/general/devices"
+    },
+    {
+      "name": "NeuropixelsImec0",
+      "path": "/general/devices/NeuropixelsImec0",
+      "parent_path": "/general/devices"
+    },
+    {
+      "name": "NeuropixelsImec1",
+      "path": "/general/devices/NeuropixelsImec1",
+      "parent_path": "/general/devices"
+    },
+    {
+      "name": "extracellular_ephys",
+      "path": "/general/extracellular_ephys",
+      "parent_path": "/general"
+    },
+    {
+      "name": "NeuropixelsImec0Shank0",
+      "path": "/general/extracellular_ephys/NeuropixelsImec0Shank0",
+      "parent_path": "/general/extracellular_ephys"
+    },
+    {
+      "name": "NeuropixelsImec0Shank1",
+      "path": "/general/extracellular_ephys/NeuropixelsImec0Shank1",
+      "parent_path": "/general/extracellular_ephys"
+    },
+    {
+      "name": "NeuropixelsImec0Shank2",
+      "path": "/general/extracellular_ephys/NeuropixelsImec0Shank2",
+      "parent_path": "/general/extracellular_ephys"
+    },
+    {
+      "name": "NeuropixelsImec0Shank3",
+      "path": "/general/extracellular_ephys/NeuropixelsImec0Shank3",
+      "parent_path": "/general/extracellular_ephys"
+    },
+    {
+      "name": "NeuropixelsImec1Shank0",
+      "path": "/general/extracellular_ephys/NeuropixelsImec1Shank0",
+      "parent_path": "/general/extracellular_ephys"
+    },
+    {
+      "name": "NeuropixelsImec1Shank1",
+      "path": "/general/extracellular_ephys/NeuropixelsImec1Shank1",
+      "parent_path": "/general/extracellular_ephys"
+    },
+    {
+      "name": "NeuropixelsImec1Shank2",
+      "path": "/general/extracellular_ephys/NeuropixelsImec1Shank2",
+      "parent_path": "/general/extracellular_ephys"
+    },
+    {
+      "name": "NeuropixelsImec1Shank3",
+      "path": "/general/extracellular_ephys/NeuropixelsImec1Shank3",
+      "parent_path": "/general/extracellular_ephys"
+    },
+    {
+      "name": "electrodes",
+      "path": "/general/extracellular_ephys/electrodes",
+      "parent_path": "/general/extracellular_ephys"
+    },
+    {
+      "name": "subject",
+      "path": "/general/subject",
+      "parent_path": "/general"
+    },
+    {
+      "name": "intervals",
+      "path": "/intervals",
+      "parent_path": "/"
+    },
+    {
+      "name": "epochs",
+      "path": "/intervals/epochs",
+      "parent_path": "/intervals"
+    },
+    {
+      "name": "trials",
+      "path": "/intervals/trials",
+      "parent_path": "/intervals"
+    },
+    {
+      "name": "processing",
+      "path": "/processing",
+      "parent_path": "/"
+    },
+    {
+      "name": "specifications",
+      "path": "/specifications",
+      "parent_path": "/"
+    },
+    {
+      "name": "core",
+      "path": "/specifications/core",
+      "parent_path": "/specifications"
+    },
+    {
+      "name": "2.8.0",
+      "path": "/specifications/core/2.8.0",
+      "parent_path": "/specifications/core"
+    },
+    {
+      "name": "hdmf-common",
+      "path": "/specifications/hdmf-common",
+      "parent_path": "/specifications"
+    },
+    {
+      "name": "1.8.0",
+      "path": "/specifications/hdmf-common/1.8.0",
+      "parent_path": "/specifications/hdmf-common"
+    },
+    {
+      "name": "hdmf-experimental",
+      "path": "/specifications/hdmf-experimental",
+      "parent_path": "/specifications"
+    },
+    {
+      "name": "0.5.0",
+      "path": "/specifications/hdmf-experimental/0.5.0",
+      "parent_path": "/specifications/hdmf-experimental"
+    },
+    {
+      "name": "ndx-events",
+      "path": "/specifications/ndx-events",
+      "parent_path": "/specifications"
+    },
+    {
+      "name": "0.2.1",
+      "path": "/specifications/ndx-events/0.2.1",
+      "parent_path": "/specifications/ndx-events"
+    },
+    {
+      "name": "stimulus",
+      "path": "/stimulus",
+      "parent_path": "/"
+    },
+    {
+      "name": "presentation",
+      "path": "/stimulus/presentation",
+      "parent_path": "/stimulus"
+    },
+    {
+      "name": "templates",
+      "path": "/stimulus/templates",
+      "parent_path": "/stimulus"
+    }
+  ],
+  "datasets": [
+    {
+      "name": "data",
+      "path": "/acquisition/ElectricalSeriesAPImec0/data",
+      "shape": [
+        100,
+        384
+      ],
+      "dtype": "int16"
+    },
+    {
+      "name": "electrodes",
+      "path": "/acquisition/ElectricalSeriesAPImec0/electrodes",
+      "shape": [
+        384
+      ],
+      "dtype": "int64"
+    },
+    {
+      "name": "starting_time",
+      "path": "/acquisition/ElectricalSeriesAPImec0/starting_time",
+      "shape": [],
+      "dtype": "float64"
+    },
+    {
+      "name": "data",
+      "path": "/acquisition/ElectricalSeriesAPImec1/data",
+      "shape": [
+        100,
+        384
+      ],
+      "dtype": "int16"
+    },
+    {
+      "name": "electrodes",
+      "path": "/acquisition/ElectricalSeriesAPImec1/electrodes",
+      "shape": [
+        384
+      ],
+      "dtype": "int64"
+    },
+    {
+      "name": "starting_time",
+      "path": "/acquisition/ElectricalSeriesAPImec1/starting_time",
+      "shape": [],
+      "dtype": "float64"
+    },
+    {
+      "name": "data",
+      "path": "/acquisition/EventsNIDQDigitalChannelXD0/data",
+      "shape": [
+        12381
+      ],
+      "dtype": "uint64"
+    },
+    {
+      "name": "timestamps",
+      "path": "/acquisition/EventsNIDQDigitalChannelXD0/timestamps",
+      "shape": [
+        12381
+      ],
+      "dtype": "float64"
+    },
+    {
+      "name": "data",
+      "path": "/acquisition/EventsNIDQDigitalChannelXD2/data",
+      "shape": [
+        32124
+      ],
+      "dtype": "uint64"
+    },
+    {
+      "name": "timestamps",
+      "path": "/acquisition/EventsNIDQDigitalChannelXD2/timestamps",
+      "shape": [
+        32124
+      ],
+      "dtype": "float64"
+    },
+    {
+      "name": "data",
+      "path": "/acquisition/EventsNIDQDigitalChannelXD3/data",
+      "shape": [
+        32098
+      ],
+      "dtype": "uint64"
+    },
+    {
+      "name": "timestamps",
+      "path": "/acquisition/EventsNIDQDigitalChannelXD3/timestamps",
+      "shape": [
+        32098
+      ],
+      "dtype": "float64"
+    },
+    {
+      "name": "data",
+      "path": "/acquisition/TimeSeriesNIDQ/data",
+      "shape": [
+        100,
+        8
+      ],
+      "dtype": "int16"
+    },
+    {
+      "name": "starting_time",
+      "path": "/acquisition/TimeSeriesNIDQ/starting_time",
+      "shape": [],
+      "dtype": "float64"
+    },
+    {
+      "name": "file_create_date",
+      "path": "/file_create_date",
+      "shape": [
+        1
+      ],
+      "dtype": "object"
+    },
+    {
+      "name": "experimenter",
+      "path": "/general/experimenter",
+      "shape": [
+        1
+      ],
+      "dtype": "object"
+    },
+    {
+      "name": "channel_name",
+      "path": "/general/extracellular_ephys/electrodes/channel_name",
+      "shape": [
+        768
+      ],
+      "dtype": "object"
+    },
+    {
+      "name": "contact_ids",
+      "path": "/general/extracellular_ephys/electrodes/contact_ids",
+      "shape": [
+        768
+      ],
+      "dtype": "object"
+    },
+    {
+      "name": "contact_shapes",
+      "path": "/general/extracellular_ephys/electrodes/contact_shapes",
+      "shape": [
+        768
+      ],
+      "dtype": "object"
+    },
+    {
+      "name": "gain_to_physical_unit",
+      "path": "/general/extracellular_ephys/electrodes/gain_to_physical_unit",
+      "shape": [
+        768
+      ],
+      "dtype": "float64"
+    },
+    {
+      "name": "group",
+      "path": "/general/extracellular_ephys/electrodes/group",
+      "shape": [
+        768
+      ],
+      "dtype": "object"
+    },
+    {
+      "name": "group_name",
+      "path": "/general/extracellular_ephys/electrodes/group_name",
+      "shape": [
+        768
+      ],
+      "dtype": "object"
+    },
+    {
+      "name": "id",
+      "path": "/general/extracellular_ephys/electrodes/id",
+      "shape": [
+        768
+      ],
+      "dtype": "int64"
+    },
+    {
+      "name": "inter_sample_shift",
+      "path": "/general/extracellular_ephys/electrodes/inter_sample_shift",
+      "shape": [
+        768
+      ],
+      "dtype": "float64"
+    },
+    {
+      "name": "location",
+      "path": "/general/extracellular_ephys/electrodes/location",
+      "shape": [
+        768
+      ],
+      "dtype": "object"
+    },
+    {
+      "name": "offset_to_physical_unit",
+      "path": "/general/extracellular_ephys/electrodes/offset_to_physical_unit",
+      "shape": [
+        768
+      ],
+      "dtype": "float64"
+    },
+    {
+      "name": "physical_unit",
+      "path": "/general/extracellular_ephys/electrodes/physical_unit",
+      "shape": [
+        768
+      ],
+      "dtype": "object"
+    },
+    {
+      "name": "rel_x",
+      "path": "/general/extracellular_ephys/electrodes/rel_x",
+      "shape": [
+        768
+      ],
+      "dtype": "float64"
+    },
+    {
+      "name": "rel_y",
+      "path": "/general/extracellular_ephys/electrodes/rel_y",
+      "shape": [
+        768
+      ],
+      "dtype": "float64"
+    },
+    {
+      "name": "shank_ids",
+      "path": "/general/extracellular_ephys/electrodes/shank_ids",
+      "shape": [
+        768
+      ],
+      "dtype": "object"
+    },
+    {
+      "name": "session_id",
+      "path": "/general/session_id",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "source_script",
+      "path": "/general/source_script",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "sex",
+      "path": "/general/subject/sex",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "species",
+      "path": "/general/subject/species",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "strain",
+      "path": "/general/subject/strain",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "subject_id",
+      "path": "/general/subject/subject_id",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "identifier",
+      "path": "/identifier",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "block_details",
+      "path": "/intervals/epochs/block_details",
+      "shape": [
+        3
+      ],
+      "dtype": "object"
+    },
+    {
+      "name": "block_id",
+      "path": "/intervals/epochs/block_id",
+      "shape": [
+        3
+      ],
+      "dtype": "object"
+    },
+    {
+      "name": "id",
+      "path": "/intervals/epochs/id",
+      "shape": [
+        3
+      ],
+      "dtype": "int64"
+    },
+    {
+      "name": "start_time",
+      "path": "/intervals/epochs/start_time",
+      "shape": [
+        3
+      ],
+      "dtype": "float64"
+    },
+    {
+      "name": "stop_time",
+      "path": "/intervals/epochs/stop_time",
+      "shape": [
+        3
+      ],
+      "dtype": "float64"
+    },
+    {
+      "name": "concentration",
+      "path": "/intervals/trials/concentration",
+      "shape": [
+        1212
+      ],
+      "dtype": "float64"
+    },
+    {
+      "name": "id",
+      "path": "/intervals/trials/id",
+      "shape": [
+        1212
+      ],
+      "dtype": "int64"
+    },
+    {
+      "name": "odorant",
+      "path": "/intervals/trials/odorant",
+      "shape": [
+        1212
+      ],
+      "dtype": "object"
+    },
+    {
+      "name": "odorant_id",
+      "path": "/intervals/trials/odorant_id",
+      "shape": [
+        1212
+      ],
+      "dtype": "object"
+    },
+    {
+      "name": "start_time",
+      "path": "/intervals/trials/start_time",
+      "shape": [
+        1212
+      ],
+      "dtype": "float64"
+    },
+    {
+      "name": "stop_time",
+      "path": "/intervals/trials/stop_time",
+      "shape": [
+        1212
+      ],
+      "dtype": "float64"
+    },
+    {
+      "name": "session_description",
+      "path": "/session_description",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "session_start_time",
+      "path": "/session_start_time",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "namespace",
+      "path": "/specifications/core/2.8.0/namespace",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "nwb.base",
+      "path": "/specifications/core/2.8.0/nwb.base",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "nwb.behavior",
+      "path": "/specifications/core/2.8.0/nwb.behavior",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "nwb.device",
+      "path": "/specifications/core/2.8.0/nwb.device",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "nwb.ecephys",
+      "path": "/specifications/core/2.8.0/nwb.ecephys",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "nwb.epoch",
+      "path": "/specifications/core/2.8.0/nwb.epoch",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "nwb.file",
+      "path": "/specifications/core/2.8.0/nwb.file",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "nwb.icephys",
+      "path": "/specifications/core/2.8.0/nwb.icephys",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "nwb.image",
+      "path": "/specifications/core/2.8.0/nwb.image",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "nwb.misc",
+      "path": "/specifications/core/2.8.0/nwb.misc",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "nwb.ogen",
+      "path": "/specifications/core/2.8.0/nwb.ogen",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "nwb.ophys",
+      "path": "/specifications/core/2.8.0/nwb.ophys",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "nwb.retinotopy",
+      "path": "/specifications/core/2.8.0/nwb.retinotopy",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "base",
+      "path": "/specifications/hdmf-common/1.8.0/base",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "namespace",
+      "path": "/specifications/hdmf-common/1.8.0/namespace",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "sparse",
+      "path": "/specifications/hdmf-common/1.8.0/sparse",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "table",
+      "path": "/specifications/hdmf-common/1.8.0/table",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "experimental",
+      "path": "/specifications/hdmf-experimental/0.5.0/experimental",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "namespace",
+      "path": "/specifications/hdmf-experimental/0.5.0/namespace",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "resources",
+      "path": "/specifications/hdmf-experimental/0.5.0/resources",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "namespace",
+      "path": "/specifications/ndx-events/0.2.1/namespace",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "ndx-events.extensions",
+      "path": "/specifications/ndx-events/0.2.1/ndx-events.extensions",
+      "shape": [],
+      "dtype": "object"
+    },
+    {
+      "name": "timestamps_reference_time",
+      "path": "/timestamps_reference_time",
+      "shape": [],
+      "dtype": "object"
+    }
+  ],
+  "links": [
+    {
+      "name": "device",
+      "path": "/general/extracellular_ephys/NeuropixelsImec0Shank0/device",
+      "type": "soft"
+    },
+    {
+      "name": "device",
+      "path": "/general/extracellular_ephys/NeuropixelsImec0Shank1/device",
+      "type": "soft"
+    },
+    {
+      "name": "device",
+      "path": "/general/extracellular_ephys/NeuropixelsImec0Shank2/device",
+      "type": "soft"
+    },
+    {
+      "name": "device",
+      "path": "/general/extracellular_ephys/NeuropixelsImec0Shank3/device",
+      "type": "soft"
+    },
+    {
+      "name": "device",
+      "path": "/general/extracellular_ephys/NeuropixelsImec1Shank0/device",
+      "type": "soft"
+    },
+    {
+      "name": "device",
+      "path": "/general/extracellular_ephys/NeuropixelsImec1Shank1/device",
+      "type": "soft"
+    },
+    {
+      "name": "device",
+      "path": "/general/extracellular_ephys/NeuropixelsImec1Shank2/device",
+      "type": "soft"
+    },
+    {
+      "name": "device",
+      "path": "/general/extracellular_ephys/NeuropixelsImec1Shank3/device",
+      "type": "soft"
+    }
+  ],
+  "attributes": {
+    ".specloc": "<Reference: <HDF5 object reference>>",
+    "namespace": "core",
+    "neurodata_type": "NWBFile",
+    "nwb_version": "2.8.0",
+    "object_id": "8dbcd99b-9af0-4e8b-8dba-ad8068c751a0"
+  }
+}

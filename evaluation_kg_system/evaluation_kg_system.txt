@@ -1,0 +1,836 @@
+# Comprehensive NWB File Analysis and Knowledge Graph Generation System - Final Specification
+
+## Project Overview
+Create a robust, production-ready Python application that performs deep analysis of Neurodata Without Borders (NWB) files, generates comprehensive evaluation reports, converts to LinkML format using the official NWB LinkML schema, and constructs ontology-based knowledge graphs with multiple output formats for visualization and semantic web integration.
+
+## Core Requirements
+
+### 1. Input Processing
+- Accept NWB (Neurodata Without Borders) files as input via command-line argument or interactive file selection
+- Support both NWB 2.x formats (HDF5-based)
+- Validate file integrity before processing
+- Handle large files efficiently with streaming/chunked reading where appropriate
+- Provide clear error messages for invalid or corrupted files
+
+### 2. NWB File Inspection and Evaluation
+
+#### Deep Hierarchical Parsing
+- Traverse the entire HDF5 hierarchical structure recursively
+- Extract ALL data at every level:
+  - Root-level metadata (session information, experimenter, institution, etc.)
+  - Groups and subgroups (acquisition, processing, analysis, epochs, trials, etc.)
+  - Datasets (timeseries data, spatial data, behavioral data)
+  - Attributes at every level (units, descriptions, comments, custom metadata)
+  - Links and references between objects
+  - Data types and shapes for all datasets
+  - Compression information and storage layout
+
+#### NWB Inspector Integration
+- Integrate the official `nwbinspector` Python package
+- Run comprehensive validation checks:
+  - Best practices compliance
+  - Schema validation
+  - Data integrity checks
+  - Metadata completeness
+  - File organization standards
+  - Temporal alignment validation
+  - Unit consistency
+- Capture all warnings, errors, and informational messages
+- Categorize issues by severity (critical, warning, info)
+
+#### Evaluation Report Generation
+Create a detailed, structured report containing:
+- **Executive Summary**: File statistics, overall health score, critical issues count
+- **File Structure Overview**: Visual tree representation of the HDF5 hierarchy
+- **Metadata Analysis**: Complete extraction of session, subject, and experimental metadata
+- **Data Inventory**: List of all timeseries, spatial series, behavioral data with dimensions and types
+- **Validation Results**: Detailed findings from NWB Inspector organized by category
+- **Quality Metrics**: Completeness scores, schema compliance percentage, data coverage
+- **Recommendations**: Specific actionable items to improve file quality
+- **Technical Details**: File size, compression ratios, internal links count
+- Output formats: JSON (machine-readable), HTML (human-readable with styling), and plain text
+
+### 3. LinkML Schema Conversion Using Official NWB LinkML Schema
+
+#### Critical Requirement: Use Official NWB LinkML Schema
+**The system MUST use the official NWB LinkML schema definitions rather than creating custom schemas.**
+
+- **Schema Source**: Utilize the official NWB LinkML schema from the NWB specification repository
+  - Repository: https://github.com/linkml/linkml-model or NWB's official LinkML schema repo
+  - The NWB LinkML schema already defines all core NWB types, relationships, and constraints
+  - Download or clone the official schema files during installation or reference them programmatically
+
+#### Schema Loading and Validation
+- Load the official NWB LinkML schema files (YAML format)
+- Parse schema to understand:
+  - All defined classes (TimeSeries, ElectricalSeries, Subject, Device, etc.)
+  - Class hierarchies and inheritance relationships
+  - Slot definitions (properties/attributes)
+  - Type constraints and value ranges
+  - Cardinality rules (required, optional, multivalued)
+  - Relationship semantics
+- Validate that the input NWB file conforms to the expected schema structure
+- Identify any custom extensions or deviations from the standard schema
+
+#### Data Transformation to LinkML Format
+- Map NWB file contents to LinkML instances following the official schema:
+  - Parse HDF5 groups and datasets
+  - Identify neurodata_type of each object
+  - Match to corresponding LinkML class from official schema
+  - Extract attributes and map to LinkML slots
+  - Preserve all references and relationships as defined in schema
+  - Handle inheritance (e.g., ElectricalSeries inherits from TimeSeries)
+  
+- **Mapping Strategy**:
+  - Root NWB file → NWBFile class instance
+  - Subject group → Subject class instance
+  - Each TimeSeries variant → Corresponding TimeSeries subclass
+  - Devices → Device class instances
+  - ElectrodeGroups → ElectrodeGroup class instances
+  - DynamicTable rows → Individual class instances with properties
+  - All relationships preserved through LinkML association slots
+
+- Handle complex data types:
+  - Arrays: Summarize or serialize appropriately
+  - References: Convert to LinkML foreign key relationships
+  - Compound types: Map to complex slot structures
+  - Units and dimensions: Preserve as metadata
+
+- **Output Formats**:
+  - JSON-LD: LinkML data instances in JSON-LD format (RDF-compatible)
+  - YAML: LinkML data instances in YAML format
+  - Validate output against the official NWB LinkML schema using LinkML validators
+
+#### Extension Handling
+- If NWB file contains custom extensions not in official schema:
+  - Document the extensions found
+  - Attempt to map to closest official schema classes
+  - Generate supplementary schema definitions for extensions if necessary
+  - Include extension metadata in outputs
+  - Flag extensions in evaluation report
+
+### 4. RDF/TTL Generation from LinkML Data
+
+#### LinkML to RDF Conversion Process
+**The TTL (Turtle) file must be generated from the LinkML representation, not directly from NWB file.**
+
+- Use LinkML's built-in RDF generation capabilities:
+  - LinkML provides automatic RDF/OWL generation from schemas
+  - LinkML data instances can be serialized as RDF triples
+  - Leverage linkml-runtime or linkml-model for conversion
+
+- **Conversion Pipeline**:
+  1. NWB File → Parse with PyNWB
+  2. Map to LinkML instances using official NWB LinkML schema
+  3. Validate LinkML instances against schema
+  4. Serialize LinkML instances to RDF/TTL format
+  5. Include ontology definitions from LinkML schema
+  6. Generate comprehensive TTL file
+
+#### TTL File Content Structure
+- **Ontology Definitions** (from NWB LinkML Schema):
+  - Class definitions (owl:Class) for all NWB types
+  - Property definitions (owl:ObjectProperty, owl:DatatypeProperty)
+  - Class hierarchies (rdfs:subClassOf)
+  - Domain and range restrictions
+  - Cardinality constraints
+  - Annotations and documentation
+
+- **Instance Data** (from specific NWB file):
+  - Individual entities as RDF resources
+  - Type assertions (rdf:type)
+  - Property values (data properties)
+  - Relationships (object properties)
+  - Temporal, spatial, and quantitative data
+  - Provenance metadata
+
+- **Namespace Definitions**:
+  ```turtle
+  @prefix nwb: <http://purl.org/nwb#> .
+  @prefix linkml: <https://w3id.org/linkml/> .
+  @prefix schema: <http://schema.org/> .
+  @prefix dcterms: <http://purl.org/dc/terms/> .
+  @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+  @prefix owl: <http://www.w3.org/2002/07/owl#> .
+  @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+  ```
+
+- **Quality Assurance**:
+  - Validate generated TTL against RDF/OWL specifications
+  - Ensure all references resolve correctly
+  - Test loading in RDF triple stores (e.g., Apache Jena, Blazegraph)
+  - Verify SPARQL query capability
+
+### 5. Knowledge Graph Construction from LinkML/TTL
+
+#### Graph Building Strategy
+**The knowledge graph must be constructed from the LinkML representation and/or the generated TTL file, NOT directly from the NWB file.**
+
+- **Source for Graph Construction**:
+  - Primary: Parse the generated TTL file using RDF libraries
+  - Alternative: Use the LinkML data instances directly
+  - Both approaches should produce equivalent graphs
+
+#### Graph Construction from TTL
+
+- **Parse TTL File**:
+  - Use rdflib to load and parse the TTL file
+  - Extract all RDF triples (subject, predicate, object)
+  - Build in-memory graph representation
+
+- **Node Creation**:
+  - Each RDF resource (URI) becomes a graph node
+  - Node ID: Use RDF URI or generate clean identifier
+  - Node Label: Extract from rdfs:label or resource name
+  - Node Type: Extract from rdf:type assertions
+  - Node Properties: Collect all data property values
+    - Literals become node attributes
+    - Include datatype and language tags
+    - Preserve units and dimensions from NWB schema
+
+- **Edge Creation**:
+  - Each RDF object property becomes a graph edge
+  - Edge connects subject node to object node
+  - Edge Label: Use property URI or rdfs:label
+  - Edge Type: Categorize by property type
+  - Edge Properties: Include relationship metadata
+    - Temporal context
+    - Confidence or provenance
+    - Any reified relationship attributes
+
+- **Ontology Integration**:
+  - Include class hierarchy as graph structure
+  - Create "subClassOf" edges for taxonomy
+  - Preserve domain/range constraints as metadata
+  - Include property hierarchies if present
+
+#### Graph Enrichment
+
+- **Inferred Relationships**:
+  - Apply OWL reasoning rules (optional):
+    - Transitive properties
+    - Symmetric properties
+    - Inverse properties
+    - Property chains
+  - Mark inferred edges distinctly from asserted edges
+
+- **Graph Analytics**:
+  - Compute node importance (degree centrality, betweenness)
+  - Identify communities/clusters
+  - Calculate graph statistics (density, diameter, clustering coefficient)
+  - Find key hub nodes
+  - Detect strongly connected components
+
+- **Semantic Enhancement**:
+  - Annotate nodes with schema documentation
+  - Add human-readable descriptions from ontology
+  - Include provenance: "derived from NWB file X on date Y"
+  - Link to external ontologies (NCIT, OBI, PATO) if applicable
+
+#### Graph Structure Requirements
+
+- **Completeness**: 
+  - Every entity in the NWB file must appear as a node
+  - Every reference/relationship must appear as an edge
+  - All metadata must be preserved as properties
+  - No information loss from LinkML → Graph transformation
+
+- **Fidelity**:
+  - Maintain semantic accuracy from NWB LinkML schema
+  - Preserve cardinality and constraints
+  - Keep type hierarchies intact
+  - Ensure bidirectional navigation where appropriate
+
+- **Organization**:
+  - Group related nodes (e.g., all electrodes, all timeseries)
+  - Maintain temporal ordering for time-dependent data
+  - Preserve spatial hierarchies (brain regions, electrode locations)
+  - Clear separation of metadata, data, and provenance layers
+
+### 6. Knowledge Graph Output Formats
+
+#### TTL (Turtle) File
+- Generated from LinkML as described in Section 4
+- Contains complete ontology + instance data
+- Validated against RDF/OWL specifications
+- Loadable into semantic web tools and triple stores
+
+#### Graph Metadata JSON
+- Export graph statistics and structure summary:
+  - Node count by type
+  - Edge count by relationship type
+  - Schema version used
+  - Generation timestamp
+  - Source NWB file information
+  - LinkML schema version
+  - Graph metrics (density, average degree, etc.)
+
+#### Interactive HTML Visualization
+
+**Minimal External Dependencies Philosophy:**
+- Create a **single, self-contained HTML file** that works offline
+- Use only **vanilla JavaScript** (ES6+) - no external libraries required
+- All visualization code embedded directly in the HTML
+- Use native browser APIs: Canvas API or SVG for rendering
+- Optional: Include a single, small, embedded visualization library if absolutely necessary (minified, inline)
+- CSS for styling embedded in `<style>` tags
+- All graph data embedded as JSON in `<script>` tags derived from LinkML/TTL
+
+**Graph Data Preparation for Visualization**:
+- Parse TTL file to extract nodes and edges
+- Convert RDF resources to visualization-friendly JSON format
+- Include all properties from LinkML instances
+- Organize data for efficient rendering
+
+**Core Visualization Features**:
+
+1. **Interactive Graph Rendering**:
+   - Canvas-based or SVG-based rendering
+   - Force-directed layout algorithm in vanilla JavaScript
+   - Pan: Click and drag background
+   - Zoom: Mouse wheel or touch gestures
+   - Drag nodes: Click and drag to reposition
+   - Smooth animations
+   - Auto-fit button to reset view
+
+2. **Node Styling**:
+   - Color-coded by NWB class type (Subject, Session, TimeSeries, Device, etc.)
+   - Size proportional to importance (connection count, data volume)
+   - Shape variations for categories
+   - Border indicates validation status or data quality
+   - Node labels (abbreviated, full on hover)
+
+3. **Edge Styling**:
+   - Different colors for relationship types
+   - Line styles (solid, dashed) for different semantics
+   - Arrows for directed relationships
+   - Thickness proportional to relationship importance
+   - Curved lines for multiple edges between nodes
+
+4. **Advanced Hover/Tooltip System** ⭐:
+   
+   **For Nodes:**
+   - Rich tooltip showing:
+     - Node ID and label
+     - NWB class type (from LinkML schema)
+     - **All properties from LinkML instance**:
+       - Property name: value
+       - Data types
+       - Units (if applicable)
+       - Nested/complex properties (expandable)
+     - Schema documentation (from LinkML)
+     - Statistics: array shapes, value ranges
+     - Validation status
+     - Connection count
+   - Smart positioning (avoid viewport edges)
+   - Scrollable for long property lists
+   - Professional card-like design
+   - Syntax highlighting for complex values
+
+   **For Edges:**
+   - Connection tooltip showing:
+     - Relationship type (predicate from RDF)
+     - Source → Target (with labels)
+     - **All edge properties**:
+       - Temporal information
+       - Provenance metadata
+       - Relationship context from schema
+     - Directionality indicator
+     - Semantic description
+   - Positioned along edge path
+   - Compact but readable
+
+   **Tooltip Interaction**:
+   - Fade in/out transitions (200-300ms)
+   - 500ms hover delay to avoid flickering
+   - Click to "pin" tooltip (stays visible)
+   - One pinned tooltip at a time
+   - Close button for pinned tooltips
+   - Proper z-index management
+   - "Show more" for truncated long values
+
+5. **Search and Filter**:
+   - Search box: Find by ID, label, or property value
+   - Real-time highlighting
+   - Filter by node type (checkboxes)
+   - Filter by property values
+   - Connection count slider
+   - Clear filters button
+   - Results counter
+
+6. **Layout Options**:
+   - Dropdown menu:
+     - Force-directed (default)
+     - Hierarchical (tree, top-down or left-right)
+     - Circular
+     - Grid
+   - Re-layout button
+   - Freeze layout toggle
+
+7. **Control Panel**:
+   - Collapsible sidebar with:
+     - **Legend**: Colors, shapes, edge types
+     - **Statistics**:
+       - Total nodes/edges
+       - Breakdown by type
+       - Average connections
+       - Graph density
+     - **Settings**:
+       - Show/hide labels
+       - Adjust node size
+       - Adjust edge thickness
+       - Animation speed
+       - Physics strength
+   - Floating toolbar:
+     - Zoom controls
+     - Fit to screen
+     - Export as PNG
+     - Fullscreen toggle
+
+8. **Selection and Highlighting**:
+   - Click to select node
+   - Multi-select (Ctrl+Click, Shift+Click)
+   - Highlight connected edges and neighbors
+   - Show shortest path between two nodes
+   - Selection info panel
+
+9. **Performance Optimization**:
+   - Level-of-detail rendering
+   - Viewport culling
+   - Quadtree for hit detection
+   - RequestAnimationFrame
+   - Web Workers for layout (optional)
+   - Configurable quality vs. performance
+
+10. **Responsive Design**:
+    - Desktop (mouse) and tablet (touch) support
+    - Touch gestures: pinch zoom, two-finger pan
+    - Adapts to screen sizes
+    - Mobile-friendly controls
+    - Collapsible panels on small screens
+
+11. **Data Export**:
+    - Export graph image (PNG)
+    - Export visible data (JSON)
+    - Copy node info button
+
+12. **Accessibility**:
+    - Keyboard navigation
+    - ARIA labels
+    - High contrast mode
+    - Configurable fonts
+    - Focus indicators
+
+**HTML File Structure**:
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NWB Knowledge Graph - [filename]</title>
+    <style>
+        /* All CSS embedded here */
+    </style>
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>NWB Knowledge Graph (from LinkML Schema)</h1>
+            <div id="file-info"></div>
+        </header>
+        
+        <div id="main-container">
+            <div id="graph-container">
+                <canvas id="graph-canvas"></canvas>
+                <svg id="ui-overlay"></svg>
+            </div>
+            
+            <aside id="control-panel">
+                <!-- Controls, legend, stats -->
+            </aside>
+        </div>
+        
+        <div id="tooltip" class="tooltip hidden"></div>
+        <div id="toolbar"><!-- Floating tools --></div>
+    </div>
+    
+    <!-- Graph data from TTL/LinkML -->
+    <script type="application/json" id="graph-data">
+        {
+            "metadata": {
+                "source": "experiment.nwb",
+                "linkml_schema_version": "2.5.0",
+                "generated": "2025-09-30T10:30:00Z"
+            },
+            "nodes": [...],  // From RDF resources
+            "edges": [...]   // From RDF triples
+        }
+    </script>
+    
+    <!-- All JavaScript embedded -->
+    <script>
+        // Complete visualization engine
+        // No external dependencies
+    </script>
+</body>
+</html>
+```
+
+**Graph Data JSON Format** (derived from TTL):
+```json
+{
+  "metadata": {
+    "source_file": "experiment_001.nwb",
+    "linkml_schema": "nwb-schema-2.5.0",
+    "ttl_source": "experiment_001_kg.ttl",
+    "generated": "2025-09-30T10:30:00Z",
+    "node_count": 150,
+    "edge_count": 287
+  },
+  "nodes": [
+    {
+      "id": "nwb:Session_001",
+      "label": "Session_2024-01-15",
+      "type": "NWBFile",  // From LinkML class
+      "rdf_type": "nwb:NWBFile",
+      "properties": {
+        // All from LinkML instance
+        "session_id": "2024-01-15_mouse_001",
+        "session_description": "Visual cortex recording",
+        "session_start_time": {
+          "value": "2024-01-15T09:00:00Z",
+          "datatype": "xsd:dateTime"
+        },
+        "experimenter": ["Dr. Smith"],
+        "lab": "Neural Dynamics Lab",
+        "institution": "University XYZ"
+      },
+      "schema_doc": "Top-level NWB file object...",
+      "visual": {
+        "x": 100, "y": 200,
+        "color": "#3498db",
+        "size": 12,
+        "shape": "circle"
+      }
+    },
+    {
+      "id": "nwb:Subject_mouse001",
+      "label": "mouse_001",
+      "type": "Subject",
+      "rdf_type": "nwb:Subject",
+      "properties": {
+        "subject_id": "mouse_001",
+        "species": "Mus musculus",
+        "age": "P60",
+        "sex": "M"
+      },
+      "visual": {...}
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_1",
+      "source": "nwb:Session_001",
+      "target": "nwb:Subject_mouse001",
+      "label": "subject",
+      "type": "nwb:subject",  // From LinkML schema relationship
+      "predicate": "nwb:hasSubject",
+      "properties": {
+        "schema_domain": "NWBFile",
+        "schema_range": "Subject",
+        "required": true
+      },
+      "visual": {
+        "color": "#95a5a6",
+        "thickness": 2,
+        "style": "solid",
+        "arrow": true
+      }
+    }
+  ]
+}
+```
+
+### 7. Technical Implementation Requirements
+
+#### Technology Stack
+- **Primary Language**: Python 3.8+
+- **Required Libraries**:
+  - `pynwb` - NWB file reading
+  - `h5py` - Low-level HDF5 access
+  - `nwbinspector` - Validation
+  - **`linkml-runtime`** - LinkML schema handling and validation
+  - **`linkml-model`** - LinkML to RDF conversion
+  - `rdflib` - RDF/TTL parsing and generation
+  - `networkx` - Graph algorithms
+  - `jinja2` - HTML templating
+  - `pyyaml`, `jsonschema` - Data handling
+  - Standard library: `argparse`, `logging`, `pathlib`, `json`, `datetime`
+
+#### Code Architecture
+Modular design:
+- `nwb_loader.py` - Load and validate NWB files
+- `inspector_runner.py` - Run NWB Inspector
+- `hierarchical_parser.py` - Deep HDF5 traversal
+- **`linkml_converter.py`** - Map NWB to LinkML using official schema
+- **`linkml_schema_loader.py`** - Load and manage official NWB LinkML schema
+- **`ttl_generator.py`** - Generate TTL from LinkML instances
+- **`graph_constructor.py`** - Build graph from TTL/LinkML
+- `html_generator.py` - Generate self-contained HTML visualization
+- `visualization_engine.py` - Embed graph layouts
+- `report_generator.py` - Create evaluation reports
+- `main.py` - CLI orchestration
+
+Key implementation notes:
+- Use object-oriented design
+- Proper error handling and logging
+- Comprehensive docstrings
+- Type hints throughout
+
+#### Processing Pipeline
+
+**Complete Data Flow**:
+```
+NWB File (HDF5)
+    ↓
+[NWB Loader + Inspector]
+    ↓
+Deep Hierarchical Parse
+    ↓
+[Evaluation Report Generation]
+    ↓
+Load Official NWB LinkML Schema
+    ↓
+Map NWB Data → LinkML Instances
+    ↓
+Validate against LinkML Schema
+    ↓
+[LinkML Outputs: JSON-LD, YAML]
+    ↓
+Convert LinkML → RDF/TTL
+    ↓
+[TTL File Output]
+    ↓
+Parse TTL → Graph Structure
+    ↓
+Enrich Graph (analytics, inference)
+    ↓
+[HTML Visualization Generation]
+    ↓
+Final Outputs:
+- Evaluation Reports (JSON, HTML, TXT)
+- LinkML Data (JSON-LD, YAML)
+- TTL File (complete RDF graph)
+- HTML Visualization (interactive, self-contained)
+- Metadata JSON
+- Logs
+```
+
+#### Performance Considerations
+- Handle GB-scale files efficiently
+- Use generators and iterators
+- Progress indicators for long operations
+- Cache intermediate results
+- Parallel processing where beneficial
+- Optimize for thousands of graph nodes
+- Limit visualization display (configurable max nodes)
+
+#### Robustness
+- Validate at each stage
+- Handle missing/malformed data gracefully
+- Informative error messages
+- Comprehensive logging (DEBUG, INFO, WARNING, ERROR)
+- Continue on non-critical issues
+- Generate partial outputs if processing fails
+- Include diagnostics in outputs
+
+### 8. Output Deliverables
+
+For each NWB file:
+
+1. **Evaluation Reports**:
+   - `{filename}_evaluation_report.json`
+   - `{filename}_evaluation_report.html`
+   - `{filename}_evaluation_report.txt`
+
+2. **LinkML Outputs**:
+   - `{filename}_linkml_data.json` - LinkML instances (JSON-LD format)
+   - `{filename}_linkml_data.yaml` - LinkML instances (YAML format)
+   - Documentation of schema version used
+
+3. **Knowledge Graph Outputs**:
+   - `{filename}_knowledge_graph.ttl` - Complete RDF graph (from LinkML)
+   - `{filename}_knowledge_graph.html` - Interactive visualization (self-contained)
+   - `{filename}_ontology.ttl` - Ontology definitions only (optional)
+   - `{filename}_graph_metadata.json` - Graph statistics
+
+4. **Log Files**:
+   - `{filename}_processing.log`
+
+### 9. Command-Line Interface
+
+```bash
+python nwb_analyzer.py <path_to_nwb_file> [options]
+
+Options:
+  --output-dir DIR          Output directory (default: ./output)
+  --linkml-schema PATH      Path to NWB LinkML schema (default: auto-download official)
+  --report-formats FORMATS  Comma-separated: json,html,txt (default: all)
+  --skip-inspector          Skip NWB Inspector validation
+  --skip-linkml             Skip LinkML conversion
+  --skip-kg                 Skip knowledge graph generation
+  --skip-visualization      Skip HTML visualization generation
+  --graph-layout LAYOUT     Default viz layout: force|hierarchical|circular
+  --max-viz-nodes NUM       Max nodes in visualization (default: 1000)
+  --enable-reasoning        Apply OWL reasoning to infer relationships
+  --log-level LEVEL         Logging: DEBUG|INFO|WARNING|ERROR
+  --config FILE             Configuration file (JSON/YAML)
+  --help                    Show help
+```
+
+### 10. Configuration File Support
+
+Optional JSON/YAML configuration:
+- Official LinkML schema source/version
+- Custom namespace definitions
+- Node coloring rules by NWB class
+- Property display preferences
+- Graph layout parameters
+- Visualization settings
+- Reasoning rules to apply
+- Output preferences
+- Performance tuning
+
+### 11. Documentation Requirements
+
+- **README.md**: Installation, usage, architecture, data flow
+- **API Documentation**: All modules with examples
+- **LinkML Integration Guide**: How official schema is used
+- **Visualization User Guide**: Interacting with HTML output
+- **Configuration Examples**: Sample config files
+- **Troubleshooting Guide**: Common issues
+- **Performance Tuning**: Optimization for large files
+- **Contribution Guidelines**: For developers
+- **Example Outputs**: Screenshots, sample files
+
+### 12. Quality Assurance
+
+- Unit tests for each module
+- Integration tests with diverse NWB files
+- Test various NWB types: ecephys, ophys, icephys, behavior
+- **Validate LinkML outputs** against official schema
+- **Validate TTL** with RDF validators and triple stores
+- **Test HTML** in major browsers (Chrome, Firefox, Safari, Edge)
+- Test visualization with varying graph sizes (10, 100, 1000+ nodes)
+- Test tooltip rendering on different devices
+- Verify graph accurately represents LinkML/TTL content
+- Benchmark performance with large files
+- Code coverage ≥80%
+
+### 13. Success Criteria
+
+The system successfully:
+1. Processes any valid NWB 2.x file without errors
+2. Correctly maps NWB data to official LinkML schema
+3. Generates valid LinkML instances that pass schema validation
+4. Produces valid, loadable TTL files from LinkML
+5. Constructs accurate knowledge graphs from TTL/LinkML
+6. Creates self-contained, functional HTML visualizations
+7. Displays comprehensive properties on hover (nodes and edges)
+8. Maintains semantic fidelity: NWB → LinkML → TTL → Graph
+9. Produces accurate evaluation reports
+10. Adapts to NWB extensions while using official schema as base
+11. Completes 1GB file processing in reasonable time (<15 minutes)
+12. HTML works offline without external dependencies
+13. Provides actionable data quality insights
+
+---
+
+## Implementation Phases
+
+**Phase 1: Core Infrastructure**
+- NWB file loading and validation
+- Deep HDF5 hierarchical parsing
+- Logging and error handling
+
+**Phase 2: Inspection and Reporting**
+- NWB Inspector integration
+- Evaluation report generation (all formats)
+- File structure visualization
+
+**Phase 3: LinkML Integration** ⭐
+- Load official NWB LinkML schema
+- Map NWB data to LinkML classes
+- Generate LinkML instances
+- Validate against schema
+- Output JSON-LD and YAML
+
+**Phase 4: RDF/TTL Generation** ⭐
+- Convert LinkML instances to RDF
+- Generate TTL file with ontology + data
+- Validate TTL output
+- Test with triple stores
+
+**Phase 5: Knowledge Graph Construction** ⭐
+- Parse TTL into graph structure
+- Extract nodes from RDF resources
+- Extract edges from RDF triples
+- Preserve all properties and relationships
+- Apply graph analytics
+- Generate graph metadata
+
+**Phase 6: Visualization Core**
+- HTML template design
+- Vanilla JavaScript graph renderer
+- Force-directed layout implementation
+- Basic pan, zoom, drag
+
+**Phase 7: Enhanced Interactivity**
+- Advanced node tooltips (show all LinkML properties)
+- Edge tooltips (show relationship details)
+- Pin/unpin functionality
+- Hover effects and animations
+
+**Phase 8: Search, Filter, Controls**
+- Search functionality
+- Filter controls by NWB class type
+- Layout switching
+- Control panel UI
+- Export features
+
+**Phase 9: Optimization and Testing**
+- Performance optimization
+- Cross-browser testing
+- Validation with diverse NWB files
+- LinkML schema compliance verification
+- TTL/RDF validation
+
+**Phase 10: Documentation and Release**
+- Complete documentation
+- User guides
+- Example datasets
+- Deployment instructions
+
+---
+
+## Critical Workflow Summary
+
+**Essential Points:**
+
+1. **Use Official NWB LinkML Schema**: Do NOT create custom schemas. Use the official NWB LinkML schema definitions for all type mappings and validations.
+
+2. **Data Flow Must Be**: NWB File → LinkML Instances (using official schema) → TTL File (from LinkML) → Knowledge Graph (from TTL)
+
+3. **TTL Generation**: Must be derived from LinkML representation, ensuring semantic consistency with the official NWB ontology.
+
+4. **Graph Construction**: Must parse the TTL file to build the graph, ensuring all RDF semantics are preserved.
+
+5. **Visualization**: Graph data for HTML must come from the LinkML/TTL representation, showing properties and relationships as defined in the official schema.
+
+6. **Self-Contained**: HTML visualization must work offline with zero external dependencies.
+
+7. **Property Display**: Tooltips must show all properties from LinkML instances for both nodes and edges.
+
+8. **Validation**: Ensure every step validates against official specifications (NWB Inspector, LinkML validators, RDF validators).
+
+This ensures the system is standards-compliant, semantically accurate, and interoperable with the broader NWB and semantic web ecosystems.

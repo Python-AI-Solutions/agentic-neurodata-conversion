@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NWB Knowledge Graph Visualization</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+        #canvas {
+            display: block;
+            cursor: move;
+        }
+        #search {
+            width: 200px;
+            padding: 5px;
+            margin-bottom: 10px;
+        }
+        #tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            pointer-events: none;
+            display: none;
+            z-index: 100;
+            font-size: 12px;
+        }
+        .control-label {
+            display: inline-block;
+            width: 80px;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <h3>Controls</h3>
+        <input type="text" id="search" placeholder="Search nodes...">
+        <div>
+            <label class="control-label">Zoom:</label>
+            <button onclick="zoomIn()">+</button>
+            <button onclick="zoomOut()">-</button>
+            <button onclick="resetView()">Reset</button>
+        </div>
+    </div>
+    <div id="info">
+        <h3>Graph Info</h3>
+        <p><strong>Nodes:</strong> <span id="nodeCount">9</span></p>
+        <p><strong>Edges:</strong> <span id="edgeCount">6</span></p>
+        <p><strong>Density:</strong> <span id="density">0.0833</span></p>
+    </div>
+    <canvas id="canvas"></canvas>
+    <div id="tooltip"></div>
+
+    <script type="application/json" id="graphData">
+{
+  "nodes": [
+    {
+      "id": "http://purl.org/nwb/2.5.0/EventsNIDQDigitalChannelXD2",
+      "label": "EventsNIDQDigitalChannelXD2",
+      "type": "TimeSeries"
+    },
+    {
+      "id": "http://purl.org/nwb/2.5.0/ElectricalSeriesAPImec0",
+      "label": "ElectricalSeriesAPImec0",
+      "type": "TimeSeries"
+    },
+    {
+      "id": "http://purl.org/nwb/2.5.0/EventsNIDQDigitalChannelXD0",
+      "label": "EventsNIDQDigitalChannelXD0",
+      "type": "TimeSeries"
+    },
+    {
+      "id": "http://purl.org/nwb/2.5.0/b03926dd-85f3-43ea-a5cd-6ae9803c2811",
+      "label": "b03926dd-85f3-43ea-a5cd-6ae9803c2811",
+      "type": "NWBFile"
+    },
+    {
+      "id": "http://purl.org/nwb/2.5.0/EventsNIDQDigitalChannelXD3",
+      "label": "EventsNIDQDigitalChannelXD3",
+      "type": "TimeSeries"
+    },
+    {
+      "id": "http://purl.org/nwb/2.5.0/TimeSeriesNIDQ",
+      "label": "TimeSeriesNIDQ",
+      "type": "TimeSeries"
+    },
+    {
+      "id": "http://purl.org/nwb/2.5.0/ElectricalSeriesAPImec1",
+      "label": "ElectricalSeriesAPImec1",
+      "type": "TimeSeries"
+    }
+  ],
+  "edges": [
+    {
+      "source": "http://purl.org/nwb/2.5.0/b03926dd-85f3-43ea-a5cd-6ae9803c2811",
+      "target": "http://purl.org/nwb/2.5.0/ElectricalSeriesAPImec0",
+      "label": "has_acquisition"
+    },
+    {
+      "source": "http://purl.org/nwb/2.5.0/b03926dd-85f3-43ea-a5cd-6ae9803c2811",
+      "target": "http://purl.org/nwb/2.5.0/ElectricalSeriesAPImec1",
+      "label": "has_acquisition"
+    },
+    {
+      "source": "http://purl.org/nwb/2.5.0/b03926dd-85f3-43ea-a5cd-6ae9803c2811",
+      "target": "http://purl.org/nwb/2.5.0/EventsNIDQDigitalChannelXD0",
+      "label": "has_acquisition"
+    },
+    {
+      "source": "http://purl.org/nwb/2.5.0/b03926dd-85f3-43ea-a5cd-6ae9803c2811",
+      "target": "http://purl.org/nwb/2.5.0/EventsNIDQDigitalChannelXD2",
+      "label": "has_acquisition"
+    },
+    {
+      "source": "http://purl.org/nwb/2.5.0/b03926dd-85f3-43ea-a5cd-6ae9803c2811",
+      "target": "http://purl.org/nwb/2.5.0/EventsNIDQDigitalChannelXD3",
+      "label": "has_acquisition"
+    },
+    {
+      "source": "http://purl.org/nwb/2.5.0/b03926dd-85f3-43ea-a5cd-6ae9803c2811",
+      "target": "http://purl.org/nwb/2.5.0/TimeSeriesNIDQ",
+      "label": "has_acquisition"
+    }
+  ]
+}
+    </script>
+
+    <script type="application/json" id="fullGraphData">
+[
+  {
+    "@id": "http://purl.org/nwb/2.5.0/EventsNIDQDigitalChannelXD2",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "uint64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(32124,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "On and Off Events from channel XD2"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "EventsNIDQDigitalChannelXD2"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/timestamps_shape": [
+      {
+        "@value": "(32124,)"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/ElectricalSeriesAPImec0",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "int16"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(100, 384)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "Acquisition traces for the ElectricalSeriesAPImec0."
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "ElectricalSeriesAPImec0"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/unit": [
+      {
+        "@value": "volts"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/EventsNIDQDigitalChannelXD0",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "uint64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(12381,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "On and Off Events from channel XD0"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "EventsNIDQDigitalChannelXD0"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/timestamps_shape": [
+      {
+        "@value": "(12381,)"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/b03926dd-85f3-43ea-a5cd-6ae9803c2811",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/NWBFile"
+    ],
+    "http://purl.org/nwb/2.5.0/has_acquisition": [
+      {
+        "@id": "http://purl.org/nwb/2.5.0/ElectricalSeriesAPImec0"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/ElectricalSeriesAPImec1"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/EventsNIDQDigitalChannelXD0"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/EventsNIDQDigitalChannelXD2"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/EventsNIDQDigitalChannelXD3"
+      },
+      {
+        "@id": "http://purl.org/nwb/2.5.0/TimeSeriesNIDQ"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/identifier": [
+      {
+        "@value": "b03926dd-85f3-43ea-a5cd-6ae9803c2811"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/session_description": [
+      {
+        "@value": "AllNovel"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/session_start_time": [
+      {
+        "@value": "2024-08-31 18:02:46-04:00"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/EventsNIDQDigitalChannelXD3",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "uint64"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(32098,)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "On and Off Events from channel XD3"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "EventsNIDQDigitalChannelXD3"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/timestamps_shape": [
+      {
+        "@value": "(32098,)"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/TimeSeriesNIDQ",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "int16"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(100, 8)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "Analog data from the NIDQ board. Channels are ['XA0' 'XA1' 'XA2' 'XA3' 'XA4' 'XA5' 'XA6' 'XA7'] in that order."
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "TimeSeriesNIDQ"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/unit": [
+      {
+        "@value": "V"
+      }
+    ]
+  },
+  {
+    "@id": "http://purl.org/nwb/2.5.0/ElectricalSeriesAPImec1",
+    "@type": [
+      "http://purl.org/nwb/2.5.0/TimeSeries"
+    ],
+    "http://purl.org/nwb/2.5.0/data_dtype": [
+      {
+        "@value": "int16"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/data_shape": [
+      {
+        "@value": "(100, 384)"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/description": [
+      {
+        "@value": "Acquisition traces for the ElectricalSeriesAPImec1."
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/name": [
+      {
+        "@value": "ElectricalSeriesAPImec1"
+      }
+    ],
+    "http://purl.org/nwb/2.5.0/unit": [
+      {
+        "@value": "volts"
+      }
+    ]
+  }
+]
+    </script>
+
+    <script>
+        // Load graph data
+        const graphData = JSON.parse(document.getElementById('graphData').textContent);
+
+        // Canvas setup
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const tooltip = document.getElementById('tooltip');
+
+        // Resize canvas
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Parse graph data - now using simplified structure
+        let nodes = graphData.nodes || [];
+        let edges = graphData.edges || [];
+
+        // Add physics properties to nodes - center them initially
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        nodes = nodes.map(node => ({
+            ...node,
+            x: centerX + (Math.random() - 0.5) * 200,
+            y: centerY + (Math.random() - 0.5) * 200,
+            vx: 0,
+            vy: 0
+        }));
+
+        // Transform state - start zoomed out to see all nodes
+        let scale = 0.5;
+        let offsetX = 0;
+        let offsetY = 0;
+        let isDragging = false;
+        let dragStart = { x: 0, y: 0 };
+        let selectedNode = null;
+
+        // Zoom functions
+        function zoomIn() {
+            scale *= 1.2;
+            draw();
+        }
+
+        function zoomOut() {
+            scale /= 1.2;
+            draw();
+        }
+
+        function resetView() {
+            scale = 1.0;
+            offsetX = 0;
+            offsetY = 0;
+            draw();
+        }
+
+        // Mouse wheel zoom
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            scale *= delta;
+            draw();
+        });
+
+        // Mouse drag pan
+        canvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            dragStart = { x: e.clientX - offsetX, y: e.clientY - offsetY };
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                offsetX = e.clientX - dragStart.x;
+                offsetY = e.clientY - dragStart.y;
+                draw();
+            }
+
+            // Tooltip
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = (e.clientX - rect.left - offsetX) / scale;
+            const mouseY = (e.clientY - rect.top - offsetY) / scale;
+
+            let hoverNode = null;
+            for (const node of nodes) {
+                const dx = mouseX - node.x;
+                const dy = mouseY - node.y;
+                if (Math.sqrt(dx*dx + dy*dy) < 10) {
+                    hoverNode = node;
+                    break;
+                }
+            }
+
+            if (hoverNode) {
+                tooltip.style.display = 'block';
+                tooltip.style.left = (e.clientX + 10) + 'px';
+                tooltip.style.top = (e.clientY + 10) + 'px';
+                tooltip.innerHTML = `<strong>${hoverNode.label}</strong><br>Type: ${hoverNode.type}`;
+            } else {
+                tooltip.style.display = 'none';
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            isDragging = false;
+            tooltip.style.display = 'none';
+        });
+
+        // Search functionality
+        document.getElementById('search').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            selectedNode = nodes.find(n => n.label.toLowerCase().includes(query));
+            draw();
+        });
+
+        // Simple force-directed layout simulation
+        function simulatePhysics() {
+            const k = 150; // Optimal distance - increased for better spacing
+            const repulsion = 10000; // Increased repulsion
+            const attraction = 0.05;
+            const damping = 0.85;
+
+            // Apply forces
+            for (let i = 0; i < nodes.length; i++) {
+                let fx = 0, fy = 0;
+
+                // Repulsion between all nodes
+                for (let j = 0; j < nodes.length; j++) {
+                    if (i !== j) {
+                        const dx = nodes[i].x - nodes[j].x;
+                        const dy = nodes[i].y - nodes[j].y;
+                        const dist = Math.sqrt(dx*dx + dy*dy) + 0.01;
+                        const force = repulsion / (dist * dist);
+                        fx += (dx / dist) * force;
+                        fy += (dy / dist) * force;
+                    }
+                }
+
+                // Attraction along edges
+                edges.forEach(edge => {
+                    let other = null;
+                    let sign = 1;
+                    if (edge.source === nodes[i].id) {
+                        other = nodes.find(n => n.id === edge.target);
+                    } else if (edge.target === nodes[i].id) {
+                        other = nodes.find(n => n.id === edge.source);
+                        sign = -1;
+                    }
+
+                    if (other) {
+                        const dx = other.x - nodes[i].x;
+                        const dy = other.y - nodes[i].y;
+                        const dist = Math.sqrt(dx*dx + dy*dy) + 0.01;
+                        const force = attraction * (dist - k);
+                        fx += sign * (dx / dist) * force;
+                        fy += sign * (dy / dist) * force;
+                    }
+                });
+
+                // Update velocity and position
+                nodes[i].vx = (nodes[i].vx + fx) * damping;
+                nodes[i].vy = (nodes[i].vy + fy) * damping;
+                nodes[i].x += nodes[i].vx;
+                nodes[i].y += nodes[i].vy;
+            }
+        }
+
+        // Drawing function
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            ctx.translate(offsetX, offsetY);
+            ctx.scale(scale, scale);
+
+            // Draw edges
+            ctx.strokeStyle = '#999';
+            ctx.lineWidth = 2 / scale;
+            for (const edge of edges) {
+                const source = nodes.find(n => n.id === edge.source);
+                const target = nodes.find(n => n.id === edge.target);
+                if (source && target) {
+                    ctx.beginPath();
+                    ctx.moveTo(source.x, source.y);
+                    ctx.lineTo(target.x, target.y);
+                    ctx.stroke();
+                }
+            }
+
+            // Draw nodes
+            for (const node of nodes) {
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, 15 / scale, 0, Math.PI * 2);
+
+                if (node === selectedNode) {
+                    ctx.fillStyle = '#ff0000';
+                } else {
+                    ctx.fillStyle = '#4287f5';
+                }
+                ctx.fill();
+
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2 / scale;
+                ctx.stroke();
+
+                // Label
+                ctx.fillStyle = '#000';
+                ctx.font = `${14 / scale}px Arial`;
+                ctx.fillText(node.label, node.x + 20 / scale, node.y + 5 / scale);
+            }
+
+            ctx.restore();
+        }
+
+        // Animation loop
+        let animationRunning = true;
+        let frameCount = 0;
+
+        function animate() {
+            if (animationRunning && frameCount < 200) {
+                simulatePhysics();
+                frameCount++;
+            }
+            draw();
+            requestAnimationFrame(animate);
+        }
+
+        // Start animation
+        animate();
+
+        // Button to toggle animation
+        const resetBtn = document.querySelector('button');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                frameCount = 0;
+                animationRunning = true;
+            });
+        }
+    </script>
+</body>
+</html>

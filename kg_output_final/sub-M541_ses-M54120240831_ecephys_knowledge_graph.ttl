@@ -1,0 +1,895 @@
+@prefix nwb: <http://purl.org/nwb/2.5.0/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+nwb:b03926dd-85f3-43ea-a5cd-6ae9803c2811 a nwb:NWBFile ;
+    nwb:has_children nwb:_acquisition,
+        nwb:_analysis,
+        nwb:_file_create_date,
+        nwb:_general,
+        nwb:_identifier,
+        nwb:_intervals,
+        nwb:_processing,
+        nwb:_session_description,
+        nwb:_session_start_time,
+        nwb:_specifications,
+        nwb:_stimulus,
+        nwb:_timestamps_reference_time ;
+    nwb:identifier "b03926dd-85f3-43ea-a5cd-6ae9803c2811" ;
+    nwb:path "/" ;
+    nwb:session_description "AllNovel" ;
+    nwb:session_start_time "2024-08-31 18:02:46-04:00" .
+
+nwb:_acquisition a nwb:Group ;
+    nwb:has_children nwb:_acquisition_ElectricalSeriesAPImec0,
+        nwb:_acquisition_ElectricalSeriesAPImec1,
+        nwb:_acquisition_EventsNIDQDigitalChannelXD0,
+        nwb:_acquisition_EventsNIDQDigitalChannelXD2,
+        nwb:_acquisition_EventsNIDQDigitalChannelXD3,
+        nwb:_acquisition_TimeSeriesNIDQ ;
+    nwb:name "acquisition" ;
+    nwb:path "/acquisition" .
+
+nwb:_acquisition_ElectricalSeriesAPImec0 a nwb:TimeSeries ;
+    nwb:comments "no comments" ;
+    nwb:description "Acquisition traces for the ElectricalSeriesAPImec0." ;
+    nwb:has_children nwb:_acquisition_ElectricalSeriesAPImec0_data,
+        nwb:_acquisition_ElectricalSeriesAPImec0_electrodes,
+        nwb:_acquisition_ElectricalSeriesAPImec0_starting_time ;
+    nwb:name "ElectricalSeriesAPImec0" ;
+    nwb:namespace "core" ;
+    nwb:neurodata_type "ElectricalSeries" ;
+    nwb:object_id "529beeb7-737e-4fec-ade1-8e580c824b34" ;
+    nwb:path "/acquisition/ElectricalSeriesAPImec0" .
+
+nwb:_acquisition_ElectricalSeriesAPImec0_data a nwb:TimeSeries ;
+    nwb:data_dtype "int16" ;
+    nwb:data_shape "(100, 384)" ;
+    nwb:name "data" ;
+    nwb:path "/acquisition/ElectricalSeriesAPImec0/data" ;
+    nwb:size_bytes 76800 .
+
+nwb:_acquisition_ElectricalSeriesAPImec0_electrodes a nwb:TimeSeries ;
+    nwb:data_dtype "int64" ;
+    nwb:data_shape "(384,)" ;
+    nwb:name "electrodes" ;
+    nwb:path "/acquisition/ElectricalSeriesAPImec0/electrodes" ;
+    nwb:size_bytes 3072 .
+
+nwb:_acquisition_ElectricalSeriesAPImec0_starting_time a nwb:TimeSeries ;
+    nwb:data_dtype "float64" ;
+    nwb:data_shape "()" ;
+    nwb:name "starting_time" ;
+    nwb:path "/acquisition/ElectricalSeriesAPImec0/starting_time" ;
+    nwb:size_bytes 8 .
+
+nwb:_acquisition_ElectricalSeriesAPImec1 a nwb:TimeSeries ;
+    nwb:comments "no comments" ;
+    nwb:description "Acquisition traces for the ElectricalSeriesAPImec1." ;
+    nwb:has_children nwb:_acquisition_ElectricalSeriesAPImec1_data,
+        nwb:_acquisition_ElectricalSeriesAPImec1_electrodes,
+        nwb:_acquisition_ElectricalSeriesAPImec1_starting_time ;
+    nwb:name "ElectricalSeriesAPImec1" ;
+    nwb:namespace "core" ;
+    nwb:neurodata_type "ElectricalSeries" ;
+    nwb:object_id "1b4f90e7-0755-45e8-a9aa-f52c94ee3e82" ;
+    nwb:path "/acquisition/ElectricalSeriesAPImec1" .
+
+nwb:_acquisition_ElectricalSeriesAPImec1_data a nwb:TimeSeries ;
+    nwb:data_dtype "int16" ;
+    nwb:data_shape "(100, 384)" ;
+    nwb:name "data" ;
+    nwb:path "/acquisition/ElectricalSeriesAPImec1/data" ;
+    nwb:size_bytes 76800 .
+
+nwb:_acquisition_ElectricalSeriesAPImec1_electrodes a nwb:TimeSeries ;
+    nwb:data_dtype "int64" ;
+    nwb:data_shape "(384,)" ;
+    nwb:name "electrodes" ;
+    nwb:path "/acquisition/ElectricalSeriesAPImec1/electrodes" ;
+    nwb:size_bytes 3072 .
+
+nwb:_acquisition_ElectricalSeriesAPImec1_starting_time a nwb:TimeSeries ;
+    nwb:data_dtype "float64" ;
+    nwb:data_shape "()" ;
+    nwb:name "starting_time" ;
+    nwb:path "/acquisition/ElectricalSeriesAPImec1/starting_time" ;
+    nwb:size_bytes 8 .
+
+nwb:_acquisition_EventsNIDQDigitalChannelXD0 a nwb:TimeSeries ;
+    nwb:description "On and Off Events from channel XD0" ;
+    nwb:has_children nwb:_acquisition_EventsNIDQDigitalChannelXD0_data,
+        nwb:_acquisition_EventsNIDQDigitalChannelXD0_timestamps ;
+    nwb:name "EventsNIDQDigitalChannelXD0" ;
+    nwb:namespace "ndx-events" ;
+    nwb:neurodata_type "LabeledEvents" ;
+    nwb:object_id "7348d61b-4197-4c31-a516-52d27e072dc6" ;
+    nwb:path "/acquisition/EventsNIDQDigitalChannelXD0" .
+
+nwb:_acquisition_EventsNIDQDigitalChannelXD0_data a nwb:TimeSeries ;
+    nwb:data_dtype "uint64" ;
+    nwb:data_shape "(12381,)" ;
+    nwb:name "data" ;
+    nwb:path "/acquisition/EventsNIDQDigitalChannelXD0/data" ;
+    nwb:size_bytes 99048 .
+
+nwb:_acquisition_EventsNIDQDigitalChannelXD0_timestamps a nwb:TimeSeries ;
+    nwb:data_dtype "float64" ;
+    nwb:data_shape "(12381,)" ;
+    nwb:name "timestamps" ;
+    nwb:path "/acquisition/EventsNIDQDigitalChannelXD0/timestamps" ;
+    nwb:size_bytes 99048 .
+
+nwb:_acquisition_EventsNIDQDigitalChannelXD2 a nwb:TimeSeries ;
+    nwb:description "On and Off Events from channel XD2" ;
+    nwb:has_children nwb:_acquisition_EventsNIDQDigitalChannelXD2_data,
+        nwb:_acquisition_EventsNIDQDigitalChannelXD2_timestamps ;
+    nwb:name "EventsNIDQDigitalChannelXD2" ;
+    nwb:namespace "ndx-events" ;
+    nwb:neurodata_type "LabeledEvents" ;
+    nwb:object_id "869fb460-cb1d-45d0-bff1-546a1d279874" ;
+    nwb:path "/acquisition/EventsNIDQDigitalChannelXD2" .
+
+nwb:_acquisition_EventsNIDQDigitalChannelXD2_data a nwb:TimeSeries ;
+    nwb:data_dtype "uint64" ;
+    nwb:data_shape "(32124,)" ;
+    nwb:name "data" ;
+    nwb:path "/acquisition/EventsNIDQDigitalChannelXD2/data" ;
+    nwb:size_bytes 256992 .
+
+nwb:_acquisition_EventsNIDQDigitalChannelXD2_timestamps a nwb:TimeSeries ;
+    nwb:data_dtype "float64" ;
+    nwb:data_shape "(32124,)" ;
+    nwb:name "timestamps" ;
+    nwb:path "/acquisition/EventsNIDQDigitalChannelXD2/timestamps" ;
+    nwb:size_bytes 256992 .
+
+nwb:_acquisition_EventsNIDQDigitalChannelXD3 a nwb:TimeSeries ;
+    nwb:description "On and Off Events from channel XD3" ;
+    nwb:has_children nwb:_acquisition_EventsNIDQDigitalChannelXD3_data,
+        nwb:_acquisition_EventsNIDQDigitalChannelXD3_timestamps ;
+    nwb:name "EventsNIDQDigitalChannelXD3" ;
+    nwb:namespace "ndx-events" ;
+    nwb:neurodata_type "LabeledEvents" ;
+    nwb:object_id "998558c7-0929-4f0d-8534-14191a3572b4" ;
+    nwb:path "/acquisition/EventsNIDQDigitalChannelXD3" .
+
+nwb:_acquisition_EventsNIDQDigitalChannelXD3_data a nwb:TimeSeries ;
+    nwb:data_dtype "uint64" ;
+    nwb:data_shape "(32098,)" ;
+    nwb:name "data" ;
+    nwb:path "/acquisition/EventsNIDQDigitalChannelXD3/data" ;
+    nwb:size_bytes 256784 .
+
+nwb:_acquisition_EventsNIDQDigitalChannelXD3_timestamps a nwb:TimeSeries ;
+    nwb:data_dtype "float64" ;
+    nwb:data_shape "(32098,)" ;
+    nwb:name "timestamps" ;
+    nwb:path "/acquisition/EventsNIDQDigitalChannelXD3/timestamps" ;
+    nwb:size_bytes 256784 .
+
+nwb:_acquisition_TimeSeriesNIDQ a nwb:TimeSeries ;
+    nwb:comments "no comments" ;
+    nwb:description "Analog data from the NIDQ board. Channels are ['XA0' 'XA1' 'XA2' 'XA3' 'XA4' 'XA5' 'XA6' 'XA7'] in that order." ;
+    nwb:has_children nwb:_acquisition_TimeSeriesNIDQ_data,
+        nwb:_acquisition_TimeSeriesNIDQ_starting_time ;
+    nwb:name "TimeSeriesNIDQ" ;
+    nwb:namespace "core" ;
+    nwb:neurodata_type "TimeSeries" ;
+    nwb:object_id "e1d0ed81-b106-411b-ba1b-879cefd1e199" ;
+    nwb:path "/acquisition/TimeSeriesNIDQ" .
+
+nwb:_acquisition_TimeSeriesNIDQ_data a nwb:TimeSeries ;
+    nwb:data_dtype "int16" ;
+    nwb:data_shape "(100, 8)" ;
+    nwb:name "data" ;
+    nwb:path "/acquisition/TimeSeriesNIDQ/data" ;
+    nwb:size_bytes 1600 .
+
+nwb:_acquisition_TimeSeriesNIDQ_starting_time a nwb:TimeSeries ;
+    nwb:data_dtype "float64" ;
+    nwb:data_shape "()" ;
+    nwb:name "starting_time" ;
+    nwb:path "/acquisition/TimeSeriesNIDQ/starting_time" ;
+    nwb:size_bytes 8 .
+
+nwb:_analysis a nwb:Group ;
+    nwb:name "analysis" ;
+    nwb:path "/analysis" .
+
+nwb:_file_create_date a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "(1,)" ;
+    nwb:name "file_create_date" ;
+    nwb:path "/file_create_date" ;
+    nwb:size_bytes 8 .
+
+nwb:_general a nwb:Group ;
+    nwb:has_children nwb:_general_devices,
+        nwb:_general_experimenter,
+        nwb:_general_extracellular_ephys,
+        nwb:_general_session_id,
+        nwb:_general_source_script,
+        nwb:_general_subject ;
+    nwb:name "general" ;
+    nwb:path "/general" .
+
+nwb:_general_devices a nwb:General ;
+    nwb:has_children nwb:_general_devices_NIDQBoard,
+        nwb:_general_devices_NeuropixelsImec0,
+        nwb:_general_devices_NeuropixelsImec1 ;
+    nwb:name "devices" ;
+    nwb:path "/general/devices" .
+
+nwb:_general_devices_NIDQBoard a nwb:Device ;
+    nwb:description "A NIDQ board used in conjunction with SpikeGLX." ;
+    nwb:manufacturer "National Instruments" ;
+    nwb:name "NIDQBoard" ;
+    nwb:namespace "core" ;
+    nwb:neurodata_type "Device" ;
+    nwb:object_id "e8dfea6c-8fa8-4496-afda-009b7b469443" ;
+    nwb:path "/general/devices/NIDQBoard" .
+
+nwb:_general_devices_NeuropixelsImec0 a nwb:Device ;
+    nwb:description "{\"probe_type\": \"2013\", \"probe_type_description\": \"Neuropixels 2.0 - Four Shank\", \"flex_part_number\": \"NPM_FLEX_01\", \"connected_base_station_part_number\": \"NP2_QBSC_00\"}" ;
+    nwb:manufacturer "Imec" ;
+    nwb:name "NeuropixelsImec0" ;
+    nwb:namespace "core" ;
+    nwb:neurodata_type "Device" ;
+    nwb:object_id "276bbab1-1c49-4e00-a051-9d646224f233" ;
+    nwb:path "/general/devices/NeuropixelsImec0" .
+
+nwb:_general_devices_NeuropixelsImec1 a nwb:Device ;
+    nwb:description "{\"probe_type\": \"2013\", \"probe_type_description\": \"Neuropixels 2.0 - Four Shank\", \"flex_part_number\": \"NPM_FLEX_01\", \"connected_base_station_part_number\": \"NP2_QBSC_00\"}" ;
+    nwb:manufacturer "Imec" ;
+    nwb:name "NeuropixelsImec1" ;
+    nwb:namespace "core" ;
+    nwb:neurodata_type "Device" ;
+    nwb:object_id "54b4ec4d-4c42-405b-ac89-6f59e3d99b0d" ;
+    nwb:path "/general/devices/NeuropixelsImec1" .
+
+nwb:_general_experimenter a nwb:General ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "(1,)" ;
+    nwb:name "experimenter" ;
+    nwb:path "/general/experimenter" ;
+    nwb:size_bytes 8 .
+
+nwb:_general_extracellular_ephys a nwb:General ;
+    nwb:has_children nwb:_general_extracellular_ephys_NeuropixelsImec0Shank0,
+        nwb:_general_extracellular_ephys_NeuropixelsImec0Shank1,
+        nwb:_general_extracellular_ephys_NeuropixelsImec0Shank2,
+        nwb:_general_extracellular_ephys_NeuropixelsImec0Shank3,
+        nwb:_general_extracellular_ephys_NeuropixelsImec1Shank0,
+        nwb:_general_extracellular_ephys_NeuropixelsImec1Shank1,
+        nwb:_general_extracellular_ephys_NeuropixelsImec1Shank2,
+        nwb:_general_extracellular_ephys_NeuropixelsImec1Shank3,
+        nwb:_general_extracellular_ephys_electrodes ;
+    nwb:name "extracellular_ephys" ;
+    nwb:path "/general/extracellular_ephys" .
+
+nwb:_general_extracellular_ephys_NeuropixelsImec0Shank0 a nwb:General ;
+    nwb:description "A group representing probe/shank 'NeuropixelsImec0Shank0'." ;
+    nwb:location "right dCA1" ;
+    nwb:name "NeuropixelsImec0Shank0" ;
+    nwb:namespace "core" ;
+    nwb:neurodata_type "ElectrodeGroup" ;
+    nwb:object_id "1c90f9e0-9d03-4162-bcf8-cfc97940db71" ;
+    nwb:path "/general/extracellular_ephys/NeuropixelsImec0Shank0" .
+
+nwb:_general_extracellular_ephys_NeuropixelsImec0Shank1 a nwb:General ;
+    nwb:description "A group representing probe/shank 'NeuropixelsImec0Shank1'." ;
+    nwb:location "right dCA1" ;
+    nwb:name "NeuropixelsImec0Shank1" ;
+    nwb:namespace "core" ;
+    nwb:neurodata_type "ElectrodeGroup" ;
+    nwb:object_id "1a2c68ae-20b1-458e-a6f8-38327742c54b" ;
+    nwb:path "/general/extracellular_ephys/NeuropixelsImec0Shank1" .
+
+nwb:_general_extracellular_ephys_NeuropixelsImec0Shank2 a nwb:General ;
+    nwb:description "A group representing probe/shank 'NeuropixelsImec0Shank2'." ;
+    nwb:location "right dCA1" ;
+    nwb:name "NeuropixelsImec0Shank2" ;
+    nwb:namespace "core" ;
+    nwb:neurodata_type "ElectrodeGroup" ;
+    nwb:object_id "9ecd6c39-4ebe-4dad-ab78-f4b4b1164661" ;
+    nwb:path "/general/extracellular_ephys/NeuropixelsImec0Shank2" .
+
+nwb:_general_extracellular_ephys_NeuropixelsImec0Shank3 a nwb:General ;
+    nwb:description "A group representing probe/shank 'NeuropixelsImec0Shank3'." ;
+    nwb:location "right dCA1" ;
+    nwb:name "NeuropixelsImec0Shank3" ;
+    nwb:namespace "core" ;
+    nwb:neurodata_type "ElectrodeGroup" ;
+    nwb:object_id "43c94783-3a45-4dff-8856-2030a5d9b719" ;
+    nwb:path "/general/extracellular_ephys/NeuropixelsImec0Shank3" .
+
+nwb:_general_extracellular_ephys_NeuropixelsImec1Shank0 a nwb:General ;
+    nwb:description "A group representing probe/shank 'NeuropixelsImec1Shank0'." ;
+    nwb:location "left dCA1" ;
+    nwb:name "NeuropixelsImec1Shank0" ;
+    nwb:namespace "core" ;
+    nwb:neurodata_type "ElectrodeGroup" ;
+    nwb:object_id "ef842660-2f57-4291-be08-4b64c05fed08" ;
+    nwb:path "/general/extracellular_ephys/NeuropixelsImec1Shank0" .
+
+nwb:_general_extracellular_ephys_NeuropixelsImec1Shank1 a nwb:General ;
+    nwb:description "A group representing probe/shank 'NeuropixelsImec1Shank1'." ;
+    nwb:location "left dCA1" ;
+    nwb:name "NeuropixelsImec1Shank1" ;
+    nwb:namespace "core" ;
+    nwb:neurodata_type "ElectrodeGroup" ;
+    nwb:object_id "3b5fcfec-112a-404f-bb23-b0f3667e9b5c" ;
+    nwb:path "/general/extracellular_ephys/NeuropixelsImec1Shank1" .
+
+nwb:_general_extracellular_ephys_NeuropixelsImec1Shank2 a nwb:General ;
+    nwb:description "A group representing probe/shank 'NeuropixelsImec1Shank2'." ;
+    nwb:location "left dCA1" ;
+    nwb:name "NeuropixelsImec1Shank2" ;
+    nwb:namespace "core" ;
+    nwb:neurodata_type "ElectrodeGroup" ;
+    nwb:object_id "4893fbae-0521-498c-9370-4592206f5557" ;
+    nwb:path "/general/extracellular_ephys/NeuropixelsImec1Shank2" .
+
+nwb:_general_extracellular_ephys_NeuropixelsImec1Shank3 a nwb:General ;
+    nwb:description "A group representing probe/shank 'NeuropixelsImec1Shank3'." ;
+    nwb:location "left dCA1" ;
+    nwb:name "NeuropixelsImec1Shank3" ;
+    nwb:namespace "core" ;
+    nwb:neurodata_type "ElectrodeGroup" ;
+    nwb:object_id "e784f57d-c4bc-4f8e-ad4c-6a5b56fd8c49" ;
+    nwb:path "/general/extracellular_ephys/NeuropixelsImec1Shank3" .
+
+nwb:_general_extracellular_ephys_electrodes a nwb:Electrodes ;
+    nwb:colnames """['location' 'group' 'group_name' 'channel_name' 'contact_ids' 'rel_y'
+ 'shank_ids' 'inter_sample_shift' 'gain_to_physical_unit' 'rel_x'
+ 'contact_shapes' 'offset_to_physical_unit' 'physical_unit']""" ;
+    nwb:description "metadata about extracellular electrodes" ;
+    nwb:has_children nwb:_general_extracellular_ephys_electrodes_channel_name,
+        nwb:_general_extracellular_ephys_electrodes_contact_ids,
+        nwb:_general_extracellular_ephys_electrodes_contact_shapes,
+        nwb:_general_extracellular_ephys_electrodes_gain_to_physical_unit,
+        nwb:_general_extracellular_ephys_electrodes_group,
+        nwb:_general_extracellular_ephys_electrodes_group_name,
+        nwb:_general_extracellular_ephys_electrodes_id,
+        nwb:_general_extracellular_ephys_electrodes_inter_sample_shift,
+        nwb:_general_extracellular_ephys_electrodes_location,
+        nwb:_general_extracellular_ephys_electrodes_offset_to_physical_unit,
+        nwb:_general_extracellular_ephys_electrodes_physical_unit,
+        nwb:_general_extracellular_ephys_electrodes_rel_x,
+        nwb:_general_extracellular_ephys_electrodes_rel_y,
+        nwb:_general_extracellular_ephys_electrodes_shank_ids ;
+    nwb:name "electrodes" ;
+    nwb:namespace "hdmf-common" ;
+    nwb:neurodata_type "DynamicTable" ;
+    nwb:object_id "64facccc-7ee0-4fcb-b266-f95b85bab76a" ;
+    nwb:path "/general/extracellular_ephys/electrodes" .
+
+nwb:_general_extracellular_ephys_electrodes_channel_name a nwb:Electrodes ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "(768,)" ;
+    nwb:name "channel_name" ;
+    nwb:path "/general/extracellular_ephys/electrodes/channel_name" ;
+    nwb:size_bytes 6144 .
+
+nwb:_general_extracellular_ephys_electrodes_contact_ids a nwb:Electrodes ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "(768,)" ;
+    nwb:name "contact_ids" ;
+    nwb:path "/general/extracellular_ephys/electrodes/contact_ids" ;
+    nwb:size_bytes 6144 .
+
+nwb:_general_extracellular_ephys_electrodes_contact_shapes a nwb:Electrodes ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "(768,)" ;
+    nwb:name "contact_shapes" ;
+    nwb:path "/general/extracellular_ephys/electrodes/contact_shapes" ;
+    nwb:size_bytes 6144 .
+
+nwb:_general_extracellular_ephys_electrodes_gain_to_physical_unit a nwb:Electrodes ;
+    nwb:data_dtype "float64" ;
+    nwb:data_shape "(768,)" ;
+    nwb:name "gain_to_physical_unit" ;
+    nwb:path "/general/extracellular_ephys/electrodes/gain_to_physical_unit" ;
+    nwb:size_bytes 6144 .
+
+nwb:_general_extracellular_ephys_electrodes_group a nwb:ElectrodeGroup ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "(768,)" ;
+    nwb:name "group" ;
+    nwb:path "/general/extracellular_ephys/electrodes/group" ;
+    nwb:size_bytes 6144 .
+
+nwb:_general_extracellular_ephys_electrodes_group_name a nwb:ElectrodeGroup ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "(768,)" ;
+    nwb:name "group_name" ;
+    nwb:path "/general/extracellular_ephys/electrodes/group_name" ;
+    nwb:size_bytes 6144 .
+
+nwb:_general_extracellular_ephys_electrodes_id a nwb:Electrodes ;
+    nwb:data_dtype "int64" ;
+    nwb:data_shape "(768,)" ;
+    nwb:name "id" ;
+    nwb:path "/general/extracellular_ephys/electrodes/id" ;
+    nwb:size_bytes 6144 .
+
+nwb:_general_extracellular_ephys_electrodes_inter_sample_shift a nwb:Electrodes ;
+    nwb:data_dtype "float64" ;
+    nwb:data_shape "(768,)" ;
+    nwb:name "inter_sample_shift" ;
+    nwb:path "/general/extracellular_ephys/electrodes/inter_sample_shift" ;
+    nwb:size_bytes 6144 .
+
+nwb:_general_extracellular_ephys_electrodes_location a nwb:Electrodes ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "(768,)" ;
+    nwb:name "location" ;
+    nwb:path "/general/extracellular_ephys/electrodes/location" ;
+    nwb:size_bytes 6144 .
+
+nwb:_general_extracellular_ephys_electrodes_offset_to_physical_unit a nwb:Electrodes ;
+    nwb:data_dtype "float64" ;
+    nwb:data_shape "(768,)" ;
+    nwb:name "offset_to_physical_unit" ;
+    nwb:path "/general/extracellular_ephys/electrodes/offset_to_physical_unit" ;
+    nwb:size_bytes 6144 .
+
+nwb:_general_extracellular_ephys_electrodes_physical_unit a nwb:Electrodes ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "(768,)" ;
+    nwb:name "physical_unit" ;
+    nwb:path "/general/extracellular_ephys/electrodes/physical_unit" ;
+    nwb:size_bytes 6144 .
+
+nwb:_general_extracellular_ephys_electrodes_rel_x a nwb:Electrodes ;
+    nwb:data_dtype "float64" ;
+    nwb:data_shape "(768,)" ;
+    nwb:name "rel_x" ;
+    nwb:path "/general/extracellular_ephys/electrodes/rel_x" ;
+    nwb:size_bytes 6144 .
+
+nwb:_general_extracellular_ephys_electrodes_rel_y a nwb:Electrodes ;
+    nwb:data_dtype "float64" ;
+    nwb:data_shape "(768,)" ;
+    nwb:name "rel_y" ;
+    nwb:path "/general/extracellular_ephys/electrodes/rel_y" ;
+    nwb:size_bytes 6144 .
+
+nwb:_general_extracellular_ephys_electrodes_shank_ids a nwb:Electrodes ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "(768,)" ;
+    nwb:name "shank_ids" ;
+    nwb:path "/general/extracellular_ephys/electrodes/shank_ids" ;
+    nwb:size_bytes 6144 .
+
+nwb:_general_session_id a nwb:General ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "session_id" ;
+    nwb:path "/general/session_id" ;
+    nwb:size_bytes 8 .
+
+nwb:_general_source_script a nwb:General ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "source_script" ;
+    nwb:path "/general/source_script" ;
+    nwb:size_bytes 8 .
+
+nwb:_general_subject a nwb:Subject ;
+    nwb:has_children nwb:_general_subject_sex,
+        nwb:_general_subject_species,
+        nwb:_general_subject_strain,
+        nwb:_general_subject_subject_id ;
+    nwb:name "subject" ;
+    nwb:namespace "core" ;
+    nwb:neurodata_type "Subject" ;
+    nwb:object_id "bde71fff-0256-47bd-ae5f-2ba92ca8990a" ;
+    nwb:path "/general/subject" .
+
+nwb:_general_subject_sex a nwb:Subject ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "sex" ;
+    nwb:path "/general/subject/sex" ;
+    nwb:size_bytes 8 .
+
+nwb:_general_subject_species a nwb:Subject ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "species" ;
+    nwb:path "/general/subject/species" ;
+    nwb:size_bytes 8 .
+
+nwb:_general_subject_strain a nwb:Subject ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "strain" ;
+    nwb:path "/general/subject/strain" ;
+    nwb:size_bytes 8 .
+
+nwb:_general_subject_subject_id a nwb:Subject ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "subject_id" ;
+    nwb:path "/general/subject/subject_id" ;
+    nwb:size_bytes 8 .
+
+nwb:_identifier a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "identifier" ;
+    nwb:path "/identifier" ;
+    nwb:size_bytes 8 .
+
+nwb:_intervals a nwb:Group ;
+    nwb:has_children nwb:_intervals_epochs,
+        nwb:_intervals_trials ;
+    nwb:name "intervals" ;
+    nwb:path "/intervals" .
+
+nwb:_intervals_epochs a nwb:Group ;
+    nwb:colnames "['start_time' 'stop_time' 'block_id' 'block_details']" ;
+    nwb:description "Each block in this experiment involves a repetition of a subset of odor IDs, though the order of presentation may be randomized." ;
+    nwb:has_children nwb:_intervals_epochs_block_details,
+        nwb:_intervals_epochs_block_id,
+        nwb:_intervals_epochs_id,
+        nwb:_intervals_epochs_start_time,
+        nwb:_intervals_epochs_stop_time ;
+    nwb:name "epochs" ;
+    nwb:namespace "core" ;
+    nwb:neurodata_type "TimeIntervals" ;
+    nwb:object_id "f4cd0bdc-ce73-4798-95c1-ed054e188e91" ;
+    nwb:path "/intervals/epochs" .
+
+nwb:_intervals_epochs_block_details a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "(3,)" ;
+    nwb:name "block_details" ;
+    nwb:path "/intervals/epochs/block_details" ;
+    nwb:size_bytes 24 .
+
+nwb:_intervals_epochs_block_id a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "(3,)" ;
+    nwb:name "block_id" ;
+    nwb:path "/intervals/epochs/block_id" ;
+    nwb:size_bytes 24 .
+
+nwb:_intervals_epochs_id a nwb:Group ;
+    nwb:data_dtype "int64" ;
+    nwb:data_shape "(3,)" ;
+    nwb:name "id" ;
+    nwb:path "/intervals/epochs/id" ;
+    nwb:size_bytes 24 .
+
+nwb:_intervals_epochs_start_time a nwb:Group ;
+    nwb:data_dtype "float64" ;
+    nwb:data_shape "(3,)" ;
+    nwb:name "start_time" ;
+    nwb:path "/intervals/epochs/start_time" ;
+    nwb:size_bytes 24 .
+
+nwb:_intervals_epochs_stop_time a nwb:Group ;
+    nwb:data_dtype "float64" ;
+    nwb:data_shape "(3,)" ;
+    nwb:name "stop_time" ;
+    nwb:path "/intervals/epochs/stop_time" ;
+    nwb:size_bytes 24 .
+
+nwb:_intervals_trials a nwb:Group ;
+    nwb:colnames "['start_time' 'stop_time' 'odorant_id' 'odorant' 'concentration']" ;
+    nwb:description "The on/off timing of presented odors IDs." ;
+    nwb:has_children nwb:_intervals_trials_concentration,
+        nwb:_intervals_trials_id,
+        nwb:_intervals_trials_odorant,
+        nwb:_intervals_trials_odorant_id,
+        nwb:_intervals_trials_start_time,
+        nwb:_intervals_trials_stop_time ;
+    nwb:name "trials" ;
+    nwb:namespace "core" ;
+    nwb:neurodata_type "TimeIntervals" ;
+    nwb:object_id "1e7b9ac4-cf08-4a79-a1e2-178415fe0352" ;
+    nwb:path "/intervals/trials" .
+
+nwb:_intervals_trials_concentration a nwb:Group ;
+    nwb:data_dtype "float64" ;
+    nwb:data_shape "(1212,)" ;
+    nwb:name "concentration" ;
+    nwb:path "/intervals/trials/concentration" ;
+    nwb:size_bytes 9696 .
+
+nwb:_intervals_trials_id a nwb:Group ;
+    nwb:data_dtype "int64" ;
+    nwb:data_shape "(1212,)" ;
+    nwb:name "id" ;
+    nwb:path "/intervals/trials/id" ;
+    nwb:size_bytes 9696 .
+
+nwb:_intervals_trials_odorant a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "(1212,)" ;
+    nwb:name "odorant" ;
+    nwb:path "/intervals/trials/odorant" ;
+    nwb:size_bytes 9696 .
+
+nwb:_intervals_trials_odorant_id a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "(1212,)" ;
+    nwb:name "odorant_id" ;
+    nwb:path "/intervals/trials/odorant_id" ;
+    nwb:size_bytes 9696 .
+
+nwb:_intervals_trials_start_time a nwb:Group ;
+    nwb:data_dtype "float64" ;
+    nwb:data_shape "(1212,)" ;
+    nwb:name "start_time" ;
+    nwb:path "/intervals/trials/start_time" ;
+    nwb:size_bytes 9696 .
+
+nwb:_intervals_trials_stop_time a nwb:Group ;
+    nwb:data_dtype "float64" ;
+    nwb:data_shape "(1212,)" ;
+    nwb:name "stop_time" ;
+    nwb:path "/intervals/trials/stop_time" ;
+    nwb:size_bytes 9696 .
+
+nwb:_processing a nwb:Group ;
+    nwb:name "processing" ;
+    nwb:path "/processing" .
+
+nwb:_session_description a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "session_description" ;
+    nwb:path "/session_description" ;
+    nwb:size_bytes 8 .
+
+nwb:_session_start_time a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "session_start_time" ;
+    nwb:path "/session_start_time" ;
+    nwb:size_bytes 8 .
+
+nwb:_specifications a nwb:Group ;
+    nwb:has_children nwb:_specifications_core,
+        nwb:_specifications_hdmf-common,
+        nwb:_specifications_hdmf-experimental,
+        nwb:_specifications_ndx-events ;
+    nwb:name "specifications" ;
+    nwb:path "/specifications" .
+
+nwb:_specifications_core a nwb:Group ;
+    nwb:has_children nwb:_specifications_core_2.8.0 ;
+    nwb:name "core" ;
+    nwb:path "/specifications/core" .
+
+nwb:_specifications_core_2.8.0 a nwb:Group ;
+    nwb:has_children nwb:_specifications_core_2.8.0_namespace,
+        nwb:_specifications_core_2.8.0_nwb.base,
+        nwb:_specifications_core_2.8.0_nwb.behavior,
+        nwb:_specifications_core_2.8.0_nwb.device,
+        nwb:_specifications_core_2.8.0_nwb.ecephys,
+        nwb:_specifications_core_2.8.0_nwb.epoch,
+        nwb:_specifications_core_2.8.0_nwb.file,
+        nwb:_specifications_core_2.8.0_nwb.icephys,
+        nwb:_specifications_core_2.8.0_nwb.image,
+        nwb:_specifications_core_2.8.0_nwb.misc,
+        nwb:_specifications_core_2.8.0_nwb.ogen,
+        nwb:_specifications_core_2.8.0_nwb.ophys,
+        nwb:_specifications_core_2.8.0_nwb.retinotopy ;
+    nwb:name "2.8.0" ;
+    nwb:path "/specifications/core/2.8.0" .
+
+nwb:_specifications_core_2.8.0_namespace a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "namespace" ;
+    nwb:path "/specifications/core/2.8.0/namespace" ;
+    nwb:size_bytes 8 .
+
+nwb:_specifications_core_2.8.0_nwb.base a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "nwb.base" ;
+    nwb:path "/specifications/core/2.8.0/nwb.base" ;
+    nwb:size_bytes 8 .
+
+nwb:_specifications_core_2.8.0_nwb.behavior a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "nwb.behavior" ;
+    nwb:path "/specifications/core/2.8.0/nwb.behavior" ;
+    nwb:size_bytes 8 .
+
+nwb:_specifications_core_2.8.0_nwb.device a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "nwb.device" ;
+    nwb:path "/specifications/core/2.8.0/nwb.device" ;
+    nwb:size_bytes 8 .
+
+nwb:_specifications_core_2.8.0_nwb.ecephys a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "nwb.ecephys" ;
+    nwb:path "/specifications/core/2.8.0/nwb.ecephys" ;
+    nwb:size_bytes 8 .
+
+nwb:_specifications_core_2.8.0_nwb.epoch a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "nwb.epoch" ;
+    nwb:path "/specifications/core/2.8.0/nwb.epoch" ;
+    nwb:size_bytes 8 .
+
+nwb:_specifications_core_2.8.0_nwb.file a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "nwb.file" ;
+    nwb:path "/specifications/core/2.8.0/nwb.file" ;
+    nwb:size_bytes 8 .
+
+nwb:_specifications_core_2.8.0_nwb.icephys a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "nwb.icephys" ;
+    nwb:path "/specifications/core/2.8.0/nwb.icephys" ;
+    nwb:size_bytes 8 .
+
+nwb:_specifications_core_2.8.0_nwb.image a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "nwb.image" ;
+    nwb:path "/specifications/core/2.8.0/nwb.image" ;
+    nwb:size_bytes 8 .
+
+nwb:_specifications_core_2.8.0_nwb.misc a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "nwb.misc" ;
+    nwb:path "/specifications/core/2.8.0/nwb.misc" ;
+    nwb:size_bytes 8 .
+
+nwb:_specifications_core_2.8.0_nwb.ogen a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "nwb.ogen" ;
+    nwb:path "/specifications/core/2.8.0/nwb.ogen" ;
+    nwb:size_bytes 8 .
+
+nwb:_specifications_core_2.8.0_nwb.ophys a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "nwb.ophys" ;
+    nwb:path "/specifications/core/2.8.0/nwb.ophys" ;
+    nwb:size_bytes 8 .
+
+nwb:_specifications_core_2.8.0_nwb.retinotopy a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "nwb.retinotopy" ;
+    nwb:path "/specifications/core/2.8.0/nwb.retinotopy" ;
+    nwb:size_bytes 8 .
+
+nwb:_specifications_hdmf-common a nwb:Group ;
+    nwb:has_children nwb:_specifications_hdmf-common_1.8.0 ;
+    nwb:name "hdmf-common" ;
+    nwb:path "/specifications/hdmf-common" .
+
+nwb:_specifications_hdmf-common_1.8.0 a nwb:Group ;
+    nwb:has_children nwb:_specifications_hdmf-common_1.8.0_base,
+        nwb:_specifications_hdmf-common_1.8.0_namespace,
+        nwb:_specifications_hdmf-common_1.8.0_sparse,
+        nwb:_specifications_hdmf-common_1.8.0_table ;
+    nwb:name "1.8.0" ;
+    nwb:path "/specifications/hdmf-common/1.8.0" .
+
+nwb:_specifications_hdmf-common_1.8.0_base a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "base" ;
+    nwb:path "/specifications/hdmf-common/1.8.0/base" ;
+    nwb:size_bytes 8 .
+
+nwb:_specifications_hdmf-common_1.8.0_namespace a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "namespace" ;
+    nwb:path "/specifications/hdmf-common/1.8.0/namespace" ;
+    nwb:size_bytes 8 .
+
+nwb:_specifications_hdmf-common_1.8.0_sparse a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "sparse" ;
+    nwb:path "/specifications/hdmf-common/1.8.0/sparse" ;
+    nwb:size_bytes 8 .
+
+nwb:_specifications_hdmf-common_1.8.0_table a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "table" ;
+    nwb:path "/specifications/hdmf-common/1.8.0/table" ;
+    nwb:size_bytes 8 .
+
+nwb:_specifications_hdmf-experimental a nwb:Group ;
+    nwb:has_children nwb:_specifications_hdmf-experimental_0.5.0 ;
+    nwb:name "hdmf-experimental" ;
+    nwb:path "/specifications/hdmf-experimental" .
+
+nwb:_specifications_hdmf-experimental_0.5.0 a nwb:Group ;
+    nwb:has_children nwb:_specifications_hdmf-experimental_0.5.0_experimental,
+        nwb:_specifications_hdmf-experimental_0.5.0_namespace,
+        nwb:_specifications_hdmf-experimental_0.5.0_resources ;
+    nwb:name "0.5.0" ;
+    nwb:path "/specifications/hdmf-experimental/0.5.0" .
+
+nwb:_specifications_hdmf-experimental_0.5.0_experimental a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "experimental" ;
+    nwb:path "/specifications/hdmf-experimental/0.5.0/experimental" ;
+    nwb:size_bytes 8 .
+
+nwb:_specifications_hdmf-experimental_0.5.0_namespace a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "namespace" ;
+    nwb:path "/specifications/hdmf-experimental/0.5.0/namespace" ;
+    nwb:size_bytes 8 .
+
+nwb:_specifications_hdmf-experimental_0.5.0_resources a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "resources" ;
+    nwb:path "/specifications/hdmf-experimental/0.5.0/resources" ;
+    nwb:size_bytes 8 .
+
+nwb:_specifications_ndx-events a nwb:Group ;
+    nwb:has_children nwb:_specifications_ndx-events_0.2.1 ;
+    nwb:name "ndx-events" ;
+    nwb:path "/specifications/ndx-events" .
+
+nwb:_specifications_ndx-events_0.2.1 a nwb:Group ;
+    nwb:has_children nwb:_specifications_ndx-events_0.2.1_namespace,
+        nwb:_specifications_ndx-events_0.2.1_ndx-events.extensions ;
+    nwb:name "0.2.1" ;
+    nwb:path "/specifications/ndx-events/0.2.1" .
+
+nwb:_specifications_ndx-events_0.2.1_namespace a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "namespace" ;
+    nwb:path "/specifications/ndx-events/0.2.1/namespace" ;
+    nwb:size_bytes 8 .
+
+nwb:_specifications_ndx-events_0.2.1_ndx-events.extensions a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "ndx-events.extensions" ;
+    nwb:path "/specifications/ndx-events/0.2.1/ndx-events.extensions" ;
+    nwb:size_bytes 8 .
+
+nwb:_stimulus a nwb:Group ;
+    nwb:has_children nwb:_stimulus_presentation,
+        nwb:_stimulus_templates ;
+    nwb:name "stimulus" ;
+    nwb:path "/stimulus" .
+
+nwb:_stimulus_presentation a nwb:TimeSeries ;
+    nwb:name "presentation" ;
+    nwb:path "/stimulus/presentation" .
+
+nwb:_stimulus_templates a nwb:TimeSeries ;
+    nwb:name "templates" ;
+    nwb:path "/stimulus/templates" .
+
+nwb:_timestamps_reference_time a nwb:Group ;
+    nwb:data_dtype "object" ;
+    nwb:data_shape "()" ;
+    nwb:name "timestamps_reference_time" ;
+    nwb:path "/timestamps_reference_time" ;
+    nwb:size_bytes 8 .
+
