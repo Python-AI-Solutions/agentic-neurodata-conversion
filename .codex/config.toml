@@ -1,0 +1,4 @@
+model = "gpt-5-codex"
+model_reasoning_effort = "high"
+[projects.'\\?\C:\Users\shahh\OneDrive\Desktop\agentic-neurodata-conversion-2']
+trust_level = "trusted"
