@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The agentic neurodata conversion project provides support for scientists to conver their lab data to NWB format. This is done through a multi-agent system that orchestrates the conversion process. The functionality is exposed using an MCP server and makes use of validation systems, domain specific ontoloogies, pre-existing conversion examples, and ecosystem tools for this task.
+The agentic neurodata conversion project provides support for scientists to convert their lab data to NWB format. This is done through a multi-agent system that orchestrates the conversion process. The functionality is exposed using an MCP server and makes use of validation systems, domain specific ontoloogies, pre-existing conversion examples, and ecosystem tools for this task.
 
 The project structure must balance monorepo advantages for core components with clear boundaries for external integrations, support multiple development workflows from local debugging to cloud deployment. The MCP server exposes dataset analysis capabilities, conversion orchestration tools, and workflow handoff mechanisms, which delegate tasks to internal agent modules. We must maintain consistency across a complex multi-agent architecture while enabling independent component evolution.
 
@@ -40,7 +40,7 @@ The project structure must balance monorepo advantages for core components with 
 
 4. WHEN creating new modules for data conversion THEN the system SHALL provide scaffolding via copier or cookiecutter templates (e.g., catalystneuro cookiecutter) with boilerplate code and standard interfaces. The system SHALL ensure the pixi environment contains all necessary tools for development and testing. Additional templates for CI/CD pipelines, Dockerfiles, and Kubernetes manifests MAY be introduced later if operational needs require them.
 
-5. WHEN handling errors THEN the system SHALL implement consistent error handling with typed exceptions hierarchy, error codes with documentation, structured error responses, error recovery strategies, retry mechanisms with backoff, circuit breaker patterns, error aggregation and reporting, user-friendly error messages, debug information in development, and sanitized errors in production
+5. WHEN handling errors THEN the system SHALL implement consistent error handling with typed exceptions hierarchy, error codes with documentation, structured error responses, error recovery strategies if a clear approach is known, debug information in development.
 
 6. WHEN documenting code THEN the system SHALL require comprehensive documentation including docstrings for all public APIs (Google style), type hints for all functions, inline comments for complex logic, architecture decision records (ADRs), API documentation generation, example usage in docstrings, performance considerations noted, deprecation warnings, and migration guides
 
@@ -52,7 +52,7 @@ The project structure must balance monorepo advantages for core components with 
 
 1. WHEN developing MCP tools THEN the system SHALL provide decorator-based tool registration with `@mcp_tool(name, description, parameters)`, automatic parameter validation, schema generation from type hints, request/response logging, performance instrumentation, error handling wrappers, retry logic injection, caching decorators, rate limiting support, and comprehensive testing utilities including mock MCP contexts and tool execution harnesses
 
-2. WHEN managing dependencies THEN the system SHALL use modern package management with pixi for environment management, pyproject.toml for package metadata, optional dependency groups (dev, test, docs, ml), version pinning strategies, dependency vulnerability scanning, license compliance checking, update automation with Dependabot, lockfile generation for reproducibility, multi-platform support, and private package repository integration
+2. WHEN managing dependencies THEN the system SHALL use modern package management with pixi for environment management, pyproject.toml for package metadata, optional dependency groups (dev, test, docs, ml), version pinning strategies, dependency vulnerability scanning, license compliance checking, update automation with Dependabot, support for linux-64 and osx-arm64.
 
 3. WHEN debugging THEN the system SHALL provide comprehensive logging infrastructure including structured logging with JSON output, log levels per module, correlation ID tracking, distributed tracing integration, performance metrics in logs, log aggregation support, log sampling for volume control, debug mode toggles, remote debugging support, and interactive debugging tools for MCP server operations and agent interactions
 
