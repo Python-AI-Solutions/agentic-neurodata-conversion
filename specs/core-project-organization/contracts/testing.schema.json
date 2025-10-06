@@ -4,7 +4,13 @@
   "title": "TestSuite",
   "description": "Categorized collection of tests with execution profiles and quality requirements",
   "type": "object",
-  "required": ["name", "test_type", "markers", "fixtures", "coverage_threshold"],
+  "required": [
+    "name",
+    "test_type",
+    "markers",
+    "fixtures",
+    "coverage_threshold"
+  ],
   "properties": {
     "name": {
       "type": "string",
@@ -26,11 +32,21 @@
       "items": {
         "type": "string",
         "enum": [
-          "unit", "integration", "e2e",
-          "fast", "slow",
-          "requires_llm", "requires_datasets", "requires_docker",
-          "mock_llm", "cheap_api", "frontier_api",
-          "mcp_server", "agents", "data_management", "client"
+          "unit",
+          "integration",
+          "e2e",
+          "fast",
+          "slow",
+          "requires_llm",
+          "requires_datasets",
+          "requires_docker",
+          "mock_llm",
+          "cheap_api",
+          "frontier_api",
+          "mcp_server",
+          "agents",
+          "data_management",
+          "client"
         ]
       },
       "minItems": 1,
@@ -114,14 +130,14 @@
   "allOf": [
     {
       "if": {
-        "properties": {"test_type": {"const": "unit"}}
+        "properties": { "test_type": { "const": "unit" } }
       },
       "then": {
         "properties": {
-          "coverage_threshold": {"minimum": 80.0},
+          "coverage_threshold": { "minimum": 80.0 },
           "execution_profile": {
             "properties": {
-              "max_duration_seconds": {"maximum": 300}
+              "max_duration_seconds": { "maximum": 300 }
             }
           }
         }
@@ -129,14 +145,14 @@
     },
     {
       "if": {
-        "properties": {"test_type": {"const": "integration"}}
+        "properties": { "test_type": { "const": "integration" } }
       },
       "then": {
         "properties": {
-          "coverage_threshold": {"minimum": 75.0},
+          "coverage_threshold": { "minimum": 75.0 },
           "execution_profile": {
             "properties": {
-              "max_duration_seconds": {"maximum": 900}
+              "max_duration_seconds": { "maximum": 900 }
             }
           }
         }
@@ -174,9 +190,7 @@
         "requires_isolation": true,
         "retry_on_failure": true
       },
-      "test_files": [
-        "integration/agents/test_conversation_flow.py"
-      ],
+      "test_files": ["integration/agents/test_conversation_flow.py"],
       "dependencies": ["mcp_server_unit", "agent_unit"]
     }
   ],

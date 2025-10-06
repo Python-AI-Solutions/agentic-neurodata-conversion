@@ -17,7 +17,15 @@
     "type": {
       "type": "string",
       "description": "Documentation category",
-      "enum": ["api", "architecture", "adr", "tutorial", "example", "guide", "reference"],
+      "enum": [
+        "api",
+        "architecture",
+        "adr",
+        "tutorial",
+        "example",
+        "guide",
+        "reference"
+      ],
       "examples": ["api", "architecture", "tutorial"]
     },
     "format": {
@@ -65,13 +73,13 @@
         "include_patterns": {
           "type": "array",
           "description": "File patterns to include in documentation",
-          "items": {"type": "string"},
+          "items": { "type": "string" },
           "examples": [["*.py"], ["src/**/*.py", "!src/**/tests/**"]]
         },
         "exclude_patterns": {
           "type": "array",
           "description": "File patterns to exclude from documentation",
-          "items": {"type": "string"},
+          "items": { "type": "string" },
           "examples": [["**/tests/**", "**/__pycache__/**"]]
         },
         "options": {
@@ -124,7 +132,7 @@
         },
         "authors": {
           "type": "array",
-          "items": {"type": "string"},
+          "items": { "type": "string" },
           "description": "Document authors"
         },
         "version": {
@@ -139,7 +147,7 @@
         },
         "tags": {
           "type": "array",
-          "items": {"type": "string"},
+          "items": { "type": "string" },
           "description": "Classification tags"
         }
       }
@@ -147,7 +155,7 @@
     "dependencies": {
       "type": "array",
       "description": "Other documentation artifacts this depends on",
-      "items": {"type": "string"},
+      "items": { "type": "string" },
       "uniqueItems": true,
       "examples": [["api_reference"], ["architecture_overview", "data_model"]]
     }
@@ -156,7 +164,7 @@
   "allOf": [
     {
       "if": {
-        "properties": {"auto_generated": {"const": true}}
+        "properties": { "auto_generated": { "const": true } }
       },
       "then": {
         "required": ["generation_config"]
@@ -164,15 +172,15 @@
     },
     {
       "if": {
-        "properties": {"type": {"const": "api"}}
+        "properties": { "type": { "const": "api" } }
       },
       "then": {
         "properties": {
-          "auto_generated": {"const": true},
+          "auto_generated": { "const": true },
           "validation": {
             "properties": {
-              "require_examples": {"const": true},
-              "min_docstring_coverage": {"minimum": 80}
+              "require_examples": { "const": true },
+              "min_docstring_coverage": { "minimum": 80 }
             }
           }
         }
