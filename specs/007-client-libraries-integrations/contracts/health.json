@@ -1,0 +1,227 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Health Check Contract",
+  "description": "JSON-RPC contract for server health checks",
+
+  "request": {
+    "type": "object",
+    "required": ["jsonrpc", "id", "method"],
+    "properties": {
+      "jsonrpc": {
+        "type": "string",
+        "const": "2.0"
+      },
+      "id": {
+        "type": "string",
+        "description": "Unique request identifier"
+      },
+      "method": {
+        "type": "string",
+        "const": "health_check"
+      },
+      "params": {
+        "type": "object",
+        "properties": {
+          "detailed": {
+            "type": "boolean",
+            "default": false,
+            "description": "Return detailed health information"
+          }
+        }
+      }
+    }
+  },
+
+  "response_success": {
+    "type": "object",
+    "required": ["jsonrpc", "id", "result"],
+    "properties": {
+      "jsonrpc": {
+        "type": "string",
+        "const": "2.0"
+      },
+      "id": {
+        "type": "string"
+      },
+      "result": {
+        "type": "object",
+        "required": ["status", "timestamp"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["healthy", "degraded", "unhealthy"],
+            "description": "Overall server health status"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Health check timestamp"
+          },
+          "uptime_seconds": {
+            "type": "number",
+            "description": "Server uptime in seconds"
+          },
+          "version": {
+            "type": "string",
+            "description": "Server version"
+          },
+          "agents": {
+            "type": "object",
+            "description": "Agent-specific health (if detailed=true)",
+            "properties": {
+              "orchestrator": {
+                "type": "object",
+                "properties": {
+                  "status": {"type": "string", "enum": ["available", "unavailable"]},
+                  "load": {"type": "number", "minimum": 0, "maximum": 1}
+                }
+              },
+              "analysis": {
+                "type": "object",
+                "properties": {
+                  "status": {"type": "string", "enum": ["available", "unavailable"]},
+                  "load": {"type": "number", "minimum": 0, "maximum": 1}
+                }
+              },
+              "conversion": {
+                "type": "object",
+                "properties": {
+                  "status": {"type": "string", "enum": ["available", "unavailable"]},
+                  "load": {"type": "number", "minimum": 0, "maximum": 1}
+                }
+              },
+              "evaluation": {
+                "type": "object",
+                "properties": {
+                  "status": {"type": "string", "enum": ["available", "unavailable"]},
+                  "load": {"type": "number", "minimum": 0, "maximum": 1}
+                }
+              }
+            }
+          },
+          "resources": {
+            "type": "object",
+            "description": "Resource usage (if detailed=true)",
+            "properties": {
+              "memory_mb": {"type": "number"},
+              "cpu_percent": {"type": "number", "minimum": 0, "maximum": 100},
+              "disk_usage_percent": {"type": "number", "minimum": 0, "maximum": 100}
+            }
+          },
+          "active_conversions": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of active conversions"
+          }
+        }
+      }
+    }
+  },
+
+  "response_error": {
+    "type": "object",
+    "required": ["jsonrpc", "id", "error"],
+    "properties": {
+      "jsonrpc": {"type": "string", "const": "2.0"},
+      "id": {"type": "string"},
+      "error": {
+        "type": "object",
+        "required": ["code", "message"],
+        "properties": {
+          "code": {"type": "integer"},
+          "message": {"type": "string"}
+        }
+      }
+    }
+  },
+
+  "examples": {
+    "request_basic": {
+      "jsonrpc": "2.0",
+      "id": "health-001",
+      "method": "health_check",
+      "params": {}
+    },
+    "request_detailed": {
+      "jsonrpc": "2.0",
+      "id": "health-002",
+      "method": "health_check",
+      "params": {
+        "detailed": true
+      }
+    },
+    "response_basic": {
+      "jsonrpc": "2.0",
+      "id": "health-001",
+      "result": {
+        "status": "healthy",
+        "timestamp": "2025-10-06T12:00:00Z",
+        "uptime_seconds": 3600.5,
+        "version": "0.1.0"
+      }
+    },
+    "response_detailed": {
+      "jsonrpc": "2.0",
+      "id": "health-002",
+      "result": {
+        "status": "healthy",
+        "timestamp": "2025-10-06T12:00:00Z",
+        "uptime_seconds": 3600.5,
+        "version": "0.1.0",
+        "agents": {
+          "orchestrator": {
+            "status": "available",
+            "load": 0.25
+          },
+          "analysis": {
+            "status": "available",
+            "load": 0.10
+          },
+          "conversion": {
+            "status": "available",
+            "load": 0.50
+          },
+          "evaluation": {
+            "status": "available",
+            "load": 0.15
+          }
+        },
+        "resources": {
+          "memory_mb": 512.5,
+          "cpu_percent": 35.2,
+          "disk_usage_percent": 62.0
+        },
+        "active_conversions": 2
+      }
+    },
+    "response_degraded": {
+      "jsonrpc": "2.0",
+      "id": "health-003",
+      "result": {
+        "status": "degraded",
+        "timestamp": "2025-10-06T12:00:00Z",
+        "uptime_seconds": 7200.0,
+        "version": "0.1.0",
+        "agents": {
+          "orchestrator": {
+            "status": "available",
+            "load": 0.85
+          },
+          "analysis": {
+            "status": "available",
+            "load": 0.90
+          },
+          "conversion": {
+            "status": "unavailable",
+            "load": 0.0
+          },
+          "evaluation": {
+            "status": "available",
+            "load": 0.75
+          }
+        },
+        "active_conversions": 5
+      }
+    }
+  }
+}
