@@ -34,7 +34,10 @@
         "pattern": "^[a-z][a-z0-9_]*$"
       },
       "uniqueItems": true,
-      "examples": [["utils", "models"], ["config", "utils"]]
+      "examples": [
+        ["utils", "models"],
+        ["config", "utils"]
+      ]
     },
     "public_api": {
       "type": "array",
@@ -44,7 +47,10 @@
         "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
       },
       "uniqueItems": true,
-      "examples": [["MCPServer", "start_server", "mcp_tool"], ["AgentBase", "AgentRegistry"]]
+      "examples": [
+        ["MCPServer", "start_server", "mcp_tool"],
+        ["AgentBase", "AgentRegistry"]
+      ]
     },
     "metadata": {
       "type": "object",
@@ -60,7 +66,7 @@
         },
         "maintainers": {
           "type": "array",
-          "items": {"type": "string"}
+          "items": { "type": "string" }
         }
       }
     }

@@ -1,9 +1,11 @@
 # Implementation Plan: Core Project Organization
 
-**Branch**: `001-core-project-organization` | **Date**: 2025-10-03 | **Spec**: [spec.md](./spec.md)
-**Input**: Feature specification from `/specs/001-core-project-organization/spec.md`
+**Branch**: `001-core-project-organization` | **Date**: 2025-10-03 | **Spec**:
+[spec.md](./spec.md) **Input**: Feature specification from
+`/specs/001-core-project-organization/spec.md`
 
 ## Execution Flow (/plan command scope)
+
 ```
 1. Load feature spec from Input path
    → Spec loaded successfully from spec.md
@@ -25,18 +27,26 @@
 9. STOP - Ready for /tasks command
 ```
 
-**IMPORTANT**: The /plan command STOPS at step 8. Phases 2-4 are executed by other commands:
+**IMPORTANT**: The /plan command STOPS at step 8. Phases 2-4 are executed by
+other commands:
+
 - Phase 2: /tasks command creates tasks.md
 - Phase 3-4: Implementation execution (manual or via tools)
 
 ## Summary
 
-The Core Project Organization feature establishes comprehensive project structure for the agentic neurodata conversion system with MCP server as primary orchestration layer. This includes:
+The Core Project Organization feature establishes comprehensive project
+structure for the agentic neurodata conversion system with MCP server as primary
+orchestration layer. This includes:
 
-**Primary Requirement**: Create well-organized codebase with clear boundaries between MCP server orchestration layer, internal agent modules, and external integrations, enabling efficient navigation, contribution, and maintenance.
+**Primary Requirement**: Create well-organized codebase with clear boundaries
+between MCP server orchestration layer, internal agent modules, and external
+integrations, enabling efficient navigation, contribution, and maintenance.
 
 **Technical Approach** (from research):
-- MCP tool decorator pattern with Pydantic schema generation for standardized tool interfaces
+
+- MCP tool decorator pattern with Pydantic schema generation for standardized
+  tool interfaces
 - pydantic-settings for configuration management with fail-fast validation
 - Ruff-centric pre-commit hooks for code quality enforcement
 - Multi-dimensional pytest markers for flexible test execution
@@ -47,55 +57,70 @@ The Core Project Organization feature establishes comprehensive project structur
 
 ## Technical Context
 
-**Language/Version**: Python 3.11+
-**Primary Dependencies**: pixi (environment), pydantic-settings (config), FastAPI (MCP server), structlog (logging), pytest (testing), ruff (linting), mypy (type checking), DataLad (data management)
+**Language/Version**: Python 3.11+ **Primary Dependencies**: pixi (environment),
+pydantic-settings (config), FastAPI (MCP server), structlog (logging), pytest
+(testing), ruff (linting), mypy (type checking), DataLad (data management)
 **Storage**: Git for code, git-annex for large files, GIN for remote storage
-**Testing**: pytest with markers (unit/integration/e2e), pytest-cov for coverage, pytest-xdist for parallelization
-**Target Platform**: linux-64, osx-arm64
-**Project Type**: Single project with modular structure (MCP-centric architecture)
-**Performance Goals**: Pre-commit <10s (fast), test suite <5min (unit), <15min (integration), <30min (full)
-**Constraints**: MCP-centric architecture (all functionality through MCP tools), TDD mandatory, DataLad Python API only (no CLI), 80%+ code coverage
-**Scale/Scope**: Multi-agent system with 4 specialized agents (Conversation, Conversion, Evaluation, Knowledge Graph), 30+ MCP tools, comprehensive test infrastructure
+**Testing**: pytest with markers (unit/integration/e2e), pytest-cov for
+coverage, pytest-xdist for parallelization **Target Platform**: linux-64,
+osx-arm64 **Project Type**: Single project with modular structure (MCP-centric
+architecture) **Performance Goals**: Pre-commit <10s (fast), test suite <5min
+(unit), <15min (integration), <30min (full) **Constraints**: MCP-centric
+architecture (all functionality through MCP tools), TDD mandatory, DataLad
+Python API only (no CLI), 80%+ code coverage **Scale/Scope**: Multi-agent system
+with 4 specialized agents (Conversation, Conversion, Evaluation, Knowledge
+Graph), 30+ MCP tools, comprehensive test infrastructure
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 ### I. MCP-Centric Architecture ✓
-**Status**: COMPLIANT
-**Evidence**: FR-036 mandates all functionality exposed through standardized MCP tools; direct agent invocation prohibited
-**Implementation**: AgentModule entities communicate exclusively via MCP Server, tool decorator pattern enforces standardized interfaces
+
+**Status**: COMPLIANT **Evidence**: FR-036 mandates all functionality exposed
+through standardized MCP tools; direct agent invocation prohibited
+**Implementation**: AgentModule entities communicate exclusively via MCP Server,
+tool decorator pattern enforces standardized interfaces
 
 ### II. Agent Specialization ✓
-**Status**: COMPLIANT
-**Evidence**: FR-027 defines clear lifecycle management; FR-003 provides standardized agent structure
-**Implementation**: 4 agent types (conversation, conversion, evaluation, knowledge_graph) with single domain responsibility each
+
+**Status**: COMPLIANT **Evidence**: FR-027 defines clear lifecycle management;
+FR-003 provides standardized agent structure **Implementation**: 4 agent types
+(conversation, conversion, evaluation, knowledge_graph) with single domain
+responsibility each
 
 ### III. Test-Driven Development (NON-NEGOTIABLE) ✓
-**Status**: COMPLIANT
-**Evidence**: FR-019 enforces TDD workflow with test markers; FR-021 requires >80% coverage
-**Implementation**: pytest marker taxonomy enables TDD workflow, contract tests generated before implementation
+
+**Status**: COMPLIANT **Evidence**: FR-019 enforces TDD workflow with test
+markers; FR-021 requires >80% coverage **Implementation**: pytest marker
+taxonomy enables TDD workflow, contract tests generated before implementation
 
 ### IV. Data Integrity & Validation ✓
-**Status**: COMPLIANT
-**Evidence**: FR-028 provides validation system foundation; FR-007 requires fail-fast configuration validation
-**Implementation**: Pydantic models with field validators, structured error responses, NWB Inspector integration point defined
+
+**Status**: COMPLIANT **Evidence**: FR-028 provides validation system
+foundation; FR-007 requires fail-fast configuration validation
+**Implementation**: Pydantic models with field validators, structured error
+responses, NWB Inspector integration point defined
 
 ### V. Metadata Completeness ✓
-**Status**: COMPLIANT
-**Evidence**: FR-014 requires comprehensive documentation; ConfigurationProfile entity tracks metadata
-**Implementation**: Documentation artifacts tracked, metadata extraction patterns defined in integration points
+
+**Status**: COMPLIANT **Evidence**: FR-014 requires comprehensive documentation;
+ConfigurationProfile entity tracks metadata **Implementation**: Documentation
+artifacts tracked, metadata extraction patterns defined in integration points
 
 ### VI. Reproducibility & Provenance ✓
-**Status**: COMPLIANT
-**Evidence**: FR-029 mandates DataLad Python API usage; research phase confirms Python API patterns
-**Implementation**: DataLad integration point uses Python API exclusively, provenance tracking via datalad.api.save()
+
+**Status**: COMPLIANT **Evidence**: FR-029 mandates DataLad Python API usage;
+research phase confirms Python API patterns **Implementation**: DataLad
+integration point uses Python API exclusively, provenance tracking via
+datalad.api.save()
 
 **Overall Status**: ✅ ALL CONSTITUTIONAL PRINCIPLES SATISFIED
 
 ## Project Structure
 
 ### Documentation (this feature)
+
 ```
 specs/001-core-project-organization/
 ├── spec.md              # Feature specification (complete)
@@ -162,7 +187,10 @@ agentic-neurodata-conversion-5/
 └── pyproject.toml                   # Project metadata
 ```
 
-**Structure Decision**: Single project structure with clear module boundaries. The MCP server acts as central orchestration layer with agents, clients, and utilities as supporting modules. Tests are organized by type (unit/integration/e2e) with separate directories for fixtures and mocks.
+**Structure Decision**: Single project structure with clear module boundaries.
+The MCP server acts as central orchestration layer with agents, clients, and
+utilities as supporting modules. Tests are organized by type
+(unit/integration/e2e) with separate directories for fixtures and mocks.
 
 ## Phase 0: Outline & Research
 
@@ -181,7 +209,8 @@ agentic-neurodata-conversion-5/
    - Rationale: 10-100x faster than traditional tools, consolidated tooling
 
 4. **Pytest markers** ✓
-   - Decision: Multi-dimensional taxonomy (type, performance, resource, component)
+   - Decision: Multi-dimensional taxonomy (type, performance, resource,
+     component)
    - Rationale: Flexible test selection, execution profiles, CI/CD optimization
 
 5. **DataLad Python API** ✓
@@ -190,21 +219,25 @@ agentic-neurodata-conversion-5/
 
 6. **Structured logging (structlog)** ✓
    - Decision: structlog with JSON output, OpenTelemetry integration
-   - Rationale: Context variables for async, processor pipeline, log-trace correlation
+   - Rationale: Context variables for async, processor pipeline, log-trace
+     correlation
 
 7. **Agent lifecycle management** ✓
-   - Decision: FastAPI lifespan with AgentRegistry and event-driven communication
+   - Decision: FastAPI lifespan with AgentRegistry and event-driven
+     communication
    - Rationale: Clean async support, centralized registry, graceful shutdown
 
 8. **Code scaffolding (Copier vs Cookiecutter)** ✓
    - Decision: Copier v9+ for version-controlled templates with updates
-   - Rationale: Template updates (killer feature), version tagging, conflict resolution
+   - Rationale: Template updates (killer feature), version tagging, conflict
+     resolution
 
-**Output**: research.md with all 8 topics researched, decisions documented with rationale and alternatives
+**Output**: research.md with all 8 topics researched, decisions documented with
+rationale and alternatives
 
 ## Phase 1: Design & Contracts
 
-*Prerequisites: research.md complete ✓*
+_Prerequisites: research.md complete ✓_
 
 ### 1. Data Model (data-model.md) ✓
 
@@ -220,7 +253,8 @@ agentic-neurodata-conversion-5/
 8. **IntegrationPoint**: External system boundary with adapter
 9. **QualityMetric**: Measurable indicator with threshold
 
-All entities defined with fields, validation rules, relationships, and state transitions.
+All entities defined with fields, validation rules, relationships, and state
+transitions.
 
 ### 2. API Contracts (contracts/)
 
@@ -245,6 +279,7 @@ All entities defined with fields, validation rules, relationships, and state tra
 ### 3. Contract Tests
 
 Contract tests will be generated in Phase 2 (tasks.md) for each schema:
+
 - Validate schema compliance for entity instances
 - Assert required fields presence
 - Test validation rules enforcement
@@ -253,6 +288,7 @@ Contract tests will be generated in Phase 2 (tasks.md) for each schema:
 ### 4. Integration Tests from User Stories
 
 From spec.md user scenarios:
+
 - **Scenario 1**: Repository navigation test (5-minute understanding)
 - **Scenario 2**: New MCP tool addition test (seamless integration)
 - **Scenario 3**: Quality gates test (pre-commit + CI/CD)
@@ -263,17 +299,20 @@ From spec.md user scenarios:
 ### 5. Agent Context File (CLAUDE.md)
 
 Update agent context incrementally:
+
 - Run `.specify/scripts/bash/update-agent-context.sh claude`
 - Add new tech stack from this plan
 - Preserve manual additions between markers
 - Update recent changes section
 - Keep under 150 lines for token efficiency
 
-**Output**: data-model.md ✓, contracts/*.schema.json (pending), quickstart.md (pending), CLAUDE.md (pending)
+**Output**: data-model.md ✓, contracts/\*.schema.json (pending), quickstart.md
+(pending), CLAUDE.md (pending)
 
 ## Phase 2: Task Planning Approach
 
-*This section describes what the /tasks command will do - DO NOT execute during /plan*
+_This section describes what the /tasks command will do - DO NOT execute during
+/plan_
 
 ### Task Generation Strategy
 
@@ -310,28 +349,33 @@ The /tasks command will:
 ### Ordering Strategy
 
 **Test-Driven Development Order**:
+
 1. Contract tests (define expectations)
 2. Model implementations (pass contract tests)
 3. Integration tests (define workflows)
 4. Infrastructure implementations (pass integration tests)
 
 **Dependency Order**:
+
 1. Foundation: Configuration, logging, data models
 2. Core: MCP tool decorator, agent registry
 3. Infrastructure: Pre-commit, pytest markers, templates
 4. Integration: Agent lifecycle, external integrations
 
 **Parallelization Markers**:
+
 - [P]: Independent tasks (can run in parallel)
 - [S]: Sequential tasks (must run in order)
 
 ### Estimated Output
 
 **Task Categories**:
+
 - Contract tests: 4 tasks (1 per schema)
 - Model implementations: 9 tasks (1 per entity)
 - Integration tests: 6 tasks (1 per scenario)
-- Infrastructure: 8 tasks (decorator, config, hooks, markers, logging, lifecycle, templates, docs)
+- Infrastructure: 8 tasks (decorator, config, hooks, markers, logging,
+  lifecycle, templates, docs)
 - Validation: 3 tasks (test execution, coverage, quality gates)
 
 **Total**: ~30 numbered, ordered tasks in tasks.md
@@ -340,25 +384,26 @@ The /tasks command will:
 
 ## Phase 3+: Future Implementation
 
-*These phases are beyond the scope of the /plan command*
+_These phases are beyond the scope of the /plan command_
 
-**Phase 3**: Task execution (/tasks command creates tasks.md)
-**Phase 4**: Implementation (execute tasks.md following constitutional principles)
-**Phase 5**: Validation (run tests, execute quickstart.md, performance validation)
+**Phase 3**: Task execution (/tasks command creates tasks.md) **Phase 4**:
+Implementation (execute tasks.md following constitutional principles) **Phase
+5**: Validation (run tests, execute quickstart.md, performance validation)
 
 ## Complexity Tracking
 
-*Fill ONLY if Constitution Check has violations that must be justified*
+_Fill ONLY if Constitution Check has violations that must be justified_
 
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| N/A | No constitutional violations | All principles satisfied |
+| Violation | Why Needed                   | Simpler Alternative Rejected Because |
+| --------- | ---------------------------- | ------------------------------------ |
+| N/A       | No constitutional violations | All principles satisfied             |
 
 ## Progress Tracking
 
-*This checklist is updated during execution flow*
+_This checklist is updated during execution flow_
 
 **Phase Status**:
+
 - [x] Phase 0: Research complete (/plan command)
 - [x] Phase 1: Design complete (/plan command) - data-model.md complete
 - [ ] Phase 1: Contracts complete (/plan command) - contracts/ in progress
@@ -370,6 +415,7 @@ The /tasks command will:
 - [ ] Phase 5: Validation passed
 
 **Gate Status**:
+
 - [x] Initial Constitution Check: PASS
 - [ ] Post-Design Constitution Check: PASS (pending Phase 1 completion)
 - [x] All NEEDS CLARIFICATION resolved
@@ -377,4 +423,4 @@ The /tasks command will:
 
 ---
 
-*Based on Constitution v1.0.0 - See `.specify/memory/constitution.md`*
+_Based on Constitution v1.0.0 - See `.specify/memory/constitution.md`_
