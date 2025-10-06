@@ -1,219 +1,184 @@
 
-# Implementation Plan: [FEATURE]
+# Implementation Plan: MCP Server Architecture
 
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
+**Branch**: `006-mcp-server-architecture` | **Date**: 2025-10-06 | **Spec**: [requirements.md](../../.kiro/specs/mcp-server-architecture/requirements.md)
+**Input**: Feature specification from C:/Users/shahh/Projects/agentic-neurodata-conversion-2/.kiro/specs/mcp-server-architecture/requirements.md
+
+## Summary
+
+The MCP Server Architecture implements a central orchestration hub for the agentic neurodata conversion pipeline, coordinating specialized agents through the Model Context Protocol (MCP) to manage complete conversion workflows from dataset analysis to NWB file generation and evaluation.
+
+## Technical Context
+
+**Language/Version**: Python 3.9-3.11
+**Primary Dependencies**: FastAPI, uvicorn, MCP SDK, pydantic, SQLAlchemy, pytest
+**Storage**: SQLite (dev), PostgreSQL (prod)
+**Testing**: pytest with pytest-asyncio
+**Target Platform**: Linux server (primary), cross-platform
+**Project Type**: single
+**Performance Goals**: 10+ concurrent workflows, <100ms API latency, <2s workflow startup
+**Constraints**: >99.9% uptime, zero data loss, transactional semantics
+**Scale/Scope**: 25+ neuroscience formats, 4+ agent types
 
 ## Execution Flow (/plan command scope)
 ```
 1. Load feature spec from Input path
-   → If not found: ERROR "No feature spec at {path}"
-2. Fill Technical Context (scan for NEEDS CLARIFICATION)
-   → Detect Project Type from file system structure or context (web=frontend+backend, mobile=app+api)
-   → Set Structure Decision based on project type
-3. Fill the Constitution Check section based on the content of the constitution document.
-4. Evaluate Constitution Check section below
-   → If violations exist: Document in Complexity Tracking
-   → If no justification possible: ERROR "Simplify approach first"
-   → Update Progress Tracking: Initial Constitution Check
+2. Fill Technical Context
+3. Fill the Constitution Check section
+4. Evaluate Constitution Check section
 5. Execute Phase 0 → research.md
-   → If NEEDS CLARIFICATION remain: ERROR "Resolve unknowns"
-6. Execute Phase 1 → contracts, data-model.md, quickstart.md, agent-specific template file (e.g., `CLAUDE.md` for Claude Code, `.github/copilot-instructions.md` for GitHub Copilot, `GEMINI.md` for Gemini CLI, `QWEN.md` for Qwen Code or `AGENTS.md` for opencode).
+6. Execute Phase 1 → contracts, data-model.md, quickstart.md, agent file
 7. Re-evaluate Constitution Check section
-   → If new violations: Refactor design, return to Phase 1
-   → Update Progress Tracking: Post-Design Constitution Check
-8. Plan Phase 2 → Describe task generation approach (DO NOT create tasks.md)
+8. Plan Phase 2 → Describe task generation approach
 9. STOP - Ready for /tasks command
 ```
 
-**IMPORTANT**: The /plan command STOPS at step 7. Phases 2-4 are executed by other commands:
-- Phase 2: /tasks command creates tasks.md
-- Phase 3-4: Implementation execution (manual or via tools)
-
-## Summary
-[Extract from feature spec: primary requirement + technical approach from research]
-
-## Technical Context
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [single/web/mobile - determines source structure]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
-
 ## Constitution Check
+
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+**Constitution Status**: Template-only constitution found at .specify/memory/constitution.md with placeholder sections but no actual constitutional constraints defined.
+
+**Resolution**: N/A - No active constitution. Feature proceeds with standard software engineering best practices:
+- Clean architecture with separation of concerns (transport-agnostic core)
+- TDD approach with contract tests ensuring adapter parity
+- Comprehensive error handling and observability
+
+**Note for Future**: Once constitution established, review this plan against those principles.
 
 ## Project Structure
 
 ### Documentation (this feature)
 ```
-specs/[###-feature]/
-├── plan.md              # This file (/plan command output)
-├── research.md          # Phase 0 output (/plan command)
-├── data-model.md        # Phase 1 output (/plan command)
-├── quickstart.md        # Phase 1 output (/plan command)
-├── contracts/           # Phase 1 output (/plan command)
-└── tasks.md             # Phase 2 output (/tasks command - NOT created by /plan)
+specs/006-mcp-server-architecture/
+├── plan.md              # This file
+├── research.md          # Phase 0 output
+├── data-model.md        # Phase 1 output
+├── quickstart.md        # Phase 1 output
+├── contracts/           # Phase 1 output
+└── tasks.md             # Phase 2 output (/tasks command)
 ```
 
 ### Source Code (repository root)
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
+
 ```
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
-src/
-├── models/
-├── services/
-├── cli/
-└── lib/
+agentic_neurodata_conversion/
+├── mcp_server/
+│   ├── core/                    # Transport-agnostic business logic
+│   │   ├── services/           # Workflow orchestration, agent coordination
+│   │   ├── domain/             # Domain entities and value objects
+│   │   ├── ports/              # Interface definitions for adapters
+│   │   └── use_cases/          # Business use case implementations
+│   ├── adapters/               # Transport-specific thin layers
+│   │   ├── mcp/               # MCP protocol (stdin/stdout, socket, TCP)
+│   │   ├── http/              # HTTP/REST adapter with FastAPI
+│   │   ├── websocket/         # WebSocket real-time adapter
+│   │   └── cli/               # Command-line interface adapter
+│   ├── models/                # Data models and schemas
+│   │   ├── workflow.py        # Workflow state and transitions
+│   │   ├── agent.py           # Agent coordination models
+│   │   └── validation.py      # Validation result models
+│   ├── agents/                # Agent integration layer
+│   ├── workflows/             # Workflow orchestration logic
+│   └── observability/         # Monitoring and logging
 
 tests/
-├── contract/
-├── integration/
-└── unit/
-
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
-backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
-
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
-
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+├── contract/                   # Contract tests for adapter parity
+├── integration/               # Multi-component integration tests
+└── unit/                      # Unit tests for core logic
 ```
 
-**Structure Decision**: [Document the selected structure and reference the real
-directories captured above]
+**Structure Decision**: Single project structure using existing agentic_neurodata_conversion/ package. MCP server as new module following hexagonal architecture with transport-agnostic core and thin adapters.
 
 ## Phase 0: Outline & Research
-1. **Extract unknowns from Technical Context** above:
-   - For each NEEDS CLARIFICATION → research task
-   - For each dependency → best practices task
-   - For each integration → patterns task
 
-2. **Generate and dispatch research agents**:
-   ```
-   For each unknown in Technical Context:
-     Task: "Research {unknown} for {feature context}"
-   For each technology choice:
-     Task: "Find best practices for {tech} in {domain}"
-   ```
+1. **Extract unknowns from Technical Context**:
+   - MCP SDK integration patterns
+   - SQLAlchemy async patterns for workflow state
+   - Circuit breaker patterns (tenacity, circuitbreaker libs)
+   - OpenTelemetry distributed tracing
+   - Neuroscience format detection (25+ formats)
 
-3. **Consolidate findings** in `research.md` using format:
-   - Decision: [what was chosen]
-   - Rationale: [why chosen]
-   - Alternatives considered: [what else evaluated]
+2. **Generate and dispatch research agents** for:
+   - MCP SDK best practices for Python server
+   - FastAPI hexagonal architecture adapter patterns
+   - Contract testing strategies for multi-protocol APIs
+   - NeuroConv interface selection strategies
 
-**Output**: research.md with all NEEDS CLARIFICATION resolved
+3. **Consolidate findings** in research.md
+
+**Output**: research.md with all technology choices documented
 
 ## Phase 1: Design & Contracts
-*Prerequisites: research.md complete*
 
-1. **Extract entities from feature spec** → `data-model.md`:
-   - Entity name, fields, relationships
-   - Validation rules from requirements
-   - State transitions if applicable
+1. **Extract entities** → data-model.md:
+   - Workflow (id, state, steps, checkpoints, metadata)
+   - WorkflowStep (agent_type, status, input, output, timing)
+   - AgentRequest/Response models
+   - FormatDetection, ValidationResult
 
-2. **Generate API contracts** from functional requirements:
-   - For each user action → endpoint
-   - Use standard REST/GraphQL patterns
-   - Output OpenAPI/GraphQL schema to `/contracts/`
+2. **Generate API contracts**:
+   - POST /workflows, GET /workflows/{id}, PUT /workflows/{id}/cancel
+   - POST /agents/{type}/invoke, GET /agents/health
+   - POST /formats/detect, GET /formats/supported
+   - POST /validation/run, GET /validation/{id}/results
+   - Output OpenAPI 3.0 schema to /contracts/openapi.yaml
+   - Generate MCP tool definitions to /contracts/mcp-tools.json
 
-3. **Generate contract tests** from contracts:
-   - One test file per endpoint
-   - Assert request/response schemas
-   - Tests must fail (no implementation yet)
+3. **Generate contract tests** per adapter
 
-4. **Extract test scenarios** from user stories:
-   - Each story → integration test scenario
-   - Quickstart test = story validation steps
+4. **Extract test scenarios** from 8 requirements
 
-5. **Update agent file incrementally** (O(1) operation):
-   - Run `.specify/scripts/powershell/update-agent-context.ps1 -AgentType codex`
-     **IMPORTANT**: Execute it exactly as specified above. Do not add or remove any arguments.
-   - If exists: Add only NEW tech from current plan
-   - Preserve manual additions between markers
-   - Update recent changes (keep last 3)
-   - Keep under 150 lines for token efficiency
-   - Output to repository root
+5. **Update agent file**
 
-**Output**: data-model.md, /contracts/*, failing tests, quickstart.md, agent-specific file
+**Output**: data-model.md, /contracts/*, failing tests, quickstart.md, agent file
 
 ## Phase 2: Task Planning Approach
-*This section describes what the /tasks command will do - DO NOT execute during /plan*
 
 **Task Generation Strategy**:
-- Load `.specify/templates/tasks-template.md` as base
-- Generate tasks from Phase 1 design docs (contracts, data model, quickstart)
-- Each contract → contract test task [P]
-- Each entity → model creation task [P] 
-- Each user story → integration test task
-- Implementation tasks to make tests pass
+- Each contract endpoint → contract test task [P]
+- Each entity → model creation task [P]
+- Each adapter (MCP, HTTP, WebSocket, CLI) → adapter task
+- Each requirement → integration test task
+- Core service layer → business logic tasks
 
 **Ordering Strategy**:
-- TDD order: Tests before implementation 
-- Dependency order: Models before services before UI
-- Mark [P] for parallel execution (independent files)
+- TDD: Contract tests → Models → Core services → Adapters → Integration tests
+- Dependency: Models → Core services → Adapters → Integration
 
-**Estimated Output**: 25-30 numbered, ordered tasks in tasks.md
-
-**IMPORTANT**: This phase is executed by the /tasks command, NOT by /plan
+**Estimated Output**: 35-45 tasks covering:
+- 8 contract test tasks
+- 6 data model tasks
+- 12 core service tasks
+- 8 adapter implementation tasks
+- 8 integration test tasks
+- 3 observability tasks
 
 ## Phase 3+: Future Implementation
-*These phases are beyond the scope of the /plan command*
 
-**Phase 3**: Task execution (/tasks command creates tasks.md)  
-**Phase 4**: Implementation (execute tasks.md following constitutional principles)  
-**Phase 5**: Validation (run tests, execute quickstart.md, performance validation)
+**Phase 3**: Task execution (/tasks command creates tasks.md)
+**Phase 4**: Implementation
+**Phase 5**: Validation
 
 ## Complexity Tracking
-*Fill ONLY if Constitution Check has violations that must be justified*
 
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
-
+No constitution violations. Design follows clean architecture patterns.
 
 ## Progress Tracking
-*This checklist is updated during execution flow*
 
 **Phase Status**:
-- [ ] Phase 0: Research complete (/plan command)
-- [ ] Phase 1: Design complete (/plan command)
-- [ ] Phase 2: Task planning complete (/plan command - describe approach only)
+- [x] Phase 0: Research complete
+- [x] Phase 1: Design complete
+- [x] Phase 2: Task planning complete (approach defined)
 - [ ] Phase 3: Tasks generated (/tasks command)
 - [ ] Phase 4: Implementation complete
 - [ ] Phase 5: Validation passed
 
 **Gate Status**:
-- [ ] Initial Constitution Check: PASS
-- [ ] Post-Design Constitution Check: PASS
-- [ ] All NEEDS CLARIFICATION resolved
-- [ ] Complexity deviations documented
+- [x] Initial Constitution Check: N/A
+- [x] Post-Design Constitution Check: PASS
+- [x] All NEEDS CLARIFICATION resolved
+- [x] Complexity deviations documented (none)
 
 ---
-*Based on Constitution v2.1.1 - See `/memory/constitution.md`*
+*Based on Constitution v2.1.1 - See /memory/constitution.md*
