@@ -80,7 +80,13 @@
         "properties": {
           "rule_type": {
             "type": "string",
-            "enum": ["required_field", "path_exists", "range_check", "pattern_match", "custom"],
+            "enum": [
+              "required_field",
+              "path_exists",
+              "range_check",
+              "pattern_match",
+              "custom"
+            ],
             "description": "Type of validation rule"
           },
           "field": {
@@ -132,7 +138,7 @@
         {
           "rule_type": "path_exists",
           "field": "data_root",
-          "parameters": {"create_if_missing": true},
+          "parameters": { "create_if_missing": true },
           "error_message": "data_root path must be accessible"
         }
       ],
@@ -162,7 +168,7 @@
         {
           "rule_type": "path_exists",
           "field": "data_root",
-          "parameters": {"create_if_missing": false},
+          "parameters": { "create_if_missing": false },
           "error_message": "data_root must exist in production"
         }
       ],

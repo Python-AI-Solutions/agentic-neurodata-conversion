@@ -1,10 +1,10 @@
 # Quickstart: Core Project Organization
 
-**Feature**: 001-core-project-organization
-**Date**: 2025-10-03
-**Purpose**: Executable validation scenarios for core project organization feature
+**Feature**: 001-core-project-organization **Date**: 2025-10-03 **Purpose**:
+Executable validation scenarios for core project organization feature
 
-This document provides step-by-step executable scenarios to validate the implementation of the core project organization infrastructure.
+This document provides step-by-step executable scenarios to validate the
+implementation of the core project organization infrastructure.
 
 ---
 
@@ -12,7 +12,8 @@ This document provides step-by-step executable scenarios to validate the impleme
 
 Before running these scenarios, ensure:
 
-1. Repository cloned: `git clone https://github.com/Python-AI-Solutions/agentic-neurodata-conversion.git`
+1. Repository cloned:
+   `git clone https://github.com/Python-AI-Solutions/agentic-neurodata-conversion.git`
 2. Environment setup: `pixi install`
 3. Development tools installed: `pixi run pre-commit install`
 
@@ -20,7 +21,8 @@ Before running these scenarios, ensure:
 
 ## Scenario 1: Repository Navigation (5-Minute Understanding)
 
-**User Story**: As a new developer, I can understand the project structure within 5 minutes.
+**User Story**: As a new developer, I can understand the project structure
+within 5 minutes.
 
 **Validation Steps**:
 
@@ -54,6 +56,7 @@ ls docs/architecture/
 ```
 
 **Success Criteria**:
+
 - All expected directories exist
 - README provides clear architectural overview
 - Documentation structure is intuitive
@@ -63,7 +66,8 @@ ls docs/architecture/
 
 ## Scenario 2: Add New MCP Tool (Seamless Integration)
 
-**User Story**: As a developer, I can add a new MCP tool following standardized patterns.
+**User Story**: As a developer, I can add a new MCP tool following standardized
+patterns.
 
 **Validation Steps**:
 
@@ -103,6 +107,7 @@ python -c "from agentic_nwb_converter.mcp_server.tools import validate_nwb; prin
 ```
 
 **Success Criteria**:
+
 - Template generates correct file structure
 - Decorator automatically registers tool
 - Tests follow TDD workflow
@@ -112,7 +117,8 @@ python -c "from agentic_nwb_converter.mcp_server.tools import validate_nwb; prin
 
 ## Scenario 3: Quality Gates (Pre-commit + CI/CD)
 
-**User Story**: As a developer, code quality checks run automatically and pass before commit.
+**User Story**: As a developer, code quality checks run automatically and pass
+before commit.
 
 **Validation Steps**:
 
@@ -162,6 +168,7 @@ pytest tests/unit/ --cov=src --cov-report=term --cov-fail-under=80
 ```
 
 **Success Criteria**:
+
 - Pre-commit hooks run in correct order
 - Formatters execute before linters
 - Type checking catches missing type hints
@@ -172,7 +179,8 @@ pytest tests/unit/ --cov=src --cov-report=term --cov-fail-under=80
 
 ## Scenario 4: Third-Party Integration (Client Patterns)
 
-**User Story**: As a third-party developer, I can implement a client integration using provided patterns.
+**User Story**: As a third-party developer, I can implement a client integration
+using provided patterns.
 
 **Validation Steps**:
 
@@ -216,6 +224,7 @@ curl http://localhost:8080/openapi.json
 ```
 
 **Success Criteria**:
+
 - Example clients are complete and working
 - Documentation provides clear integration guide
 - OpenAPI spec is available and valid
@@ -225,7 +234,8 @@ curl http://localhost:8080/openapi.json
 
 ## Scenario 5: Architecture Review (MCP-Centric Compliance)
 
-**User Story**: As a system architect, I can verify adherence to MCP-centric architecture principles.
+**User Story**: As a system architect, I can verify adherence to MCP-centric
+architecture principles.
 
 **Validation Steps**:
 
@@ -287,6 +297,7 @@ grep -A 5 "Constitution Check" specs/001-core-project-organization/plan.md
 ```
 
 **Success Criteria**:
+
 - No direct agent-to-agent communication
 - All functionality exposed through MCP tools
 - Each agent has single domain responsibility
@@ -297,7 +308,8 @@ grep -A 5 "Constitution Check" specs/001-core-project-organization/plan.md
 
 ## Scenario 6: Agent Module Modification (Test Suite Validation)
 
-**User Story**: As a developer, I can modify an agent and validate changes through comprehensive test suite.
+**User Story**: As a developer, I can modify an agent and validate changes
+through comprehensive test suite.
 
 **Validation Steps**:
 
@@ -354,6 +366,7 @@ pytest tests/unit/agents/ -v --durations=10
 ```
 
 **Success Criteria**:
+
 - TDD workflow followed (test first, then implement)
 - All tests pass after implementation
 - Code coverage maintained above 80%
@@ -556,6 +569,7 @@ echo "============================================"
 ### Common Issues
 
 **Issue**: Pre-commit hooks not running
+
 ```bash
 # Solution: Reinstall hooks
 pre-commit uninstall
@@ -564,12 +578,14 @@ pre-commit run --all-files
 ```
 
 **Issue**: Tests failing with import errors
+
 ```bash
 # Solution: Reinstall in development mode
 pixi run pip install -e .
 ```
 
 **Issue**: Configuration validation fails
+
 ```bash
 # Solution: Check environment variables
 env | grep NWB_CONVERTER_
@@ -577,6 +593,7 @@ env | grep NWB_CONVERTER_
 ```
 
 **Issue**: DataLad operations fail
+
 ```bash
 # Solution: Initialize git config
 git config --global user.name "Your Name"
@@ -597,6 +614,5 @@ After validating all scenarios:
 
 ---
 
-**Document Status**: Quickstart Complete
-**Last Updated**: 2025-10-03
+**Document Status**: Quickstart Complete **Last Updated**: 2025-10-03
 **Validation Status**: Ready for execution after implementation
