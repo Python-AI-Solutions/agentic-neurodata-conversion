@@ -1,0 +1,742 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MCP Server Architecture Tools",
+  "description": "MCP tool definitions for the neurodata conversion workflow orchestration",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "create_workflow",
+      "description": "Create a new conversion workflow from input dataset to NWB output. The workflow begins in PENDING state and can be automatically started if auto_start is true.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "input_path": {
+            "type": "string",
+            "description": "Path to the input neuroscience dataset"
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Initial metadata for the workflow (experimenter, session_description, etc.)",
+            "additionalProperties": true
+          },
+          "auto_start": {
+            "type": "boolean",
+            "description": "Automatically start workflow execution after creation",
+            "default": false
+          }
+        },
+        "required": ["input_path"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "workflow_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier for the created workflow"
+          },
+          "state": {
+            "type": "string",
+            "enum": ["pending", "analyzing"],
+            "description": "Initial workflow state"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": ["workflow_id", "state", "created_at"]
+      }
+    },
+    {
+      "name": "get_workflow",
+      "description": "Retrieve detailed information about a specific workflow including current state, steps, format detection results, and validation summary.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workflow_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique workflow identifier"
+          }
+        },
+        "required": ["workflow_id"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "analyzing",
+              "collecting",
+              "converting",
+              "validating",
+              "completed",
+              "failed",
+              "cancelled"
+            ]
+          },
+          "input_path": {
+            "type": "string"
+          },
+          "output_path": {
+            "type": ["string", "null"]
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "format_info": {
+            "type": ["object", "null"],
+            "description": "Format detection results"
+          },
+          "validation_summary": {
+            "type": ["array", "null"],
+            "items": {
+              "type": "object"
+            },
+            "description": "Validation results from multiple tools"
+          },
+          "error_details": {
+            "type": ["object", "null"]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completed_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          }
+        },
+        "required": ["id", "state", "input_path", "created_at", "updated_at"]
+      }
+    },
+    {
+      "name": "list_workflows",
+      "description": "List workflows with optional filtering by state and pagination support. Returns workflows sorted by creation date (newest first by default).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "analyzing",
+              "collecting",
+              "converting",
+              "validating",
+              "completed",
+              "failed",
+              "cancelled"
+            ],
+            "description": "Filter workflows by state"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 20,
+            "description": "Maximum number of results to return"
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0,
+            "description": "Number of results to skip for pagination"
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "created_asc",
+              "created_desc",
+              "updated_asc",
+              "updated_desc"
+            ],
+            "default": "created_desc",
+            "description": "Sort order for results"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "workflows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Workflow summary object"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "description": "Total number of workflows matching filter"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          }
+        },
+        "required": ["workflows", "total", "limit", "offset"]
+      }
+    },
+    {
+      "name": "start_workflow",
+      "description": "Start execution of a workflow in PENDING state. Transitions the workflow to ANALYZING state and begins format detection.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workflow_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique workflow identifier"
+          }
+        },
+        "required": ["workflow_id"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "workflow_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string",
+            "enum": ["analyzing"]
+          },
+          "message": {
+            "type": "string",
+            "description": "Status message"
+          }
+        },
+        "required": ["workflow_id", "state"]
+      }
+    },
+    {
+      "name": "cancel_workflow",
+      "description": "Cancel a running workflow. Triggers cleanup operations and transitions to CANCELLED state.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workflow_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique workflow identifier"
+          }
+        },
+        "required": ["workflow_id"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "workflow_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string",
+            "enum": ["cancelled"]
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": ["workflow_id", "state"]
+      }
+    },
+    {
+      "name": "get_workflow_steps",
+      "description": "Retrieve all execution steps for a workflow, ordered by sequence number. Each step represents an agent invocation with input, output, and execution metadata.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workflow_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique workflow identifier"
+          }
+        },
+        "required": ["workflow_id"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "agent_type": {
+                  "type": "string",
+                  "enum": [
+                    "conversation",
+                    "conversion",
+                    "evaluation",
+                    "metadata_questioner"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "running",
+                    "completed",
+                    "failed",
+                    "skipped",
+                    "retrying"
+                  ]
+                },
+                "sequence_number": {
+                  "type": "integer"
+                },
+                "started_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "completed_at": {
+                  "type": ["string", "null"],
+                  "format": "date-time"
+                },
+                "duration_ms": {
+                  "type": ["integer", "null"]
+                }
+              }
+            }
+          }
+        },
+        "required": ["steps"]
+      }
+    },
+    {
+      "name": "detect_format",
+      "description": "Analyze a dataset to detect its format(s) using multi-layer detection (file extensions, magic bytes, directory structure, headers). Returns detected formats with confidence scores and recommended NeuroConv interface.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "input_path": {
+            "type": "string",
+            "description": "Path to dataset for format detection"
+          },
+          "detection_layers": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "extension",
+                "magic_bytes",
+                "directory_structure",
+                "header_parsing",
+                "neuroconv_mapping"
+              ]
+            },
+            "description": "Specific detection layers to use (optional, all layers used if not specified)"
+          }
+        },
+        "required": ["input_path"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "formats_detected": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": ["string", "null"]
+                },
+                "confidence": {
+                  "type": "number",
+                  "minimum": 0.0,
+                  "maximum": 1.0
+                },
+                "neuroconv_interface": {
+                  "type": ["string", "null"]
+                },
+                "detection_method": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "primary_format": {
+            "type": ["object", "null"],
+            "description": "Highest confidence format"
+          },
+          "recommended_interface": {
+            "type": ["string", "null"],
+            "description": "Recommended NeuroConv interface for conversion"
+          },
+          "confidence_scores": {
+            "type": "object",
+            "description": "Confidence scores by detection layer",
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["formats_detected", "confidence_scores"]
+      }
+    },
+    {
+      "name": "list_supported_formats",
+      "description": "Get a list of all supported neuroscience data formats with their NeuroConv interfaces, file extensions, and typical directory structures.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "formats": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "neuroconv_interface": {
+                  "type": "string"
+                },
+                "file_extensions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "typical_structure": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "required": ["formats"]
+      }
+    },
+    {
+      "name": "invoke_agent",
+      "description": "Directly invoke a specific agent with custom input data. This is a low-level operation for testing or manual agent interaction. For workflow-based conversions, use create_workflow instead.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_type": {
+            "type": "string",
+            "enum": [
+              "conversation",
+              "conversion",
+              "evaluation",
+              "metadata_questioner"
+            ],
+            "description": "Type of agent to invoke"
+          },
+          "operation": {
+            "type": "string",
+            "description": "Operation to perform (agent-specific)"
+          },
+          "input": {
+            "type": "object",
+            "description": "Operation-specific input data",
+            "additionalProperties": true
+          },
+          "context": {
+            "type": "object",
+            "description": "Execution context (workflow_id, etc.)",
+            "additionalProperties": true
+          },
+          "timeout_seconds": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3600,
+            "default": 300,
+            "description": "Maximum execution time in seconds"
+          },
+          "priority": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10,
+            "default": 5,
+            "description": "Request priority (higher = more important)"
+          }
+        },
+        "required": ["agent_type", "operation", "input"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_type": {
+            "type": "string"
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "output_data": {
+            "type": ["object", "null"],
+            "additionalProperties": true
+          },
+          "error": {
+            "type": ["object", "null"],
+            "properties": {
+              "type": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          },
+          "execution_time_ms": {
+            "type": "integer"
+          },
+          "correlation_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "agent_type",
+          "success",
+          "execution_time_ms",
+          "correlation_id"
+        ]
+      }
+    },
+    {
+      "name": "get_agent_health",
+      "description": "Check the health status of all registered agents. Returns connectivity status, response times, and error information for each agent.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "agents": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "agent_type": {
+                  "type": "string",
+                  "enum": [
+                    "conversation",
+                    "conversion",
+                    "evaluation",
+                    "metadata_questioner"
+                  ]
+                },
+                "healthy": {
+                  "type": "boolean"
+                },
+                "last_check": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "response_time_ms": {
+                  "type": ["integer", "null"]
+                },
+                "error": {
+                  "type": ["string", "null"]
+                }
+              }
+            }
+          }
+        },
+        "required": ["agents"]
+      }
+    },
+    {
+      "name": "run_validation",
+      "description": "Validate an NWB file using multiple validation tools (NWB Inspector, PyNWB validator, DANDI validator). Returns aggregated validation results with issues, quality scores, and recommendations.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nwb_file_path": {
+            "type": "string",
+            "description": "Path to NWB file for validation"
+          },
+          "validators": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["nwb_inspector", "pynwb", "dandi"]
+            },
+            "description": "Specific validators to run (all used if not specified)"
+          },
+          "validation_config": {
+            "type": "object",
+            "description": "Validator-specific configuration options",
+            "additionalProperties": true
+          }
+        },
+        "required": ["nwb_file_path"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "validation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "validator_name": {
+                  "type": "string"
+                },
+                "severity": {
+                  "type": "string",
+                  "enum": ["info", "warning", "error", "critical"]
+                },
+                "issues": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "severity": {
+                        "type": "string"
+                      },
+                      "message": {
+                        "type": "string"
+                      },
+                      "location": {
+                        "type": ["string", "null"]
+                      },
+                      "suggestion": {
+                        "type": ["string", "null"]
+                      }
+                    }
+                  }
+                },
+                "quality_score": {
+                  "type": "number",
+                  "minimum": 0.0,
+                  "maximum": 1.0
+                },
+                "passed": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "overall_passed": {
+            "type": "boolean"
+          },
+          "overall_quality_score": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          },
+          "executed_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "validation_id",
+          "results",
+          "overall_passed",
+          "overall_quality_score",
+          "executed_at"
+        ]
+      }
+    },
+    {
+      "name": "get_validation_results",
+      "description": "Retrieve detailed validation results by validation ID. Returns the same information as run_validation, useful for checking status of async validation jobs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "validation_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique validation identifier from run_validation"
+          }
+        },
+        "required": ["validation_id"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "validation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "overall_passed": {
+            "type": "boolean"
+          },
+          "overall_quality_score": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          },
+          "executed_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "validation_id",
+          "results",
+          "overall_passed",
+          "overall_quality_score",
+          "executed_at"
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "architecture": "transport-agnostic",
+    "core_service_layer": "All tools map to methods in the core service layer, ensuring identical functionality across MCP, HTTP, WebSocket, and CLI transports",
+    "contract_testing": "Contract tests verify all transport adapters provide equivalent functionality",
+    "version_history": [
+      {
+        "version": "1.0.0",
+        "date": "2025-10-06",
+        "changes": "Initial tool definitions for MCP Server Architecture feature"
+      }
+    ]
+  }
+}

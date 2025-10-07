@@ -1,0 +1,269 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Python-AI-Solutions/agentic-neurodata-conversion/schemas/documentation.json",
+  "title": "DocumentationArtifact",
+  "description": "Generated or authored documentation content with validation rules",
+  "type": "object",
+  "required": ["name", "type", "format", "auto_generated", "source_path"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Document identifier",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "minLength": 3,
+      "maxLength": 100,
+      "examples": ["mcp_server_api", "architecture_overview", "getting_started"]
+    },
+    "type": {
+      "type": "string",
+      "description": "Documentation category",
+      "enum": [
+        "api",
+        "architecture",
+        "adr",
+        "tutorial",
+        "example",
+        "guide",
+        "reference"
+      ],
+      "examples": ["api", "architecture", "tutorial"]
+    },
+    "format": {
+      "type": "string",
+      "description": "Document format",
+      "enum": ["markdown", "html", "pdf", "jupyter", "rst"],
+      "examples": ["markdown", "html"]
+    },
+    "auto_generated": {
+      "type": "boolean",
+      "description": "Whether document is automatically generated from code",
+      "default": false
+    },
+    "source_path": {
+      "type": "string",
+      "description": "Location of source content (file or directory)",
+      "pattern": "^(/[^/]+)+$",
+      "examples": [
+        "/Users/user/project/src/agentic_nwb_converter/mcp_server",
+        "/Users/user/project/docs/architecture/overview.md"
+      ]
+    },
+    "output_path": {
+      "type": "string",
+      "description": "Location where generated/built documentation is written",
+      "pattern": "^(/[^/]+)+$",
+      "examples": [
+        "/Users/user/project/docs/api/mcp_server.md",
+        "/Users/user/project/docs/_build/html/index.html"
+      ]
+    },
+    "generation_config": {
+      "type": "object",
+      "description": "Configuration for auto-generated documentation",
+      "properties": {
+        "tool": {
+          "type": "string",
+          "enum": ["sphinx", "mkdocs", "pdoc", "pydoc", "custom"],
+          "description": "Documentation generation tool"
+        },
+        "template": {
+          "type": "string",
+          "description": "Template file for generation"
+        },
+        "include_patterns": {
+          "type": "array",
+          "description": "File patterns to include in documentation",
+          "items": { "type": "string" },
+          "examples": [["*.py"], ["src/**/*.py", "!src/**/tests/**"]]
+        },
+        "exclude_patterns": {
+          "type": "array",
+          "description": "File patterns to exclude from documentation",
+          "items": { "type": "string" },
+          "examples": [["**/tests/**", "**/__pycache__/**"]]
+        },
+        "options": {
+          "type": "object",
+          "description": "Tool-specific options",
+          "additionalProperties": true
+        }
+      },
+      "required": ["tool"]
+    },
+    "validation": {
+      "type": "object",
+      "description": "Documentation validation requirements",
+      "properties": {
+        "check_links": {
+          "type": "boolean",
+          "description": "Validate all links are not broken",
+          "default": true
+        },
+        "check_spelling": {
+          "type": "boolean",
+          "description": "Run spell checker",
+          "default": false
+        },
+        "require_examples": {
+          "type": "boolean",
+          "description": "Require code examples in API docs",
+          "default": false
+        },
+        "min_docstring_coverage": {
+          "type": "number",
+          "description": "Minimum percentage of functions with docstrings",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 80
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Document metadata",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Human-readable title"
+        },
+        "description": {
+          "type": "string",
+          "description": "Brief description of document content"
+        },
+        "authors": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Document authors"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "description": "Document version"
+        },
+        "last_updated": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp"
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Classification tags"
+        }
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "description": "Other documentation artifacts this depends on",
+      "items": { "type": "string" },
+      "uniqueItems": true,
+      "examples": [["api_reference"], ["architecture_overview", "data_model"]]
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": { "auto_generated": { "const": true } }
+      },
+      "then": {
+        "required": ["generation_config"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "api" } }
+      },
+      "then": {
+        "properties": {
+          "auto_generated": { "const": true },
+          "validation": {
+            "properties": {
+              "require_examples": { "const": true },
+              "min_docstring_coverage": { "minimum": 80 }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "examples": [
+    {
+      "name": "mcp_server_api",
+      "type": "api",
+      "format": "markdown",
+      "auto_generated": true,
+      "source_path": "/Users/user/project/src/agentic_nwb_converter/mcp_server",
+      "output_path": "/Users/user/project/docs/api/mcp_server.md",
+      "generation_config": {
+        "tool": "pdoc",
+        "include_patterns": ["*.py"],
+        "exclude_patterns": ["**/tests/**"],
+        "options": {
+          "show_source": true,
+          "template_dir": "docs/templates"
+        }
+      },
+      "validation": {
+        "check_links": true,
+        "check_spelling": false,
+        "require_examples": true,
+        "min_docstring_coverage": 90
+      },
+      "metadata": {
+        "title": "MCP Server API Reference",
+        "description": "Complete API documentation for the MCP server orchestration layer",
+        "authors": ["Core Team"],
+        "version": "1.0.0",
+        "tags": ["api", "mcp", "server"]
+      },
+      "dependencies": []
+    },
+    {
+      "name": "getting_started",
+      "type": "tutorial",
+      "format": "markdown",
+      "auto_generated": false,
+      "source_path": "/Users/user/project/docs/guides/getting_started.md",
+      "output_path": "/Users/user/project/docs/_build/guides/getting_started.html",
+      "validation": {
+        "check_links": true,
+        "check_spelling": true,
+        "require_examples": false,
+        "min_docstring_coverage": 0
+      },
+      "metadata": {
+        "title": "Getting Started Guide",
+        "description": "Step-by-step introduction to the agentic NWB converter",
+        "authors": ["Documentation Team"],
+        "version": "1.0.0",
+        "tags": ["tutorial", "getting-started"]
+      },
+      "dependencies": ["architecture_overview"]
+    }
+  ],
+  "definitions": {
+    "validation_rules": {
+      "description": "Documentation validation requirements",
+      "rules": [
+        "Content MUST exist at source_path",
+        "Format MUST be parseable by specified tool",
+        "Auto-generated docs MUST regenerate on source changes",
+        "Links MUST be valid (no broken links) when check_links enabled",
+        "API documentation MUST include Google-style docstrings",
+        "Type hints MUST be present for all public functions",
+        "Examples MUST be executable and tested",
+        "ADRs (Architecture Decision Records) MUST follow template structure"
+      ]
+    },
+    "documentation_types": {
+      "api": "Auto-generated API reference from code annotations",
+      "architecture": "System design, diagrams, component interactions",
+      "adr": "Architecture Decision Records documenting key decisions",
+      "tutorial": "Step-by-step learning guides for users",
+      "example": "Executable code examples demonstrating usage patterns",
+      "guide": "How-to guides for specific tasks",
+      "reference": "Technical reference material"
+    }
+  }
+}
