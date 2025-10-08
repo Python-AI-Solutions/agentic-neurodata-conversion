@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Validation Rule Schema",
+  "description": "Schema for defining validation rules",
+  "type": "object",
+  "required": ["id", "name", "category", "target_artifact", "severity"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "name": {"type": "string"},
+    "description": {"type": "string"},
+    "category": {
+      "type": "string",
+      "enum": ["schema", "data_integrity", "metadata", "compliance", "performance", "security"]
+    },
+    "target_artifact": {
+      "type": "string",
+      "enum": ["nwb_file", "rdf_graph", "test_report", "source_code", "configuration"]
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["critical", "error", "warning", "info"]
+    },
+    "validation_logic": {"type": "string"},
+    "parameters": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "remediation_guidance": {"type": "string"},
+    "automated_fix": {
+      "type": "boolean",
+      "default": false
+    },
+    "documentation_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "is_enabled": {
+      "type": "boolean",
+      "default": true
+    },
+    "execution_order": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "timeout_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 30
+    }
+  }
+}

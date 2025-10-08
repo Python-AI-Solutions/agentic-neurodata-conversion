@@ -1,0 +1,101 @@
+# CI Workflow Contract: Unit Tests
+# GitHub Actions workflow specification for unit test execution
+
+workflow:
+  name: "Unit Tests"
+  file: ".github/workflows/test-unit.yml"
+  description: "Fast unit tests with mocked dependencies"
+
+triggers:
+  push:
+    branches: ["main", "develop", "feature/*", "bugfix/*"]
+  pull_request:
+    branches: ["main", "develop"]
+  schedule:
+    - cron: "0 2 * * *"  # Daily at 2 AM UTC
+
+jobs:
+  unit-tests:
+    name: "Unit Tests"
+    runs-on: "${{ matrix.os }}"
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.12", "3.13"]
+      fail-fast: false
+
+    timeout-minutes: 10
+
+    steps:
+      - name: "Checkout code"
+        uses: "actions/checkout@v4"
+
+      - name: "Setup Python"
+        uses: "actions/setup-python@v5"
+        with:
+          python-version: "${{ matrix.python-version }}"
+
+      - name: "Install pixi"
+        uses: "prefix-dev/setup-pixi@v0.5.0"
+        with:
+          cache: true
+
+      - name: "Install dependencies"
+        run: "pixi install -e test"
+
+      - name: "Run unit tests"
+        run: "pixi run test-unit"
+        env:
+          PYTEST_MARKERS: "unit and not slow"
+
+      - name: "Upload test results"
+        if: always()
+        uses: "actions/upload-artifact@v4"
+        with:
+          name: "unit-test-results-${{ matrix.os }}-py${{ matrix.python-version }}"
+          path: "tests/results/"
+
+      - name: "Upload coverage"
+        uses: "codecov/codecov-action@v4"
+        with:
+          files: "./coverage.xml"
+          flags: "unittests"
+
+quality_gates:
+  - name: "All tests must pass"
+    condition: "success()"
+    blocking: true
+
+  - name: "No test timeouts"
+    condition: "timeout-minutes not exceeded"
+    blocking: true
+
+  - name: "Coverage uploaded"
+    condition: "codecov upload success"
+    blocking: false
+
+performance_targets:
+  max_duration_minutes: 5
+  parallel_execution: true
+  cache_dependencies: true
+
+outputs:
+  artifacts:
+    - name: "Test results"
+      path: "tests/results/"
+      retention_days: 30
+
+    - name: "Coverage data"
+      path: "coverage.xml"
+      retention_days: 30
+
+notifications:
+  on_failure:
+    - github_check: "Unit Tests Failed"
+    - pr_comment: true
+
+environment_variables:
+  PYTEST_MARKERS: "unit and not slow"
+  COVERAGE_THRESHOLD: "80"
+  TEST_ENV: "ci"

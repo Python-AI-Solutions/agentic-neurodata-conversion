@@ -1,0 +1,163 @@
+# Pytest Configuration Schema
+# Defines the structure and requirements for pytest.ini configuration
+
+schema_version: "1.0"
+description: "pytest.ini configuration schema for testing framework"
+
+configuration:
+  pytest:
+    # Test discovery patterns
+    python_files:
+      type: list
+      default: ["test_*.py", "*_test.py"]
+      description: "Patterns for test file discovery"
+
+    python_classes:
+      type: list
+      default: ["Test*"]
+      description: "Patterns for test class discovery"
+
+    python_functions:
+      type: list
+      default: ["test_*"]
+      description: "Patterns for test function discovery"
+
+    # Test execution options
+    addopts:
+      type: string
+      required: true
+      description: "Default command-line options"
+      example: "--strict-markers --tb=short -ra --cov=agentic_neurodata_conversion"
+
+    # Test markers
+    markers:
+      type: list
+      required: true
+      description: "Custom pytest markers for test categorization"
+      items:
+        - name: unit
+          description: "Unit tests - fast, isolated, mocked dependencies"
+        - name: integration
+          description: "Integration tests - real services, slower"
+        - name: e2e
+          description: "End-to-end tests - full workflows"
+        - name: slow
+          description: "Tests taking >5 seconds"
+        - name: requires_datasets
+          description: "Tests requiring DataLad datasets"
+        - name: requires_llm
+          description: "Tests requiring LLM API access"
+        - name: flaky
+          description: "Tests with known flakiness (retried)"
+        - name: benchmark
+          description: "Performance benchmark tests"
+        - name: asyncio
+          description: "Async tests requiring asyncio"
+
+    # Coverage configuration
+    coverage:
+      source:
+        type: list
+        required: true
+        default: ["agentic_neurodata_conversion"]
+
+      omit:
+        type: list
+        default: ["*/tests/*", "*/migrations/*", "*/generated/*"]
+
+      fail_under:
+        type: number
+        default: 80
+        description: "Minimum coverage percentage required"
+
+      report_types:
+        type: list
+        default: ["html", "xml", "term-missing"]
+
+    # Timeout configuration
+    timeout:
+      type: number
+      default: 300
+      description: "Default test timeout in seconds"
+
+    timeout_method:
+      type: string
+      default: "thread"
+      options: ["thread", "signal"]
+
+    # Asyncio configuration
+    asyncio_mode:
+      type: string
+      default: "auto"
+      options: ["auto", "strict"]
+
+    # Parallel execution
+    numprocesses:
+      type: string
+      default: "auto"
+      description: "Number of parallel workers (use 'auto' for CPU count)"
+
+    # Logging
+    log_cli:
+      type: boolean
+      default: true
+      description: "Enable live logging to console"
+
+    log_cli_level:
+      type: string
+      default: "INFO"
+      options: ["DEBUG", "INFO", "WARNING", "ERROR"]
+
+    log_file:
+      type: string
+      default: "tests/logs/pytest.log"
+
+    log_file_level:
+      type: string
+      default: "DEBUG"
+
+# Example pytest.ini configuration
+example_config: |
+  [pytest]
+  python_files = test_*.py *_test.py
+  python_classes = Test*
+  python_functions = test_*
+
+  addopts =
+      --strict-markers
+      --tb=short
+      -ra
+      --cov=agentic_neurodata_conversion
+      --cov-report=html
+      --cov-report=xml
+      --cov-report=term-missing
+      --maxfail=5
+
+  markers =
+      unit: Unit tests - fast, isolated, mocked dependencies
+      integration: Integration tests - real services, slower
+      e2e: End-to-end tests - full workflows
+      slow: Tests taking >5 seconds
+      requires_datasets: Tests requiring DataLad datasets
+      requires_llm: Tests requiring LLM API access
+      flaky: Tests with known flakiness (retried)
+      benchmark: Performance benchmark tests
+      asyncio: Async tests requiring asyncio
+
+  timeout = 300
+  timeout_method = thread
+
+  asyncio_mode = auto
+
+  log_cli = true
+  log_cli_level = INFO
+  log_file = tests/logs/pytest.log
+  log_file_level = DEBUG
+
+# Validation rules
+validation:
+  - rule: "All markers used in tests must be declared in markers section"
+  - rule: "Coverage threshold (fail_under) must be >= 80%"
+  - rule: "Timeout should be reasonable (<600 seconds for most tests)"
+  - rule: "Log files should be in tests/logs/ directory"
+  - rule: "Report types must include at least 'term-missing' for CI feedback"
