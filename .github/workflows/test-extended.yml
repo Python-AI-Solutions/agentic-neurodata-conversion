@@ -28,7 +28,7 @@ jobs:
       - name: Setup Pixi
         uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.13.0
+          pixi-version: v0.56.0
 
       - name: Install dependencies
         run: pixi install
@@ -52,7 +52,7 @@ jobs:
         run: pixi run pytest -m "small_model" -v --tb=short
 
       - name: Upload test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: extended-test-results-${{ github.sha }}

@@ -26,9 +26,7 @@ uvicorn = ">=0.20.0"
 # Development tools
 git = "*"
 make = "*"
-rdflib = ">=7.1.4,<8"
 pandas = ">=2.3.2,<3"
-pynwb = ">=3.1.2,<4"
 pbr = ">=7.0.1,<8"
 
 [pypi-dependencies]
@@ -46,18 +44,22 @@ mcp = ">=1.0.0"
 
 # Neuroscience specific packages
 neuroconv = ">=0.4.0"
-pynwb = ">=2.5.0"
+pynwb = ">=3.1.2,<4"
 nwbinspector = ">=0.4.0"
 
 # Knowledge graph and validation
 linkml = ">=1.5.0"
-rdflib = ">=7.0.0"
+rdflib = ">=7.1.4,<8"
 
 # CLI and utilities
 click = ">=8.0.0"
 rich = ">=13.0.0"
 typer = ">=0.9.0"
 python-dotenv = ">=1.0.0"
+
+# Build tools (PyPI only)
+build = ">=0.10.0"
+twine = ">=4.0.0"
 
 # Development environment
 [feature.dev.dependencies]
@@ -79,6 +81,10 @@ jupyter = ">=1.0.0"
 notebook = ">=7.0.0"
 datalad = ">=0.9.3,<2"
 pytest-timeout = ">=2.4.0,<3"
+
+# Security and quality tools
+bandit = ">=1.7.0"
+safety = ">=2.0.0"
 
 # Documentation environment
 [feature.docs.dependencies]
@@ -123,7 +129,7 @@ lint-fix = "ruff check --fix agentic_neurodata_conversion/ tests/ examples/"
 format = "ruff format agentic_neurodata_conversion/ tests/ examples/"
 format-check = "ruff format --check agentic_neurodata_conversion/ tests/ examples/"
 type-check = "mypy agentic_neurodata_conversion/"
-quality = { depends-on = ["lint", "format-check", "type-check"] }
+quality = { cmd = "echo 'Running quality checks...'", depends-on = ["lint", "format-check", "type-check"] }
 
 # Testing tasks
 test = "pytest tests/ -q"
