@@ -1,59 +1,77 @@
 <!--
-Constitution Version: 7.2.0 (MVP)
+Constitution Version: 0.0.1
 Format: MVP Core Principles Only
 Ratified: 2025-10-09
 Last Amended: 2025-10-09
 Source: Consolidated from 11 feature requirements (1,389 lines)
-Change Type: MINOR - Added Spec-Kit workflow gates and enhanced AGENTS.md references
-Changes:
-- Added Principle VII: Spec-Kit Workflow Gates (NON-NEGOTIABLE)
-- Required /speckit.analyze and /speckit.checklist before implementation
-- Enhanced compliance checklist with Spec-Kit artifact verification
-- Expanded AGENTS.md references with specific content areas
-- Added Claude Agent SDK as required framework for thin adapters
-- Terminology update: "modules" → "features" (spec-kit alignment)
 -->
 
 # Agentic Neurodata Conversion Constitution (MVP)
 
-**Version**: 7.2.0
-**Ratified**: 2025-10-09
-**Scope**: All system features and components
+**Version**: 0.0.1 **Ratified**: 2025-10-09 **Scope**: All system features and
+components
 
 ---
+
+## Feature Organization
+
+This constitution governs 11 system features:
+
+1. **MCP Server Architecture** - Core orchestration layer
+2. **Agent Implementations** - Specialized AI agents (conversation, conversion,
+   evaluation, questioner)
+3. **Agent SDK Integration** - Claude Agent SDK wrappers and thin adapters
+4. **Client Libraries & Integrations** - Client SDKs
+5. **Core Project Organization** - Project infrastructure
+6. **Data Management & Provenance** - DataLad integration
+7. **Evaluation & Reporting** - Quality metrics
+8. **Knowledge Graph Systems** - Semantic data representation
+9. **Test Verbosity Optimization** - Testing output management
+10. **Testing & Quality Assurance** - Test framework
+11. **Validation & Quality Assurance** - NWB validation
 
 ## Core Principles
 
 ### I. MCP-Centric Architecture (NON-NEGOTIABLE)
 
-All system functionality MUST be exposed through Model Context Protocol (MCP) tools. The MCP server is the single orchestration point.
+All system functionality MUST be exposed through Model Context Protocol (MCP)
+tools. The MCP server is the single orchestration point.
 
 **Requirements**:
-- All business logic resides in transport-agnostic core services
-- Transport adapters are thin (<500 LOC) with ZERO business logic using Claude Agent SDK
-- Claude Agent SDK handles protocol communication, context management, and tool ecosystem
-- Direct agent invocation or feature-to-feature communication without MCP mediation is PROHIBITED
 
-**Verification**: Contract tests verify adapter behavior; integration tests verify MCP mediation.
+- All business logic resides in transport-agnostic core services
+- Transport adapters are thin (<500 LOC) with ZERO business logic using Claude
+  Agent SDK
+- Claude Agent SDK handles protocol communication, context management, and tool
+  ecosystem
+- Direct agent invocation or feature-to-feature communication without MCP
+  mediation is PROHIBITED
+
+**Verification**: Contract tests verify adapter behavior; integration tests
+verify MCP mediation.
 
 ---
 
 ### II. Test-Driven Development (NON-NEGOTIABLE)
 
-All features MUST follow strict TDD workflow. Tests MUST be written before implementation.
+All features MUST follow strict TDD workflow. Tests MUST be written before
+implementation.
 
 **TDD Workflow**:
+
 1. Write tests first (unit, integration, contract)
 2. Verify tests fail (RED)
 3. Implement minimum code to pass (GREEN)
 4. Refactor while maintaining green tests
 
 **Quality Gates**:
+
 - Critical paths: ≥90% coverage
 - Standard features: ≥85% coverage
 - All API endpoints have contract tests before implementation
 
 **Test Categories**:
+
 - **Unit**: Test individual components
 - **Integration**: Test cross-feature workflows
 - **Contract**: 100% OpenAPI coverage, schema validation
@@ -65,9 +83,11 @@ All features MUST follow strict TDD workflow. Tests MUST be written before imple
 
 ### III. Schema-First Development (NON-NEGOTIABLE)
 
-NWB-LinkML schema is the canonical source. Every data structure MUST start with schema definition.
+NWB-LinkML schema is the canonical source. Every data structure MUST start with
+schema definition.
 
 **Schema Workflow**:
+
 1. Define or extend LinkML schema FIRST
 2. Generate artifacts (JSON-LD contexts, SHACL shapes, Pydantic validators)
 3. Implement validation using schema-derived validators
@@ -75,6 +95,7 @@ NWB-LinkML schema is the canonical source. Every data structure MUST start with 
 5. ONLY THEN implement features
 
 **Standards**:
+
 - **NWB-LinkML**: Canonical source
 - **LinkML Validation**: Runtime validation with Pydantic
 - **Semantic Web**: RDF, OWL, SPARQL, SHACL support
@@ -86,21 +107,27 @@ NWB-LinkML schema is the canonical source. Every data structure MUST start with 
 
 ### IV. Feature-Driven Architecture & Clear Boundaries (NON-NEGOTIABLE)
 
-Each feature MUST be self-contained with well-defined interfaces and ZERO cross-feature dependencies except through MCP server.
+Each feature MUST be self-contained with well-defined interfaces and ZERO
+cross-feature dependencies except through MCP server.
 
 **Requirements**:
+
 - **Single Responsibility**: Each feature handles one domain
-- **Defined Interfaces**: All inter-feature communication through MCP tools with OpenAPI contracts
-- **Isolated Testing**: Each feature testable in isolation with mocked dependencies
+- **Defined Interfaces**: All inter-feature communication through MCP tools with
+  OpenAPI contracts
+- **Isolated Testing**: Each feature testable in isolation with mocked
+  dependencies
 - **Clear Boundaries**: No direct imports between features
 
 **Feature Organization**:
+
 - Core service layer (business logic)
 - Interface layer (MCP tools, contracts)
 - Adapter layer (transport-specific, thin)
 - Test layer (unit, integration, contract, e2e)
 
-**Verification**: Contract tests verify interfaces; each feature has independent test suite.
+**Verification**: Contract tests verify interfaces; each feature has independent
+test suite.
 
 ---
 
@@ -109,115 +136,107 @@ Each feature MUST be self-contained with well-defined interfaces and ZERO cross-
 All data transformations MUST be tracked with complete provenance.
 
 **Requirements**:
-- **DataLad Integration**: ALL data operations use DataLad Python API (NEVER CLI)
-- **Provenance Tracking**: PROV-O ontology for all transformations, stored in RDF knowledge graph
-- **Validation Pipeline**: Multi-stage validation (input → schema → NWB Inspector → domain rules)
-- **Version Control**: All data files annexed (git-annex + GIN storage for files >10MB)
+
+- **DataLad Integration**: ALL data operations use DataLad
+- **Provenance Tracking**: PROV-O ontology for all transformations, stored in
+  RDF knowledge graph
+- **Validation Pipeline**: Multi-stage validation (input → schema → NWB
+  Inspector → domain rules)
+- **Version Control**: All data files annexed (git-annex + GIN storage for
+  files >10MB)
 - **Reproducibility**: Bit-for-bit reproduction with recorded parameters
 
 **Validation Stages**:
+
 1. Input structure validation
 2. Schema compliance (LinkML + NWB schema)
 3. NWB Inspector validation
 4. Domain-specific rules
 5. Metadata completeness
 
-**Verification**: All conversions produce PROV-O provenance; DataLad API usage enforced by linters.
+**Verification**: All conversions produce PROV-O provenance; DataLad API usage
+enforced by linters.
 
 ---
 
 ### VI. Quality-First Development (NON-NEGOTIABLE)
 
-Comprehensive quality assurance is mandatory across all features.
+Comprehensive quality assurance is mandatory across all features and automated
+using pre-commit hooks.
 
 **Quality Requirements**:
+
 - **Code Quality**: Automated linting, type checking, cyclomatic complexity <10
 - **Test Coverage**: ≥85% (≥90% for critical paths)
 - **Input Validation**: Schema-based validation for all inputs
 
 **Logging**:
+
 - **Structured Logging**: Configurable levels with contextual data
 - **Error Tracking**: Clear error messages with stack traces
 
 **CI/CD**:
+
 - **PR Pipeline**: Tests, linting, type checking, coverage checks
 - **Periodic**: E2E tests, performance benchmarks
 
-**Verification**: CI gates block merges on failures; coverage reports required in PRs.
+**Verification**: CI gates block merges on failures; coverage reports required
+in PRs.
 
 ---
 
 ### VII. Spec-Kit Workflow Gates (NON-NEGOTIABLE)
 
-All features MUST follow Spec-Kit's workflow with mandatory gates before implementation.
+All features MUST follow Spec-Kit's workflow with mandatory gates before
+implementation.
 
 **Required Workflow**:
+
 1. `/speckit.constitution` - Constitution guides all feature development
 2. `/speckit.specify` - Create feature specification
 3. `/speckit.plan` - Create implementation plan
 4. `/speckit.tasks` - Generate task breakdown
-5. `/speckit.analyze` - **MUST PASS** before implementation (cross-artifact consistency)
-6. `/speckit.checklist` - **MUST PASS** before implementation (quality validation)
+5. `/speckit.analyze` - **MUST PASS** before implementation (cross-artifact
+   consistency)
+6. `/speckit.checklist` - **MUST PASS** before implementation (quality
+   validation)
 7. `/speckit.implement` - Execute implementation only after gates pass
 
 **Gate Requirements**:
+
 - `/speckit.analyze` verifies specification consistency and completeness
 - `/speckit.checklist` validates all quality criteria are met
-- Tasks violating non-negotiable principles MUST be revised before implementation
+- Tasks violating non-negotiable principles MUST be revised before
+  implementation
 - PR checklist MUST include links to latest analyze/checklist artifacts
 
-**Verification**: PRs without passing analyze/checklist gates are blocked from merge.
-
----
-
-## Shared Technical Standards
-
-### Language & Environment
-- **Python**: 3.13+ with type hints enforced
-- **Package Manager**: Pixi for reproducible environments
-- **Configuration**: Pydantic Settings for environment-aware configuration
-
-### Agent Framework
-- **SDK**: Claude Agent SDK for agent implementation and MCP protocol handling
-- **MCP Integration**: Agent SDK's MCP extensibility for tool calls and inter-agent communication
-- **Context Management**: Automatic context compaction and management via Agent SDK
-- **Agent Storage**: `.claude/agents/` directory following Agent SDK conventions
-
-### Code Quality
-- **Linting**: Ruff (pycodestyle, pyflakes, isort, flake8-bugbear)
-- **Type Checking**: MyPy with strict mode
-- **Complexity Limit**: Cyclomatic complexity <10
-
-### Testing
-- **Framework**: Pytest with async support (pytest-asyncio)
-- **Coverage**: pytest-cov (≥80% CI threshold, ≥85% constitutional requirement)
-- **Contract Testing**: OpenAPI schema validation
-
-### Documentation
-- **API Docs**: FastAPI auto-generated OpenAPI specs
-- **Code Docs**: Docstrings for all public APIs (mkdocstrings)
-- **User Docs**: MkDocs with Material theme
-
-### Performance
-- **Benchmarking**: pytest-benchmark for regression detection
+**Verification**: PRs without passing analyze/checklist gates are blocked from
+merge.
 
 ---
 
 ## Cross-Feature Integration Rules
 
 ### 1. MCP Server as Mediator (NON-NEGOTIABLE)
-All inter-feature communication flows through MCP server. Direct feature-to-feature calls are PROHIBITED.
+
+All inter-feature communication flows through MCP server. Direct
+feature-to-feature calls are PROHIBITED.
 
 ### 2. Contract-Based Interfaces (NON-NEGOTIABLE)
-All feature interfaces defined by OpenAPI contracts. Contract tests enforce compliance.
+
+All feature interfaces defined by OpenAPI contracts. Contract tests enforce
+compliance.
 
 ### 3. DataLad for Data Exchange
+
 All data shared between features tracked in DataLad datasets with provenance.
 
 ### 4. Consistent Error Handling
+
 All features use standard error schemas with error codes, messages, and context.
 
 ### 5. Schema Compatibility
+
 Feature APIs use schema versioning (MAJOR.MINOR.PATCH).
 
 ---
@@ -225,9 +244,13 @@ Feature APIs use schema versioning (MAJOR.MINOR.PATCH).
 ## Governance
 
 ### Constitutional Authority
-This constitution is the **supreme governance artifact**. Hierarchy: Constitution > Technical Specifications (feature requirements) > Code Comments. Constitutional principles override all other documentation.
+
+This constitution is the **supreme governance artifact**. Hierarchy:
+Constitution > Technical Specifications (feature requirements) > Code Comments.
+Constitutional principles override all other documentation.
 
 ### Versioning
+
 - **MAJOR** (X.0.0): New principles, breaking changes
 - **MINOR** (x.Y.0): Clarifications, additions
 - **PATCH** (x.y.Z): Corrections, typos
@@ -235,57 +258,17 @@ This constitution is the **supreme governance artifact**. Hierarchy: Constitutio
 ### Compliance Checklist (Attach to PRs)
 
 **Core Principles**:
+
 - [ ] MCP-mediated (no direct feature calls)
 - [ ] Tests written before implementation (TDD)
 - [ ] Schema defined before features
 - [ ] Feature boundaries respected (no cross-feature imports)
 - [ ] Provenance tracking implemented
 - [ ] Quality gates passed (coverage ≥85%, linting, type checking)
-- [ ] Spec-Kit workflow followed (`/speckit.analyze` + `/speckit.checklist` passed)
-
-**Technical Standards**:
-- [ ] Python 3.13+ with type hints
-- [ ] Ruff linting and MyPy type checking pass
-- [ ] Claude Agent SDK used for thin adapters
+- [ ] Spec-Kit workflow followed (`/speckit.analyze` + `/speckit.checklist`
+      passed)
 
 **Spec-Kit Artifacts**:
-- [ ] `/speckit.analyze` passed (link: _____________)
-- [ ] `/speckit.checklist` passed (link: _____________)
 
-**Enforcement**: Code reviews verify compliance (violations block merge); CI/CD pipelines validate constraints. Exceptions require documented justification and team approval.
-
----
-
-## Feature Organization
-
-This constitution governs 11 system features:
-
-1. **MCP Server Architecture** - Core orchestration layer
-2. **Agent Implementations** - Specialized AI agents (conversation, conversion, evaluation, questioner)
-3. **Agent SDK Integration** - Claude Agent SDK wrappers and thin adapters
-4. **Client Libraries & Integrations** - Client SDKs
-5. **Core Project Organization** - Project infrastructure
-6. **Data Management & Provenance** - DataLad integration
-7. **Evaluation & Reporting** - Quality metrics
-8. **Knowledge Graph Systems** - Semantic data representation
-9. **Test Verbosity Optimization** - Testing output management
-10. **Testing & Quality Assurance** - Test framework
-11. **Validation & Quality Assurance** - NWB validation
-
-**See**:
-- `.kiro/specs/*/requirements.md` for detailed feature requirements
-- `AGENTS.md` (symlinked as `CLAUDE.md`) for agent architecture, capabilities, and Claude Agent SDK integration
-  - Agent roles and boundaries
-  - MCP tool definitions
-  - Inter-agent communication patterns
-  - SDK configuration and usage examples
-
----
-
-**Version**: 7.2.0 (MVP)
-**Ratified**: 2025-10-09
-**Supersedes**: All prior versions (1.0.0 - 7.1.0)
-
-**Source**: Core MVP principles from 11 feature specifications. Detailed technical requirements in feature-specific specification files and AGENTS.md.
-
-**Spec-Kit Integration**: This constitution guides `/speckit.constitution`, `/speckit.specify`, `/speckit.plan`, `/speckit.tasks`, `/speckit.analyze`, `/speckit.checklist`, and `/speckit.implement` commands.
+- [ ] `/speckit.analyze` passed (link: ******\_******)
+- [ ] `/speckit.checklist` passed (link: ******\_******)
