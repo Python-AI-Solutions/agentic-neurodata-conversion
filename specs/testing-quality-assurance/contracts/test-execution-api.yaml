@@ -1,0 +1,417 @@
+openapi: 3.0.3
+info:
+  title: Test Execution API
+  description: |
+    API for test orchestration and execution management.
+    Part of Testing and Quality Assurance Framework (testing-quality-assurance).
+
+    **Constitutional Requirements**:
+    - MCP-Centric Architecture (Constitution I): All test execution through MCP tools
+    - TDD (Constitution II): Contract tests written before implementation
+    - Schema-First (Constitution III): Requests/responses validated against LinkML-derived schemas
+  version: 1.0.0
+  contact:
+    name: Testing Framework Team
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local development server
+  - url: https://api.example.com/v1
+    description: Production server
+
+paths:
+  /test-suites/{suite_id}/execute:
+    post:
+      summary: Execute test suite
+      description: |
+        Triggers execution of a test suite with specified configuration.
+        Supports parallel execution with unlimited horizontal scaling (per clarification).
+      operationId: executeTestSuite
+      tags:
+        - Test Execution
+      parameters:
+        - name: suite_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Unique identifier of test suite to execute
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TestExecutionRequest'
+      responses:
+        '202':
+          description: Test suite execution started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestExecutionResponse'
+        '400':
+          description: Invalid request (e.g., invalid suite_id, malformed configuration)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Test suite not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /test-suites/{suite_id}/status:
+    get:
+      summary: Get test suite execution status
+      description: Retrieves current execution status and progress of a test suite
+      operationId: getTestSuiteStatus
+      tags:
+        - Test Execution
+      parameters:
+        - name: suite_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Test suite status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestSuiteStatus'
+        '404':
+          description: Test suite not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /test-suites/{suite_id}/cancel:
+    post:
+      summary: Cancel test suite execution
+      description: Cancels a running test suite execution with cleanup
+      operationId: cancelTestSuite
+      tags:
+        - Test Execution
+      parameters:
+        - name: suite_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Test suite cancelled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancellationResponse'
+        '404':
+          description: Test suite not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Test suite not in cancellable state (e.g., already completed)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /test-environments:
+    get:
+      summary: List available test environments
+      description: Returns list of provisioned test environments with their configurations
+      operationId: listTestEnvironments
+      tags:
+        - Test Environments
+      parameters:
+        - name: python_version
+          in: query
+          schema:
+            type: string
+            enum: ['3.8', '3.9', '3.10', '3.11', '3.12']
+          description: Filter by Python version
+        - name: os
+          in: query
+          schema:
+            type: string
+            enum: ['ubuntu', 'macos', 'windows']
+          description: Filter by operating system
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: ['ready', 'in_use', 'provisioning']
+          description: Filter by environment status
+      responses:
+        '200':
+          description: List of test environments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  environments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TestEnvironment'
+                  total:
+                    type: integer
+
+    post:
+      summary: Provision new test environment
+      description: |
+        Provisions a new isolated test environment with specified configuration.
+        Supports unlimited horizontal scaling via cloud runners (per clarification).
+      operationId: provisionTestEnvironment
+      tags:
+        - Test Environments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TestEnvironmentRequest'
+      responses:
+        '201':
+          description: Test environment provisioned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestEnvironment'
+        '400':
+          description: Invalid configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Resource provisioning failed (retry with exponential backoff per clarification)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    TestExecutionRequest:
+      type: object
+      required:
+        - environment_id
+        - configuration
+      properties:
+        environment_id:
+          type: string
+          format: uuid
+          description: ID of test environment to use for execution
+        configuration:
+          type: object
+          properties:
+            parallel_workers:
+              type: integer
+              minimum: 1
+              description: Number of parallel workers (unlimited scaling supported)
+            fail_fast:
+              type: boolean
+              default: false
+              description: Stop execution on first failure
+            retry_flaky:
+              type: boolean
+              default: true
+              description: Retry flaky tests (5% threshold per clarification)
+            coverage_threshold:
+              type: number
+              format: float
+              minimum: 0.85
+              maximum: 1.0
+              description: Minimum coverage required (≥0.85 or ≥0.90 for critical)
+            timeout_seconds:
+              type: integer
+              minimum: 1
+              description: Maximum execution time in seconds
+
+    TestExecutionResponse:
+      type: object
+      required:
+        - execution_id
+        - suite_id
+        - status
+        - started_at
+      properties:
+        execution_id:
+          type: string
+          format: uuid
+          description: Unique identifier for this execution
+        suite_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: ['running', 'queued']
+        started_at:
+          type: string
+          format: date-time
+        estimated_completion:
+          type: string
+          format: date-time
+          description: Estimated completion time based on historical data
+
+    TestSuiteStatus:
+      type: object
+      required:
+        - suite_id
+        - status
+        - progress
+      properties:
+        suite_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: ['pending', 'running', 'completed', 'failed', 'cancelled']
+        progress:
+          type: object
+          properties:
+            completed_tests:
+              type: integer
+            total_tests:
+              type: integer
+            percentage:
+              type: number
+              format: float
+              minimum: 0
+              maximum: 100
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        coverage:
+          type: object
+          properties:
+            line_coverage:
+              type: number
+              format: float
+            branch_coverage:
+              type: number
+              format: float
+            meets_gate:
+              type: boolean
+              description: True if coverage meets ≥0.85 gate
+
+    CancellationResponse:
+      type: object
+      required:
+        - suite_id
+        - cancelled_at
+        - cleanup_status
+      properties:
+        suite_id:
+          type: string
+          format: uuid
+        cancelled_at:
+          type: string
+          format: date-time
+        cleanup_status:
+          type: string
+          enum: ['completed', 'in_progress', 'failed']
+          description: Status of resource cleanup after cancellation
+
+    TestEnvironment:
+      type: object
+      required:
+        - id
+        - python_version
+        - os
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        python_version:
+          type: string
+          enum: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        os:
+          type: string
+          enum: ['ubuntu', 'macos', 'windows']
+        dependencies:
+          type: object
+          additionalProperties:
+            type: string
+          description: Python packages with versions
+        status:
+          type: string
+          enum: ['provisioning', 'ready', 'in_use', 'torn_down']
+        resource_constraints:
+          type: object
+          properties:
+            cpu_cores:
+              type: integer
+            memory_mb:
+              type: integer
+            disk_mb:
+              type: integer
+
+    TestEnvironmentRequest:
+      type: object
+      required:
+        - python_version
+        - os
+      properties:
+        python_version:
+          type: string
+          enum: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        os:
+          type: string
+          enum: ['ubuntu', 'macos', 'windows']
+        dependencies:
+          type: object
+          additionalProperties:
+            type: string
+          description: Python packages to install
+        resource_constraints:
+          type: object
+          properties:
+            cpu_cores:
+              type: integer
+              minimum: 1
+            memory_mb:
+              type: integer
+              minimum: 512
+            disk_mb:
+              type: integer
+              minimum: 1024
+
+    Error:
+      type: object
+      required:
+        - error_code
+        - message
+      properties:
+        error_code:
+          type: string
+          description: Machine-readable error code
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          description: Additional error context
+        timestamp:
+          type: string
+          format: date-time
