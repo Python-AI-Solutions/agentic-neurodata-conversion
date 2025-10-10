@@ -1,0 +1,793 @@
+openapi: 3.0.3
+info:
+  title: MCP Server Orchestration API
+  description: |
+    HTTP REST API for agentic neurodata conversion orchestration.
+    Provides functional parity with MCP protocol transport for multi-agent workflow coordination,
+    state management, validation, and provenance tracking.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Development server
+  - url: https://api.example.com/api/v1
+    description: Production server
+
+tags:
+  - name: conversions
+    description: Conversion workflow operations
+  - name: validations
+    description: Standalone NWB file validation
+  - name: provenance
+    description: Provenance and audit trail operations
+
+paths:
+  /conversions:
+    post:
+      summary: Submit dataset for conversion
+      description: |
+        Create a new conversion session to process a dataset through automatic format detection,
+        metadata collection, conversion to NWB, and validation.
+
+        Equivalent to MCP tool: convert-dataset
+      operationId: createConversion
+      tags: [conversions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateConversionRequest"
+            examples:
+              basic:
+                summary: Basic conversion with auto-detection
+                value:
+                  dataset_path: /data/experiment_001
+              with_config:
+                summary: Conversion with custom configuration
+                value:
+                  dataset_path: /data/experiment_001
+                  workflow_config:
+                    format_override: SpikeGLX
+                    timeout_seconds: 1200
+                    validation_config:
+                      run_dandi_validation: true
+      responses:
+        "201":
+          description: Conversion session created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversionSessionResponse"
+              examples:
+                created:
+                  value:
+                    session_id: 123e4567-e89b-12d3-a456-426614174000
+                    initial_status:
+                      state: analyzing
+                      current_step: format_detection
+                      progress_percentage: 5.0
+                      created_at: "2025-10-10T10:00:00Z"
+                      expires_at: "2025-10-10T12:00:00Z"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+    get:
+      summary: List active conversion sessions
+      description: |
+        Retrieve all conversion sessions with optional filtering by user, state, and time range.
+
+        Equivalent to MCP tool: list-active-sessions
+      operationId: listConversions
+      tags: [conversions]
+      parameters:
+        - name: user_id
+          in: query
+          schema:
+            type: string
+          description: Filter by user identifier
+        - name: state
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                [
+                  analyzing,
+                  collecting_metadata,
+                  converting,
+                  validating,
+                  completed,
+                  failed,
+                  cancelled,
+                  suspended,
+                ]
+          description: Filter by session states
+          style: form
+          explode: true
+        - name: created_after
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter sessions created after timestamp
+        - name: created_before
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter sessions created before timestamp
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Maximum number of results
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Pagination offset
+      responses:
+        "200":
+          description: List of conversion sessions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversionSessionList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /conversions/{session_id}:
+    get:
+      summary: Get conversion session status
+      description: |
+        Query the current status and progress of a conversion workflow.
+
+        Equivalent to MCP tool: get-session-status
+      operationId: getConversionStatus
+      tags: [conversions]
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+        - name: include_details
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Include detailed intermediate results
+      responses:
+        "200":
+          description: Session status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionStatus"
+              examples:
+                in_progress:
+                  value:
+                    session_id: 123e4567-e89b-12d3-a456-426614174000
+                    state: converting
+                    current_step: nwb_generation
+                    progress_percentage: 65.5
+                    created_at: "2025-10-10T10:00:00Z"
+                    updated_at: "2025-10-10T10:15:30Z"
+                    format_detection:
+                      primary_format: SpikeGLX
+                      confidence: 0.95
+                completed:
+                  value:
+                    session_id: 123e4567-e89b-12d3-a456-426614174000
+                    state: completed
+                    progress_percentage: 100.0
+                    created_at: "2025-10-10T10:00:00Z"
+                    updated_at: "2025-10-10T10:25:45Z"
+                    completed_at: "2025-10-10T10:25:45Z"
+                    validation_summary:
+                      overall_status: PASS
+                      quality_score: 87.5
+                      critical_issues: 0
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      summary: Cancel conversion workflow
+      description: |
+        Terminate a running workflow and cleanup resources.
+
+        Equivalent to MCP tool: cancel-workflow
+      operationId: cancelConversion
+      tags: [conversions]
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: Optional cancellation reason for audit logs
+      responses:
+        "200":
+          description: Workflow cancelled successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CancellationResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /conversions/{session_id}/resume:
+    post:
+      summary: Resume workflow from checkpoint
+      description: |
+        Resume a suspended or failed workflow from the last successful checkpoint.
+
+        Equivalent to MCP tool: resume-workflow
+      operationId: resumeConversion
+      tags: [conversions]
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResumeWorkflowRequest"
+      responses:
+        "200":
+          description: Workflow resumed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResumeWorkflowResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Conflict - session cannot be resumed in current state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /conversions/{session_id}/provenance:
+    get:
+      summary: Get provenance graph
+      description: |
+        Retrieve complete PROV-O provenance graph for a conversion session.
+
+        Equivalent to MCP tool: get-provenance
+      operationId: getProvenance
+      tags: [provenance]
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [turtle, json-ld, json]
+            default: json
+          description: Provenance serialization format
+      responses:
+        "200":
+          description: Provenance graph retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProvenanceResponse"
+            text/turtle:
+              schema:
+                type: string
+              example: |
+                @prefix prov: <http://www.w3.org/ns/prov#> .
+                @prefix mcp: <http://mcp-server/provenance/> .
+
+                mcp:activity_conversion_001 a prov:Activity .
+            application/ld+json:
+              schema:
+                type: object
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /validations:
+    post:
+      summary: Validate NWB file
+      description: |
+        Run standalone validation on an existing NWB file without full conversion workflow.
+
+        Equivalent to MCP tool: validate-nwb-file
+      operationId: validateNWBFile
+      tags: [validations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ValidationRequest"
+      responses:
+        "200":
+          description: Validation completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          description: File not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  parameters:
+    SessionId:
+      name: session_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Unique session identifier
+
+  schemas:
+    CreateConversionRequest:
+      type: object
+      required:
+        - dataset_path
+      properties:
+        dataset_path:
+          type: string
+          description: Absolute path to the dataset directory or file
+          example: /data/experiment_001
+        workflow_config:
+          $ref: "#/components/schemas/WorkflowConfig"
+
+    WorkflowConfig:
+      type: object
+      properties:
+        workflow_definition_id:
+          type: string
+          format: uuid
+          description: Custom workflow definition to use
+        format_override:
+          type: string
+          description: Manual format specification (bypasses auto-detection)
+          example: SpikeGLX
+        timeout_seconds:
+          type: integer
+          minimum: 60
+          maximum: 7200
+          description: Overall workflow timeout
+        validation_config:
+          $ref: "#/components/schemas/ValidationConfig"
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Custom metadata key-value pairs
+
+    ValidationConfig:
+      type: object
+      properties:
+        run_nwb_inspector:
+          type: boolean
+          default: true
+        run_pynwb_validation:
+          type: boolean
+          default: true
+        run_dandi_validation:
+          type: boolean
+          default: true
+        custom_validators:
+          type: array
+          items:
+            type: string
+
+    ConversionSessionResponse:
+      type: object
+      required:
+        - session_id
+        - initial_status
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        initial_status:
+          $ref: "#/components/schemas/SessionStatusSummary"
+
+    SessionStatusSummary:
+      type: object
+      required:
+        - state
+        - progress_percentage
+        - created_at
+      properties:
+        state:
+          $ref: "#/components/schemas/SessionState"
+        current_step:
+          type: string
+        progress_percentage:
+          type: number
+          minimum: 0
+          maximum: 100
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+
+    SessionStatus:
+      type: object
+      required:
+        - session_id
+        - state
+        - progress_percentage
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        state:
+          $ref: "#/components/schemas/SessionState"
+        current_step:
+          type: string
+        progress_percentage:
+          type: number
+          minimum: 0
+          maximum: 100
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        format_detection:
+          type: object
+          properties:
+            primary_format:
+              type: string
+            confidence:
+              type: number
+              minimum: 0
+              maximum: 1
+        validation_summary:
+          type: object
+          properties:
+            overall_status:
+              type: string
+              enum: [PASS, FAIL, WARNING]
+            quality_score:
+              type: number
+              minimum: 0
+              maximum: 100
+            critical_issues:
+              type: integer
+              minimum: 0
+        error:
+          $ref: "#/components/schemas/ErrorDetails"
+
+    SessionState:
+      type: string
+      enum:
+        - analyzing
+        - collecting_metadata
+        - converting
+        - validating
+        - completed
+        - failed
+        - cancelled
+        - suspended
+
+    ConversionSessionList:
+      type: object
+      required:
+        - sessions
+        - total_count
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionSummary"
+        total_count:
+          type: integer
+          minimum: 0
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    SessionSummary:
+      type: object
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+        state:
+          $ref: "#/components/schemas/SessionState"
+        progress_percentage:
+          type: number
+          minimum: 0
+          maximum: 100
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ResumeWorkflowRequest:
+      type: object
+      properties:
+        checkpoint_version:
+          type: integer
+          minimum: 1
+          description: Specific checkpoint version to resume from
+        user_inputs:
+          type: object
+          additionalProperties: true
+          description: User responses to metadata questioner prompts
+
+    ResumeWorkflowResponse:
+      type: object
+      required:
+        - session_id
+        - resumed_status
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        resumed_status:
+          type: object
+          properties:
+            state:
+              $ref: "#/components/schemas/SessionState"
+            resumed_from_step:
+              type: string
+            checkpoint_version:
+              type: integer
+            progress_percentage:
+              type: number
+              minimum: 0
+              maximum: 100
+
+    CancellationResponse:
+      type: object
+      required:
+        - session_id
+        - cancellation_status
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        cancellation_status:
+          type: object
+          required:
+            - cancelled
+            - state
+            - cancelled_at
+          properties:
+            cancelled:
+              type: boolean
+            state:
+              $ref: "#/components/schemas/SessionState"
+            cancelled_at:
+              type: string
+              format: date-time
+            cleanup_completed:
+              type: boolean
+
+    ValidationRequest:
+      type: object
+      required:
+        - file_path
+      properties:
+        file_path:
+          type: string
+          description: Absolute path to NWB file
+        validators:
+          type: array
+          items:
+            type: string
+            enum: [nwb_inspector, pynwb, dandi, all]
+          default: [all]
+        validation_config:
+          type: object
+          properties:
+            importance_threshold:
+              type: string
+              enum:
+                [CRITICAL, BEST_PRACTICE_VIOLATION, BEST_PRACTICE_SUGGESTION]
+              default: CRITICAL
+            check_dandi_readiness:
+              type: boolean
+              default: false
+
+    ValidationResult:
+      type: object
+      required:
+        - validation_id
+        - file_path
+        - overall_status
+        - quality_gate_passed
+      properties:
+        validation_id:
+          type: string
+        file_path:
+          type: string
+        overall_status:
+          type: string
+          enum: [PASS, FAIL, WARNING]
+        quality_gate_passed:
+          type: boolean
+        overall_quality_score:
+          type: number
+          minimum: 0
+          maximum: 100
+        validators_run:
+          type: array
+          items:
+            $ref: "#/components/schemas/ValidatorRun"
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/ValidationIssue"
+        dandi_readiness_score:
+          type: number
+          minimum: 0
+          maximum: 100
+
+    ValidatorRun:
+      type: object
+      properties:
+        validator_name:
+          type: string
+        version:
+          type: string
+        status:
+          type: string
+          enum: [passed, failed, error, skipped]
+        issues_found:
+          type: integer
+          minimum: 0
+        duration_seconds:
+          type: number
+          minimum: 0
+
+    ValidationIssue:
+      type: object
+      properties:
+        issue_id:
+          type: string
+        severity:
+          type: string
+          enum: [critical, high, medium, low, info]
+        validator:
+          type: string
+        message:
+          type: string
+        file_location:
+          type: string
+        suggested_fix:
+          type: string
+
+    ProvenanceResponse:
+      type: object
+      required:
+        - session_id
+        - format
+        - provenance
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        format:
+          type: string
+          enum: [turtle, json-ld, json]
+        provenance:
+          oneOf:
+            - type: string
+              description: RDF Turtle or JSON-LD string
+            - type: object
+              description: JSON provenance object
+              properties:
+                entities:
+                  type: array
+                  items:
+                    type: object
+                activities:
+                  type: array
+                  items:
+                    type: object
+                agents:
+                  type: array
+                  items:
+                    type: object
+                relationships:
+                  type: array
+                  items:
+                    type: object
+
+    ErrorDetails:
+      type: object
+      properties:
+        error_type:
+          type: string
+        message:
+          type: string
+        recovery_suggestions:
+          type: array
+          items:
+            type: string
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: bad_request
+            message: "Invalid dataset_path: path does not exist"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: not_found
+            message: Session not found
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: internal_server_error
+            message: An unexpected error occurred
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for authentication
+
+security:
+  - bearerAuth: []

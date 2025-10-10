@@ -1,0 +1,193 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Query Agent Method Contract",
+  "description": "JSON-RPC contract for querying individual agents",
+
+  "request": {
+    "type": "object",
+    "required": ["jsonrpc", "id", "method", "params"],
+    "properties": {
+      "jsonrpc": {
+        "type": "string",
+        "const": "2.0"
+      },
+      "id": {
+        "type": "string",
+        "description": "Unique request identifier"
+      },
+      "method": {
+        "type": "string",
+        "const": "query_agent"
+      },
+      "params": {
+        "type": "object",
+        "required": ["agent", "query"],
+        "properties": {
+          "agent": {
+            "type": "string",
+            "enum": ["orchestrator", "analysis", "conversion", "evaluation"],
+            "description": "Target agent"
+          },
+          "query": {
+            "type": "string",
+            "description": "Question or command for the agent"
+          },
+          "context": {
+            "type": ["object", "null"],
+            "description": "Additional context for the query",
+            "additionalProperties": true
+          },
+          "session_id": {
+            "type": ["string", "null"],
+            "description": "Session ID for conversation context"
+          }
+        }
+      }
+    }
+  },
+
+  "response_success": {
+    "type": "object",
+    "required": ["jsonrpc", "id", "result"],
+    "properties": {
+      "jsonrpc": {
+        "type": "string",
+        "const": "2.0"
+      },
+      "id": {
+        "type": "string",
+        "description": "Matches request id"
+      },
+      "result": {
+        "type": "object",
+        "required": ["agent", "response"],
+        "properties": {
+          "agent": {
+            "type": "string",
+            "enum": ["orchestrator", "analysis", "conversion", "evaluation"]
+          },
+          "response": {
+            "type": "string",
+            "description": "Agent's text response"
+          },
+          "context": {
+            "type": "object",
+            "description": "Context data from agent",
+            "additionalProperties": true
+          },
+          "suggestions": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Agent suggestions"
+          },
+          "confidence": {
+            "type": ["number", "null"],
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "description": "Confidence score (if applicable)"
+          },
+          "session_id": {
+            "type": ["string", "null"]
+          }
+        }
+      }
+    }
+  },
+
+  "response_error": {
+    "type": "object",
+    "required": ["jsonrpc", "id", "error"],
+    "properties": {
+      "jsonrpc": {
+        "type": "string",
+        "const": "2.0"
+      },
+      "id": {
+        "type": "string"
+      },
+      "error": {
+        "type": "object",
+        "required": ["code", "message"],
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "error_type": {
+                "type": "string",
+                "enum": ["invalid_agent", "agent_unavailable", "query_error"]
+              },
+              "suggestions": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  "examples": {
+    "request_basic": {
+      "jsonrpc": "2.0",
+      "id": "req-query-001",
+      "method": "query_agent",
+      "params": {
+        "agent": "analysis",
+        "query": "What is the sampling rate of this recording?"
+      }
+    },
+    "request_with_context": {
+      "jsonrpc": "2.0",
+      "id": "req-query-002",
+      "method": "query_agent",
+      "params": {
+        "agent": "conversion",
+        "query": "Can you convert this spike2 file?",
+        "context": {
+          "file_path": "/data/experiment_001.spike2",
+          "file_size": 1048576
+        },
+        "session_id": "sess-abc123"
+      }
+    },
+    "response_success": {
+      "jsonrpc": "2.0",
+      "id": "req-query-001",
+      "result": {
+        "agent": "analysis",
+        "response": "The sampling rate of this recording is 30,000 Hz.",
+        "context": {
+          "sampling_rate": 30000,
+          "unit": "Hz",
+          "channels": 4
+        },
+        "suggestions": [
+          "Consider downsampling to 10 kHz if high frequency not needed"
+        ],
+        "confidence": 0.95,
+        "session_id": null
+      }
+    },
+    "response_error": {
+      "jsonrpc": "2.0",
+      "id": "req-query-003",
+      "error": {
+        "code": -32602,
+        "message": "Invalid params: agent not found",
+        "data": {
+          "error_type": "invalid_agent",
+          "suggestions": [
+            "Valid agents: orchestrator, analysis, conversion, evaluation"
+          ]
+        }
+      }
+    }
+  }
+}

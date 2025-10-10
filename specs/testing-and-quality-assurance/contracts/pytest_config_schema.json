@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Pytest Configuration Schema",
+  "description": "Schema for pytest configuration and test execution",
+  "type": "object",
+  "properties": {
+    "testpaths": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Directories to search for tests"
+    },
+    "python_files": {
+      "type": "string",
+      "description": "Pattern for test file names",
+      "default": "test_*.py"
+    },
+    "python_classes": {
+      "type": "string",
+      "description": "Pattern for test class names",
+      "default": "Test*"
+    },
+    "python_functions": {
+      "type": "string",
+      "description": "Pattern for test function names",
+      "default": "test_*"
+    },
+    "markers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" }
+        },
+        "required": ["name"]
+      },
+      "description": "Custom pytest markers"
+    },
+    "coverage": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "branch": { "type": "boolean" },
+        "fail_under": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    },
+    "addopts": {
+      "type": "string",
+      "description": "Additional pytest options"
+    }
+  }
+}
