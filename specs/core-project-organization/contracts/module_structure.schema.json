@@ -1,0 +1,103 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Python-AI-Solutions/agentic-neurodata-conversion/schemas/module_structure.json",
+  "title": "ModuleStructure",
+  "description": "Logical module in the project hierarchy with dependencies and public API",
+  "type": "object",
+  "required": ["name", "path", "type", "dependencies", "public_api"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Module identifier (e.g., 'mcp_server', 'agents')",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "minLength": 2,
+      "maxLength": 50,
+      "examples": ["mcp_server", "agents", "conversion_agent"]
+    },
+    "path": {
+      "type": "string",
+      "description": "Absolute filesystem path to module root",
+      "pattern": "^(/[^/]+)+$",
+      "examples": ["/Users/user/project/src/agentic_nwb_converter/mcp_server"]
+    },
+    "type": {
+      "type": "string",
+      "description": "Module category defining its architectural role",
+      "enum": ["mcp_server", "agent", "client", "util", "model", "config"],
+      "examples": ["mcp_server", "agent"]
+    },
+    "dependencies": {
+      "type": "array",
+      "description": "List of module names this module depends on",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "uniqueItems": true,
+      "examples": [
+        ["utils", "models"],
+        ["config", "utils"]
+      ]
+    },
+    "public_api": {
+      "type": "array",
+      "description": "Exported symbols in __init__.py that constitute the public API",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+      },
+      "uniqueItems": true,
+      "examples": [
+        ["MCPServer", "start_server", "mcp_tool"],
+        ["AgentBase", "AgentRegistry"]
+      ]
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Optional metadata about the module",
+      "properties": {
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "maintainers": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "name": "mcp_server",
+      "path": "/Users/user/project/src/agentic_nwb_converter/mcp_server",
+      "type": "mcp_server",
+      "dependencies": ["utils", "models"],
+      "public_api": ["MCPServer", "start_server", "mcp_tool"]
+    },
+    {
+      "name": "conversation_agent",
+      "path": "/Users/user/project/src/agentic_nwb_converter/agents/conversation",
+      "type": "agent",
+      "dependencies": ["utils", "models", "config"],
+      "public_api": ["ConversationAgent", "ConversationConfig"]
+    }
+  ],
+  "definitions": {
+    "validation_rules": {
+      "description": "Validation rules enforced at runtime",
+      "rules": [
+        "Path MUST exist on filesystem and contain __init__.py",
+        "Type MUST be one of defined enum values",
+        "NO circular dependencies in dependency graph",
+        "Public API symbols MUST be importable from module",
+        "Module name MUST be valid Python identifier"
+      ]
+    }
+  }
+}

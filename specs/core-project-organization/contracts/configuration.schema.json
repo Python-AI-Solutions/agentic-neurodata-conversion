@@ -1,0 +1,190 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Python-AI-Solutions/agentic-neurodata-conversion/schemas/configuration.json",
+  "title": "ConfigurationProfile",
+  "description": "Environment-specific configuration settings with validation rules",
+  "type": "object",
+  "required": ["name", "settings", "env_vars", "validation_rules"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Profile identifier for environment",
+      "enum": ["development", "testing", "staging", "production"],
+      "examples": ["development", "production"]
+    },
+    "settings": {
+      "type": "object",
+      "description": "Configuration key-value pairs",
+      "required": ["log_level", "debug_mode", "data_root"],
+      "properties": {
+        "log_level": {
+          "type": "string",
+          "enum": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+          "description": "Logging level for the application"
+        },
+        "debug_mode": {
+          "type": "boolean",
+          "description": "Enable debug mode with verbose output"
+        },
+        "data_root": {
+          "type": "string",
+          "description": "Root directory for data storage",
+          "pattern": "^(/[^/]+)+$"
+        },
+        "agent_timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3600,
+          "default": 300,
+          "description": "Timeout for agent operations in seconds"
+        },
+        "max_retries": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10,
+          "default": 3,
+          "description": "Maximum number of retry attempts"
+        },
+        "memory_limit_mb": {
+          "type": ["integer", "null"],
+          "minimum": 128,
+          "description": "Memory limit in megabytes, null for unlimited"
+        }
+      },
+      "additionalProperties": true
+    },
+    "env_vars": {
+      "type": "object",
+      "description": "Environment variable mappings following NWB_CONVERTER_ prefix pattern",
+      "patternProperties": {
+        "^NWB_CONVERTER_[A-Z_]+$": {
+          "type": "string",
+          "description": "Environment variable value"
+        }
+      },
+      "additionalProperties": false,
+      "examples": [
+        {
+          "NWB_CONVERTER_LOG_LEVEL": "DEBUG",
+          "NWB_CONVERTER_DEBUG_MODE": "true",
+          "NWB_CONVERTER_DATA_ROOT": "/data/dev"
+        }
+      ]
+    },
+    "validation_rules": {
+      "type": "array",
+      "description": "Pydantic validators for configuration",
+      "items": {
+        "type": "object",
+        "required": ["rule_type", "field"],
+        "properties": {
+          "rule_type": {
+            "type": "string",
+            "enum": [
+              "required_field",
+              "path_exists",
+              "range_check",
+              "pattern_match",
+              "custom"
+            ],
+            "description": "Type of validation rule"
+          },
+          "field": {
+            "type": "string",
+            "description": "Field name to validate"
+          },
+          "parameters": {
+            "type": "object",
+            "description": "Rule-specific parameters",
+            "additionalProperties": true
+          },
+          "error_message": {
+            "type": "string",
+            "description": "Custom error message for validation failure"
+          }
+        }
+      },
+      "minItems": 1
+    },
+    "inherits_from": {
+      "type": ["string", "null"],
+      "description": "Parent configuration profile for inheritance",
+      "enum": ["development", "testing", "staging", "production", null]
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "name": "development",
+      "settings": {
+        "log_level": "DEBUG",
+        "debug_mode": true,
+        "data_root": "/data/dev",
+        "agent_timeout_seconds": 300,
+        "max_retries": 3,
+        "memory_limit_mb": null
+      },
+      "env_vars": {
+        "NWB_CONVERTER_LOG_LEVEL": "DEBUG",
+        "NWB_CONVERTER_DEBUG_MODE": "true",
+        "NWB_CONVERTER_DATA_ROOT": "/data/dev"
+      },
+      "validation_rules": [
+        {
+          "rule_type": "required_field",
+          "field": "log_level",
+          "error_message": "log_level is required"
+        },
+        {
+          "rule_type": "path_exists",
+          "field": "data_root",
+          "parameters": { "create_if_missing": true },
+          "error_message": "data_root path must be accessible"
+        }
+      ],
+      "inherits_from": null
+    },
+    {
+      "name": "production",
+      "settings": {
+        "log_level": "INFO",
+        "debug_mode": false,
+        "data_root": "/data/prod",
+        "agent_timeout_seconds": 600,
+        "max_retries": 5,
+        "memory_limit_mb": 4096
+      },
+      "env_vars": {
+        "NWB_CONVERTER_LOG_LEVEL": "INFO",
+        "NWB_CONVERTER_DEBUG_MODE": "false",
+        "NWB_CONVERTER_DATA_ROOT": "/data/prod"
+      },
+      "validation_rules": [
+        {
+          "rule_type": "required_field",
+          "field": "log_level",
+          "error_message": "log_level is required"
+        },
+        {
+          "rule_type": "path_exists",
+          "field": "data_root",
+          "parameters": { "create_if_missing": false },
+          "error_message": "data_root must exist in production"
+        }
+      ],
+      "inherits_from": null
+    }
+  ],
+  "definitions": {
+    "validation_rules_description": {
+      "description": "Configuration validation requirements",
+      "rules": [
+        "Required settings MUST be present: log_level, debug_mode, data_root",
+        "Environment variables MUST follow NWB_CONVERTER_{SECTION}_{KEY} pattern",
+        "Values MUST match declared types",
+        "Fail-fast on missing required settings with clear error message",
+        "Nested configuration uses double underscore: NWB_CONVERTER_AGENT__TIMEOUT"
+      ]
+    }
+  }
+}

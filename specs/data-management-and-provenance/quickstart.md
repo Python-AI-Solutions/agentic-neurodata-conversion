@@ -1,0 +1,495 @@
+# Quickstart Guide: Data Management and Provenance
+
+**Feature**: Data Management and Provenance **Date**: 2025-10-07
+
+## Overview
+
+This guide demonstrates how to use the DataLad-based data management and
+provenance tracking system for neurodata conversions.
+
+---
+
+## Prerequisites
+
+```bash
+# Install dependencies
+pip install datalad pyoxigraph oxrdflib jinja2 plotly pyyaml
+
+# Verify DataLad installation
+python -c "import datalad.api as dl; print(dl.__version__)"
+```
+
+---
+
+## Quick Start Examples
+
+### 1. Initialize Test Dataset from Raw Files
+
+```python
+from data_management.datalad import DatasetManager
+from pathlib import Path
+
+# Create dataset manager
+manager = DatasetManager()
+
+# Create new test dataset
+dataset_path = Path("tests/fixtures/datasets/sample_ephys")
+result = manager.create_dataset(
+    path=dataset_path,
+    description="Sample electrophysiology test dataset"
+)
+
+# Configure selective annexing (files > 10MB)
+manager.configure_annex(
+    dataset_path=dataset_path,
+    large_file_threshold_mb=10
+)
+
+# Add raw data files
+raw_files = list(Path("path/to/raw/data").glob("*.dat"))
+for file in raw_files:
+    # Copy file to dataset
+    target = dataset_path / file.name
+    shutil.copy(file, target)
+
+# Save with descriptive message
+manager.save_changes(
+    dataset_path=dataset_path,
+    message="Add sample electrophysiology data files"
+)
+
+print(f"✅ Dataset created at {dataset_path}")
+```
+
+### 2. Record Provenance During Conversion
+
+```python
+from data_management.provenance import ProvenanceTracker, ConfidenceLevel, SourceType
+from datetime import datetime
+
+# Initialize provenance tracker
+tracker = ProvenanceTracker(store_path="conversions/conv_001/provenance_store")
+
+# Start conversion activity
+activity_uri = tracker.start_activity(
+    activity_id="conversion_001",
+    activity_type="nwb_conversion",
+    start_time=datetime.utcnow(),
+    metadata={"input_format": "proprietary", "output_format": "NWB"}
+)
+
+# Record agent
+agent_uri = tracker.record_agent(
+    agent_id="conversion_agent_v1",
+    agent_type="software",
+    name="NeuroConv Conversion Agent"
+)
+
+# Link activity to agent
+tracker.link_association(
+    activity_id="conversion_001",
+    agent_id="conversion_agent_v1",
+    role="executor"
+)
+
+# Record input entity
+input_uri = tracker.record_entity(
+    entity_id="input_file_001",
+    entity_type="raw_data_file",
+    value="/path/to/input.dat",
+    metadata={"file_size": 1024000, "format": "proprietary"}
+)
+
+# Link input to activity
+tracker.link_usage(
+    activity_id="conversion_001",
+    entity_id="input_file_001",
+    usage_time=datetime.utcnow()
+)
+
+# Record metadata with provenance (convenience method)
+metadata_entity_id = tracker.record_metadata_provenance(
+    metadata_field="session_start_time",
+    value="2025-01-15T10:30:00",
+    confidence=ConfidenceLevel.HIGH_EVIDENCE,
+    source_type=SourceType.FILE,
+    derivation_method="Extracted from file header timestamp field",
+    reasoning_chain=[
+        "Located timestamp field at byte offset 0x100",
+        "Parsed as Unix epoch timestamp: 1737024600",
+        "Converted to ISO 8601 format",
+        "Validated against expected date range"
+    ],
+    evidence_sources=[
+        {
+            "source_type": "file",
+            "source_path": "/path/to/input.dat",
+            "confidence": 0.9,
+            "content": "Header field: timestamp=1737024600"
+        }
+    ],
+    activity_id="conversion_001",
+    agent_id="conversion_agent_v1"
+)
+
+# Record output entity
+output_uri = tracker.record_entity(
+    entity_id="output_nwb_001",
+    entity_type="nwb_file",
+    value="/conversions/conv_001/outputs/nwb/session.nwb",
+    metadata={"file_size": 5120000, "format": "NWB 2.6"}
+)
+
+# Link output generation
+tracker.link_generation(
+    entity_id="output_nwb_001",
+    activity_id="conversion_001",
+    generation_time=datetime.utcnow()
+)
+
+# End activity
+tracker.end_activity(
+    activity_id="conversion_001",
+    end_time=datetime.utcnow(),
+    status="completed"
+)
+
+print("✅ Provenance recorded for conversion")
+```
+
+### 3. Query Provenance with SPARQL
+
+```python
+# Get confidence distribution
+confidence_dist = tracker.get_confidence_distribution()
+print("Confidence Distribution:", confidence_dist)
+
+# Query with SPARQL
+sparql_query = """
+PREFIX prov: <http://www.w3.org/ns/prov#>
+PREFIX nwb: <http://example.org/nwb#>
+
+SELECT ?field ?confidence ?value
+WHERE {
+    ?entity a prov:Entity ;
+            nwb:field ?field ;
+            nwb:confidenceLevel ?confidence ;
+            nwb:value ?value .
+    FILTER(?confidence = "high_evidence")
+}
+ORDER BY ?field
+"""
+
+results = tracker.query_sparql(sparql_query)
+for result in results:
+    print(f"Field: {result['field']}, Value: {result['value']}")
+
+# Get complete provenance for specific metadata
+metadata_prov = tracker.get_entity_provenance(
+    entity_id=metadata_entity_id,
+    depth=2  # Include upstream and downstream
+)
+
+print("Metadata Provenance:")
+print(f"  Generated by: {metadata_prov['generated_by']}")
+print(f"  Attributed to: {metadata_prov['attributed_to']}")
+print(f"  Derived from: {metadata_prov['derived_from']}")
+```
+
+### 4. Generate HTML Report
+
+```python
+from data_management.reporting import ReportGenerator, ReportSection
+
+# Initialize report
+generator = ReportGenerator()
+generator.initialize_report(
+    report_id="conv_001_report",
+    title="Conversion 001 Provenance Report"
+)
+
+# Set executive summary
+generator.set_executive_summary(
+    summary="Conversion completed successfully with 95% high-confidence metadata.",
+    key_metrics={
+        "total_metadata_fields": 150,
+        "high_confidence": 143,
+        "human_review_needed": 7,
+        "duration_seconds": 45.2
+    }
+)
+
+# Add confidence distribution chart
+generator.add_confidence_chart(confidence_dist)
+
+# Add activity timeline
+activities = tracker.query_sparql("""
+    PREFIX prov: <http://www.w3.org/ns/prov#>
+    SELECT ?activity ?start ?end ?type
+    WHERE {
+        ?activity a prov:Activity ;
+                  prov:startedAtTime ?start ;
+                  prov:endedAtTime ?end .
+        OPTIONAL { ?activity a ?type }
+    }
+""")
+generator.add_timeline_chart(activities)
+
+# Add decision chains for key metadata
+generator.add_decision_chain(
+    metadata_field="session_start_time",
+    chain=[
+        "Located timestamp field at byte offset 0x100",
+        "Parsed as Unix epoch timestamp: 1737024600",
+        "Converted to ISO 8601 format",
+        "Validated against expected date range"
+    ],
+    final_value="2025-01-15T10:30:00",
+    confidence="high_evidence"
+)
+
+# Generate HTML file
+output_path = Path("conversions/conv_001/reports/provenance_report.html")
+generator.generate_html(
+    output_path=output_path,
+    embed_assets=True,  # Offline-capable
+    accessibility=True  # Include ARIA labels
+)
+
+print(f"✅ Report generated at {output_path}")
+```
+
+### 5. Configure Performance Thresholds
+
+Create `config/performance.yaml`:
+
+```yaml
+performance:
+  thresholds:
+    conversion_throughput_min: 1.0 # datasets/hour
+    storage_usage_max_percent: 90
+    response_time_max_seconds: 30.0
+
+  alerts:
+    enabled: true
+    log_level: "WARNING"
+    notification_methods: ["log", "file"]
+
+  monitoring:
+    interval_seconds: 60
+    metrics_retention_days: 30
+```
+
+Use in code:
+
+```python
+from data_management.performance import PerformanceMonitor
+import yaml
+
+# Load configuration
+with open("config/performance.yaml") as f:
+    config = yaml.safe_load(f)
+
+# Initialize monitor
+monitor = PerformanceMonitor(config=config['performance'])
+
+# Track metric
+monitor.track_metric(
+    conversion_id="conv_001",
+    operation_type="conversion",
+    throughput=0.8,  # datasets/hour
+    storage_used_bytes=5000000000,
+    response_time_seconds=45.2
+)
+
+# Check for threshold violations
+alerts = monitor.check_thresholds()
+for alert in alerts:
+    print(f"⚠️  Alert: {alert['threshold_name']} exceeded")
+    print(f"   Expected: {alert['threshold_value']}, Actual: {alert['actual_value']}")
+```
+
+---
+
+## Common Workflows
+
+### Complete Conversion with Provenance
+
+```python
+from pathlib import Path
+from data_management import DatasetManager, ProvenanceTracker, ReportGenerator
+from data_management.conversion_repo import ConversionRepository
+
+# 1. Create conversion repository
+conv_repo = ConversionRepository.create(
+    conversion_id="conv_20251007_143000_abc123"
+)
+print(f"Conversion repository: {conv_repo.path}")
+
+# 2. Initialize provenance tracking
+tracker = ProvenanceTracker(store_path=conv_repo.path / "provenance_store")
+
+# 3. Perform conversion with provenance recording
+#    (see example 2 above)
+
+# 4. Save iteration
+conv_repo.save_iteration(
+    message="Initial conversion iteration",
+    files=[conv_repo.path / "outputs" / "nwb" / "session.nwb"]
+)
+
+# 5. Generate report
+generator = ReportGenerator()
+generator.initialize_report(
+    report_id=conv_repo.conversion_id,
+    title=f"Provenance Report - {conv_repo.conversion_id}"
+)
+# ... add sections (see example 4)
+generator.generate_html(
+    output_path=conv_repo.path / "reports" / "provenance.html"
+)
+
+# 6. Tag successful conversion
+conv_repo.tag_success()
+
+print("✅ Conversion complete with full provenance")
+```
+
+### Selective Dataset Download
+
+```python
+from data_management.datalad import DatasetManager
+
+manager = DatasetManager()
+
+# Install dataset without downloading content
+dataset_path = Path("tests/fixtures/datasets/large_dataset")
+manager.install_subdataset(
+    parent_path=Path("tests/fixtures/datasets"),
+    subdataset_path="large_dataset",
+    source="https://example.com/large_dataset.git",
+    get_data=False  # Don't download yet
+)
+
+# Get only specific files needed for test
+files_needed = [
+    dataset_path / "subject01" / "session01" / "data.nii.gz",
+    dataset_path / "subject01" / "session01" / "metadata.json"
+]
+
+status = manager.get_files(
+    dataset_path=dataset_path,
+    file_paths=files_needed
+)
+
+for file, success in status.items():
+    print(f"{'✅' if success else '❌'} {file}")
+```
+
+---
+
+## Directory Structure
+
+After running these examples, your project structure will look like:
+
+```
+project_root/
+├── tests/
+│   └── fixtures/
+│       └── datasets/
+│           ├── sample_ephys/        # Test dataset
+│           │   ├── .git/
+│           │   ├── .gitattributes   # Annexing config
+│           │   └── *.dat            # Data files
+│           └── large_dataset/       # Subdataset
+│
+├── conversions/
+│   └── conv_20251007_143000_abc123/
+│       ├── .git/                    # DataLad repo
+│       ├── outputs/
+│       │   └── nwb/
+│       │       └── session.nwb
+│       ├── scripts/
+│       │   └── conversion_script.py
+│       ├── reports/
+│       │   ├── provenance.html      # Interactive report
+│       │   └── validation/
+│       ├── provenance_store/        # Oxigraph RDF store
+│       └── .datalad/
+│
+└── config/
+    └── performance.yaml
+```
+
+---
+
+## Troubleshooting
+
+### DataLad File Locked
+
+```python
+# If you get "file is locked" errors:
+manager.unlock_files(
+    dataset_path=dataset_path,
+    file_paths=[Path("data/results.csv")]
+)
+
+# Modify the file
+with open(dataset_path / "data/results.csv", 'w') as f:
+    f.write("updated data")
+
+# Save (automatically re-locks)
+manager.save_changes(
+    dataset_path=dataset_path,
+    message="Updated results"
+)
+```
+
+### Subdataset Not Installed
+
+```python
+# Check status
+status = manager.get_status(
+    dataset_path=parent_path,
+    include_subdatasets=True
+)
+
+# Install missing subdatasets
+for subds in status['subdatasets']:
+    if subds['state'] == 'absent':
+        manager.install_subdataset(
+            parent_path=parent_path,
+            subdataset_path=subds['path'],
+            source=subds['gitmodule_url']
+        )
+```
+
+### SPARQL Query Returns Empty
+
+```python
+# Export graph to debug
+turtle = tracker.export_graph(format="turtle")
+print(turtle)  # Inspect RDF structure
+
+# Check if entities exist
+entity_prov = tracker.get_entity_provenance(entity_id="your_entity_id")
+print(entity_prov)
+```
+
+---
+
+## Next Steps
+
+1. Review [data-model.md](data-model.md) for complete entity definitions
+2. Check [contracts/](contracts/) for full API specifications
+3. See [plan.md](plan.md) for implementation architecture
+4. Run `/speckit.tasks` to generate actionable implementation tasks
+
+---
+
+## Resources
+
+- DataLad Handbook: http://handbook.datalad.org
+- PROV-O Specification: https://www.w3.org/TR/prov-o/
+- Plotly Python Documentation: https://plotly.com/python/
+- Jinja2 Documentation: https://jinja.palletsprojects.com/

@@ -1,0 +1,798 @@
+openapi: 3.0.3
+info:
+  title: Agent-Based Neurodata Conversion API
+  description: |
+    RESTful API for the agent-based neurodata conversion system.
+    Supports conversational task creation, workflow execution, and progress monitoring.
+  version: 1.0.0
+  contact:
+    name: Agentic Neurodata Conversion Team
+    email: support@pythonaisolutions.com
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local development server
+  - url: https://api.neurodata-conversion.example.com/api/v1
+    description: Production server
+
+tags:
+  - name: conversation
+    description: Natural language conversation endpoints
+  - name: tasks
+    description: Conversion task management
+  - name: workflows
+    description: Workflow execution
+  - name: metrics
+    description: System metrics and statistics
+
+paths:
+  /conversation:
+    post:
+      summary: Start new conversation
+      description:
+        Initiate a new conversation with the agent for conversion task setup
+      operationId: startConversation
+      tags:
+        - conversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - message
+              properties:
+                message:
+                  type: string
+                  description: Initial user message describing conversion needs
+                  example:
+                    "I need to convert my Blackrock neural recordings to NWB
+                    format"
+                user_id:
+                  type: string
+                  description: Optional user identifier
+                  example: "researcher_123"
+      responses:
+        "201":
+          description: Conversation started successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversationResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /conversation/{conversation_id}:
+    get:
+      summary: Get conversation context
+      description: Retrieve full conversation history and current state
+      operationId: getConversation
+      tags:
+        - conversation
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Conversation details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversationContext"
+        "404":
+          description: Conversation not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    post:
+      summary: Continue conversation
+      description: Send additional message in existing conversation
+      operationId: continueConversation
+      tags:
+        - conversation
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - message
+              properties:
+                message:
+                  type: string
+                  description: User's response or additional information
+      responses:
+        "200":
+          description: Message processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversationResponse"
+        "404":
+          description: Conversation not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /tasks:
+    post:
+      summary: Create conversion task
+      description:
+        Create a new conversion task (can be created from conversation or
+        directly)
+      operationId: createTask
+      tags:
+        - tasks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskCreateRequest"
+      responses:
+        "201":
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    get:
+      summary: List all tasks
+      description: Retrieve list of all conversion tasks with optional filtering
+      operationId: listTasks
+      tags:
+        - tasks
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              [
+                pending,
+                profiling,
+                tool_selection,
+                executing,
+                validating,
+                completed,
+                failed,
+                cancelled,
+                clarification_needed,
+              ]
+        - name: user_id
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        "200":
+          description: List of tasks retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tasks:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Task"
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+
+  /tasks/{task_id}:
+    get:
+      summary: Get task details
+      description: Retrieve full details of a specific conversion task
+      operationId: getTask
+      tags:
+        - tasks
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Task details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "404":
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      summary: Cancel task
+      description: Cancel a pending or running conversion task
+      operationId: cancelTask
+      tags:
+        - tasks
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Task cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "404":
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Task cannot be cancelled (already completed/failed)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /tasks/{task_id}/status:
+    get:
+      summary: Get task status
+      description: Retrieve current status and progress of conversion task
+      operationId: getTaskStatus
+      tags:
+        - tasks
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Task status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskStatus"
+        "404":
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /workflows/execute:
+    post:
+      summary: Execute workflow
+      description: Execute a specific workflow for a conversion task
+      operationId: executeWorkflow
+      tags:
+        - workflows
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - task_id
+                - workflow_id
+              properties:
+                task_id:
+                  type: string
+                  format: uuid
+                workflow_id:
+                  type: string
+                  format: uuid
+                parameters:
+                  type: object
+                  description: Optional workflow-specific parameters
+      responses:
+        "202":
+          description: Workflow execution started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkflowExecution"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Task or workflow not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /metrics:
+    get:
+      summary: Get conversion metrics
+      description: Retrieve aggregated metrics for conversion tasks
+      operationId: getMetrics
+      tags:
+        - metrics
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [day, week, month]
+            default: week
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Metrics retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetricsResponse"
+
+components:
+  schemas:
+    ConversationResponse:
+      type: object
+      required:
+        - conversation_id
+        - agent_message
+        - requires_response
+      properties:
+        conversation_id:
+          type: string
+          format: uuid
+        agent_message:
+          type: string
+          description: Agent's response to user
+        requires_response:
+          type: boolean
+          description: Whether agent is waiting for user input
+        suggested_actions:
+          type: array
+          items:
+            type: string
+          description: Optional suggested next steps
+        task_id:
+          type: string
+          format: uuid
+          description: Task ID if conversation resulted in task creation
+
+    ConversationContext:
+      type: object
+      required:
+        - id
+        - user_id
+        - messages
+        - started_at
+        - is_active
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+        task_id:
+          type: string
+          format: uuid
+          nullable: true
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/Message"
+        clarifications:
+          type: object
+          additionalProperties: true
+        user_preferences:
+          type: object
+          additionalProperties: true
+        current_intent:
+          type: string
+          nullable: true
+        started_at:
+          type: string
+          format: date-time
+        last_activity_at:
+          type: string
+          format: date-time
+        is_active:
+          type: boolean
+
+    Message:
+      type: object
+      required:
+        - role
+        - content
+        - timestamp
+      properties:
+        role:
+          type: string
+          enum: [user, agent]
+        content:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        intent:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          additionalProperties: true
+
+    TaskCreateRequest:
+      type: object
+      required:
+        - source_path
+        - target_path
+      properties:
+        source_path:
+          type: string
+          description: Path to source neurodata files
+        source_format:
+          type: string
+          description:
+            Optional source format (will be auto-detected if not provided)
+        target_path:
+          type: string
+          description: Path for output NWB file
+        user_id:
+          type: string
+        conversation_id:
+          type: string
+          format: uuid
+          description: Optional conversation that led to this task
+        metadata:
+          type: object
+          additionalProperties: true
+
+    Task:
+      type: object
+      required:
+        - id
+        - source_path
+        - target_path
+        - status
+        - progress
+        - submission_time
+      properties:
+        id:
+          type: string
+          format: uuid
+        source_path:
+          type: string
+        source_format:
+          type: string
+        target_path:
+          type: string
+        status:
+          type: string
+          enum:
+            [
+              pending,
+              profiling,
+              tool_selection,
+              executing,
+              validating,
+              completed,
+              failed,
+              cancelled,
+              clarification_needed,
+            ]
+        progress:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        workflow_id:
+          type: string
+          format: uuid
+          nullable: true
+        error_history:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorRecord"
+        submission_time:
+          type: string
+          format: date-time
+        start_time:
+          type: string
+          format: date-time
+          nullable: true
+        completion_time:
+          type: string
+          format: date-time
+          nullable: true
+        result:
+          $ref: "#/components/schemas/ValidationReport"
+          nullable: true
+        user_id:
+          type: string
+          nullable: true
+        priority:
+          type: integer
+        metadata:
+          type: object
+          additionalProperties: true
+
+    TaskStatus:
+      type: object
+      required:
+        - task_id
+        - status
+        - progress
+      properties:
+        task_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+            [
+              pending,
+              profiling,
+              tool_selection,
+              executing,
+              validating,
+              completed,
+              failed,
+              cancelled,
+              clarification_needed,
+            ]
+        progress:
+          type: number
+          format: float
+        current_step:
+          type: string
+          description: Human-readable description of current operation
+        estimated_completion_time:
+          type: string
+          format: date-time
+          nullable: true
+        last_error:
+          $ref: "#/components/schemas/ErrorRecord"
+          nullable: true
+
+    ErrorRecord:
+      type: object
+      required:
+        - error_type
+        - error_message
+        - occurred_at
+        - recovery_attempted
+        - recovery_successful
+      properties:
+        error_type:
+          type: string
+        error_message:
+          type: string
+        error_code:
+          type: string
+          nullable: true
+        occurred_at:
+          type: string
+          format: date-time
+        recovery_attempted:
+          type: boolean
+        recovery_successful:
+          type: boolean
+        stack_trace:
+          type: string
+          nullable: true
+
+    ValidationReport:
+      type: object
+      required:
+        - id
+        - task_id
+        - nwb_file_path
+        - schema_version
+        - is_valid
+        - validated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        task_id:
+          type: string
+          format: uuid
+        nwb_file_path:
+          type: string
+        schema_version:
+          type: string
+        is_valid:
+          type: boolean
+        schema_errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/SchemaError"
+        data_integrity_checks:
+          type: object
+          additionalProperties:
+            type: boolean
+        quality_metrics:
+          type: object
+          additionalProperties:
+            type: number
+        warnings:
+          type: array
+          items:
+            type: string
+        validation_tool:
+          type: string
+        validated_at:
+          type: string
+          format: date-time
+        validation_duration_seconds:
+          type: number
+
+    SchemaError:
+      type: object
+      required:
+        - error_type
+        - location
+        - message
+        - severity
+      properties:
+        error_type:
+          type: string
+        location:
+          type: string
+        message:
+          type: string
+        severity:
+          type: string
+          enum: [critical, error, warning]
+
+    WorkflowExecution:
+      type: object
+      required:
+        - task_id
+        - workflow_id
+        - status
+      properties:
+        task_id:
+          type: string
+          format: uuid
+        workflow_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [started, running, completed, failed]
+        current_step:
+          type: string
+          nullable: true
+
+    MetricsResponse:
+      type: object
+      required:
+        - period
+        - metrics
+      properties:
+        period:
+          type: string
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        metrics:
+          type: array
+          items:
+            $ref: "#/components/schemas/MetricsAggregate"
+
+    MetricsAggregate:
+      type: object
+      required:
+        - week_start_date
+        - week_end_date
+        - total_tasks
+        - successful_tasks
+        - failed_tasks
+      properties:
+        id:
+          type: string
+          format: uuid
+        week_start_date:
+          type: string
+          format: date
+        week_end_date:
+          type: string
+          format: date
+        total_tasks:
+          type: integer
+        successful_tasks:
+          type: integer
+        failed_tasks:
+          type: integer
+        average_duration_seconds:
+          type: number
+        median_duration_seconds:
+          type: number
+        p95_duration_seconds:
+          type: number
+        error_type_counts:
+          type: object
+          additionalProperties:
+            type: integer
+        data_format_counts:
+          type: object
+          additionalProperties:
+            type: integer
+        total_data_processed_gb:
+          type: number
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true

@@ -1,0 +1,352 @@
+openapi: 3.0.3
+info:
+  title: Knowledge Graph MCP Tools
+  description:
+    Model Context Protocol tools for knowledge graph integration with agents
+  version: 1.0.0
+
+paths:
+  /mcp/tools/sparql_query:
+    post:
+      summary: Execute SPARQL query through MCP
+      description:
+        MCP tool for executing SPARQL queries with structured agent response
+      operationId: mcpSparqlQuery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+                  description: SPARQL query string
+                limit:
+                  type: integer
+                  description: Maximum results to return
+                  default: 10
+                  maximum: 100
+              required:
+                - query
+      responses:
+        "200":
+          description: Query executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MCPResponse"
+
+  /mcp/tools/enrich_metadata:
+    post:
+      summary: Generate metadata enrichment suggestions
+      description:
+        MCP tool for metadata enrichment with agent-friendly response format
+      operationId: mcpEnrichMetadata
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                entity_type:
+                  type: string
+                  enum: [dataset, session, subject, device]
+                entity_data:
+                  type: object
+                  description: Current entity metadata
+                sources:
+                  type: array
+                  items:
+                    type: string
+                  description: Knowledge sources to query
+                  default: ["NIFSTD", "NCBITaxon", "UBERON"]
+              required:
+                - entity_type
+                - entity_data
+      responses:
+        "200":
+          description: Enrichment suggestions generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MCPResponse"
+
+  /mcp/tools/validate_schema:
+    post:
+      summary: Validate data against NWB-LinkML schema
+      description: MCP tool for schema validation with detailed error reporting
+      operationId: mcpValidateSchema
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: object
+                  description: Data to validate
+                schema_type:
+                  type: string
+                  enum: [linkml, shacl]
+                  default: linkml
+                schema_version:
+                  type: string
+                  description: NWB-LinkML schema version
+                  default: "latest"
+              required:
+                - data
+      responses:
+        "200":
+          description: Validation completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MCPResponse"
+
+  /mcp/tools/resolve_conflicts:
+    post:
+      summary: Present metadata conflicts for resolution
+      description:
+        MCP tool for presenting conflicting enrichment suggestions to agents
+      operationId: mcpResolveConflicts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                entity_id:
+                  type: string
+                  description: Entity with conflicts
+                conflict_type:
+                  type: string
+                  enum: [enrichment, validation, mapping]
+              required:
+                - entity_id
+      responses:
+        "200":
+          description: Conflicts presented for resolution
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MCPResponse"
+
+  /mcp/tools/generate_rdf:
+    post:
+      summary: Generate RDF from NWB data
+      description:
+        MCP tool for converting NWB data to semantic RDF representation
+      operationId: mcpGenerateRdf
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nwb_data:
+                  type: object
+                  description: NWB data structure
+                format:
+                  type: string
+                  enum: [turtle, jsonld, ntriples, rdfxml]
+                  default: turtle
+                include_provenance:
+                  type: boolean
+                  default: true
+              required:
+                - nwb_data
+      responses:
+        "200":
+          description: RDF generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MCPResponse"
+
+  /mcp/tools/query_ontology:
+    post:
+      summary: Query neuroscience ontologies
+      description: MCP tool for querying integrated neuroscience ontologies
+      operationId: mcpQueryOntology
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                concept:
+                  type: string
+                  description: Concept to search for
+                ontologies:
+                  type: array
+                  items:
+                    type: string
+                    enum: [NIFSTD, UBERON, CHEBI, NCBITaxon]
+                  default: ["NIFSTD", "NCBITaxon"]
+                relationship_type:
+                  type: string
+                  enum: [subclass, equivalent, related]
+                  default: related
+              required:
+                - concept
+      responses:
+        "200":
+          description: Ontology query completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MCPResponse"
+
+components:
+  schemas:
+    MCPResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                enum: [text, data, error]
+              data:
+                type: object
+                description: Structured response data
+              text:
+                type: string
+                description: Human-readable response
+        isError:
+          type: boolean
+          default: false
+        errorMessage:
+          type: string
+          description: Error message if isError is true
+      required:
+        - content
+
+    MCPTool:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Tool name
+        description:
+          type: string
+          description: Tool functionality description
+        inputSchema:
+          type: object
+          description: JSON Schema for input validation
+        outputSchema:
+          type: object
+          description: JSON Schema for output validation
+      required:
+        - name
+        - description
+        - inputSchema
+
+    EnrichmentMCPResponse:
+      allOf:
+        - $ref: "#/components/schemas/MCPResponse"
+        - type: object
+          properties:
+            suggestions:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  current_value:
+                    type: string
+                  suggested_value:
+                    type: string
+                  confidence:
+                    type: number
+                  evidence:
+                    type: array
+                    items:
+                      type: string
+                  requires_review:
+                    type: boolean
+                    default: true
+            conflicts:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  conflicting_values:
+                    type: array
+                    items:
+                      type: object
+                  resolution_strategy:
+                    type: string
+
+    ValidationMCPResponse:
+      allOf:
+        - $ref: "#/components/schemas/MCPResponse"
+        - type: object
+          properties:
+            validation_result:
+              type: object
+              properties:
+                valid:
+                  type: boolean
+                errors:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      path:
+                        type: string
+                      message:
+                        type: string
+                      severity:
+                        type: string
+                warnings:
+                  type: array
+                  items:
+                    type: object
+                schema_version:
+                  type: string
+
+    OntologyMCPResponse:
+      allOf:
+        - $ref: "#/components/schemas/MCPResponse"
+        - type: object
+          properties:
+            ontology_results:
+              type: array
+              items:
+                type: object
+                properties:
+                  concept_uri:
+                    type: string
+                    format: uri
+                  label:
+                    type: string
+                  definition:
+                    type: string
+                  ontology_source:
+                    type: string
+                  relationships:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                        target:
+                          type: string
+                  confidence_score:
+                    type: number
+                    minimum: 0.0
+                    maximum: 1.0

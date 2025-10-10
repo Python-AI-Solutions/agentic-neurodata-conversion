@@ -1,0 +1,470 @@
+openapi: 3.0.3
+info:
+  title: Knowledge Graph Systems API
+  description:
+    API for NWB knowledge graph metadata enrichment, validation, and semantic
+    querying
+  version: 1.0.0
+  contact:
+    name: Agentic Neurodata Conversion Team
+    email: support@pythonaisolutions.com
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Development server
+  - url: https://kg.nwb.example.com/api/v1
+    description: Production server
+
+paths:
+  /sparql:
+    post:
+      summary: Execute SPARQL query
+      description:
+        Execute SPARQL queries against the knowledge graph with 30-second
+        timeout
+      operationId: executeSparqlQuery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+                  description: SPARQL query string
+                  example:
+                    "SELECT ?subject ?predicate ?object WHERE { ?subject
+                    ?predicate ?object } LIMIT 10"
+                timeout:
+                  type: integer
+                  description: Query timeout in seconds (max 30)
+                  default: 30
+                  maximum: 30
+                format:
+                  type: string
+                  enum: [json, xml, csv, tsv]
+                  default: json
+              required:
+                - query
+      responses:
+        "200":
+          description: Query executed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: object
+                    description: SPARQL query results
+                  execution_time:
+                    type: number
+                    description: Query execution time in seconds
+                  result_count:
+                    type: integer
+                    description: Number of results returned
+        "400":
+          description: Invalid SPARQL query
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "408":
+          description: Query timeout exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error during query execution
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /datasets:
+    post:
+      summary: Create new dataset
+      description: Create a new dataset with NWB files and metadata
+      operationId: createDataset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DatasetCreate"
+      responses:
+        "201":
+          description: Dataset created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dataset"
+        "400":
+          description: Invalid dataset data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    get:
+      summary: List datasets
+      description: Retrieve list of datasets with pagination
+      operationId: listDatasets
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of datasets to return
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: offset
+          in: query
+          description: Number of datasets to skip
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Datasets retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  datasets:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Dataset"
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+
+  /datasets/{dataset_id}:
+    get:
+      summary: Get dataset by ID
+      description: Retrieve detailed dataset information
+      operationId: getDataset
+      parameters:
+        - name: dataset_id
+          in: path
+          required: true
+          description: Dataset identifier
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Dataset retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dataset"
+        "404":
+          description: Dataset not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /datasets/{dataset_id}/enrich:
+    post:
+      summary: Enrich dataset metadata
+      description:
+        Generate metadata enrichment suggestions requiring human review
+      operationId: enrichDataset
+      parameters:
+        - name: dataset_id
+          in: path
+          required: true
+          description: Dataset identifier
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sources:
+                  type: array
+                  items:
+                    type: string
+                  description: External knowledge sources to use
+                  example: ["NIFSTD", "NCBITaxon", "UBERON"]
+                confidence_threshold:
+                  type: number
+                  description:
+                    Minimum confidence for suggestions (all require review)
+                  default: 0.0
+                  minimum: 0.0
+                  maximum: 1.0
+      responses:
+        "200":
+          description: Enrichment suggestions generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  suggestions:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/EnrichmentSuggestion"
+                  conflicts:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ConflictReport"
+        "404":
+          description: Dataset not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /validation/shacl:
+    post:
+      summary: Validate RDF with SHACL shapes
+      description:
+        Validate RDF data against SHACL shapes generated from NWB-LinkML schema
+      operationId: validateShacl
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data_graph:
+                  type: string
+                  description: RDF data to validate (Turtle format)
+                shapes_graph:
+                  type: string
+                  description:
+                    SHACL shapes (optional, uses default if not provided)
+                schema_version:
+                  type: string
+                  description: NWB-LinkML schema version to use
+                  example: "2.6.0"
+              required:
+                - data_graph
+      responses:
+        "200":
+          description: Validation completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationReport"
+        "400":
+          description: Invalid RDF or SHACL data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /validation/linkml:
+    post:
+      summary: Validate data against LinkML schema
+      description: Validate YAML/JSON data against NWB-LinkML schema
+      operationId: validateLinkml
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: object
+                  description: Data to validate
+                schema_version:
+                  type: string
+                  description: NWB-LinkML schema version
+                  example: "2.6.0"
+                format:
+                  type: string
+                  enum: [json, yaml]
+                  default: json
+              required:
+                - data
+      responses:
+        "200":
+          description: Validation completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationReport"
+        "400":
+          description: Invalid data format
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  schemas:
+    Dataset:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uri
+          description: Unique dataset identifier
+        title:
+          type: string
+          description: Human-readable dataset name
+        description:
+          type: string
+          description: Scientific description
+        nwb_files:
+          type: array
+          items:
+            type: string
+          maxItems: 100
+          description: List of NWB file references (max 100)
+        metadata:
+          type: object
+          description: Rich metadata dictionary
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - nwb_files
+
+    DatasetCreate:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Human-readable dataset name
+        description:
+          type: string
+          description: Scientific description
+        nwb_files:
+          type: array
+          items:
+            type: string
+          maxItems: 100
+          minItems: 1
+          description: List of NWB file references (1-100)
+        metadata:
+          type: object
+          description: Initial metadata
+      required:
+        - title
+        - nwb_files
+
+    EnrichmentSuggestion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uri
+        target_entity:
+          type: string
+          description: Entity being enriched
+        suggested_value:
+          type: object
+          description: Proposed metadata value
+        confidence_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+        evidence_chain:
+          type: array
+          items:
+            type: object
+          description: Supporting evidence
+        source:
+          type: string
+          description: Knowledge source
+        review_status:
+          type: string
+          enum: [pending, under_review, approved, rejected]
+          default: pending
+      required:
+        - id
+        - target_entity
+        - suggested_value
+        - confidence_score
+        - source
+
+    ConflictReport:
+      type: object
+      properties:
+        entity:
+          type: string
+          description: Entity with conflicting suggestions
+        conflicting_suggestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/EnrichmentSuggestion"
+        resolution_required:
+          type: boolean
+          default: true
+
+    ValidationReport:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uri
+        status:
+          type: string
+          enum: [pass, fail, warning]
+        issues:
+          type: array
+          items:
+            type: object
+            properties:
+              severity:
+                type: string
+                enum: [error, warning, info]
+              message:
+                type: string
+              location:
+                type: string
+        recommendations:
+          type: array
+          items:
+            type: string
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - status
+        - timestamp
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+        code:
+          type: string
+          description: Error code
+        details:
+          type: object
+          description: Additional error details
+      required:
+        - error
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+security:
+  - ApiKeyAuth: []
