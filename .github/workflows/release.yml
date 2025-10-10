@@ -18,18 +18,18 @@ jobs:
       - name: Setup Pixi
         uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.13.0
+          pixi-version: v0.56.0
 
       - name: Install dependencies
         run: pixi install
 
       - name: Run full test suite
         run: |
-          pixi run pytest tests/unit/ tests/integration/ -v --cov=agentic_neurodata_conversion
-          pixi run pre-commit run --all-files
+          pixi run test-cov
+          pixi run quality
 
       - name: Build package
-        run: pixi run python -m build
+        run: pixi run build
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
