@@ -1,0 +1,400 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MCP Server Tools Contract",
+  "description": "MCP tool definitions for agentic neurodata conversion orchestration",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "convert-dataset",
+      "description": "Submit a dataset for conversion to NWB format with automatic format detection, metadata collection, conversion, and validation",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "dataset_path": {
+            "type": "string",
+            "description": "Absolute path to the dataset directory or file"
+          },
+          "workflow_config": {
+            "type": "object",
+            "description": "Optional workflow configuration overrides",
+            "properties": {
+              "workflow_definition_id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Custom workflow definition to use (defaults to standard workflow)"
+              },
+              "format_override": {
+                "type": "string",
+                "description": "Manual format specification (bypasses auto-detection)"
+              },
+              "timeout_seconds": {
+                "type": "integer",
+                "minimum": 60,
+                "maximum": 7200,
+                "description": "Overall workflow timeout"
+              },
+              "validation_config": {
+                "type": "object",
+                "properties": {
+                  "run_nwb_inspector": {"type": "boolean", "default": true},
+                  "run_pynwb_validation": {"type": "boolean", "default": true},
+                  "run_dandi_validation": {"type": "boolean", "default": true},
+                  "custom_validators": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                  }
+                }
+              },
+              "metadata": {
+                "type": "object",
+                "description": "Custom metadata key-value pairs",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "required": ["dataset_path"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique session identifier for tracking"
+          },
+          "initial_status": {
+            "type": "object",
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": ["analyzing", "collecting_metadata", "converting", "validating", "completed", "failed", "cancelled", "suspended"]
+              },
+              "current_step": {"type": "string"},
+              "progress_percentage": {"type": "number", "minimum": 0, "maximum": 100},
+              "created_at": {"type": "string", "format": "date-time"},
+              "expires_at": {"type": "string", "format": "date-time"}
+            },
+            "required": ["state", "progress_percentage", "created_at"]
+          }
+        },
+        "required": ["session_id", "initial_status"]
+      }
+    },
+    {
+      "name": "get-session-status",
+      "description": "Query the current status and progress of a conversion workflow",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Session identifier from convert-dataset response"
+          },
+          "include_details": {
+            "type": "boolean",
+            "default": false,
+            "description": "Include detailed intermediate results"
+          }
+        },
+        "required": ["session_id"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "session_id": {"type": "string", "format": "uuid"},
+          "state": {
+            "type": "string",
+            "enum": ["analyzing", "collecting_metadata", "converting", "validating", "completed", "failed", "cancelled", "suspended"]
+          },
+          "current_step": {"type": "string"},
+          "progress_percentage": {"type": "number", "minimum": 0, "maximum": 100},
+          "created_at": {"type": "string", "format": "date-time"},
+          "updated_at": {"type": "string", "format": "date-time"},
+          "completed_at": {"type": "string", "format": "date-time"},
+          "format_detection": {
+            "type": "object",
+            "properties": {
+              "primary_format": {"type": "string"},
+              "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+            }
+          },
+          "validation_summary": {
+            "type": "object",
+            "properties": {
+              "overall_status": {"type": "string", "enum": ["PASS", "FAIL", "WARNING"]},
+              "quality_score": {"type": "number", "minimum": 0, "maximum": 100},
+              "critical_issues": {"type": "integer", "minimum": 0}
+            }
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "error_type": {"type": "string"},
+              "message": {"type": "string"},
+              "recovery_suggestions": {"type": "array", "items": {"type": "string"}}
+            }
+          }
+        },
+        "required": ["session_id", "state", "progress_percentage"]
+      }
+    },
+    {
+      "name": "resume-workflow",
+      "description": "Resume a suspended or failed workflow from the last successful checkpoint",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Session identifier to resume"
+          },
+          "checkpoint_version": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Specific checkpoint version to resume from (defaults to latest)"
+          },
+          "user_inputs": {
+            "type": "object",
+            "description": "User responses to metadata questioner prompts (for suspended sessions)",
+            "additionalProperties": true
+          }
+        },
+        "required": ["session_id"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "session_id": {"type": "string", "format": "uuid"},
+          "resumed_status": {
+            "type": "object",
+            "properties": {
+              "state": {"type": "string"},
+              "resumed_from_step": {"type": "string"},
+              "checkpoint_version": {"type": "integer"},
+              "progress_percentage": {"type": "number", "minimum": 0, "maximum": 100}
+            }
+          }
+        },
+        "required": ["session_id", "resumed_status"]
+      }
+    },
+    {
+      "name": "cancel-workflow",
+      "description": "Terminate a running workflow and cleanup resources",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Session identifier to cancel"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Optional cancellation reason for audit logs"
+          }
+        },
+        "required": ["session_id"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "session_id": {"type": "string", "format": "uuid"},
+          "cancellation_status": {
+            "type": "object",
+            "properties": {
+              "cancelled": {"type": "boolean"},
+              "state": {"type": "string"},
+              "cancelled_at": {"type": "string", "format": "date-time"},
+              "cleanup_completed": {"type": "boolean"}
+            },
+            "required": ["cancelled", "state", "cancelled_at"]
+          }
+        },
+        "required": ["session_id", "cancellation_status"]
+      }
+    },
+    {
+      "name": "validate-nwb-file",
+      "description": "Run standalone validation on an existing NWB file without full conversion workflow",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "description": "Absolute path to NWB file (.nwb)"
+          },
+          "validators": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["nwb_inspector", "pynwb", "dandi", "all"]
+            },
+            "default": ["all"],
+            "description": "Which validators to run"
+          },
+          "validation_config": {
+            "type": "object",
+            "properties": {
+              "importance_threshold": {
+                "type": "string",
+                "enum": ["CRITICAL", "BEST_PRACTICE_VIOLATION", "BEST_PRACTICE_SUGGESTION"],
+                "default": "CRITICAL",
+                "description": "Minimum issue severity to report"
+              },
+              "check_dandi_readiness": {
+                "type": "boolean",
+                "default": false
+              }
+            }
+          }
+        },
+        "required": ["file_path"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "validation_id": {"type": "string"},
+          "file_path": {"type": "string"},
+          "overall_status": {"type": "string", "enum": ["PASS", "FAIL", "WARNING"]},
+          "quality_gate_passed": {"type": "boolean"},
+          "overall_quality_score": {"type": "number", "minimum": 0, "maximum": 100},
+          "validators_run": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "validator_name": {"type": "string"},
+                "version": {"type": "string"},
+                "status": {"type": "string"},
+                "issues_found": {"type": "integer", "minimum": 0},
+                "duration_seconds": {"type": "number", "minimum": 0}
+              }
+            }
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "issue_id": {"type": "string"},
+                "severity": {"type": "string", "enum": ["critical", "high", "medium", "low", "info"]},
+                "validator": {"type": "string"},
+                "message": {"type": "string"},
+                "file_location": {"type": "string"},
+                "suggested_fix": {"type": "string"}
+              }
+            }
+          },
+          "dandi_readiness_score": {"type": "number", "minimum": 0, "maximum": 100}
+        },
+        "required": ["validation_id", "file_path", "overall_status", "quality_gate_passed"]
+      }
+    },
+    {
+      "name": "list-active-sessions",
+      "description": "Enumerate all active conversion sessions with optional filtering",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "filters": {
+            "type": "object",
+            "properties": {
+              "user_id": {"type": "string"},
+              "state": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": ["analyzing", "collecting_metadata", "converting", "validating", "completed", "failed", "cancelled", "suspended"]
+                }
+              },
+              "created_after": {"type": "string", "format": "date-time"},
+              "created_before": {"type": "string", "format": "date-time"}
+            }
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 20
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "sessions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "session_id": {"type": "string", "format": "uuid"},
+                "user_id": {"type": "string"},
+                "state": {"type": "string"},
+                "progress_percentage": {"type": "number", "minimum": 0, "maximum": 100},
+                "created_at": {"type": "string", "format": "date-time"},
+                "updated_at": {"type": "string", "format": "date-time"}
+              }
+            }
+          },
+          "total_count": {"type": "integer", "minimum": 0},
+          "limit": {"type": "integer"},
+          "offset": {"type": "integer"}
+        },
+        "required": ["sessions", "total_count"]
+      }
+    },
+    {
+      "name": "get-provenance",
+      "description": "Retrieve complete PROV-O provenance graph for a conversion session",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Session identifier"
+          },
+          "format": {
+            "type": "string",
+            "enum": ["turtle", "json-ld", "json"],
+            "default": "json",
+            "description": "Provenance serialization format"
+          }
+        },
+        "required": ["session_id"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "session_id": {"type": "string", "format": "uuid"},
+          "format": {"type": "string"},
+          "provenance": {
+            "oneOf": [
+              {"type": "string", "description": "RDF Turtle or JSON-LD string"},
+              {
+                "type": "object",
+                "description": "JSON provenance object",
+                "properties": {
+                  "entities": {"type": "array"},
+                  "activities": {"type": "array"},
+                  "agents": {"type": "array"},
+                  "relationships": {"type": "array"}
+                }
+              }
+            ]
+          }
+        },
+        "required": ["session_id", "format", "provenance"]
+      }
+    }
+  ]
+}
