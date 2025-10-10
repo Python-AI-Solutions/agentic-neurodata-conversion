@@ -151,62 +151,7 @@ include = [
     "/scripts"
 ]
 
-# Pixi configuration for environment management
-[tool.pixi.project]
-channels = ["conda-forge", "pyviz", "pytorch"]
-platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]
-
-[tool.pixi.pypi-dependencies]
-agentic-neurodata-conversion = { path = ".", editable = true }
-
-[tool.pixi.tasks]
-# Development tasks
-install-dev = "pip install -e .[dev]"
-
-# Testing tasks
-test = "pytest tests/ -v"
-test-unit = "pytest tests/unit/ -v -m unit"
-test-integration = "pytest tests/integration/ -v -m integration"
-test-e2e = "pytest tests/e2e/ -v -m e2e"
-test-fast = "pytest tests/ -v -m 'not slow and not requires_llm and not requires_datasets'"
-test-cov = "pytest tests/ -v --cov=agentic_neurodata_conversion --cov-report=html --cov-report=term-missing"
-test-cov-xml = "pytest tests/ -v --cov=agentic_neurodata_conversion --cov-report=xml"
-test-parallel = "pytest tests/ -v -n auto"
-test-benchmark = "pytest tests/ -v --benchmark-only"
-test-watch = "pytest-watch tests/ -- -v"
-
-# Code quality tasks
-lint = "ruff check agentic_neurodata_conversion/ tests/ examples/"
-format = "ruff format agentic_neurodata_conversion/ tests/ examples/"
-type-check = "mypy agentic_neurodata_conversion/"
-pre-commit-install = "pre-commit install"
-pre-commit-run = "pre-commit run --all-files"
-
-# Server tasks
-run-server = "python -m agentic_neurodata_conversion.mcp_server"
-run-server-dev = "python -m agentic_neurodata_conversion.mcp_server --reload --debug"
-
-# Documentation tasks
-docs-serve = "mkdocs serve"
-docs-build = "mkdocs build"
-
-# Utility tasks
-clean = "rm -rf build/ dist/ *.egg-info/ .coverage htmlcov/ .pytest_cache/ .mypy_cache/ .ruff_cache/"
-
-[tool.pixi.feature.dev.dependencies]
-pytest = ">=7.0.0"
-pytest-asyncio = ">=0.21.0"
-pytest-cov = ">=4.0.0"
-pytest-mock = ">=3.10.0"
-ruff = ">=0.1.0"
-mypy = ">=1.5.0"
-pre-commit = ">=3.0.0"
-ipython = ">=8.0.0"
-jupyter = ">=1.0.0"
-
-[tool.pixi.feature.docs.dependencies]
-mkdocs = ">=1.5.0"
-mkdocs-material = ">=9.0.0"
+# Note: Pixi configuration is managed in pixi.toml
 
 # Tool configurations
 [tool.pytest.ini_options]
