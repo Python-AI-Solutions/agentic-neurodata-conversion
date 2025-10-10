@@ -1,0 +1,404 @@
+# PROV-O Schema for MCP Server Architecture
+# Version: 1.0.0
+# Date: 2025-10-10
+# Description: RDF schema defining provenance structure for agentic neurodata conversion workflows
+
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix mcp: <http://mcp-server/provenance/> .
+@prefix nwb: <http://nwb.org/schema/> .
+
+# ============================================================================
+# Entity Classes (Data Artifacts)
+# ============================================================================
+
+mcp:Dataset a rdfs:Class ;
+    rdfs:subClassOf prov:Entity ;
+    rdfs:label "Dataset" ;
+    rdfs:comment "Raw neuroscience dataset input to conversion pipeline" ;
+    prov:definition "A collection of experimental data files in native acquisition format" .
+
+mcp:NWBFile a rdfs:Class ;
+    rdfs:subClassOf prov:Entity ;
+    rdfs:label "NWB File" ;
+    rdfs:comment "Generated NWB format output file" ;
+    prov:definition "Neurodata Without Borders file conforming to NWB schema" .
+
+mcp:IntermediateResult a rdfs:Class ;
+    rdfs:subClassOf prov:Entity ;
+    rdfs:label "Intermediate Result" ;
+    rdfs:comment "Temporary artifacts produced during workflow execution" ;
+    prov:definition "Format detection results, metadata collections, or conversion scripts" .
+
+mcp:FormatDetectionResult a rdfs:Class ;
+    rdfs:subClassOf mcp:IntermediateResult ;
+    rdfs:label "Format Detection Result" ;
+    rdfs:comment "Output of automatic format detection process" .
+
+mcp:MetadataCollection a rdfs:Class ;
+    rdfs:subClassOf mcp:IntermediateResult ;
+    rdfs:label "Metadata Collection" ;
+    rdfs:comment "Collected experimental metadata from user and automated extraction" .
+
+mcp:ConversionScript a rdfs:Class ;
+    rdfs:subClassOf mcp:IntermediateResult ;
+    rdfs:label "Conversion Script" ;
+    rdfs:comment "Generated Python script for NWB conversion" .
+
+mcp:ValidationReport a rdfs:Class ;
+    rdfs:subClassOf mcp:IntermediateResult ;
+    rdfs:label "Validation Report" ;
+    rdfs:comment "Aggregated validation results from multiple validators" .
+
+# ============================================================================
+# Activity Classes (Transformation Processes)
+# ============================================================================
+
+mcp:FormatDetection a rdfs:Class ;
+    rdfs:subClassOf prov:Activity ;
+    rdfs:label "Format Detection" ;
+    rdfs:comment "Automatic identification of neuroscience data format" ;
+    prov:definition "Process of analyzing dataset structure and content to determine data format" .
+
+mcp:MetadataQuestioning a rdfs:Class ;
+    rdfs:subClassOf prov:Activity ;
+    rdfs:label "Metadata Questioning" ;
+    rdfs:comment "Interactive collection of missing experimental metadata" ;
+    prov:definition "Agent-driven process of prompting user for required NWB metadata fields" .
+
+mcp:Conversion a rdfs:Class ;
+    rdfs:subClassOf prov:Activity ;
+    rdfs:label "Conversion" ;
+    rdfs:comment "Transformation of raw data to NWB format" ;
+    prov:definition "Execution of conversion script to generate NWB file from source dataset" .
+
+mcp:Validation a rdfs:Class ;
+    rdfs:subClassOf prov:Activity ;
+    rdfs:label "Validation" ;
+    rdfs:comment "Quality assessment of generated NWB file" ;
+    prov:definition "Multi-validator evaluation of NWB file against standards and best practices" .
+
+mcp:NWBInspectorValidation a rdfs:Class ;
+    rdfs:subClassOf mcp:Validation ;
+    rdfs:label "NWB Inspector Validation" ;
+    rdfs:comment "Validation using NWB Inspector tool" .
+
+mcp:PyNWBValidation a rdfs:Class ;
+    rdfs:subClassOf mcp:Validation ;
+    rdfs:label "PyNWB Validation" ;
+    rdfs:comment "Schema validation using PyNWB library" .
+
+mcp:DANDIValidation a rdfs:Class ;
+    rdfs:subClassOf mcp:Validation ;
+    rdfs:label "DANDI Validation" ;
+    rdfs:comment "Repository readiness validation using DANDI CLI" .
+
+mcp:WorkflowExecution a rdfs:Class ;
+    rdfs:subClassOf prov:Activity ;
+    rdfs:label "Workflow Execution" ;
+    rdfs:comment "Orchestrated multi-agent conversion workflow" ;
+    prov:definition "Complete end-to-end conversion process coordinating multiple agents" .
+
+# ============================================================================
+# Agent Classes (Actors)
+# ============================================================================
+
+mcp:ConversationAgent a rdfs:Class ;
+    rdfs:subClassOf prov:SoftwareAgent ;
+    rdfs:label "Conversation Agent" ;
+    rdfs:comment "AI agent for dataset analysis and format detection" ;
+    prov:definition "LLM-based agent that analyzes dataset structure and detects data formats" .
+
+mcp:MetadataQuestionerAgent a rdfs:Class ;
+    rdfs:subClassOf prov:SoftwareAgent ;
+    rdfs:label "Metadata Questioner Agent" ;
+    rdfs:comment "AI agent for interactive metadata collection" ;
+    prov:definition "LLM-based agent that generates targeted questions to collect missing metadata" .
+
+mcp:ConversionAgent a rdfs:Class ;
+    rdfs:subClassOf prov:SoftwareAgent ;
+    rdfs:label "Conversion Agent" ;
+    rdfs:comment "AI agent for NWB file generation" ;
+    prov:definition "Agent that generates and executes conversion scripts using NeuroConv interfaces" .
+
+mcp:EvaluationAgent a rdfs:Class ;
+    rdfs:subClassOf prov:SoftwareAgent ;
+    rdfs:label "Evaluation Agent" ;
+    rdfs:comment "AI agent for quality assessment and validation coordination" ;
+    prov:definition "Agent that orchestrates multiple validators and generates quality reports" .
+
+mcp:OrchestrationServer a rdfs:Class ;
+    rdfs:subClassOf prov:SoftwareAgent ;
+    rdfs:label "Orchestration Server" ;
+    rdfs:comment "MCP server coordinating multi-agent workflows" ;
+    prov:definition "Central orchestration hub managing workflow execution and state" .
+
+mcp:HumanUser a rdfs:Class ;
+    rdfs:subClassOf prov:Person ;
+    rdfs:label "Human User" ;
+    rdfs:comment "Researcher or system operator" ;
+    prov:definition "Human actor providing inputs and triggering workflows" .
+
+# ============================================================================
+# Property Definitions
+# ============================================================================
+
+# Entity Properties
+mcp:datasetPath a rdf:Property ;
+    rdfs:domain mcp:Dataset ;
+    rdfs:range xsd:string ;
+    rdfs:label "dataset path" ;
+    rdfs:comment "Filesystem path to dataset directory or file" .
+
+mcp:fileSize a rdf:Property ;
+    rdfs:domain prov:Entity ;
+    rdfs:range xsd:long ;
+    rdfs:label "file size" ;
+    rdfs:comment "Size in bytes" .
+
+mcp:checksum a rdf:Property ;
+    rdfs:domain prov:Entity ;
+    rdfs:range xsd:string ;
+    rdfs:label "checksum" ;
+    rdfs:comment "SHA-256 hash for integrity verification" .
+
+mcp:detectedFormat a rdf:Property ;
+    rdfs:domain mcp:FormatDetectionResult ;
+    rdfs:range xsd:string ;
+    rdfs:label "detected format" ;
+    rdfs:comment "Primary detected data format (e.g., SpikeGLX, Open Ephys)" .
+
+mcp:detectionConfidence a rdf:Property ;
+    rdfs:domain mcp:FormatDetectionResult ;
+    rdfs:range xsd:float ;
+    rdfs:label "detection confidence" ;
+    rdfs:comment "Confidence score 0-1 for format detection" .
+
+mcp:nwbSchemaVersion a rdf:Property ;
+    rdfs:domain mcp:NWBFile ;
+    rdfs:range xsd:string ;
+    rdfs:label "NWB schema version" ;
+    rdfs:comment "Version of NWB schema used (e.g., 2.6.0)" .
+
+mcp:validationStatus a rdf:Property ;
+    rdfs:domain mcp:ValidationReport ;
+    rdfs:range xsd:string ;
+    rdfs:label "validation status" ;
+    rdfs:comment "Overall validation outcome: PASS, FAIL, WARNING" .
+
+mcp:qualityScore a rdf:Property ;
+    rdfs:domain mcp:ValidationReport ;
+    rdfs:range xsd:float ;
+    rdfs:label "quality score" ;
+    rdfs:comment "Composite quality score 0-100" .
+
+# Activity Properties
+mcp:sessionId a rdf:Property ;
+    rdfs:domain prov:Activity ;
+    rdfs:range xsd:string ;
+    rdfs:label "session ID" ;
+    rdfs:comment "Unique workflow session identifier (UUID)" .
+
+mcp:workflowDefinitionId a rdf:Property ;
+    rdfs:domain mcp:WorkflowExecution ;
+    rdfs:range xsd:string ;
+    rdfs:label "workflow definition ID" ;
+    rdfs:comment "Identifier of workflow definition used" .
+
+mcp:executionDuration a rdf:Property ;
+    rdfs:domain prov:Activity ;
+    rdfs:range xsd:float ;
+    rdfs:label "execution duration" ;
+    rdfs:comment "Duration in seconds" .
+
+mcp:retryCount a rdf:Property ;
+    rdfs:domain prov:Activity ;
+    rdfs:range xsd:int ;
+    rdfs:label "retry count" ;
+    rdfs:comment "Number of retry attempts" .
+
+mcp:errorMessage a rdf:Property ;
+    rdfs:domain prov:Activity ;
+    rdfs:range xsd:string ;
+    rdfs:label "error message" ;
+    rdfs:comment "Error description for failed activities" .
+
+# Agent Properties
+mcp:agentVersion a rdf:Property ;
+    rdfs:domain prov:Agent ;
+    rdfs:range xsd:string ;
+    rdfs:label "agent version" ;
+    rdfs:comment "Software version of agent" .
+
+mcp:modelName a rdf:Property ;
+    rdfs:domain prov:SoftwareAgent ;
+    rdfs:range xsd:string ;
+    rdfs:label "model name" ;
+    rdfs:comment "LLM model name for AI agents (e.g., claude-3-sonnet)" .
+
+mcp:agentConfiguration a rdf:Property ;
+    rdfs:domain prov:Agent ;
+    rdfs:range xsd:string ;
+    rdfs:label "agent configuration" ;
+    rdfs:comment "JSON-serialized agent configuration" .
+
+# ============================================================================
+# Example Instance (Template)
+# ============================================================================
+
+# This section demonstrates how provenance records are structured in practice.
+# Actual instances are generated dynamically during workflow execution.
+
+mcp:example_dataset_001 a mcp:Dataset ;
+    mcp:datasetPath "/data/experiment_001" ;
+    mcp:fileSize 524288000 ;
+    mcp:checksum "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" ;
+    prov:generatedAtTime "2025-10-10T09:00:00Z"^^xsd:dateTime .
+
+mcp:example_format_detection_001 a mcp:FormatDetection ;
+    mcp:sessionId "123e4567-e89b-12d3-a456-426614174000" ;
+    prov:startedAtTime "2025-10-10T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2025-10-10T10:01:30Z"^^xsd:dateTime ;
+    mcp:executionDuration 90.0 ;
+    prov:used mcp:example_dataset_001 ;
+    prov:wasAssociatedWith mcp:example_conversation_agent .
+
+mcp:example_format_result_001 a mcp:FormatDetectionResult ;
+    mcp:detectedFormat "SpikeGLX" ;
+    mcp:detectionConfidence 0.95 ;
+    prov:wasGeneratedBy mcp:example_format_detection_001 ;
+    prov:generatedAtTime "2025-10-10T10:01:30Z"^^xsd:dateTime .
+
+mcp:example_conversion_001 a mcp:Conversion ;
+    mcp:sessionId "123e4567-e89b-12d3-a456-426614174000" ;
+    prov:startedAtTime "2025-10-10T10:10:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2025-10-10T10:20:00Z"^^xsd:dateTime ;
+    mcp:executionDuration 600.0 ;
+    prov:used mcp:example_dataset_001 ;
+    prov:used mcp:example_format_result_001 ;
+    prov:used mcp:example_metadata_001 ;
+    prov:wasAssociatedWith mcp:example_conversion_agent .
+
+mcp:example_nwb_001 a mcp:NWBFile ;
+    mcp:datasetPath "/output/experiment_001.nwb" ;
+    mcp:fileSize 537919488 ;
+    mcp:checksum "a3b1c55398fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b944" ;
+    mcp:nwbSchemaVersion "2.6.0" ;
+    prov:wasGeneratedBy mcp:example_conversion_001 ;
+    prov:generatedAtTime "2025-10-10T10:20:00Z"^^xsd:dateTime ;
+    prov:wasDerivedFrom mcp:example_dataset_001 .
+
+mcp:example_validation_001 a mcp:Validation ;
+    mcp:sessionId "123e4567-e89b-12d3-a456-426614174000" ;
+    prov:startedAtTime "2025-10-10T10:20:30Z"^^xsd:dateTime ;
+    prov:endedAtTime "2025-10-10T10:25:00Z"^^xsd:dateTime ;
+    mcp:executionDuration 270.0 ;
+    prov:used mcp:example_nwb_001 ;
+    prov:wasAssociatedWith mcp:example_evaluation_agent .
+
+mcp:example_validation_report_001 a mcp:ValidationReport ;
+    mcp:validationStatus "PASS" ;
+    mcp:qualityScore 87.5 ;
+    prov:wasGeneratedBy mcp:example_validation_001 ;
+    prov:generatedAtTime "2025-10-10T10:25:00Z"^^xsd:dateTime .
+
+# Agent instances
+mcp:example_conversation_agent a mcp:ConversationAgent ;
+    mcp:agentVersion "1.0.0" ;
+    mcp:modelName "claude-3-sonnet-20240229" ;
+    rdfs:label "Conversation Agent Instance" .
+
+mcp:example_conversion_agent a mcp:ConversionAgent ;
+    mcp:agentVersion "1.0.0" ;
+    mcp:modelName "claude-3-sonnet-20240229" ;
+    rdfs:label "Conversion Agent Instance" .
+
+mcp:example_evaluation_agent a mcp:EvaluationAgent ;
+    mcp:agentVersion "1.0.0" ;
+    mcp:modelName "claude-3-sonnet-20240229" ;
+    rdfs:label "Evaluation Agent Instance" .
+
+# Workflow orchestration
+mcp:example_workflow_001 a mcp:WorkflowExecution ;
+    mcp:sessionId "123e4567-e89b-12d3-a456-426614174000" ;
+    mcp:workflowDefinitionId "standard_nwb_conversion" ;
+    prov:startedAtTime "2025-10-10T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2025-10-10T10:25:45Z"^^xsd:dateTime ;
+    mcp:executionDuration 1545.0 ;
+    prov:wasAssociatedWith mcp:orchestration_server ;
+    prov:wasStartedBy mcp:user_researcher_001 .
+
+mcp:orchestration_server a mcp:OrchestrationServer ;
+    mcp:agentVersion "1.0.0" ;
+    rdfs:label "MCP Orchestration Server" .
+
+mcp:user_researcher_001 a mcp:HumanUser ;
+    rdfs:label "researcher@university.edu" .
+
+# Provenance relationships
+mcp:example_workflow_001 prov:used mcp:example_dataset_001 .
+mcp:example_nwb_001 prov:wasAttributedTo mcp:user_researcher_001 .
+mcp:example_nwb_001 prov:wasAttributedTo mcp:example_conversion_agent .
+
+# ============================================================================
+# SPARQL Query Examples
+# ============================================================================
+
+# Example 1: Find all activities in a workflow session
+# SELECT ?activity ?activityType ?startTime ?endTime
+# WHERE {
+#   ?activity mcp:sessionId "123e4567-e89b-12d3-a456-426614174000" .
+#   ?activity a ?activityType .
+#   ?activity prov:startedAtTime ?startTime .
+#   ?activity prov:endedAtTime ?endTime .
+# }
+# ORDER BY ?startTime
+
+# Example 2: Trace data lineage from dataset to NWB file
+# SELECT ?entity
+# WHERE {
+#   mcp:example_nwb_001 prov:wasDerivedFrom* ?entity .
+# }
+
+# Example 3: Find all agents involved in a workflow
+# SELECT DISTINCT ?agent ?agentType
+# WHERE {
+#   ?activity mcp:sessionId "123e4567-e89b-12d3-a456-426614174000" .
+#   ?activity prov:wasAssociatedWith ?agent .
+#   ?agent a ?agentType .
+# }
+
+# Example 4: Calculate total workflow duration
+# SELECT (SUM(?duration) AS ?totalDuration)
+# WHERE {
+#   ?activity mcp:sessionId "123e4567-e89b-12d3-a456-426614174000" .
+#   ?activity mcp:executionDuration ?duration .
+# }
+
+# ============================================================================
+# Schema Documentation
+# ============================================================================
+
+# This PROV-O schema defines the provenance ontology for agentic neurodata conversion.
+# It extends the W3C PROV-O standard with domain-specific classes and properties.
+#
+# Key Design Principles:
+# 1. All workflow executions are instances of prov:Activity
+# 2. All data artifacts (datasets, NWB files, results) are instances of prov:Entity
+# 3. All agents (AI agents, human users, server) are instances of prov:Agent
+# 4. Standard PROV-O relationships are used: used, wasGeneratedBy, wasAssociatedWith,
+#    wasAttributedTo, wasDerivedFrom, wasStartedBy, wasEndedBy
+# 5. Custom properties (mcp: namespace) extend PROV-O for workflow-specific metadata
+#
+# Usage:
+# - Provenance records are generated automatically during workflow execution
+# - Records are persisted as RDF triples in Turtle format
+# - SPARQL queries can traverse provenance graphs for lineage analysis
+# - Provenance graphs can be visualized using RDF visualization tools
+#
+# References:
+# - PROV-O specification: https://www.w3.org/TR/prov-o/
+# - NWB schema: https://nwb-schema.readthedocs.io/
+# - NeuroConv: https://neuroconv.readthedocs.io/

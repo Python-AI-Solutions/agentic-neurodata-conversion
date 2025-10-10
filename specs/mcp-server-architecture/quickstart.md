@@ -1,738 +1,871 @@
-# MCP Server Architecture - Quick Start Guide
+# Quickstart Guide: MCP Server Architecture
 
-**Feature**: MCP Server Architecture **Version**: 1.0.0 **Date**: 2025-10-06
+**Version**: 1.0.0 **Date**: 2025-10-10 **Feature**: MCP Server Architecture -
+End-to-End Example
 
-## Overview
-
-This guide helps you quickly get started with the MCP Server Architecture for
-orchestrating multi-agent neuroscience data conversions. You'll learn how to
-submit data, run conversions, and validate results using both the HTTP API and
-MCP protocol.
+This guide walks through a complete conversion workflow using Scenario 1 from
+the specification: converting a single neuroscience dataset to NWB format with
+automatic format detection, metadata collection, conversion, and validation.
 
 ---
 
 ## Prerequisites
 
-- Python 3.9-3.11 installed
-- Access to neuroscience dataset for conversion
-- MCP server running (default: `http://localhost:8000`)
+### System Requirements
+
+- Python 3.11+
+- 8GB RAM minimum (16GB recommended)
+- 50GB free disk space
+- Linux, macOS, or Windows with WSL2
+
+### Installation
+
+```bash
+# Clone repository
+git clone https://github.com/your-org/agentic-neurodata-conversion.git
+cd agentic-neurodata-conversion
+
+# Install with pixi (recommended)
+pixi install
+
+# Activate environment
+pixi shell
+
+# Verify installation
+python -c "import pynwb, nwbinspector; print('Installation successful')"
+```
+
+### Sample Dataset
+
+Download a sample SpikeGLX dataset for this tutorial:
+
+```bash
+# Create data directory
+mkdir -p data/quickstart
+
+# Download sample dataset (fictional URL - replace with actual)
+wget https://example.com/sample-spikeglx-dataset.zip -O data/quickstart/sample.zip
+
+# Extract
+unzip data/quickstart/sample.zip -d data/quickstart/experiment_001
+
+# Verify structure
+ls -la data/quickstart/experiment_001
+# Expected output:
+# experiment_001_g0_t0.imec0.ap.bin
+# experiment_001_g0_t0.imec0.ap.meta
+# experiment_001_g0_t0.imec0.lf.bin
+# experiment_001_g0_t0.imec0.lf.meta
+```
 
 ---
 
-## Quick Start: Complete Workflow
+## Step 1: Start the MCP Server
 
-### Step 1: Submit Dataset for Conversion
+### Option A: MCP Protocol (stdio)
 
-**Using HTTP API:**
+For use with Claude Desktop or MCP-compatible clients:
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/workflows \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: your-api-key" \
-  -d '{
-    "input_path": "/data/experiments/exp001",
-    "metadata": {
-      "experimenter": "Jane Doe",
-      "session_description": "Visual cortex recording session",
-      "session_id": "exp001_20250106"
-    },
-    "auto_start": true
-  }'
+# Start MCP server with stdio transport
+pixi run mcp-server
+
+# Server starts and waits for MCP protocol messages on stdin/stdout
+# [2025-10-10 10:00:00] INFO: MCP server started (stdio transport)
+# [2025-10-10 10:00:00] INFO: Registered 7 MCP tools
+# [2025-10-10 10:00:00] INFO: Waiting for messages...
 ```
 
-**Expected Response:**
+**MCP Client Configuration** (for Claude Desktop):
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ```json
 {
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "state": "analyzing",
-  "input_path": "/data/experiments/exp001",
-  "metadata": {
-    "experimenter": "Jane Doe",
-    "session_description": "Visual cortex recording session",
-    "session_id": "exp001_20250106"
-  },
-  "created_at": "2025-10-06T10:30:00Z",
-  "updated_at": "2025-10-06T10:30:00Z",
-  "completed_at": null
+  "mcpServers": {
+    "neurodata-conversion": {
+      "command": "pixi",
+      "args": ["run", "mcp-server"],
+      "cwd": "/path/to/agentic-neurodata-conversion"
+    }
+  }
 }
 ```
 
-**Using MCP Protocol:**
+### Option B: HTTP REST API
 
-```python
-from mcp import Client
+For programmatic access or web integrations:
 
-async with Client("mcp://localhost:8000") as client:
-    result = await client.call_tool(
-        "create_workflow",
-        input_path="/data/experiments/exp001",
-        metadata={
-            "experimenter": "Jane Doe",
-            "session_description": "Visual cortex recording session"
-        },
-        auto_start=True
-    )
-    workflow_id = result["workflow_id"]
-    print(f"Created workflow: {workflow_id}")
+```bash
+# Start HTTP server
+pixi run http-server
+
+# Server starts on http://localhost:8000
+# [2025-10-10 10:00:00] INFO: HTTP server started on http://0.0.0.0:8000
+# [2025-10-10 10:00:00] INFO: OpenAPI docs available at http://localhost:8000/docs
+# [2025-10-10 10:00:00] INFO: WebSocket endpoint: ws://localhost:8000/api/v1/ws/conversions/{session_id}
+```
+
+Open browser to http://localhost:8000/docs to view interactive API
+documentation.
+
+### Option C: Both Protocols (Recommended for Development)
+
+```bash
+# Start both MCP and HTTP servers
+pixi run start-all
+
+# [2025-10-10 10:00:00] INFO: Starting MCP server (background)...
+# [2025-10-10 10:00:01] INFO: Starting HTTP server...
+# [2025-10-10 10:00:02] INFO: All servers running. Press Ctrl+C to stop.
 ```
 
 ---
 
-### Step 2: Monitor Workflow Progress
+## Step 2: Submit Dataset for Conversion
 
-**Using HTTP API:**
+### Via MCP Protocol
 
-```bash
-# Poll workflow status
-curl -X GET http://localhost:8000/api/v1/workflows/550e8400-e29b-41d4-a716-446655440000 \
-  -H "X-API-Key: your-api-key"
+Using Claude Desktop with MCP server configured:
+
+```
+User: Convert the dataset at /path/to/data/quickstart/experiment_001 to NWB format
+
+Claude (uses convert-dataset tool internally):
+I'll convert your SpikeGLX dataset to NWB format. I've submitted the conversion workflow.
+
+Session ID: 123e4567-e89b-12d3-a456-426614174000
+Initial Status: Analyzing (5% complete)
+
+The workflow is now running. I'll monitor the progress...
 ```
 
-**Expected Response (during execution):**
+### Via HTTP REST API
 
-```json
-{
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "state": "converting",
-  "input_path": "/data/experiments/exp001",
-  "output_path": null,
-  "metadata": {
-    "experimenter": "Jane Doe",
-    "session_description": "Visual cortex recording session"
-  },
-  "format_info": {
-    "primary_format": {
-      "name": "Intan",
-      "version": "2.0",
-      "confidence": 0.95,
-      "neuroconv_interface": "IntanRecordingInterface",
-      "detection_method": "directory_structure"
-    },
-    "formats_detected": [
-      {
-        "name": "Intan",
-        "confidence": 0.95,
-        "neuroconv_interface": "IntanRecordingInterface"
+```bash
+# Submit conversion request
+curl -X POST http://localhost:8000/api/v1/conversions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dataset_path": "/path/to/data/quickstart/experiment_001",
+    "workflow_config": {
+      "validation_config": {
+        "run_dandi_validation": true
       }
-    ],
-    "recommended_interface": "IntanRecordingInterface"
-  },
-  "created_at": "2025-10-06T10:30:00Z",
-  "updated_at": "2025-10-06T10:31:15Z",
-  "completed_at": null
-}
-```
-
-**Using MCP Protocol:**
-
-```python
-# Monitor workflow state
-result = await client.call_tool("get_workflow", workflow_id=workflow_id)
-print(f"State: {result['state']}")
-print(f"Format: {result['format_info']['primary_format']['name']}")
-```
-
----
-
-### Step 3: View Execution Steps
-
-**Using HTTP API:**
-
-```bash
-curl -X GET http://localhost:8000/api/v1/workflows/550e8400-e29b-41d4-a716-446655440000/steps \
-  -H "X-API-Key: your-api-key"
-```
-
-**Expected Response:**
-
-```json
-{
-  "steps": [
-    {
-      "id": "650e8400-e29b-41d4-a716-446655440001",
-      "workflow_id": "550e8400-e29b-41d4-a716-446655440000",
-      "agent_type": "conversation",
-      "status": "completed",
-      "sequence_number": 1,
-      "started_at": "2025-10-06T10:30:00Z",
-      "completed_at": "2025-10-06T10:30:45Z",
-      "duration_ms": 45000,
-      "retry_count": 0,
-      "input_data": {
-        "operation": "analyze_dataset",
-        "path": "/data/experiments/exp001"
-      },
-      "output_data": {
-        "format": "Intan",
-        "version": "2.0",
-        "recommended_interface": "IntanRecordingInterface"
-      }
-    },
-    {
-      "id": "750e8400-e29b-41d4-a716-446655440002",
-      "workflow_id": "550e8400-e29b-41d4-a716-446655440000",
-      "agent_type": "conversion",
-      "status": "running",
-      "sequence_number": 2,
-      "started_at": "2025-10-06T10:30:45Z",
-      "completed_at": null,
-      "duration_ms": null,
-      "retry_count": 0
     }
-  ]
-}
-```
-
----
-
-### Step 4: Check Completion and Validation
-
-**Using HTTP API:**
-
-```bash
-# Check if workflow completed
-curl -X GET http://localhost:8000/api/v1/workflows/550e8400-e29b-41d4-a716-446655440000 \
-  -H "X-API-Key: your-api-key"
-```
-
-**Expected Response (completed):**
-
-```json
-{
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "state": "completed",
-  "input_path": "/data/experiments/exp001",
-  "output_path": "/output/exp001_20250106.nwb",
-  "validation_summary": [
-    {
-      "validator_name": "nwb_inspector",
-      "severity": "info",
-      "issues": [],
-      "quality_score": 1.0,
-      "passed": true,
-      "execution_time_ms": 2340
-    },
-    {
-      "validator_name": "pynwb",
-      "severity": "warning",
-      "issues": [
-        {
-          "severity": "warning",
-          "message": "Missing optional field: keywords",
-          "location": "/general",
-          "suggestion": "Add keywords for better discoverability"
-        }
-      ],
-      "quality_score": 0.95,
-      "passed": true,
-      "execution_time_ms": 1890
-    },
-    {
-      "validator_name": "dandi",
-      "severity": "info",
-      "issues": [],
-      "quality_score": 1.0,
-      "passed": true,
-      "execution_time_ms": 3120
-    }
-  ],
-  "created_at": "2025-10-06T10:30:00Z",
-  "updated_at": "2025-10-06T10:32:30Z",
-  "completed_at": "2025-10-06T10:32:30Z"
-}
-```
-
-**Success Criteria:**
-
-- ✅ `state` is `completed`
-- ✅ `output_path` contains path to generated NWB file
-- ✅ `validation_summary` shows `passed: true` for all validators
-- ✅ `quality_score` >= 0.9 for production use
-
----
-
-## Advanced Usage Examples
-
-### Example 1: Detect Format Before Conversion
-
-**Scenario:** You want to verify format detection before starting a full
-conversion.
-
-```bash
-# Detect format
-curl -X POST http://localhost:8000/api/v1/formats/detect \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: your-api-key" \
-  -d '{
-    "input_path": "/data/experiments/exp002"
   }'
 ```
 
-**Response:**
+**Response**:
 
 ```json
 {
-  "formats_detected": [
-    {
-      "name": "SpikeGLX",
-      "version": "3.0",
-      "confidence": 0.98,
-      "neuroconv_interface": "SpikeGLXRecordingInterface",
-      "detection_method": "directory_structure"
-    }
-  ],
-  "primary_format": {
-    "name": "SpikeGLX",
-    "confidence": 0.98,
-    "neuroconv_interface": "SpikeGLXRecordingInterface"
-  },
-  "recommended_interface": "SpikeGLXRecordingInterface",
-  "confidence_scores": {
-    "extension": 0.85,
-    "directory_structure": 0.98,
-    "magic_bytes": 0.9
-  },
-  "warnings": []
-}
-```
-
----
-
-### Example 2: Manual Agent Invocation
-
-**Scenario:** You want to test a specific agent independently.
-
-```bash
-# Invoke conversion agent directly
-curl -X POST http://localhost:8000/api/v1/agents/conversion/invoke \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: your-api-key" \
-  -d '{
-    "operation": "generate_script",
-    "input": {
-      "format": "Intan",
-      "interface": "IntanRecordingInterface",
-      "input_path": "/data/test",
-      "output_path": "/output/test.nwb"
-    },
-    "timeout_seconds": 300
-  }'
-```
-
-**Response:**
-
-```json
-{
-  "agent_type": "conversion",
-  "success": true,
-  "output_data": {
-    "script_path": "/tmp/conversion_script_123.py",
-    "interface_used": "IntanRecordingInterface",
-    "estimated_duration_seconds": 180
-  },
-  "execution_time_ms": 1234,
-  "correlation_id": "850e8400-e29b-41d4-a716-446655440003",
-  "metadata": {
-    "agent_version": "1.0.0",
-    "model_used": "claude-3-5-sonnet-20241022"
+  "session_id": "123e4567-e89b-12d3-a456-426614174000",
+  "initial_status": {
+    "state": "analyzing",
+    "current_step": "format_detection",
+    "progress_percentage": 5.0,
+    "created_at": "2025-10-10T10:00:00Z",
+    "expires_at": "2025-10-10T12:00:00Z"
   }
 }
 ```
 
----
-
-### Example 3: List and Filter Workflows
-
-**Scenario:** Find all failed workflows for debugging.
-
-```bash
-# Get failed workflows
-curl -X GET "http://localhost:8000/api/v1/workflows?state=failed&limit=10" \
-  -H "X-API-Key: your-api-key"
-```
-
-**Response:**
-
-```json
-{
-  "workflows": [
-    {
-      "id": "950e8400-e29b-41d4-a716-446655440004",
-      "state": "failed",
-      "input_path": "/data/corrupted_exp",
-      "error_details": {
-        "type": "FormatDetectionError",
-        "message": "Unable to detect format with sufficient confidence",
-        "details": {
-          "max_confidence": 0.45,
-          "threshold": 0.7
-        }
-      },
-      "created_at": "2025-10-06T09:15:00Z",
-      "updated_at": "2025-10-06T09:15:30Z"
-    }
-  ],
-  "total": 1,
-  "limit": 10,
-  "offset": 0
-}
-```
+**Save the session_id** for tracking progress!
 
 ---
 
-### Example 4: Run Standalone Validation
+## Step 3: Monitor Progress
 
-**Scenario:** Validate an existing NWB file without running conversion.
+### Via MCP Protocol
 
-```bash
-# Validate NWB file
-curl -X POST http://localhost:8000/api/v1/validation/run \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: your-api-key" \
-  -d '{
-    "nwb_file_path": "/output/existing_file.nwb",
-    "validators": ["nwb_inspector", "dandi"]
-  }'
-```
-
-**Response:**
-
-```json
-{
-  "validation_id": "a50e8400-e29b-41d4-a716-446655440005",
-  "results": [
-    {
-      "validator_name": "nwb_inspector",
-      "severity": "error",
-      "issues": [
-        {
-          "severity": "error",
-          "message": "Invalid timestamp format in acquisition/TimeSeries",
-          "location": "/acquisition/TimeSeries/timestamps",
-          "suggestion": "Ensure timestamps are in ISO 8601 format"
-        }
-      ],
-      "quality_score": 0.7,
-      "passed": false,
-      "execution_time_ms": 2100
-    },
-    {
-      "validator_name": "dandi",
-      "severity": "warning",
-      "issues": [
-        {
-          "severity": "warning",
-          "message": "Missing recommended field: related_publications",
-          "location": "/general",
-          "suggestion": "Add related publications for better documentation"
-        }
-      ],
-      "quality_score": 0.85,
-      "passed": true,
-      "execution_time_ms": 3200
-    }
-  ],
-  "overall_passed": false,
-  "overall_quality_score": 0.775,
-  "executed_at": "2025-10-06T10:45:00Z"
-}
-```
-
----
-
-### Example 5: Cancel Running Workflow
-
-**Scenario:** Cancel a long-running workflow that's no longer needed.
-
-```bash
-# Cancel workflow
-curl -X POST http://localhost:8000/api/v1/workflows/550e8400-e29b-41d4-a716-446655440000/cancel \
-  -H "X-API-Key: your-api-key"
-```
-
-**Response:**
-
-```json
-{
-  "workflow_id": "550e8400-e29b-41d4-a716-446655440000",
-  "state": "cancelled",
-  "message": "Workflow cancelled successfully. Cleanup operations completed."
-}
-```
-
----
-
-## Using MCP Protocol (Python)
-
-### Complete Workflow Example
-
-```python
-import asyncio
-from mcp import Client
-
-async def run_conversion():
-    async with Client("mcp://localhost:8000") as client:
-        # Step 1: Create and start workflow
-        workflow = await client.call_tool(
-            "create_workflow",
-            input_path="/data/experiments/exp001",
-            metadata={
-                "experimenter": "Jane Doe",
-                "session_description": "Visual cortex recording"
-            },
-            auto_start=True
-        )
-        workflow_id = workflow["workflow_id"]
-        print(f"Started workflow: {workflow_id}")
-
-        # Step 2: Poll until completion
-        while True:
-            status = await client.call_tool("get_workflow", workflow_id=workflow_id)
-            state = status["state"]
-            print(f"Current state: {state}")
-
-            if state in ["completed", "failed", "cancelled"]:
-                break
-
-            await asyncio.sleep(5)  # Poll every 5 seconds
-
-        # Step 3: Get final results
-        if state == "completed":
-            print(f"✅ Conversion successful!")
-            print(f"Output file: {status['output_path']}")
-
-            # Check validation
-            for validator in status["validation_summary"]:
-                print(f"\n{validator['validator_name']}: {'✅ PASS' if validator['passed'] else '❌ FAIL'}")
-                print(f"Quality score: {validator['quality_score']:.2f}")
-                if validator['issues']:
-                    print("Issues:")
-                    for issue in validator['issues']:
-                        print(f"  - [{issue['severity']}] {issue['message']}")
-        else:
-            print(f"❌ Workflow {state}")
-            if status.get("error_details"):
-                print(f"Error: {status['error_details']['message']}")
-
-# Run the conversion
-asyncio.run(run_conversion())
-```
-
----
-
-## Understanding Workflow States
-
-The workflow progresses through these states:
-
-1. **PENDING** → Workflow created, not started
-2. **ANALYZING** → Format detection in progress
-3. **COLLECTING** → Metadata collection (if needed)
-4. **CONVERTING** → NWB conversion in progress
-5. **VALIDATING** → Validation checks running
-6. **COMPLETED** → Success! ✅
-7. **FAILED** → Error occurred ❌
-8. **CANCELLED** → User cancelled 🛑
-
-**State Transition Flow:**
+Claude will automatically poll and report progress:
 
 ```
-PENDING → ANALYZING → [COLLECTING] → CONVERTING → VALIDATING → COMPLETED
-                  ↓         ↓              ↓            ↓
-                  └─────────┴──────────────┴────────────→ FAILED
+Claude: The conversion is progressing:
 
-                  [Any state] → CANCELLED (user action)
+Format Detection (Complete):
+- Detected format: SpikeGLX
+- Confidence: 95%
+- Detected .meta and .bin file pairs
+
+Metadata Collection (In Progress):
+- Progress: 35%
+- The metadata questioner agent needs some information...
 ```
 
----
+### Via WebSocket (Real-Time Updates)
 
-## Expected Outputs
+```javascript
+// Connect to WebSocket for streaming updates
+const ws = new WebSocket(
+  "ws://localhost:8000/api/v1/ws/conversions/123e4567-e89b-12d3-a456-426614174000",
+);
 
-### Successful Conversion
+ws.onopen = () => {
+  ws.send(
+    JSON.stringify({
+      type: "subscribe",
+      session_id: "123e4567-e89b-12d3-a456-426614174000",
+    }),
+  );
+};
 
-**Indicators:**
+ws.onmessage = (event) => {
+  const message = JSON.parse(event.data);
+  console.log("Progress:", message);
 
-- ✅ Final state: `completed`
-- ✅ `output_path` points to valid NWB file
-- ✅ All validators show `passed: true`
-- ✅ Quality score ≥ 0.9
-
-**Output Files:**
-
-- `{output_path}` - Generated NWB file
-- `{output_path}.log` - Conversion logs
-- `{output_path}_validation.json` - Detailed validation report
-
-### Partial Success (Warnings)
-
-**Indicators:**
-
-- ✅ Final state: `completed`
-- ⚠️ Some validators have warnings
-- ✅ Overall quality score ≥ 0.8
-
-**Action:** Review warnings and optionally improve metadata
-
-### Failure
-
-**Indicators:**
-
-- ❌ Final state: `failed`
-- ❌ `error_details` contains error information
-- ❌ No `output_path`
-
-**Common Failure Reasons:**
-
-- Format detection confidence < 0.7
-- Missing required metadata
-- Conversion script execution error
-- Critical validation failures
-
----
-
-## API Authentication
-
-### Using API Keys (HTTP)
-
-```bash
-# Include API key in header
-curl -H "X-API-Key: your-api-key" ...
-```
-
-### Using JWT Tokens (HTTP)
-
-```bash
-# Include Bearer token
-curl -H "Authorization: Bearer your-jwt-token" ...
-```
-
-### MCP Protocol
-
-```python
-# Authentication handled during client connection
-async with Client("mcp://localhost:8000", auth_token="your-token") as client:
-    # ... use client
-```
-
----
-
-## Error Handling
-
-### Common Errors
-
-**400 Bad Request:**
-
-```json
-{
-  "error": "BAD_REQUEST",
-  "message": "Invalid input parameters",
-  "details": {
-    "field": "input_path",
-    "issue": "Path does not exist"
+  if (message.type === "progress_update") {
+    console.log(`${message.progress_percentage}% - ${message.message}`);
   }
-}
+};
 ```
 
-**404 Not Found:**
+**Output**:
 
-```json
-{
-  "error": "NOT_FOUND",
-  "message": "Workflow not found",
-  "details": {
-    "workflow_id": "invalid-id"
-  }
-}
+```
+Progress: 5% - Analyzing dataset structure
+Progress: 15% - Format detection complete: SpikeGLX (95% confidence)
+Progress: 20% - Starting metadata collection
+Progress: 35% - Awaiting user input for experiment description
 ```
 
-**408 Request Timeout:**
-
-```json
-{
-  "error": "TIMEOUT",
-  "message": "Agent invocation timeout",
-  "details": {
-    "agent_type": "conversion",
-    "timeout_seconds": 300
-  }
-}
-```
-
-**409 Conflict:**
-
-```json
-{
-  "error": "CONFLICT",
-  "message": "Workflow was modified by another process",
-  "details": {
-    "current_version": 3,
-    "provided_version": 2
-  }
-}
-```
-
----
-
-## Performance Considerations
-
-### Timeouts
-
-- **Format Detection:** ~30-60 seconds
-- **Metadata Collection:** Variable (user-dependent)
-- **Conversion:** ~2-10 minutes (depends on dataset size)
-- **Validation:** ~5-30 seconds per validator
-
-### Concurrent Workflows
-
-The server supports **10+ concurrent workflows** with proper resource
-management:
+### Via HTTP Polling
 
 ```bash
-# Create multiple workflows in parallel
-for i in {1..10}; do
-  curl -X POST http://localhost:8000/api/v1/workflows \
-    -H "Content-Type: application/json" \
-    -H "X-API-Key: your-api-key" \
-    -d "{\"input_path\": \"/data/exp$i\", \"auto_start\": true}" &
+# Poll for status updates
+while true; do
+  curl http://localhost:8000/api/v1/conversions/123e4567-e89b-12d3-a456-426614174000 | jq
+  sleep 5
 done
 ```
 
-### API Latency
+**Output (format detection complete)**:
 
-- **Expected latency:** < 100ms for API operations
-- **Workflow startup:** < 2 seconds
-- **Step transitions:** < 500ms
+```json
+{
+  "session_id": "123e4567-e89b-12d3-a456-426614174000",
+  "state": "collecting_metadata",
+  "current_step": "metadata_questioner",
+  "progress_percentage": 35.0,
+  "created_at": "2025-10-10T10:00:00Z",
+  "updated_at": "2025-10-10T10:02:30Z",
+  "format_detection": {
+    "primary_format": "SpikeGLX",
+    "confidence": 0.95
+  }
+}
+```
+
+---
+
+## Step 4: Provide Metadata (Interactive)
+
+The metadata questioner agent needs experimental details not found in data
+files.
+
+### Via MCP Protocol
+
+```
+Claude: The metadata questioner agent needs the following information:
+
+1. Experiment description: What is the scientific goal of this experiment?
+2. Subject species: What species was the subject?
+3. Subject ID: What is the unique identifier for the subject?
+
+Please provide these details.
+
+User:
+- Experiment description: Multi-electrode array recording in motor cortex during reaching task
+- Subject species: Mus musculus
+- Subject ID: mouse_001
+
+Claude (uses resume-workflow tool with user inputs):
+Thank you! I've provided this metadata to the workflow. Conversion is now proceeding...
+```
+
+### Via HTTP REST API
+
+```bash
+# Resume workflow with user inputs
+curl -X POST http://localhost:8000/api/v1/conversions/123e4567-e89b-12d3-a456-426614174000/resume \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_inputs": {
+      "experiment_description": "Multi-electrode array recording in motor cortex during reaching task",
+      "subject_species": "Mus musculus",
+      "subject_id": "mouse_001",
+      "session_description": "Baseline recording session, animal habituated to task",
+      "experimenter": "Jane Doe",
+      "institution": "University of California, San Francisco",
+      "lab": "Motor Control Lab"
+    }
+  }'
+```
+
+**Response**:
+
+```json
+{
+  "session_id": "123e4567-e89b-12d3-a456-426614174000",
+  "resumed_status": {
+    "state": "converting",
+    "resumed_from_step": "metadata_collection",
+    "checkpoint_version": 2,
+    "progress_percentage": 45.0
+  }
+}
+```
+
+---
+
+## Step 5: Conversion to NWB
+
+Conversion proceeds automatically. Monitor progress:
+
+**Progress Updates** (via WebSocket):
+
+```
+Progress: 45% - Starting NWB file generation
+Progress: 50% - Writing acquisition metadata
+Progress: 60% - Processing electrode data (channel 1/384)
+Progress: 70% - Processing electrode data (channel 200/384)
+Progress: 80% - Processing LFP data
+Progress: 90% - Finalizing NWB file structure
+Progress: 92% - Conversion complete, starting validation
+```
+
+**HTTP Status Check**:
+
+```bash
+curl http://localhost:8000/api/v1/conversions/123e4567-e89b-12d3-a456-426614174000 | jq .state
+# Output: "converting"
+```
+
+Conversion typically takes 2-10 minutes depending on dataset size.
+
+---
+
+## Step 6: Validation
+
+Multiple validators run automatically:
+
+1. **NWB Inspector**: Checks NWB standards compliance
+2. **PyNWB**: Validates schema correctness
+3. **DANDI**: Assesses repository readiness
+
+**Progress Updates**:
+
+```
+Progress: 92% - Running NWB Inspector validation
+Progress: 94% - NWB Inspector: 2 best practice suggestions found
+Progress: 96% - Running PyNWB schema validation
+Progress: 97% - PyNWB validation: PASSED
+Progress: 98% - Running DANDI readiness checks
+Progress: 99% - DANDI readiness score: 92/100
+Progress: 100% - Workflow completed successfully!
+```
+
+---
+
+## Step 7: Retrieve Results
+
+### Via MCP Protocol
+
+```
+Claude: The conversion workflow completed successfully!
+
+Results:
+- Output File: /output/experiment_001.nwb
+- File Size: 512.7 MB
+- Validation Status: PASS
+- Quality Score: 87.5/100
+- DANDI Readiness: 92/100
+
+Validation Details:
+- Critical Issues: 0
+- Warnings: 3
+  1. Missing subject date of birth (optional field)
+  2. Electrode impedances not recorded (best practice)
+  3. Session start time timezone not specified (best practice)
+
+The NWB file is ready for sharing!
+```
+
+### Via HTTP REST API
+
+```bash
+# Get final status
+curl http://localhost:8000/api/v1/conversions/123e4567-e89b-12d3-a456-426614174000 | jq
+```
+
+**Response**:
+
+```json
+{
+  "session_id": "123e4567-e89b-12d3-a456-426614174000",
+  "state": "completed",
+  "progress_percentage": 100.0,
+  "created_at": "2025-10-10T10:00:00Z",
+  "updated_at": "2025-10-10T10:15:45Z",
+  "completed_at": "2025-10-10T10:15:45Z",
+  "format_detection": {
+    "primary_format": "SpikeGLX",
+    "confidence": 0.95
+  },
+  "validation_summary": {
+    "overall_status": "PASS",
+    "quality_score": 87.5,
+    "critical_issues": 0,
+    "warnings": 3,
+    "dandi_readiness_score": 92.0
+  }
+}
+```
+
+### Download Validation Report
+
+```bash
+# Get detailed validation report (if available via separate endpoint)
+curl http://localhost:8000/api/v1/conversions/123e4567-e89b-12d3-a456-426614174000/report \
+  -H "Accept: application/json" > validation_report.json
+
+# Or as HTML
+curl http://localhost:8000/api/v1/conversions/123e4567-e89b-12d3-a456-426614174000/report \
+  -H "Accept: text/html" > validation_report.html
+```
+
+---
+
+## Step 8: Retrieve Provenance
+
+Get complete PROV-O provenance graph:
+
+### JSON Format
+
+```bash
+curl http://localhost:8000/api/v1/conversions/123e4567-e89b-12d3-a456-426614174000/provenance?format=json | jq
+```
+
+**Response**:
+
+```json
+{
+  "session_id": "123e4567-e89b-12d3-a456-426614174000",
+  "format": "json",
+  "provenance": {
+    "entities": [
+      {
+        "entity_id": "dataset_experiment_001",
+        "entity_type": "Dataset",
+        "attributes": {
+          "path": "/path/to/data/quickstart/experiment_001",
+          "size_bytes": 524288000,
+          "checksum": "e3b0c44..."
+        }
+      },
+      {
+        "entity_id": "nwb_experiment_001",
+        "entity_type": "NWBFile",
+        "attributes": {
+          "path": "/output/experiment_001.nwb",
+          "size_bytes": 537919488,
+          "nwb_version": "2.6.0"
+        }
+      }
+    ],
+    "activities": [
+      {
+        "activity_id": "format_detection_001",
+        "activity_type": "FormatDetection",
+        "started_at": "2025-10-10T10:00:15Z",
+        "ended_at": "2025-10-10T10:01:45Z",
+        "duration_seconds": 90.0
+      },
+      {
+        "activity_id": "conversion_001",
+        "activity_type": "Conversion",
+        "started_at": "2025-10-10T10:05:00Z",
+        "ended_at": "2025-10-10T10:13:00Z",
+        "duration_seconds": 480.0
+      }
+    ],
+    "agents": [
+      {
+        "agent_id": "conversation_agent",
+        "agent_type": "ConversationAgent",
+        "version": "1.0.0"
+      },
+      {
+        "agent_id": "conversion_agent",
+        "agent_type": "ConversionAgent",
+        "version": "1.0.0"
+      }
+    ],
+    "relationships": [
+      {
+        "relationship_type": "used",
+        "subject": "format_detection_001",
+        "object": "dataset_experiment_001"
+      },
+      {
+        "relationship_type": "wasGeneratedBy",
+        "subject": "nwb_experiment_001",
+        "object": "conversion_001"
+      }
+    ]
+  }
+}
+```
+
+### RDF Turtle Format
+
+```bash
+curl http://localhost:8000/api/v1/conversions/123e4567-e89b-12d3-a456-426614174000/provenance?format=turtle > provenance.ttl
+```
+
+**Output** (`provenance.ttl`):
+
+```turtle
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix mcp: <http://mcp-server/provenance/> .
+
+mcp:dataset_experiment_001 a mcp:Dataset ;
+    mcp:datasetPath "/path/to/data/quickstart/experiment_001" ;
+    prov:generatedAtTime "2025-10-10T09:00:00Z"^^xsd:dateTime .
+
+mcp:format_detection_001 a mcp:FormatDetection ;
+    prov:used mcp:dataset_experiment_001 ;
+    prov:startedAtTime "2025-10-10T10:00:15Z"^^xsd:dateTime ;
+    prov:endedAtTime "2025-10-10T10:01:45Z"^^xsd:dateTime .
+
+mcp:nwb_experiment_001 a mcp:NWBFile ;
+    prov:wasGeneratedBy mcp:conversion_001 ;
+    prov:wasDerivedFrom mcp:dataset_experiment_001 .
+```
+
+---
+
+## Step 9: Inspect NWB File
+
+Verify the generated NWB file:
+
+### Using PyNWB
+
+```python
+from pynwb import NWBHDF5IO
+
+# Open NWB file
+with NWBHDF5IO('/output/experiment_001.nwb', 'r') as io:
+    nwbfile = io.read()
+
+    # Print basic info
+    print(f"Session: {nwbfile.session_description}")
+    print(f"Experimenter: {nwbfile.experimenter}")
+    print(f"Subject: {nwbfile.subject.subject_id}")
+    print(f"Species: {nwbfile.subject.species}")
+
+    # Print acquisition data
+    print(f"\nAcquisition data:")
+    for name, data in nwbfile.acquisition.items():
+        print(f"  - {name}: {data}")
+
+    # Print electrode info
+    print(f"\nElectrodes: {len(nwbfile.electrodes)} channels")
+```
+
+**Output**:
+
+```
+Session: Baseline recording session, animal habituated to task
+Experimenter: ['Jane Doe']
+Subject: mouse_001
+Species: Mus musculus
+
+Acquisition data:
+  - ElectricalSeries: ElectricalSeries (384 channels, 30000 Hz)
+
+Electrodes: 384 channels
+```
+
+### Using NWB Inspector (CLI)
+
+```bash
+# Run NWB Inspector validation
+nwbinspector /output/experiment_001.nwb --report-file-path inspector_report.txt
+
+# View report
+cat inspector_report.txt
+```
+
+**Output**:
+
+```
+NWB Inspector Report
+====================
+
+File: /output/experiment_001.nwb
+NWB Version: 2.6.0
+
+Summary:
+- CRITICAL issues: 0
+- BEST_PRACTICE_VIOLATION: 0
+- BEST_PRACTICE_SUGGESTION: 2
+
+Issues:
+1. [BEST_PRACTICE_SUGGESTION] Subject.date_of_birth is not set (optional)
+2. [BEST_PRACTICE_SUGGESTION] Electrode impedances are not recorded
+
+Overall: PASSED with suggestions
+```
+
+---
+
+## Step 10: Upload to DANDI Archive (Optional)
+
+If DANDI readiness score is high (>85), upload to DANDI:
+
+```bash
+# Install DANDI CLI
+pip install dandi
+
+# Organize file in DANDI format
+dandi organize /output/experiment_001.nwb -f dry
+
+# Validate with DANDI
+dandi validate /output/experiment_001.nwb
+
+# Upload to DANDI (requires DANDI account)
+dandi upload /output/experiment_001.nwb --dandiset-id 000123
+```
+
+---
+
+## Complete Example Script
+
+Here's a complete Python script automating the entire workflow:
+
+```python
+#!/usr/bin/env python3
+"""
+Automated NWB Conversion Workflow
+Usage: python quickstart_example.py /path/to/dataset
+"""
+
+import sys
+import time
+import requests
+from pathlib import Path
+
+API_BASE = "http://localhost:8000/api/v1"
+
+def convert_dataset(dataset_path: str):
+    """Submit dataset for conversion and monitor progress"""
+
+    # Step 1: Submit conversion
+    print(f"📦 Submitting dataset: {dataset_path}")
+    response = requests.post(
+        f"{API_BASE}/conversions",
+        json={"dataset_path": dataset_path}
+    )
+    response.raise_for_status()
+
+    session_id = response.json()["session_id"]
+    print(f"✅ Session created: {session_id}")
+
+    # Step 2: Poll for completion
+    while True:
+        status_response = requests.get(f"{API_BASE}/conversions/{session_id}")
+        status = status_response.json()
+
+        state = status["state"]
+        progress = status["progress_percentage"]
+
+        print(f"🔄 {state.upper()}: {progress:.1f}%")
+
+        # Handle interactive metadata collection
+        if state == "suspended":
+            print("⏸️  Workflow suspended - needs user input")
+            metadata = collect_user_metadata()
+            requests.post(
+                f"{API_BASE}/conversions/{session_id}/resume",
+                json={"user_inputs": metadata}
+            )
+            print("✅ Metadata provided, resuming...")
+
+        # Check completion
+        if state in ["completed", "failed", "cancelled"]:
+            break
+
+        time.sleep(5)
+
+    # Step 3: Report results
+    if state == "completed":
+        print("\n🎉 Conversion completed successfully!")
+        validation = status.get("validation_summary", {})
+        print(f"   Quality Score: {validation.get('quality_score', 'N/A')}/100")
+        print(f"   DANDI Readiness: {validation.get('dandi_readiness_score', 'N/A')}/100")
+        print(f"   Critical Issues: {validation.get('critical_issues', 'N/A')}")
+
+        # Get provenance
+        prov_response = requests.get(
+            f"{API_BASE}/conversions/{session_id}/provenance",
+            params={"format": "json"}
+        )
+        provenance = prov_response.json()["provenance"]
+        print(f"\n📊 Provenance recorded: {len(provenance['activities'])} activities")
+
+        return True
+    else:
+        print(f"\n❌ Conversion failed: {status.get('error', {}).get('message')}")
+        return False
+
+def collect_user_metadata():
+    """Interactive metadata collection"""
+    return {
+        "experiment_description": input("Experiment description: "),
+        "subject_species": input("Subject species (e.g., Mus musculus): "),
+        "subject_id": input("Subject ID: "),
+        "experimenter": input("Experimenter name: "),
+        "institution": input("Institution: ")
+    }
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: python quickstart_example.py /path/to/dataset")
+        sys.exit(1)
+
+    dataset_path = sys.argv[1]
+    success = convert_dataset(dataset_path)
+    sys.exit(0 if success else 1)
+```
+
+**Run the script**:
+
+```bash
+python quickstart_example.py /path/to/data/quickstart/experiment_001
+```
+
+---
+
+## Expected Timeline
+
+For the sample SpikeGLX dataset (~500MB):
+
+| Phase               | Duration        | Description                                |
+| ------------------- | --------------- | ------------------------------------------ |
+| Format Detection    | ~30 seconds     | Analyze file structure, detect SpikeGLX    |
+| Metadata Collection | ~2 minutes      | Interactive prompts for missing metadata   |
+| Conversion          | ~5 minutes      | Generate NWB file with all data            |
+| Validation          | ~2 minutes      | Run NWB Inspector, PyNWB, DANDI validators |
+| **Total**           | **~10 minutes** | End-to-end workflow                        |
+
+---
+
+## Troubleshooting
+
+### Issue: Format detection fails
+
+```
+Error: Unable to determine format with sufficient confidence
+```
+
+**Solution**: Override format manually:
+
+```json
+{
+  "dataset_path": "/path/to/dataset",
+  "workflow_config": {
+    "format_override": "SpikeGLX"
+  }
+}
+```
+
+---
+
+### Issue: Validation warnings
+
+```
+Warning: Missing subject.date_of_birth
+```
+
+**Solution**: Warnings don't block conversion. To fix, provide additional
+metadata:
+
+```python
+# Resume with additional metadata
+requests.post(
+    f"{API_BASE}/conversions/{session_id}/resume",
+    json={"user_inputs": {"subject_date_of_birth": "2024-01-15"}}
+)
+```
+
+---
+
+### Issue: Conversion timeout
+
+```
+Error: Workflow exceeded timeout of 1800 seconds
+```
+
+**Solution**: Increase timeout for large datasets:
+
+```json
+{
+  "dataset_path": "/path/to/large/dataset",
+  "workflow_config": {
+    "timeout_seconds": 3600
+  }
+}
+```
 
 ---
 
 ## Next Steps
 
-1. **Explore API Documentation:** See `contracts/openapi.yaml` for full API
-   specification
-2. **Review Data Models:** See `data-model.md` for entity definitions
-3. **Check Agent Capabilities:** Use `/agents/health` to verify agent
-   availability
-4. **Browse Supported Formats:** Use `/formats/supported` to see all format
-   options
-5. **Set Up Monitoring:** Configure observability tools for production
-   deployments
+1. **Explore Advanced Features**:
+   - Custom validators (see Plugin Architecture docs)
+   - Batch processing (submit multiple datasets)
+   - Workflow customization (modify DAG)
+
+2. **Integration**:
+   - Integrate MCP server with Claude Desktop
+   - Build custom clients using HTTP API
+   - Set up continuous conversion pipelines
+
+3. **Production Deployment**:
+   - Deploy with Docker/Kubernetes
+   - Configure Redis for session storage
+   - Set up OpenTelemetry for monitoring
 
 ---
 
-## Support
+## Validation Checklist
 
-For issues or questions:
+After completing this quickstart, verify:
 
-- API Documentation: `http://localhost:8000/docs` (Swagger UI)
-- GitHub Issues: [project repository]
-- Email: support@example.com
+- [ ] MCP server starts without errors
+- [ ] HTTP server accessible at http://localhost:8000
+- [ ] Dataset conversion completes successfully
+- [ ] NWB file generated in `/output/` directory
+- [ ] Validation passes with quality score >80
+- [ ] Provenance graph available in JSON/Turtle formats
+- [ ] NWB file opens correctly with PyNWB
+- [ ] No critical validation errors
 
 ---
 
-**Quick Start Complete!** You now know how to:
+**Quickstart Complete!** 🎉
 
-- ✅ Submit datasets for conversion
-- ✅ Monitor workflow progress
-- ✅ Check validation results
-- ✅ Handle errors and cancellations
-- ✅ Use both HTTP and MCP protocols
+You've successfully:
+
+1. ✅ Installed the MCP server
+2. ✅ Started both MCP and HTTP transports
+3. ✅ Submitted a dataset for conversion
+4. ✅ Monitored real-time progress
+5. ✅ Provided interactive metadata
+6. ✅ Validated the generated NWB file
+7. ✅ Retrieved complete provenance records
+
+**Next**: Explore the full API documentation at http://localhost:8000/docs or
+review the specification at `specs/mcp-server-architecture-new/spec.md`.
