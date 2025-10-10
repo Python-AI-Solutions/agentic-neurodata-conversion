@@ -1,0 +1,497 @@
+openapi: 3.0.3
+info:
+  title: Test Reporting API
+  description: |
+    API for test results, reporting, and quality metrics.
+    Part of Testing and Quality Assurance Framework (testing-quality-assurance).
+
+    **Constitutional Requirements**:
+    - MCP-Centric Architecture (Constitution I): All reporting through MCP tools
+    - Schema-First (Constitution III): Report schemas derived from LinkML TestReport entity
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local development server
+  - url: https://api.example.com/v1
+    description: Production server
+
+paths:
+  /test-reports/{report_id}:
+    get:
+      summary: Retrieve test report
+      description: |
+        Retrieves a test report with coverage metrics, performance benchmarks, and recommendations.
+        Supports multiple export formats (HTML, PDF, JSON) per FR-034.
+      operationId: getTestReport
+      tags:
+        - Test Reporting
+      parameters:
+        - name: report_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: ['json', 'html', 'pdf']
+            default: 'json'
+          description: Export format (FR-034)
+      responses:
+        '200':
+          description: Test report retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestReport'
+            text/html:
+              schema:
+                type: string
+                format: binary
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Report not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /test-reports:
+    get:
+      summary: Query test reports
+      description: |
+        Query test reports with filtering and pagination.
+        Supports permanent retention with indexed queries (per clarification: indefinite retention).
+      operationId: queryTestReports
+      tags:
+        - Test Reporting
+      parameters:
+        - name: suite_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by test suite ID
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter reports from this date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter reports to this date
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: ['passed', 'failed', 'partial']
+          description: Filter by overall status
+        - name: coverage_below
+          in: query
+          schema:
+            type: number
+            format: float
+          description: Filter reports with coverage below threshold
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Maximum number of results
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Pagination offset
+      responses:
+        '200':
+          description: List of test reports
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reports:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TestReportSummary'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+
+  /quality-metrics:
+    get:
+      summary: Get quality metrics with trends
+      description: |
+        Retrieves quality metrics with historical trend data for regression detection.
+        Tracks coverage, performance, error rates, scientific accuracy, compliance (FR-028, FR-036).
+      operationId: getQualityMetrics
+      tags:
+        - Quality Metrics
+      parameters:
+        - name: metric_type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: ['coverage', 'performance', 'error_rate', 'scientific_accuracy', 'compliance']
+        - name: metric_name
+          in: query
+          schema:
+            type: string
+          description: Specific metric name (e.g., "line_coverage", "nwb_pass_rate")
+        - name: trend
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Include historical trend data
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: ['day', 'week', 'month', 'year']
+            default: 'month'
+          description: Time period for trend data (if trend=true)
+      responses:
+        '200':
+          description: Quality metrics retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  metrics:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/QualityMetric'
+
+  /test-reports/{report_id}/export:
+    post:
+      summary: Export test report
+      description: |
+        Export test report to specified format (HTML, PDF, JSON) per FR-034.
+        Supports permanent archival storage (per clarification: indefinite retention).
+      operationId: exportTestReport
+      tags:
+        - Test Reporting
+      parameters:
+        - name: report_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - format
+              properties:
+                format:
+                  type: string
+                  enum: ['html', 'pdf', 'json']
+                include_historical_trends:
+                  type: boolean
+                  default: true
+                include_recommendations:
+                  type: boolean
+                  default: true
+      responses:
+        '200':
+          description: Report export initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  export_id:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: ['processing', 'completed']
+                  download_url:
+                    type: string
+                    format: uri
+                    description: URL to download exported report
+        '404':
+          description: Report not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    TestReport:
+      type: object
+      required:
+        - id
+        - test_suite_id
+        - execution_timestamp
+        - coverage_metrics
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        test_suite_id:
+          type: string
+          format: uuid
+        execution_timestamp:
+          type: string
+          format: date-time
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TestResult'
+        coverage_metrics:
+          $ref: '#/components/schemas/CoverageMetrics'
+        performance_benchmarks:
+          type: object
+          properties:
+            execution_time_seconds:
+              type: number
+              format: float
+            memory_peak_mb:
+              type: number
+              format: float
+            tests_per_second:
+              type: number
+              format: float
+        failure_details:
+          type: array
+          items:
+            $ref: '#/components/schemas/FailureDetail'
+        historical_trends:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrendData'
+        recommendations:
+          type: array
+          items:
+            type: string
+          description: Actionable recommendations (FR-034)
+        status:
+          type: string
+          enum: ['passed', 'failed', 'partial']
+
+    TestReportSummary:
+      type: object
+      required:
+        - id
+        - test_suite_id
+        - execution_timestamp
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        test_suite_id:
+          type: string
+          format: uuid
+        execution_timestamp:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: ['passed', 'failed', 'partial']
+        coverage_percentage:
+          type: number
+          format: float
+        total_tests:
+          type: integer
+        failed_tests:
+          type: integer
+
+    TestResult:
+      type: object
+      required:
+        - test_id
+        - test_name
+        - status
+        - duration_seconds
+      properties:
+        test_id:
+          type: string
+        test_name:
+          type: string
+        status:
+          type: string
+          enum: ['passed', 'failed', 'skipped', 'flaky']
+        duration_seconds:
+          type: number
+          format: float
+        error_message:
+          type: string
+        stack_trace:
+          type: string
+        flaky_rate:
+          type: number
+          format: float
+          description: Failure rate for flaky detection (5% threshold per clarification)
+
+    CoverageMetrics:
+      type: object
+      required:
+        - line_coverage
+        - branch_coverage
+        - meets_gate
+      properties:
+        line_coverage:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Line coverage percentage (≥0.85 or ≥0.90 for critical)
+        branch_coverage:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        path_coverage:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        meets_gate:
+          type: boolean
+          description: True if meets ≥0.85 gate (≥0.90 for critical)
+
+    FailureDetail:
+      type: object
+      required:
+        - test_name
+        - error_type
+        - message
+      properties:
+        test_name:
+          type: string
+        error_type:
+          type: string
+        message:
+          type: string
+        stack_trace:
+          type: string
+        reproduction_steps:
+          type: array
+          items:
+            type: string
+          description: Steps to reproduce failure (FR-026)
+        historical_failures:
+          type: integer
+          description: Number of historical failures for this test
+
+    TrendData:
+      type: object
+      required:
+        - metric_name
+        - current_value
+        - baseline_value
+      properties:
+        metric_name:
+          type: string
+        current_value:
+          type: number
+          format: float
+        baseline_value:
+          type: number
+          format: float
+        percent_change:
+          type: number
+          format: float
+        direction:
+          type: string
+          enum: ['improving', 'degrading', 'stable']
+        historical_values:
+          type: array
+          items:
+            type: object
+            properties:
+              timestamp:
+                type: string
+                format: date-time
+              value:
+                type: number
+                format: float
+
+    QualityMetric:
+      type: object
+      required:
+        - id
+        - metric_name
+        - metric_type
+        - value
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        metric_name:
+          type: string
+        metric_type:
+          type: string
+          enum: ['coverage', 'performance', 'error_rate', 'scientific_accuracy', 'compliance']
+        value:
+          type: number
+          format: float
+        baseline:
+          type: number
+          format: float
+        threshold:
+          type: number
+          format: float
+        status:
+          type: string
+          enum: ['pass', 'fail', 'warning']
+        timestamp:
+          type: string
+          format: date-time
+        trend_data:
+          type: array
+          items:
+            type: object
+            properties:
+              timestamp:
+                type: string
+                format: date-time
+              value:
+                type: number
+                format: float
+
+    Error:
+      type: object
+      required:
+        - error_code
+        - message
+      properties:
+        error_code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+        timestamp:
+          type: string
+          format: date-time
