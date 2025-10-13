@@ -1,46 +1,11 @@
-"""
-Agentic Neurodata Conversion Package
-
-A multi-agent system for converting neuroscience data to NWB format using MCP server architecture.
-The system orchestrates dataset analysis, conversion, and validation through specialized agents.
-"""
+"""Agentic Neurodata Conversion - Multi-agent system for neuroscience data conversion."""
 
 __version__ = "0.1.0"
 __author__ = "Agentic Neurodata Conversion Team"
 __email__ = "contact@example.com"
 
-# Core imports for package-level access
-from .core.config import get_config
-from .core.exceptions import (
-    AgenticConverterError,
-    ConfigurationError,
-    ConversionError,
-    ValidationError,
-)
-
-# Interface and utility imports
-from .interfaces import (
-    LinkMLValidatorInterface,
-    NeuroConvInterface,
-    NWBInspectorInterface,
-)
-from .utils import FileUtils, FormatDetector, MetadataProcessor
-
-__all__ = [
-    # Core functionality
-    "get_config",
-    "AgenticConverterError",
-    "ConfigurationError",
-    "ConversionError",
-    "ValidationError",
-    # Interfaces
-    "NeuroConvInterface",
-    "NWBInspectorInterface",
-    "LinkMLValidatorInterface",
-    # Utilities
-    "FileUtils",
-    "FormatDetector",
-    "MetadataProcessor",
-    # Package metadata
-    "__version__",
-]
+# Package metadata
+__title__ = "agentic-neurodata-conversion"
+__description__ = "Multi-agent system for converting neuroscience data to NWB format using MCP server architecture"
+__url__ = "https://github.com/example/agentic-neurodata-conversion"
+__license__ = "MIT"

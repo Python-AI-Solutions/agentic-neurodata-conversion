@@ -1,5 +1,9 @@
 ## Shared Technical Standards
 
+### Python Environment
+
+- **Package Manager**: Pixi for environment and dependency management
+
 ### Agent Framework
 
 - **SDK**: Claude Agent SDK for agent implementation and MCP protocol handling
@@ -14,6 +18,7 @@
 - **Linting**: Ruff
 - **Type Checking**: MyPy with strict mode
 - **Complexity Limit**: Cyclomatic complexity <10
+- **Git Hooks**: Pre-commit for managing git hooks
 
 ### Testing
 

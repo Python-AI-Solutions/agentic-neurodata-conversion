@@ -72,7 +72,7 @@ body:
         Provide environment details if they might be relevant to your question
       placeholder: |
         - OS: [e.g. Ubuntu 22.04]
-        - Python version: [e.g. 3.11.5]
+        - Python version: [e.g. 3.13]
         - Package version: [e.g. 1.0.0]
 
   - type: checkboxes
