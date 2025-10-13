@@ -8,52 +8,46 @@
   **constitution wins**.
 - You must follow the Spec Kit workflow and quality gates defined by the
   constitution.
+- Technical standards are summarized in docs/shared-technical-standards.md. Any
+  modification of this should be documented in docs/architecture. This should be
+  consulted for any extensive tasks that require design/architecture or
+  extensive coding.
 
 ---
 
 ## Rules
 
-1. **Pixi‑only**
-   - All commands not available on the shell MUST be run via `pixi`:
-     `pixi run <task>` or `pixi <subcommand>`. pixi tasks can be used for all
-     development related tasks. If too extensive the task can just run a python
-     script stored in the scripts directory.
-   - Do NOT use `pip`, `conda`, `venv`, `python -m pip`, system Python, or
-     `PYTHONPATH` hacks.
-   - Run scripts through pixi which can add custom dependencies to the script:
-     `pixi run python your_script.py`
-
-2. **No stray scripts or root‑level files**
+1. **No stray scripts or root‑level files**
    - Do NOT create or delete ad‑hoc scripts (e.g., `tmp.py`, `run.py`,
      `one_off.sh`) any outside scripts/temp. Use scripts if they have long-term
      use potential.
    - Try to avoid adding files to the repository root. Only modify allowed
      locations (see “Filesystem Rules”).
 
-3. **Follow the constitution’s engineering model**
+2. **Follow the constitution’s engineering model**
    - MCP‑centric orchestration (no direct module‑to‑module calls).
    - TDD with coverage gates; schema‑first (LinkML/NWB); DataLad Python API
      only.
    - Contract tests on OpenAPI interfaces; CI quality gates must pass before
      merge.
 
-4. **Pre‑commit is the gatekeeper**
+3. **Pre‑commit is the gatekeeper**
    - Every change must pass: `pixi run pre-commit run --all-files`.
    - Fix formatting/linting locally (`pixi run format`, `pixi run lint`) then
      re‑run pre‑commit.
 
-5. **Do not guess; fail fast with a crisp request**
+4. **Do not guess; fail fast with a crisp request**
    - If a step would violate the constitution or these rules, STOP and write a
      short blocking note with the minimal change you need approved i.e. how to
      resolve an apparent conflict between the instruction and the constitution.
 
-6. **Command quoting** for inline Python:
+5. **Command quoting** for inline Python:
    - Shell: single quotes outside, double quotes inside:
      `pixi run python -c 'print("ok")'`
    - Prefer tasks in `pixi.toml` or formal tests over complex `python -c`
      snippets.
 
-7. **Data handling**:
+6. **Data handling**:
    - DataLad is installed as a Python package through pixi
 
 - **DO NOT** use `datalad` CLI commands directly
