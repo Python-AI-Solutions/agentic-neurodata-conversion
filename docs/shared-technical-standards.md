@@ -2,7 +2,6 @@
 
 ### Python Environment
 
-- **Python Version**: 3.13
 - **Package Manager**: Pixi for environment and dependency management
 
 ### Agent Framework
