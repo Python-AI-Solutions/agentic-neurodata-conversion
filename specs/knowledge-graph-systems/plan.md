@@ -47,7 +47,7 @@ suggestions.
 
 ## Technical Context
 
-**Language/Version**: Python 3.12+ (based on existing pixi.toml configuration)
+**Language/Version**: Python 3.12-3.13 (per pixi.toml configuration: ">=3.12,<3.14")
 **Primary Dependencies**: rdflib, linkml, pynwb, fastapi, mcp, SHACL validation
 libraries **Storage**: RDF triple store with SPARQL endpoint, file-based
 NWB-LinkML schema artifacts **Testing**: pytest with contract tests for SPARQL
@@ -89,7 +89,7 @@ specs/001-knowledge-graph-systems/
 ### Source Code (repository root)
 
 ```
-src/
+agentic_neurodata_conversion/
 ├── knowledge_graph/
 │   ├── __init__.py
 │   ├── schema/          # LinkML schema and generated artifacts
@@ -97,31 +97,34 @@ src/
 │   ├── enrichment/      # Metadata enrichment engine
 │   ├── validation/      # SHACL and LinkML validation
 │   ├── sparql/          # SPARQL query engine and optimization
-│   └── mcp_tools/       # MCP server integration layer
+│   └── services/        # Core business logic services
 ├── cli/
 │   └── knowledge_graph_cli.py
 └── mcp_server/
-    └── knowledge_graph_server.py
+    └── tools/
+        └── kg_tools.py  # Thin MCP adapter (<500 LOC, @mcp.tool decorators)
 
 tests/
 ├── contract/
-│   ├── test_sparql_endpoints.py
+│   ├── test_mcp_kg_tools.py  # Contract tests for MCP tool interfaces
 │   ├── test_shacl_validation.py
-│   └── test_mcp_tools.py
+│   └── test_linkml_validation.py
 ├── integration/
 │   ├── test_enrichment_workflow.py
-│   ├── test_schema_validation.py
+│   ├── test_kg_mcp_integration.py
 │   └── test_ontology_mapping.py
 └── unit/
     ├── test_linkml_processing.py
     ├── test_rdf_generation.py
-    └── test_provenance_tracking.py
+    └── test_kg_services.py
 ```
 
 **Structure Decision**: Single project structure selected for Python-based
 semantic web library. Knowledge graph components organized by function (schema,
-ontology, enrichment, validation, SPARQL, MCP) with clear separation between
-core logic and external interfaces. Tests follow constitutional TDD requirements
+ontology, enrichment, validation, SPARQL, services) with clear separation
+between core business logic and MCP adapter layer. MCP integration follows
+constitutional requirement for Claude Agent SDK with thin adapter (<500 LOC) in
+`mcp_server/tools/kg_tools.py`. Tests follow constitutional TDD requirements
 with contract, integration, and unit test layers.
 
 ## Phase 0: Outline & Research
@@ -156,10 +159,12 @@ with contract, integration, and unit test layers.
 
 **MCP Server Architecture**:
 
-- Decision: FastAPI-based MCP server with clean tool interface layer
-- Rationale: Async support for concurrent users, clean separation of concerns,
-  constitutional compliance
-- Alternatives considered: Synchronous server, direct integration without MCP
+- Decision: Claude Agent SDK with thin MCP adapter (<500 LOC, zero business logic)
+- Rationale: Constitutional requirement for Agent SDK-based protocol communication
+  (Constitution Principle I), eliminates custom server implementation, automatic
+  context management and tool ecosystem, async support for concurrent users
+- Alternatives considered: Custom FastAPI MCP server (rejected - violates
+  constitutional requirement), synchronous server, direct integration without MCP
   layer
 
 **Neuroscience Ontology Integration**:

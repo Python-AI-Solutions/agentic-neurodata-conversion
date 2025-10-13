@@ -117,7 +117,9 @@ analysis while ensuring data integrity and discoverability.
 - **FR-007**: System MUST allow definition of custom validation rules and
   enrichment patterns
 - **FR-008**: System MUST provide efficient query execution with appropriate
-  indexing and optimization
+  indexing and optimization. Performance targets: <200ms for simple SPARQL
+  queries (basic lookups), <30 seconds for complex metadata enrichment
+  operations (per clarification session 2025-09-29)
 - **FR-009**: System MUST validate LinkML instances (YAML/JSON) against
   NWB-LinkML schema, rejecting invalid data and requiring manual correction
 - **FR-010**: System MUST generate RDF using schema references to ensure
@@ -127,9 +129,12 @@ analysis while ensuring data integrity and discoverability.
 - **FR-012**: System MUST produce knowledge graphs in JSON-LD with
   schema-derived context and TTL formats
 - **FR-013**: System MUST expose knowledge graphs through standard SPARQL
-  endpoints
-- **FR-014**: System MUST provide programmatic APIs for knowledge graph data
-  access
+  endpoints (Note: SPARQL queries are executed via MCP tools per
+  constitutional MCP-centric requirement; internal SPARQL endpoint is accessed
+  through MCP tool decorated functions, not direct HTTP endpoints)
+- **FR-014**: System MUST provide programmatic access to knowledge graph data
+  through service layer interfaces exposed via MCP tools (no direct HTTP API
+  endpoints per constitutional MCP-centric requirement)
 - **FR-015**: System MUST integrate core neuroscience ontologies (NIFSTD,
   UBERON, CHEBI, NCBITaxon) with concept mapping
 - **FR-016**: System MUST establish semantic relationships using OWL equivalence
@@ -137,7 +142,9 @@ analysis while ensuring data integrity and discoverability.
 - **FR-017**: System MUST expose functionality through MCP tools for agent
   integration
 - **FR-018**: System MUST handle concurrent access and maintain data consistency
-  for up to 10 simultaneous users
+  for up to 10 simultaneous users. Consistency model: eventual consistency with
+  conflict detection and manual resolution (per FR-003, all conflicts presented
+  to user for resolution)
 - **FR-019**: System MUST regenerate artifacts when NWB-LinkML schema updates
   and store version metadata
 - **FR-020**: System MUST automatically discover entity types and properties

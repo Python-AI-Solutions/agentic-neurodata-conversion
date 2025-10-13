@@ -8,10 +8,47 @@ constitutional requirements for schema-first development and human review.
 
 ## Prerequisites
 
-- Python 3.12+ environment
+- Python 3.12-3.13 environment (managed via pixi - see pixi.toml)
+- Pixi package manager installed (https://pixi.sh/)
 - NWB files for testing (max 100 per dataset)
 - Access to knowledge graph server endpoints
 - MCP server running for agent integration
+
+**IMPORTANT**: All commands must be run through pixi. Never use pip, conda, or system Python directly.
+
+### DataLad Integration (Constitutional Requirement)
+
+⚠️ **CRITICAL**: All data operations MUST use DataLad Python API, NEVER CLI commands (per CLAUDE.md and Constitution Principle V)
+
+```python
+# ✅ CORRECT - DataLad Python API
+import datalad.api as dl
+
+# Create dataset for knowledge graph outputs
+ds = dl.create(path="kg_outputs", description="Knowledge graph RDF and provenance")
+
+# Save graph state
+dl.save(dataset="kg_outputs", message="Generated RDF triples for dataset_001")
+
+# Get large ontology files from remote annex
+dl.get(path="kg_outputs/ontologies/nifstd_full.ttl")
+
+# Track provenance in knowledge graph
+dl.status(dataset="kg_outputs")
+```
+
+```bash
+# ❌ WRONG - Never use DataLad CLI
+# datalad create kg_outputs
+# datalad save -m "message"
+# datalad get file.ttl
+```
+
+**DataLad Use Cases for Knowledge Graph**:
+- Version control for generated RDF triple stores
+- Track PROV-O provenance alongside git history
+- Manage large ontology files (>10MB) on GIN remote annex
+- Subdatasets for different NWB schema versions
 
 ## Quick Start Scenarios
 
@@ -20,8 +57,8 @@ constitutional requirements for schema-first development and human review.
 **Step 1: Create a new dataset**
 
 ```bash
-# Using CLI
-python -m knowledge_graph_cli create-dataset \
+# Using CLI through pixi (REQUIRED per CLAUDE.md)
+pixi run python -m knowledge_graph_cli create-dataset \
   --title "Mouse V1 Recordings" \
   --description "Visual cortex recordings from C57BL/6 mice" \
   --nwb-files "session_001.nwb,session_002.nwb"
@@ -32,8 +69,8 @@ python -m knowledge_graph_cli create-dataset \
 **Step 2: Validate NWB-LinkML compliance**
 
 ```bash
-# Validate against current schema
-python -m knowledge_graph_cli validate-linkml \
+# Validate against current schema (via pixi)
+pixi run python -m knowledge_graph_cli validate-linkml \
   --dataset-id "dataset_001" \
   --schema-version "2.6.0"
 
@@ -44,8 +81,8 @@ python -m knowledge_graph_cli validate-linkml \
 **Step 3: Generate enrichment suggestions**
 
 ```bash
-# Generate metadata enrichment suggestions
-python -m knowledge_graph_cli enrich-metadata \
+# Generate metadata enrichment suggestions (via pixi)
+pixi run python -m knowledge_graph_cli enrich-metadata \
   --dataset-id "dataset_001" \
   --sources "NCBITaxon,NIFSTD,UBERON" \
   --output-format "review"
@@ -56,8 +93,8 @@ python -m knowledge_graph_cli enrich-metadata \
 **Step 4: Human review process**
 
 ```bash
-# Present suggestions for review
-python -m knowledge_graph_cli review-suggestions \
+# Present suggestions for review (via pixi)
+pixi run python -m knowledge_graph_cli review-suggestions \
   --dataset-id "dataset_001" \
   --interactive
 
@@ -78,8 +115,8 @@ python -m knowledge_graph_cli review-suggestions \
 **Step 1: Execute basic SPARQL query**
 
 ```bash
-# Query for all datasets and their subjects
-python -m knowledge_graph_cli sparql-query \
+# Query for all datasets and their subjects (via pixi)
+pixi run python -m knowledge_graph_cli sparql-query \
   --query "SELECT ?dataset ?subject ?species WHERE {
     ?dataset rdf:type kg:Dataset .
     ?dataset kg:hasSubject ?subject .
@@ -93,8 +130,8 @@ python -m knowledge_graph_cli sparql-query \
 **Step 2: Complex metadata validation query**
 
 ```bash
-# Query for potential data quality issues
-python -m knowledge_graph_cli sparql-query \
+# Query for potential data quality issues (via pixi)
+pixi run python -m knowledge_graph_cli sparql-query \
   --query "SELECT ?session ?issue WHERE {
     ?session rdf:type kg:Session .
     ?session kg:hasQualityIssue ?issue .
@@ -108,8 +145,8 @@ python -m knowledge_graph_cli sparql-query \
 **Step 3: Ontology relationship exploration**
 
 ```bash
-# Query neuroscience ontology mappings
-python -m knowledge_graph_cli query-ontology \
+# Query neuroscience ontology mappings (via pixi)
+pixi run python -m knowledge_graph_cli query-ontology \
   --concept "visual cortex" \
   --ontologies "NIFSTD,UBERON" \
   --relationship-type "subclass"
@@ -129,8 +166,8 @@ python -m knowledge_graph_cli query-ontology \
 **Step 1: Initialize MCP server**
 
 ```bash
-# Start knowledge graph MCP server
-python -m mcp_server.knowledge_graph_server \
+# Start knowledge graph MCP server (via pixi)
+pixi run python -m mcp_server.knowledge_graph_server \
   --port 8000 \
   --config "config/mcp_tools.yaml"
 
@@ -189,11 +226,11 @@ for conflict in conflicts["conflicts"]:
 **Step 1: Schema version update**
 
 ```bash
-# Check current schema version
-python -m knowledge_graph_cli schema-info
+# Check current schema version (via pixi)
+pixi run python -m knowledge_graph_cli schema-info
 
-# Update to new NWB-LinkML version
-python -m knowledge_graph_cli update-schema \
+# Update to new NWB-LinkML version (via pixi)
+pixi run python -m knowledge_graph_cli update-schema \
   --version "2.7.0" \
   --regenerate-artifacts
 
@@ -203,8 +240,8 @@ python -m knowledge_graph_cli update-schema \
 **Step 2: Validate existing data against new schema**
 
 ```bash
-# Validate all datasets against updated schema
-python -m knowledge_graph_cli validate-all \
+# Validate all datasets against updated schema (via pixi)
+pixi run python -m knowledge_graph_cli validate-all \
   --schema-version "2.7.0" \
   --report-format "detailed"
 
@@ -214,8 +251,8 @@ python -m knowledge_graph_cli validate-all \
 **Step 3: SHACL validation with generated shapes**
 
 ```bash
-# Run SHACL validation with auto-generated shapes
-python -m knowledge_graph_cli validate-shacl \
+# Run SHACL validation with auto-generated shapes (via pixi)
+pixi run python -m knowledge_graph_cli validate-shacl \
   --dataset-id "dataset_001" \
   --shapes-version "2.7.0"
 
@@ -234,8 +271,8 @@ python -m knowledge_graph_cli validate-shacl \
 **Step 1: Generate quality assessment report**
 
 ```bash
-# Comprehensive quality assessment
-python -m knowledge_graph_cli quality-assessment \
+# Comprehensive quality assessment (via pixi)
+pixi run python -m knowledge_graph_cli quality-assessment \
   --dataset-id "dataset_001" \
   --include-lineage \
   --confidence-threshold 0.0
@@ -246,8 +283,8 @@ python -m knowledge_graph_cli quality-assessment \
 **Step 2: Track data lineage and provenance**
 
 ```bash
-# Query provenance chain
-python -m knowledge_graph_cli sparql-query \
+# Query provenance chain (via pixi)
+pixi run python -m knowledge_graph_cli sparql-query \
   --query "SELECT ?activity ?entity ?agent WHERE {
     ?activity prov:used ?entity .
     ?activity prov:wasAssociatedWith ?agent .
@@ -260,8 +297,8 @@ python -m knowledge_graph_cli sparql-query \
 **Step 3: Evidence trail validation**
 
 ```bash
-# Validate evidence trails for enrichment decisions
-python -m knowledge_graph_cli validate-evidence \
+# Validate evidence trails for enrichment decisions (via pixi)
+pixi run python -m knowledge_graph_cli validate-evidence \
   --entity-id "subject_001" \
   --trace-sources
 
@@ -274,6 +311,52 @@ python -m knowledge_graph_cli validate-evidence \
 - Complete lineage tracking from raw NWB to RDF
 - Evidence trails maintained for all enrichment decisions
 - PROV-O ontology compliance for provenance
+
+### Scenario 6: Runtime Schema Discovery and Unknown Structure Handling
+
+**Step 1: Process NWB file with unknown extension**
+
+```bash
+# Create dataset with potentially unknown structure (via pixi)
+pixi run kg-create \
+  --title "Novel Dataset with Unknown Structures" \
+  --description "Dataset containing non-standard NWB extensions" \
+  --nwb-files "unknown_format.nwb"
+
+# Expected: Dataset created, unknown structures flagged for discovery
+```
+
+**Step 2: Trigger runtime schema discovery**
+
+```bash
+# Query for entities that don't match known schema classes (via pixi)
+pixi run kg-sparql \
+  --query "SELECT ?type ?property ?value WHERE {
+    ?entity rdf:type ?type .
+    ?entity ?property ?value .
+    FILTER NOT EXISTS { ?type rdfs:subClassOf nwb:KnownClass }
+  } LIMIT 100"
+
+# Expected: System discovers unknown entity types and properties
+```
+
+**Step 3: Analyze discovered properties**
+
+```bash
+# Get property analysis for unknown structures (via pixi)
+pixi run python -m agentic_neurodata_conversion.cli.knowledge_graph_cli analyze-unknown-schema \
+  --dataset-id "dataset_001" \
+  --output-format "json"
+
+# Expected: Inferred property types, suggested schema extensions
+```
+
+**Validation Criteria**:
+
+- Unknown structures detected without errors
+- Runtime schema discovery suggests valid NWB-LinkML extensions
+- Property types inferred from data structure analysis
+- Evidence trail maintained for discovery process
 
 ## Performance Benchmarks
 
@@ -288,18 +371,18 @@ python -m knowledge_graph_cli validate-evidence \
 ### Performance Testing Commands
 
 ```bash
-# Test query performance
-python -m knowledge_graph_cli benchmark-sparql \
+# Test query performance (via pixi)
+pixi run python -m knowledge_graph_cli benchmark-sparql \
   --query-file "benchmarks/complex_queries.sparql" \
   --iterations 10
 
-# Test concurrent access
-python -m knowledge_graph_cli stress-test \
+# Test concurrent access (via pixi)
+pixi run python -m knowledge_graph_cli stress-test \
   --concurrent-users 10 \
   --duration 60
 
-# Test dataset scale limits
-python -m knowledge_graph_cli scale-test \
+# Test dataset scale limits (via pixi)
+pixi run python -m knowledge_graph_cli scale-test \
   --nwb-files 100 \
   --operation "full-enrichment"
 ```
@@ -318,13 +401,13 @@ python -m knowledge_graph_cli scale-test \
 ### Recovery Procedures
 
 ```bash
-# Recover from validation failures
-python -m knowledge_graph_cli repair-dataset \
+# Recover from validation failures (via pixi)
+pixi run python -m knowledge_graph_cli repair-dataset \
   --dataset-id "dataset_001" \
   --validation-report "validation_errors.json"
 
-# Restart MCP server with state recovery
-python -m mcp_server.knowledge_graph_server \
+# Restart MCP server with state recovery (via pixi)
+pixi run python -m mcp_server.knowledge_graph_server \
   --recover-state \
   --backup-file "state_backup.json"
 ```

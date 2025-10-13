@@ -270,6 +270,70 @@ structured response formats **Attributes**:
 - Endpoints must be accessible and responsive
 - Responses must conform to MCP protocol standards
 
+### DataLadProvenance
+
+**Purpose**: Integration between PROV-O knowledge graph provenance and DataLad
+dataset version control, ensuring complete lineage tracking for all knowledge
+graph operations **Attributes**:
+
+- `id`: Unique provenance record identifier (URI)
+- `datalad_dataset_id`: DataLad dataset identifier (path or UUID)
+- `commit_hash`: Git commit hash for version tracking
+- `annex_key`: Git-annex key for large file tracking (if file >10MB)
+- `prov_entity_uri`: URI linking to PROV-O entity in knowledge graph
+- `operation_type`: Type of DataLad operation (create, save, get, install, drop)
+- `file_path`: Path to file within DataLad dataset
+- `file_size`: File size in bytes
+- `timestamp`: Operation timestamp
+- `user`: User who performed the operation
+- `message`: Commit message or operation description
+- `parent_commits`: List of parent commit hashes for history tracking
+
+**Relationships**:
+
+- `tracks` → KnowledgeGraph (1:1) - Links to knowledge graph being versioned
+- `hasProvenance` → PROV-O Entity (many:1) - Links to PROV-O provenance graph
+- `partOfDataset` → DataLadDataset (many:1) - Parent dataset container
+- `derivedFrom` → DataLadProvenance (many:many) - Provenance chain lineage
+
+**Validation Rules**:
+
+- MUST use DataLad Python API only (dl.save, dl.get, dl.status, etc.)
+- NEVER use DataLad CLI commands (constitutional requirement)
+- Files >10MB MUST be annexed to GIN remote storage
+- All knowledge graph state changes MUST have corresponding DataLad save
+- Commit hash must be valid git SHA-1 or SHA-256
+- PROV-O entity URI must resolve to valid RDF resource
+- Operation type must be one of: create, save, get, install, drop, subdatasets
+
+**DataLad Python API Examples**:
+
+```python
+# ✅ CORRECT - DataLad Python API usage
+import datalad.api as dl
+
+# Track knowledge graph generation
+ds = dl.Dataset("kg_outputs")
+dl.save(
+    dataset=ds,
+    path="rdf_triples/dataset_001.ttl",
+    message="Generated RDF triples for dataset_001 with PROV-O provenance"
+)
+
+# Get large ontology file from remote annex
+dl.get(path="kg_outputs/ontologies/nifstd_full.ttl")
+
+# Check dataset status for provenance tracking
+status = dl.status(dataset="kg_outputs")
+```
+
+**Constitutional Compliance Notes**:
+
+- Per CLAUDE.md Lines 31-48: ALL DataLad operations MUST use Python API
+- Per Constitution Principle V: DataLad for ALL data operations
+- Integration with PROV-O ensures semantic provenance alongside git history
+- Supports knowledge graph versioning for different NWB schema versions
+
 ## State Transitions
 
 ### Enrichment Workflow States

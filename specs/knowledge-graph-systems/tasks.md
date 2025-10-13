@@ -8,7 +8,7 @@
 
 ```
 1. Load plan.md from feature directory
-   → ✅ Found implementation plan with Python 3.12+, semantic web stack
+   → ✅ Found implementation plan with Python 3.12-3.13, semantic web stack
    → ✅ Extract: rdflib, linkml, pynwb, fastapi, mcp, SHACL validation libraries
 2. Load optional design documents:
    → ✅ data-model.md: Extract 11 entities → model tasks
@@ -48,17 +48,30 @@
 ## Phase 3.1: Setup
 
 - [ ] T001 Create knowledge graph project structure per implementation plan in
-      src/knowledge_graph/
-- [ ] T002 Initialize Python 3.12+ project with semantic web dependencies
-      (rdflib, linkml, pyshacl, fastapi, mcp)
+      agentic_neurodata_conversion/knowledge_graph/
+- [ ] T002 Add semantic web dependencies to pixi.toml (rdflib>=7.1.4, linkml>=1.5.0, pyshacl, fastapi>=0.100.0, mcp>=1.0.0) and run pixi install
+      Note: Python 3.12-3.13 environment managed via pixi (per pixi.toml: ">=3.12,<3.14")
 - [ ] T003 [P] Configure linting and formatting tools (ruff, mypy) for
       constitutional compliance
 - [ ] T004 [P] Set up LinkML schema processing pipeline in
-      src/knowledge_graph/schema/
+      agentic_neurodata_conversion/knowledge_graph/schema/
 - [ ] T005 [P] Configure SHACL validation framework with pyshacl in
-      src/knowledge_graph/validation/
+      agentic_neurodata_conversion/knowledge_graph/validation/
 
 ## Phase 3.2: Tests First (TDD) ⚠️ MUST COMPLETE BEFORE 3.3
+
+**CONSTITUTIONAL TDD WORKFLOW** (Constitution Principle II):
+1. ✅ **RED**: Write test and verify it FAILS with expected error
+2. ✅ **GREEN**: Implement minimum code to make test pass
+3. ✅ **REFACTOR**: Improve code while maintaining green tests
+
+**CRITICAL VERIFICATION STEPS**:
+- [ ] After writing each test: Run `pixi run test-quick [test-file]`
+- [ ] Confirm test FAILS with clear, expected error message
+- [ ] Document expected failure behavior in test docstring
+- [ ] Take screenshot or copy failure output for verification
+- [ ] Only after RED verification → proceed to implementation (GREEN)
+- [ ] After GREEN → refactor for quality while maintaining pass state
 
 **CRITICAL: These tests MUST be written and MUST FAIL before ANY
 implementation**
@@ -93,123 +106,150 @@ implementation**
       tests/integration/test_conflict_resolution.py
 - [ ] T018 [P] Integration test provenance tracking using PROV-O in
       tests/integration/test_provenance_tracking.py
+- [ ] T018a [P] Integration test unknown NWB structure handling with runtime
+      schema discovery in tests/integration/test_unknown_structures.py (covers
+      spec.md Edge Case 1)
 
 ## Phase 3.3: Core Implementation (ONLY after tests are failing)
 
 ### LinkML Schema and Models (Parallel - Different Entities)
 
 - [ ] T019 [P] Dataset model with NWB file limit validation in
-      src/knowledge_graph/models/dataset.py
+      agentic_neurodata_conversion/knowledge_graph/models/dataset.py
 - [ ] T020 [P] Session model with temporal boundaries in
-      src/knowledge_graph/models/session.py
+      agentic_neurodata_conversion/knowledge_graph/models/session.py
 - [ ] T021 [P] Subject model with species mapping in
-      src/knowledge_graph/models/subject.py
+      agentic_neurodata_conversion/knowledge_graph/models/subject.py
 - [ ] T022 [P] Device model with calibration tracking in
-      src/knowledge_graph/models/device.py
+      agentic_neurodata_conversion/knowledge_graph/models/device.py
 - [ ] T023 [P] Lab model with institutional affiliation in
-      src/knowledge_graph/models/lab.py
+      agentic_neurodata_conversion/knowledge_graph/models/lab.py
 - [ ] T024 [P] Protocol model with validation criteria in
-      src/knowledge_graph/models/protocol.py
+      agentic_neurodata_conversion/knowledge_graph/models/protocol.py
 - [ ] T025 [P] KnowledgeGraph model with RDF compliance in
-      src/knowledge_graph/models/knowledge_graph.py
+      agentic_neurodata_conversion/knowledge_graph/models/knowledge_graph.py
 - [ ] T026 [P] EnrichmentSuggestion model with confidence scoring in
-      src/knowledge_graph/models/enrichment.py
+      agentic_neurodata_conversion/knowledge_graph/models/enrichment.py
 - [ ] T027 [P] ValidationReport model with issue categorization in
-      src/knowledge_graph/models/validation.py
+      agentic_neurodata_conversion/knowledge_graph/models/validation.py
 - [ ] T028 [P] SchemaVersion model with artifact tracking in
-      src/knowledge_graph/models/schema_version.py
+      agentic_neurodata_conversion/knowledge_graph/models/schema_version.py
 - [ ] T029 [P] MCPTool model with protocol compliance in
-      src/knowledge_graph/models/mcp_tool.py
+      agentic_neurodata_conversion/knowledge_graph/models/mcp_tool.py
 
 ### Semantic Web Services (Sequential - Shared Dependencies)
 
 - [ ] T030 LinkML schema processor service in
-      src/knowledge_graph/schema/processor.py
+      agentic_neurodata_conversion/knowledge_graph/schema/processor.py
 - [ ] T031 RDF triple store service with SPARQL endpoint in
-      src/knowledge_graph/services/triple_store.py
+      agentic_neurodata_conversion/knowledge_graph/services/triple_store.py
 - [ ] T032 SHACL validation service with shape generation in
-      src/knowledge_graph/validation/shacl_validator.py
+      agentic_neurodata_conversion/knowledge_graph/validation/shacl_validator.py
 - [ ] T033 Metadata enrichment service with external sources in
-      src/knowledge_graph/enrichment/enrichment_engine.py
+      agentic_neurodata_conversion/knowledge_graph/enrichment/enrichment_engine.py
 - [ ] T034 Ontology mapping service with confidence scoring in
-      src/knowledge_graph/ontology/mapper.py
+      agentic_neurodata_conversion/knowledge_graph/ontology/mapper.py
 - [ ] T035 SPARQL query optimization service in
-      src/knowledge_graph/sparql/query_optimizer.py
+      agentic_neurodata_conversion/knowledge_graph/sparql/query_optimizer.py
 - [ ] T035a Query indexing strategy implementation in
-      src/knowledge_graph/sparql/indexing.py
+      agentic_neurodata_conversion/knowledge_graph/sparql/indexing.py
 - [ ] T035b Query plan analysis and optimization in
-      src/knowledge_graph/sparql/planner.py
-- [ ] T035c Query result caching service in src/knowledge_graph/sparql/cache.py
+      agentic_neurodata_conversion/knowledge_graph/sparql/planner.py
+- [ ] T035c Query result caching service in
+      agentic_neurodata_conversion/knowledge_graph/sparql/cache.py
 
-### API Endpoints (Sequential - Shared FastAPI App)
+### Service Layer (Sequential - Core Business Logic)
 
-- [ ] T036 POST /sparql endpoint with tiered timeout per constitutional
-      requirements (<200ms simple, <30s complex) in
-      src/knowledge_graph/api/sparql.py
-- [ ] T037 POST /datasets and GET /datasets endpoints in
-      src/knowledge_graph/api/datasets.py
-- [ ] T038 POST /datasets/{id}/enrich endpoint with human review in
-      src/knowledge_graph/api/enrichment.py
-- [ ] T039 POST /validation/shacl endpoint in
-      src/knowledge_graph/api/validation.py
-- [ ] T040 POST /validation/linkml endpoint in src/knowledge_graph/api/linkml.py
+**NOTE**: No direct API endpoints - all access through MCP tools per
+constitutional requirement. Services provide business logic for MCP adapter.
+
+- [ ] T036 SPARQL query service with tiered timeout (<200ms simple, <30s
+      complex) in agentic_neurodata_conversion/knowledge_graph/sparql/query_service.py
+- [ ] T037 Dataset management service in
+      agentic_neurodata_conversion/knowledge_graph/services/dataset_service.py
+- [ ] T038 Metadata enrichment service with human review workflow in
+      agentic_neurodata_conversion/knowledge_graph/enrichment/enrichment_service.py
+- [ ] T039 SHACL validation service in
+      agentic_neurodata_conversion/knowledge_graph/validation/shacl_service.py
+- [ ] T040 LinkML validation service in
+      agentic_neurodata_conversion/knowledge_graph/validation/linkml_service.py
 
 ### CLI Commands (Parallel - Different Command Modules)
 
-- [ ] T041 [P] CLI create-dataset command in src/cli/dataset_commands.py
-- [ ] T042 [P] CLI validate-linkml command in src/cli/validation_commands.py
-- [ ] T043 [P] CLI enrich-metadata command in src/cli/enrichment_commands.py
-- [ ] T044 [P] CLI sparql-query command in src/cli/query_commands.py
-- [ ] T045 [P] CLI review-suggestions command in src/cli/review_commands.py
+**NOTE**: CLI commands call MCP tools via local server instance, maintaining
+constitutional MCP-centric architecture.
+
+- [ ] T041 [P] CLI create-dataset command in
+      agentic_neurodata_conversion/cli/dataset_commands.py (calls MCP tools
+      locally)
+- [ ] T042 [P] CLI validate-linkml command in
+      agentic_neurodata_conversion/cli/validation_commands.py (calls MCP tools
+      locally)
+- [ ] T043 [P] CLI enrich-metadata command in
+      agentic_neurodata_conversion/cli/enrichment_commands.py (calls MCP tools
+      locally)
+- [ ] T044 [P] CLI sparql-query command in
+      agentic_neurodata_conversion/cli/query_commands.py (calls MCP tools
+      locally)
+- [ ] T045 [P] CLI review-suggestions command in
+      agentic_neurodata_conversion/cli/review_commands.py (calls MCP tools
+      locally)
 
 ## Phase 3.4: Integration
 
-### MCP Server Integration (Sequential - Shared MCP App)
+### MCP Agent SDK Integration (Sequential - Constitutional Compliance)
 
-- [ ] T046 MCP server setup with FastAPI backend in
-      src/mcp_server/knowledge_graph_server.py
-- [ ] T047 MCP tool sparql_query implementation in
-      src/knowledge_graph/mcp_tools/sparql_tool.py
-- [ ] T048 MCP tool enrich_metadata implementation in
-      src/knowledge_graph/mcp_tools/enrichment_tool.py
-- [ ] T049 MCP tool validate_schema implementation in
-      src/knowledge_graph/mcp_tools/validation_tool.py
-- [ ] T050 MCP tool resolve_conflicts implementation in
-      src/knowledge_graph/mcp_tools/conflict_tool.py
-- [ ] T051 MCP tool generate_rdf implementation in
-      src/knowledge_graph/mcp_tools/rdf_tool.py
-- [ ] T052 MCP tool query_ontology implementation in
-      src/knowledge_graph/mcp_tools/ontology_tool.py
+**CONSTITUTIONAL REQUIREMENT**: All MCP integration MUST use Claude Agent SDK
+(Constitution Principle I). Transport adapters MUST be thin (<500 LOC) with ZERO
+business logic.
+
+- [ ] T046 Register knowledge graph tools with Claude Agent SDK in
+      agentic_neurodata_conversion/mcp_server/tools/kg_tools.py (thin adapter
+      <500 LOC)
+- [ ] T047 MCP tool registration: sparql_query using @mcp.tool decorator,
+      delegates to knowledge_graph.sparql service
+- [ ] T048 MCP tool registration: enrich_metadata using @mcp.tool decorator,
+      delegates to knowledge_graph.enrichment service
+- [ ] T049 MCP tool registration: validate_schema using @mcp.tool decorator,
+      delegates to knowledge_graph.validation service
+- [ ] T050 MCP tool registration: resolve_conflicts using @mcp.tool decorator,
+      delegates to knowledge_graph.enrichment.conflict_resolver service
+- [ ] T051 MCP tool registration: generate_rdf using @mcp.tool decorator,
+      delegates to knowledge_graph.schema.rdf_generator service
+- [ ] T052 MCP tool registration: query_ontology using @mcp.tool decorator,
+      delegates to knowledge_graph.ontology service
+- [ ] T052a Verify adapter LOC <500 and contains ZERO business logic (only
+      parameter mapping and service delegation)
 
 ### Ontology and Provenance Integration
 
 - [ ] T053 NIFSTD ontology integration with concept mapping in
-      src/knowledge_graph/ontology/nifstd.py
+      agentic_neurodata_conversion/knowledge_graph/ontology/nifstd.py
 - [ ] T054 NCBITaxon species mapping with confidence scoring in
-      src/knowledge_graph/ontology/ncbi_taxon.py
+      agentic_neurodata_conversion/knowledge_graph/ontology/ncbi_taxon.py
 - [ ] T055 UBERON anatomy mapping integration in
-      src/knowledge_graph/ontology/uberon.py
+      agentic_neurodata_conversion/knowledge_graph/ontology/uberon.py
 - [ ] T056 CHEBI chemical entity mapping in
-      src/knowledge_graph/ontology/chebi.py
+      agentic_neurodata_conversion/knowledge_graph/ontology/chebi.py
 - [ ] T057 PROV-O provenance tracking implementation in
-      src/knowledge_graph/provenance/prov_tracker.py
+      agentic_neurodata_conversion/knowledge_graph/provenance/prov_tracker.py
 
 ### Quality Assurance and Performance
 
 - [ ] T058 Quality scoring service with configurable thresholds in
-      src/knowledge_graph/quality/scorer.py
+      agentic_neurodata_conversion/knowledge_graph/quality/scorer.py
 - [ ] T059 Evidence trail validation service in
-      src/knowledge_graph/quality/evidence_validator.py
+      agentic_neurodata_conversion/knowledge_graph/quality/evidence_validator.py
 - [ ] T060 Query performance optimization with indexing in
-      src/knowledge_graph/sparql/performance.py
+      agentic_neurodata_conversion/knowledge_graph/sparql/performance.py
 - [ ] T060a Runtime schema discovery service in
-      src/knowledge_graph/schema/discovery.py
+      agentic_neurodata_conversion/knowledge_graph/schema/discovery.py
 - [ ] T060b Dynamic entity type detection in
-      src/knowledge_graph/schema/entity_detector.py
+      agentic_neurodata_conversion/knowledge_graph/schema/entity_detector.py
 - [ ] T060c Property analysis and inference engine in
-      src/knowledge_graph/schema/property_inferrer.py
+      agentic_neurodata_conversion/knowledge_graph/schema/property_inferrer.py
 - [ ] T061 Concurrent access handling for 1-10 users in
-      src/knowledge_graph/services/concurrency.py
+      agentic_neurodata_conversion/knowledge_graph/services/concurrency.py
 
 ## Phase 3.5: Polish
 
@@ -236,22 +276,45 @@ implementation**
       tests/performance/test_query_timeout.py
 - [ ] T070 Load testing for 1-10 concurrent users in
       tests/performance/test_concurrent_load.py
+- [ ] T070a Load testing concurrent writes with consistency verification
+      (detect race conditions, validate conflict detection per FR-003) in
+      tests/performance/test_concurrent_consistency.py (covers spec.md Edge
+      Case 4)
 - [ ] T071 Scale testing for 100 NWB files per dataset in
       tests/performance/test_dataset_scale.py
 
+### Coverage Gates and Quality Verification (Constitutional Requirement)
+
+**CONSTITUTIONAL REQUIREMENT** (Principle II): Critical paths ≥90%, Standard features ≥85%
+
+- [ ] T072 Identify critical path components (SPARQL engine, validation,
+      enrichment core) in tests/critical_paths.md
+- [ ] T073 Verify critical path coverage ≥90%: pixi run pytest --cov
+      --cov-fail-under=90 tests/unit/test_sparql_*.py
+      tests/unit/test_validation_*.py tests/unit/test_enrichment_core.py
+- [ ] T074 Verify standard feature coverage ≥85%: pixi run pytest --cov
+      --cov-fail-under=85 agentic_neurodata_conversion/knowledge_graph/
+- [ ] T075 Generate comprehensive coverage report: pixi run test-cov
+- [ ] T076 Review uncovered lines and add tests for gaps >85% threshold
+- [ ] T077 Verify cyclomatic complexity <10 for all functions: pixi run ruff
+      check --select C901
+
 ### Documentation and Configuration
 
-- [ ] T072 [P] Update API documentation with OpenAPI specs in docs/api.md
-- [ ] T073 [P] Create deployment configuration for containerized environment in
+- [ ] T078 [P] Update API documentation with OpenAPI specs in docs/api.md
+- [ ] T079 [P] Create deployment configuration for containerized environment in
       config/deployment.yaml
-- [ ] T074 [P] Update constitutional compliance verification in
+- [ ] T080 [P] Update constitutional compliance verification in
       docs/constitutional_compliance.md
 
 ### Final Validation
 
-- [ ] T075 Run complete integration test suite from quickstart.md scenarios
-- [ ] T076 Validate W3C semantic web standards compliance
-- [ ] T077 Constitutional compliance audit for all components
+- [ ] T081 Run complete integration test suite from quickstart.md scenarios
+- [ ] T082 Validate W3C semantic web standards compliance (RDF, SPARQL, SHACL)
+- [ ] T083 Constitutional compliance audit for all components (all 7 principles)
+- [ ] T084 Verify MCP adapter LOC <500 with zero business logic
+- [ ] T085 Run full pre-commit hooks: pixi run pre-commit run --all-files
+- [ ] T086 Final coverage report verification with quality gates passing
 
 ## Dependencies
 
@@ -282,10 +345,10 @@ Task: "Contract test POST /validation/linkml endpoint in tests/contract/test_lin
 Task: "Contract test MCP tools in tests/contract/test_mcp_tools.py"
 
 # Launch model creation together (Phase 3.3):
-Task: "Dataset model with NWB file limit validation in src/knowledge_graph/models/dataset.py"
-Task: "Session model with temporal boundaries in src/knowledge_graph/models/session.py"
-Task: "Subject model with species mapping in src/knowledge_graph/models/subject.py"
-Task: "Device model with calibration tracking in src/knowledge_graph/models/device.py"
+Task: "Dataset model with NWB file limit validation in agentic_neurodata_conversion/knowledge_graph/models/dataset.py"
+Task: "Session model with temporal boundaries in agentic_neurodata_conversion/knowledge_graph/models/session.py"
+Task: "Subject model with species mapping in agentic_neurodata_conversion/knowledge_graph/models/subject.py"
+Task: "Device model with calibration tracking in agentic_neurodata_conversion/knowledge_graph/models/device.py"
 ```
 
 ## Notes

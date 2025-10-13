@@ -147,6 +147,31 @@ test-watch = "pytest-watch tests/ -- -q --no-cov"
 test-failed = "pytest tests/ -q --lf --no-cov"
 test-new = "pytest tests/ -q --ff --no-cov"
 
+# Knowledge Graph specific tasks (from knowledge-graph-systems spec)
+kg-create = "python -m agentic_neurodata_conversion.cli.knowledge_graph_cli create-dataset"
+kg-validate = "python -m agentic_neurodata_conversion.cli.knowledge_graph_cli validate-linkml"
+kg-validate-shacl = "python -m agentic_neurodata_conversion.cli.knowledge_graph_cli validate-shacl"
+kg-enrich = "python -m agentic_neurodata_conversion.cli.knowledge_graph_cli enrich-metadata"
+kg-review = "python -m agentic_neurodata_conversion.cli.knowledge_graph_cli review-suggestions"
+kg-sparql = "python -m agentic_neurodata_conversion.cli.knowledge_graph_cli sparql-query"
+kg-ontology = "python -m agentic_neurodata_conversion.cli.knowledge_graph_cli query-ontology"
+kg-quality = "python -m agentic_neurodata_conversion.cli.knowledge_graph_cli quality-assessment"
+kg-evidence = "python -m agentic_neurodata_conversion.cli.knowledge_graph_cli validate-evidence"
+kg-schema-info = "python -m agentic_neurodata_conversion.cli.knowledge_graph_cli schema-info"
+kg-schema-update = "python -m agentic_neurodata_conversion.cli.knowledge_graph_cli update-schema"
+kg-repair = "python -m agentic_neurodata_conversion.cli.knowledge_graph_cli repair-dataset"
+
+# Knowledge Graph testing tasks
+kg-test = "pytest tests/ -q -k knowledge_graph --no-cov"
+kg-test-cov = "pytest tests/ -q -k knowledge_graph --cov=agentic_neurodata_conversion.knowledge_graph --cov-report=html --cov-report=term-missing"
+kg-test-contract = "pytest tests/contract/ -q -k knowledge_graph --no-cov"
+kg-test-integration = "pytest tests/integration/ -q -k knowledge_graph --no-cov"
+
+# Knowledge Graph benchmarking
+kg-benchmark-sparql = "python -m agentic_neurodata_conversion.cli.knowledge_graph_cli benchmark-sparql"
+kg-stress-test = "python -m agentic_neurodata_conversion.cli.knowledge_graph_cli stress-test"
+kg-scale-test = "python -m agentic_neurodata_conversion.cli.knowledge_graph_cli scale-test"
+
 # Verbose testing tasks for debugging
 test-verbose = "pytest tests/ -v --no-cov"
 test-debug = "pytest tests/ -v -s --tb=long --pdb --no-cov"

@@ -445,20 +445,43 @@ components:
         - status
         - timestamp
 
+    # Constitutional Standard Error Schema (Constitution Principle IV)
+    # All features MUST use consistent error format with error codes, messages, and context
     Error:
       type: object
       properties:
-        error:
+        error_code:
           type: string
-          description: Error message
-        code:
+          description: Machine-readable error code (e.g., KG_VALIDATION_001)
+          example: "KG_SPARQL_TIMEOUT"
+          pattern: "^[A-Z_]+$"
+        message:
           type: string
-          description: Error code
-        details:
+          description: Human-readable error message
+          example: "SPARQL query exceeded 30-second timeout limit"
+        context:
           type: object
-          description: Additional error details
+          description: Additional error context for debugging
+          additionalProperties: true
+          example:
+            query_time: 32.5
+            timeout_limit: 30
+            dataset_id: "dataset_001"
+        timestamp:
+          type: string
+          format: date-time
+          description: Error occurrence timestamp
+        stack_trace:
+          type: string
+          description: Stack trace (development environment only)
+        request_id:
+          type: string
+          format: uuid
+          description: Request identifier for tracing
       required:
-        - error
+        - error_code
+        - message
+        - timestamp
 
   securitySchemes:
     ApiKeyAuth:

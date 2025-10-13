@@ -225,11 +225,43 @@ components:
         isError:
           type: boolean
           default: false
-        errorMessage:
-          type: string
-          description: Error message if isError is true
+        error:
+          $ref: "#/components/schemas/MCPError"
+          description: Standardized error object (if isError is true)
       required:
         - content
+
+    # Constitutional Standard Error Schema for MCP Tools (Constitution Principle IV)
+    MCPError:
+      type: object
+      properties:
+        error_code:
+          type: string
+          description: Machine-readable error code
+          example: "MCP_KG_SPARQL_TIMEOUT"
+          pattern: "^MCP_[A-Z_]+$"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "SPARQL query exceeded 30-second timeout"
+        context:
+          type: object
+          description: Error context for agent debugging
+          additionalProperties: true
+        timestamp:
+          type: string
+          format: date-time
+        tool_name:
+          type: string
+          description: MCP tool that generated the error
+        request_id:
+          type: string
+          format: uuid
+      required:
+        - error_code
+        - message
+        - timestamp
+        - tool_name
 
     MCPTool:
       type: object

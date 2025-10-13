@@ -72,28 +72,31 @@ RDF graphs with detailed error reporting
 
 ## MCP Server Architecture
 
-**Decision**: FastAPI-based MCP server with clean tool interface layer
+**Decision**: Claude Agent SDK with thin MCP adapter layer (<500 LOC)
 
 **Rationale**:
 
-- Async support enables concurrent access for 1-10 users as specified in
-  clarifications
-- Clean separation of concerns aligns with constitutional MCP integration
-  principles
-- FastAPI provides OpenAPI documentation for tool interfaces
-- Type hints and dependency injection support constitutional code quality
-  requirements
+- **Constitutional Requirement**: Constitution Principle I mandates "Claude Agent
+  SDK handles protocol communication, context management, and tool ecosystem"
+- Transport adapters must be thin (<500 LOC) with ZERO business logic
+- Agent SDK provides automatic context compaction and management
+- Built-in async support enables concurrent access for 1-10 users
+- Eliminates need for custom MCP server implementation
+- Clean separation: knowledge graph business logic in service layer, MCP
+  integration in thin adapter
 
 **Alternatives considered**:
 
+- Custom FastAPI-based MCP server: **REJECTED** - Violates Constitution
+  Principle I requirement for Claude Agent SDK
 - Synchronous server: Rejected due to concurrent user requirements
 - Direct integration without MCP layer: Rejected due to constitutional
   separation requirements
-- Flask-based implementation: Rejected due to async support limitations for
-  SPARQL queries
 
-**Implementation approach**: FastAPI app with MCP tool decorators, separate
-knowledge graph service layer
+**Implementation approach**: Register knowledge graph tools with Agent SDK's MCP
+extensibility using `@mcp.tool` decorators, business logic remains in separate
+`agentic_neurodata_conversion/knowledge_graph/` service layer, thin adapter in
+`agentic_neurodata_conversion/mcp_server/tools/kg_tools.py` (<500 LOC)
 
 ## Neuroscience Ontology Integration
 
