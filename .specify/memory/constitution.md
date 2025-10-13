@@ -13,6 +13,24 @@ components
 
 ---
 
+## Dependencies management
+
+This project uses python >=3.13. All dependencies should be managed using pixi.
+
+**Pixi‑only**
+
+- All commands not available on the shell MUST be run via `pixi`:
+  `pixi run <task>` or `pixi <subcommand>`. pixi tasks can be used for all
+  development related tasks. If too extensive the task can just run a python
+  script stored in the scripts directory.
+- Do NOT use `pip`, `conda`, `venv`, `python -m pip`, system Python, or
+  `PYTHONPATH` hacks.
+- Run scripts through pixi which can add custom dependencies to the script:
+  `pixi run python your_script.py`
+- Project dependencies should be managed using pixi.toml with appropriate
+  environments. The development environment with all development dependencies
+  should be the default so that people can get up and running quickly.
+
 ## Feature Organization
 
 This constitution governs 11 system features:
@@ -270,5 +288,5 @@ Constitutional principles override all other documentation.
 
 **Spec-Kit Artifacts**:
 
-- [ ] `/speckit.analyze` passed (link: ******\_******)
-- [ ] `/speckit.checklist` passed (link: ******\_******)
+- [ ] `/speckit.analyze` passed (link: **\*\***\_**\*\***)
+- [ ] `/speckit.checklist` passed (link: **\*\***\_**\*\***)
