@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pixi install:*)",
+      "Bash(pixi run pytest:*)",
+      "Bash(cat:*)",
+      "Bash(pixi run python:*)",
+      "Bash(curl -X POST http://localhost:8000/api/upload -F \"file=@test_data/spikeglx/Noise4Sam_g0_t0.imec0.ap.bin\")",
+      "Bash(curl:*)",
+      "Bash(python:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
