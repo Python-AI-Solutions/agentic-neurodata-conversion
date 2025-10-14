@@ -127,14 +127,12 @@ This specification uses **three consistent personas** to clarify who benefits fr
 - **Role**: "As a user"
 - **Goals**: Convert neurophysiology data to NWB format, validate data quality, receive scientifically meaningful reports
 - **Technical Level**: Intermediate (understands data formats, not necessarily software architecture)
-- **Story Count**: 14 stories
 - **Examples**: Upload files (Epic 4), view progress (Epic 10), download results (Epic 11), approve retries (Epic 8)
 
 ### **Persona 2: System (Technical Requirements)**
 - **Role**: "As the system"
 - **Definition**: Technical/architectural requirements that enable user-facing features
 - **Not a real user**: Represents system components, agent design, infrastructure, and internal protocols
-- **Story Count**: 37 stories (62% of total - largest category)
 - **Examples**: MCP server (Epic 1), format detection (Epic 5), conversion logic (Epic 6), evaluation (Epic 7), LLM reporting (Epic 9)
 - **Note**: Agent responsibilities are system requirements, not user needs. Stories say "As the system" instead of "As the Evaluation Agent"
 
@@ -142,20 +140,7 @@ This specification uses **three consistent personas** to clarify who benefits fr
 - **Role**: "As a developer"
 - **Goals**: Implement, test, debug, and maintain the system
 - **Technical Level**: Advanced (full-stack developer with AI/ML knowledge)
-- **Story Count**: 9 stories
 - **Examples**: Create sample datasets (Epic 12), write integration tests (Epic 12), set up infrastructure (Epic 12)
-
----
-
-**Persona Distribution Summary:**
-- **37 stories (62%)**: "As the system" - Technical infrastructure & agent design
-- **14 stories (23%)**: "As a user" - User-facing features
-- **9 stories (15%)**: "As a developer" - Testing & maintenance
-
-**Consistency Rules Applied:**
-✅ No agents as user story actors (agents are system components)
-✅ No mixing of roles (no "system architect", "frontend developer", "backend developer")
-✅ Three clear personas with distinct goals and story assignments
 
 ---
 
@@ -344,14 +329,17 @@ This specification uses **three consistent personas** to clarify who benefits fr
 
 ---
 
-### Story 4.3: Improvement Approval Handler
+### Story 4.3: Improvement Approval Handler (Deprecated - See Stories 8.2, 8.3, 8.3a)
 **Depends on**: Story 4.1, Story 7.3
 
-**As the** system
-**I want** to handle improvement approval requests from evaluation results
-**So that** users control when correction attempts happen
+**Note**: This story's functionality has been split into:
+- **Story 8.2**: User Improvement Notification (Conversation Agent notifies user)
+- **Story 8.3**: User Improvement Approval Handler (System handles decision)
+- **Story 8.3a**: User Accepts File With Warnings (User story for "Accept As-Is" path)
 
-**Acceptance Criteria:**
+This entry preserved for reference. Implementation should follow Stories 8.2, 8.3, and 8.3a.
+
+**Original Acceptance Criteria (now superseded):**
 - [ ] Agent receives context from Evaluation Agent via MCP (FAILED or PASSED_WITH_ISSUES)
 - [ ] Agent analyzes correction context (categorizes issues by severity)
 - [ ] For FAILED status:
@@ -370,7 +358,7 @@ This specification uses **three consistent personas** to clarify who benefits fr
 - [ ] IF user approves improvement/retry: Forward corrections to Conversion Agent
 - [ ] IF user declines/accepts-as-is: Finalize session with appropriate validation_status
 
-**Priority**: Critical
+**Priority**: Critical (Superseded)
 
 ---
 
@@ -395,6 +383,8 @@ This specification uses **three consistent personas** to clarify who benefits fr
   - Support: "Error ID: [uuid] - Include this in support requests"
 - [ ] Analysis completes in <5 seconds
 - [ ] LLM token usage tracked and logged
+
+**Note**: LLM failures during correction analysis are **critical errors** that stop the correction loop. For optional LLM usage (like Story 5.3 format detection), the system degrades gracefully.
 
 **Priority**: High
 
@@ -589,8 +579,11 @@ This specification uses **three consistent personas** to clarify who benefits fr
 - [ ] LLM prompt can reference NeuroConv documentation via MCP server
 - [ ] LLM response selects most likely interface with reasoning
 - [ ] Agent logs LLM reasoning for transparency
-- [ ] Agent proceeds with NeuroConv's highest-confidence result if LLM unavailable
+- [ ] **Graceful degradation**: Agent proceeds with NeuroConv's highest-confidence result if LLM unavailable (no exception raised)
+- [ ] Agent logs warning when LLM unavailable: "Format detection using NeuroConv default (LLM unavailable)"
 - [ ] Analysis completes in <10 seconds
+
+**Note**: This is **optional LLM usage** for enhancement. LLM failure does NOT stop the conversion (unlike Story 4.4 where LLM is critical).
 
 **Priority**: Medium
 
@@ -654,6 +647,9 @@ This specification uses **three consistent personas** to clarify who benefits fr
 - [ ] Agent computes SHA256 checksum of output file
 - [ ] Conversion progress logged with: format detected, interface used, file size, duration
 - [ ] Agent logs full NeuroConv error messages without modification (aids debugging)
+- [ ] **Error Recovery**: On conversion failure, agent sends error details to Conversation Agent via MCP
+- [ ] Conversation Agent receives error and notifies user with diagnostics
+- [ ] Global state marked as FAILED with error details stored
 
 **Priority**: Critical
 
@@ -716,12 +712,14 @@ This specification uses **three consistent personas** to clarify who benefits fr
 - [ ] Agent captures all Inspector issues (these are quality warnings, not schema violations)
 - [ ] Agent categorizes issues by severity (CRITICAL, ERROR, WARNING, BEST_PRACTICE)
 - [ ] Agent extracts check name, message, location for each issue
-- [ ] Agent determines overall status:
+- [ ] Agent determines overall evaluation status:
   - FAILED: If any CRITICAL or ERROR issues present (poor quality, may not be usable)
   - PASSED_WITH_ISSUES: If no CRITICAL/ERROR but has WARNING or BEST_PRACTICE issues (usable but improvable)
   - PASSED: If no issues at all (high quality)
 - [ ] Agent raises exceptions for Inspector timeouts or errors (defensive approach)
 - [ ] Evaluation completes in <2 minutes for typical files
+
+**Note**: `overall_status` (PASSED/PASSED_WITH_ISSUES/FAILED) is the **evaluation result** from NWB Inspector. The global state's `validation_status` (from Story 2.1) tracks the **final session outcome** including user decisions (e.g., "passed_accepted", "passed_improved", "failed_user_declined").
 
 **Priority**: Critical
 
@@ -749,35 +747,61 @@ This specification uses **three consistent personas** to clarify who benefits fr
 
 ## Epic 8: Self-Correction Loop
 
-### Story 8.1: Improvement Context Generation and User Notification
+### Story 8.1: Correction Context Generation
 **Depends on**: Story 7.3, Story 3.2
 
 **As the** system
-**I want** to generate actionable correction context and notify user when validation has issues
-**So that** the user can decide whether to attempt improvement
+**I want** to generate actionable correction context when validation has issues
+**So that** downstream agents can present options to users and orchestrate fixes
 
 **Acceptance Criteria:**
-- [ ] Agent generates correction context when status is FAILED or PASSED_WITH_ISSUES
+- [ ] Evaluation Agent generates correction context when status is FAILED or PASSED_WITH_ISSUES
 - [ ] For FAILED status:
   - Context includes all CRITICAL and ERROR issues with details
   - Agent generates FAILED report (JSON) with human-readable issue descriptions
-  - Agent sends notification: "Validation failed. Review issues and approve retry?"
 - [ ] For PASSED_WITH_ISSUES status:
   - Context includes all WARNING and BEST_PRACTICE issues with details
   - Agent generates PASSED report (PDF) with issue highlights
-  - Agent sends notification: "Validation passed with warnings. Would you like to improve the file by resolving these issues?"
 - [ ] Context categorizes issues by type (missing data, incorrect metadata, schema violations, etc.)
 - [ ] Context identifies auto-fixable issues vs. user-input-required issues
 - [ ] Context includes specific file locations and field names for each issue
-- [ ] Agent waits for user decision (approve improvement/decline)
 - [ ] Context is JSON-serializable and well-structured
+- [ ] Evaluation Agent sends context to Conversation Agent via MCP (does NOT interact with user directly)
 
 **Priority**: Critical
 
 ---
 
-### Story 8.2: User Improvement Approval Handler
-**Depends on**: Story 8.1
+### Story 8.2: User Improvement Notification
+**Depends on**: Story 8.1, Story 4.1
+
+**As the** system
+**I want** to notify users about validation results and improvement options
+**So that** users can make informed decisions about correction attempts
+
+**Acceptance Criteria:**
+- [ ] Conversation Agent receives correction context from Evaluation Agent via MCP
+- [ ] Agent analyzes context (categorizes issues by severity)
+- [ ] For FAILED status:
+  - Agent generates failure summary with CRITICAL/ERROR issues
+  - "Auto-fixable issues" list with descriptions
+  - "Requires your input" list with descriptions
+  - Agent sends message: "Validation failed. Review issues and approve retry?"
+- [ ] For PASSED_WITH_ISSUES status:
+  - Agent generates improvement summary with WARNING/BEST_PRACTICE issues
+  - "Auto-fixable improvements" list with descriptions
+  - "Requires your input for best results" list with descriptions
+  - Agent sends message: "File is valid but has warnings. Would you like to improve?"
+- [ ] Agent sends notification to API/UI via WebSocket
+- [ ] Agent waits indefinitely for user decision (no timeout)
+- [ ] Agent logs notification sent with timestamp and status type
+
+**Priority**: Critical
+
+---
+
+### Story 8.3: User Improvement Approval Handler
+**Depends on**: Story 8.2
 
 **As the** system
 **I want** to handle user decision on improvement approval
@@ -802,8 +826,28 @@ This specification uses **three consistent personas** to clarify who benefits fr
 
 ---
 
-### Story 8.3: Conversion Agent Self-Correction Handler
-**Depends on**: Story 8.2, Story 1.2
+### Story 8.3a: User Accepts File With Warnings
+**Depends on**: Story 8.2
+
+**As a** user
+**I want** to accept my file as valid despite warnings
+**So that** I can proceed with a usable file without further improvement
+
+**Acceptance Criteria:**
+- [ ] User sees "Accept As-Is" option when validation status is PASSED_WITH_ISSUES
+- [ ] User can review PDF report with all warnings before deciding
+- [ ] User can download NWB + PDF report immediately after accepting
+- [ ] System sets global validation_status to "passed_accepted"
+- [ ] No correction loop initiated (session ends successfully)
+- [ ] Decision logged: "User accepted file with N warnings at [timestamp]"
+- [ ] UI displays confirmation: "File accepted. Download ready."
+
+**Priority**: High
+
+---
+
+### Story 8.4: Conversion Agent Self-Correction Handler
+**Depends on**: Story 8.3, Story 1.2
 
 **As the** system
 **I want** to receive and process failure context when user approves retry
@@ -821,8 +865,8 @@ This specification uses **three consistent personas** to clarify who benefits fr
 
 ---
 
-### Story 8.4: Automatic Issue Correction
-**Depends on**: Story 8.3
+### Story 8.5: Automatic Issue Correction
+**Depends on**: Story 8.4
 
 **As the** system
 **I want** to automatically fix issues that don't require user input
@@ -844,8 +888,8 @@ This specification uses **three consistent personas** to clarify who benefits fr
 
 ---
 
-### Story 8.5: User Input Request for Unfixable Issues
-**Depends on**: Story 8.3, Story 4.5
+### Story 8.6: User Input Request for Unfixable Issues
+**Depends on**: Story 8.4, Story 4.5
 
 **As the** system
 **I want** to request user input for issues I cannot fix automatically
@@ -868,8 +912,8 @@ This specification uses **three consistent personas** to clarify who benefits fr
 
 ---
 
-### Story 8.6: Reconversion Orchestration
-**Depends on**: Story 8.4, Story 8.5, Story 6.3
+### Story 8.7: Reconversion Orchestration
+**Depends on**: Story 8.5, Story 8.6, Story 6.3
 
 **As the** system
 **I want** to orchestrate the reconversion process after applying fixes
@@ -894,8 +938,8 @@ This specification uses **three consistent personas** to clarify who benefits fr
 
 ---
 
-### Story 8.7: Self-Correction Loop Termination
-**Depends on**: Story 8.6
+### Story 8.8: Self-Correction Loop Termination
+**Depends on**: Story 8.7
 
 **As the** system
 **I want** to properly terminate the self-correction loop
@@ -920,8 +964,8 @@ This specification uses **three consistent personas** to clarify who benefits fr
 
 ---
 
-### Story 8.8: User Improvement Approval UI
-**Depends on**: Story 8.1
+### Story 8.9: User Improvement Approval UI
+**Depends on**: Story 8.2
 
 **As a** user
 **I want** to see validation results and decide whether to improve the file
@@ -1612,8 +1656,10 @@ This specification uses **three consistent personas** to clarify who benefits fr
   }
   ```
 - [ ] Failed conversions preserve all logs (saved to `logs/{session_id}/` directory) before raising exception
-- [ ] No graceful error handling or automatic retry logic (except user-controlled correction loop in Story 6.3)
-- [ ] LLM API failures raise `LLMAPIException` with HTTP status code, API error message, and retry-after header (if available)
+- [ ] No graceful error handling or automatic retry logic (except user-controlled correction loop in Story 8.7)
+- [ ] **LLM Error Handling Strategy**:
+  - **Critical LLM failures** (Stories 4.4, 9.3, 9.4): Raise `LLMAPIException` with HTTP status code, API error message, retry-after header. System stops correction loop.
+  - **Optional LLM failures** (Story 5.3 format detection): Log warning, degrade gracefully to NeuroConv default. No exception raised.
 - [ ] File I/O errors raise `FileProcessingException` with file path, operation attempted, and OS error code
 - [ ] Schema validation failures raise `NWBValidationException` with PyNWB error details and line numbers
 - [ ] All agent communication errors include MCP message ID, sender, receiver, and payload
