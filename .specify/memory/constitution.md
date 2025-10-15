@@ -1,21 +1,21 @@
 <!--
-Constitution Version: 0.0.1
+Constitution Version: 0.1.0
 Format: MVP Core Principles Only
 Ratified: 2025-10-09
-Last Amended: 2025-10-09
+Last Amended: 2025-01-14
 Source: Consolidated from 11 feature requirements (1,389 lines)
+Amendment: Removed Claude Agent SDK requirement, DataLad mandates, and LinkML schema-first for MVP
 -->
 
 # Agentic Neurodata Conversion Constitution (MVP)
 
-**Version**: 0.0.1 **Ratified**: 2025-10-09 **Scope**: All system features and
-components
+**Version**: 0.1.0 **Ratified**: 2025-10-09 **Last Amended**: 2025-01-14 **Scope**: All system features and components
 
 ---
 
 ## Dependencies management
 
-This project uses python >=3.13. All dependencies should be managed using pixi.
+This project uses Python 3.13 (exact version). All dependencies should be managed using pixi.
 
 **Pixi‑only**
 
@@ -33,20 +33,16 @@ This project uses python >=3.13. All dependencies should be managed using pixi.
 
 ## Feature Organization
 
-This constitution governs 11 system features:
+This constitution governs the following system features:
 
-1. **MCP Server Architecture** - Core orchestration layer
-2. **Agent Implementations** - Specialized AI agents (conversation, conversion,
-   evaluation, questioner)
-3. **Agent SDK Integration** - Claude Agent SDK wrappers and thin adapters
-4. **Client Libraries & Integrations** - Client SDKs
-5. **Core Project Organization** - Project infrastructure
-6. **Data Management & Provenance** - DataLad integration
-7. **Evaluation & Reporting** - Quality metrics
-8. **Knowledge Graph Systems** - Semantic data representation
-9. **Test Verbosity Optimization** - Testing output management
-10. **Testing & Quality Assurance** - Test framework
-11. **Validation & Quality Assurance** - NWB validation
+1. **MCP Server Architecture** - Core orchestration layer (model-agnostic)
+2. **Agent Implementations** - Specialized AI agents (conversation, conversion, evaluation)
+3. **Client Libraries & Integrations** - Client SDKs
+4. **Core Project Organization** - Project infrastructure
+5. **Evaluation & Reporting** - Quality metrics
+6. **Test Verbosity Optimization** - Testing output management
+7. **Testing & Quality Assurance** - Test framework
+8. **Validation & Quality Assurance** - NWB validation
 
 ## Core Principles
 
@@ -58,14 +54,13 @@ tools. The MCP server is the single orchestration point.
 **Requirements**:
 
 - All business logic resides in transport-agnostic core services
-- Transport adapters are thin (<500 LOC) with ZERO business logic using Claude
-  Agent SDK
-- Claude Agent SDK handles protocol communication, context management, and tool
-  ecosystem
+- MCP server implementation MUST be model-agnostic (support any LLM provider)
+- Use MCP Python package (`mcp>=1.0.0`) for protocol communication
+- Agents communicate with MCP server via HTTP/REST (no direct agent-to-agent calls)
 - Direct agent invocation or feature-to-feature communication without MCP
   mediation is PROHIBITED
 
-**Verification**: Contract tests verify adapter behavior; integration tests
+**Verification**: Contract tests verify API behavior; integration tests
 verify MCP mediation.
 
 ---
@@ -93,33 +88,32 @@ implementation.
 - **Unit**: Test individual components
 - **Integration**: Test cross-feature workflows
 - **Contract**: 100% OpenAPI coverage, schema validation
-- **E2E**: Test with real DataLad datasets
+- **E2E**: Test with real neuroscience datasets
 
 **Verification**: CI enforces coverage; code reviews reject untested code.
 
 ---
 
-### III. Schema-First Development (NON-NEGOTIABLE)
+### III. Data Validation & Type Safety (NON-NEGOTIABLE)
 
-NWB-LinkML schema is the canonical source. Every data structure MUST start with
-schema definition.
+All data structures MUST be validated and type-safe. Use Pydantic models for runtime validation.
 
-**Schema Workflow**:
+**Validation Workflow**:
 
-1. Define or extend LinkML schema FIRST
-2. Generate artifacts (JSON-LD contexts, SHACL shapes, Pydantic validators)
-3. Implement validation using schema-derived validators
+1. Define Pydantic models FIRST
+2. Add comprehensive type hints
+3. Implement validation logic
 4. Create tests
 5. ONLY THEN implement features
 
 **Standards**:
 
-- **NWB-LinkML**: Canonical source
-- **LinkML Validation**: Runtime validation with Pydantic
-- **Semantic Web**: RDF, OWL, SPARQL, SHACL support
-- **JSON-LD Contexts**: Auto-generated from schemas
+- **Pydantic**: Runtime validation and serialization
+- **Type Hints**: Full type coverage with mypy strict mode
+- **NWB Schema**: Follow NWB format specifications for neuroscience data
+- **OpenAPI**: Auto-generated from Pydantic models for API contracts
 
-**Verification**: CI rejects features without schema definition.
+**Verification**: CI enforces type checking and validation test coverage.
 
 ---
 
@@ -133,15 +127,13 @@ cross-feature dependencies except through MCP server.
 - **Single Responsibility**: Each feature handles one domain
 - **Defined Interfaces**: All inter-feature communication through MCP tools with
   OpenAPI contracts
-- **Isolated Testing**: Each feature testable in isolation with mocked
-  dependencies
+- **Isolated Testing**: Each feature testable in isolation (test with real services in dependency order)
 - **Clear Boundaries**: No direct imports between features
 
 **Feature Organization**:
 
 - Core service layer (business logic)
 - Interface layer (MCP tools, contracts)
-- Adapter layer (transport-specific, thin)
 - Test layer (unit, integration, contract, e2e)
 
 **Verification**: Contract tests verify interfaces; each feature has independent
@@ -149,31 +141,27 @@ test suite.
 
 ---
 
-### V. Data Integrity & Complete Provenance (NON-NEGOTIABLE)
+### V. Data Integrity & Validation (NON-NEGOTIABLE)
 
-All data transformations MUST be tracked with complete provenance.
+All data transformations MUST be validated for quality and compliance.
 
 **Requirements**:
 
-- **DataLad Integration**: ALL data operations use DataLad
-- **Provenance Tracking**: PROV-O ontology for all transformations, stored in
-  RDF knowledge graph
-- **Validation Pipeline**: Multi-stage validation (input → schema → NWB
-  Inspector → domain rules)
-- **Version Control**: All data files annexed (git-annex + GIN storage for
-  files >10MB)
-- **Reproducibility**: Bit-for-bit reproduction with recorded parameters
+- **Session Context Tracking**: All workflow state persisted (Redis + filesystem)
+- **Validation Pipeline**: Multi-stage validation (input → conversion → NWB Inspector)
+- **Error Recovery**: Session-level recovery from any failure point
+- **Reproducibility**: All conversion parameters recorded in session context
 
 **Validation Stages**:
 
-1. Input structure validation
-2. Schema compliance (LinkML + NWB schema)
+1. Input structure validation (format detection)
+2. Conversion with NeuroConv
 3. NWB Inspector validation
-4. Domain-specific rules
-5. Metadata completeness
+4. Quality metrics generation
+5. Metadata completeness checks
 
-**Verification**: All conversions produce PROV-O provenance; DataLad API usage
-enforced by linters.
+**Verification**: All conversions produce validation reports; session context
+persisted at each stage.
 
 ---
 
@@ -186,7 +174,7 @@ using pre-commit hooks.
 
 - **Code Quality**: Automated linting, type checking, cyclomatic complexity <10
 - **Test Coverage**: ≥85% (≥90% for critical paths)
-- **Input Validation**: Schema-based validation for all inputs
+- **Input Validation**: Pydantic-based validation for all inputs
 
 **Logging**:
 
@@ -245,9 +233,9 @@ feature-to-feature calls are PROHIBITED.
 All feature interfaces defined by OpenAPI contracts. Contract tests enforce
 compliance.
 
-### 3. DataLad for Data Exchange
+### 3. Session Context for Data Exchange
 
-All data shared between features tracked in DataLad datasets with provenance.
+All data shared between features tracked in session context with state persistence.
 
 ### 4. Consistent Error Handling
 
@@ -279,9 +267,9 @@ Constitutional principles override all other documentation.
 
 - [ ] MCP-mediated (no direct feature calls)
 - [ ] Tests written before implementation (TDD)
-- [ ] Schema defined before features
+- [ ] Pydantic models defined before features
 - [ ] Feature boundaries respected (no cross-feature imports)
-- [ ] Provenance tracking implemented
+- [ ] Session context tracking implemented
 - [ ] Quality gates passed (coverage ≥85%, linting, type checking)
 - [ ] Spec-Kit workflow followed (`/speckit.analyze` + `/speckit.checklist`
       passed)

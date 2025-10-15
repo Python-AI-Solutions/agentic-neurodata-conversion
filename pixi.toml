@@ -4,14 +4,14 @@ version = "0.1.0"
 description = "Multi-agent system for converting neuroscience data to NWB format using MCP server architecture"
 authors = ["Agentic Neurodata Conversion Team <support@pythonaisolutions.com>"]
 channels = ["conda-forge", "pyviz", "pytorch"]
-platforms = ["linux-64", "osx-arm64"]
+platforms = ["linux-64", "osx-arm64", "win-64"]
 
 [system-requirements]
 libc = { family="glibc", version="2.17" }
 
 # Base dependencies from conda-forge
 [dependencies]
-python = ">=3.12,<3.14"
+python = "3.13.*"
 pip = "*"
 
 # System dependencies for neuroscience tools
@@ -41,6 +41,13 @@ aiofiles = ">=23.0.0"
 
 # MCP (Model Context Protocol) server
 mcp = ">=1.0.0"
+
+# LLM Provider SDKs
+anthropic = ">=0.18.0"
+openai = ">=1.0.0"
+
+# Redis for session context
+redis = ">=5.0.0"
 
 # Neuroscience specific packages
 neuroconv = ">=0.4.0"
