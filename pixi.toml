@@ -1,245 +1,53 @@
 [project]
 name = "agentic-neurodata-conversion"
 version = "0.1.0"
-description = "Multi-agent system for converting neuroscience data to NWB format using MCP server architecture"
-authors = ["Agentic Neurodata Conversion Team <support@pythonaisolutions.com>"]
-channels = ["conda-forge", "pyviz", "pytorch"]
-platforms = ["linux-64", "osx-arm64"]
+description = "AI-assisted neurodata conversion to NWB format using multi-agent architecture"
+authors = ["Aditya Patane <aditya@example.com>"]
+channels = ["conda-forge"]
+platforms = ["osx-64", "osx-arm64", "linux-64", "win-64"]
 
-[system-requirements]
-libc = { family="glibc", version="2.17" }
-
-# Base dependencies from conda-forge
 [dependencies]
-python = ">=3.12,<3.14"
-pip = "*"
-
-# System dependencies for neuroscience tools
-hdf5 = ">=1.12.0"
-numpy = ">=1.24.0"
-scipy = ">=1.10.0"
-
-# HTTP and async dependencies
-httpx = ">=0.24.0"
-uvicorn = ">=0.20.0"
-
-# Development tools
-git = "*"
-make = "*"
-pandas = ">=2.3.2,<3"
-pbr = ">=7.0.1,<8"
+python = ">=3.13"
+fastapi = ">=0.115.0"
+uvicorn = ">=0.32.0"
+pydantic = ">=2.9.0"
+reportlab = ">=4.2.5"
+jinja2 = ">=3.1.4"
+pytest = ">=8.3.3"
+pytest-cov = ">=6.0.0"
+pytest-asyncio = ">=0.24.0"
+httpx = ">=0.27.2"
+pyyaml = ">=6.0.2"
+numpy = ">=2.1.3"
+h5py = ">=3.12.1"
 
 [pypi-dependencies]
-# Install the package itself in editable mode
-agentic-neurodata-conversion = { path = ".", editable = true }
+neuroconv = ">=0.6.3"
+pynwb = ">=2.8.2"
+nwbinspector = ">=0.4.36"
+anthropic = ">=0.39.0"
+websockets = ">=13.1"
+spikeinterface = ">=0.101.0"
 
-# Core Python dependencies
-pydantic = ">=2.0.0"
-pydantic-settings = ">=2.0.0"
-fastapi = ">=0.100.0"
-aiofiles = ">=23.0.0"
-
-# MCP (Model Context Protocol) server
-mcp = ">=1.0.0"
-
-# Neuroscience specific packages
-neuroconv = ">=0.4.0"
-pynwb = ">=3.1.2,<4"
-nwbinspector = ">=0.4.0"
-
-# Knowledge graph and validation
-linkml = ">=1.5.0"
-rdflib = ">=7.1.4,<8"
-
-# CLI and utilities
-click = ">=8.0.0"
-rich = ">=13.0.0"
-typer = ">=0.9.0"
-python-dotenv = ">=1.0.0"
-
-# Build tools (PyPI only)
-build = ">=0.10.0"
-twine = ">=4.0.0"
-
-# Development environment
-[feature.dev.dependencies]
-# Testing framework
-pytest = ">=7.0.0"
-pytest-asyncio = ">=0.21.0"
-pytest-cov = ">=4.0.0"
-pytest-mock = ">=3.10.0"
-pytest-xdist = ">=3.0.0"
-
-# Code quality tools
-ruff = ">=0.1.0"
-mypy = ">=1.5.0"
-pre-commit = ">=3.0.0"
-
-# Development utilities
-ipython = ">=8.0.0"
-jupyter = ">=1.0.0"
-notebook = ">=7.0.0"
-datalad = ">=0.9.3,<2"
-pytest-timeout = ">=2.4.0,<3"
-
-# Security and quality tools
-bandit = ">=1.7.0"
-safety = ">=2.0.0"
-
-# Documentation environment
-[feature.docs.dependencies]
-mkdocs = ">=1.5.0"
-mkdocs-material = ">=9.0.0"
-mkdocstrings = ">=0.22.0"
-
-# Production environment (minimal dependencies)
-[feature.prod.dependencies]
-# Only essential runtime dependencies
-
-# Testing environment
-[feature.test.dependencies]
-pytest = ">=7.0.0"
-pytest-asyncio = ">=0.21.0"
-pytest-cov = ">=4.0.0"
-pytest-mock = ">=3.10.0"
-pytest-xdist = ">=3.0.0"
-
-# Environment definitions
-[environments]
-default = { features = ["dev"], solve-group = "default" }
-dev = { features = ["dev"], solve-group = "default" }
-test = { features = ["test"], solve-group = "test" }
-docs = { features = ["docs"], solve-group = "docs" }
-prod = { features = ["prod"], solve-group = "prod" }
-
-# Task definitions
 [tasks]
-
-# Setup and installation tasks
-setup-hooks = "pre-commit install"
-
 # Development tasks
-dev = "python -m agentic_neurodata_conversion.mcp_server --reload --debug"
-shell = "python"
-notebook = "jupyter notebook"
-
-# Code quality tasks
-lint = "ruff check agentic_neurodata_conversion/ tests/ examples/"
-lint-fix = "ruff check --fix agentic_neurodata_conversion/ tests/ examples/"
-format = "ruff format agentic_neurodata_conversion/ tests/ examples/"
-format-check = "ruff format --check agentic_neurodata_conversion/ tests/ examples/"
-type-check = "mypy agentic_neurodata_conversion/"
-quality = { cmd = "echo 'Running quality checks...'", depends-on = ["lint", "format-check", "type-check"] }
-
-# Testing tasks
-test = "pytest tests/ -q"
-test-quick = "pytest tests/ -q --no-cov"
-test-unit = "pytest tests/unit/ -q -m unit --no-cov"
-test-integration = "pytest tests/integration/ -q -m integration --no-cov"
-test-e2e = "pytest tests/e2e/ -q -m e2e --no-cov"
-test-fast = "pytest tests/ -q -m 'not slow and not requires_llm and not requires_datasets' --no-cov"
-test-slow = "pytest tests/ -q -m slow --no-cov"
-test-cov = "pytest tests/ -q --cov=agentic_neurodata_conversion --cov-report=html --cov-report=term-missing --cov-report=xml"
-test-cov-unit = "pytest tests/unit/ -q --cov=agentic_neurodata_conversion --cov-report=html --cov-report=term-missing"
-test-parallel = "pytest tests/ -q -n auto --no-cov"
-test-benchmark = "pytest tests/ -q --benchmark-only --no-cov"
-test-watch = "pytest-watch tests/ -- -q --no-cov"
-test-failed = "pytest tests/ -q --lf --no-cov"
-test-new = "pytest tests/ -q --ff --no-cov"
-
-# Verbose testing tasks for debugging
-test-verbose = "pytest tests/ -v --no-cov"
-test-debug = "pytest tests/ -v -s --tb=long --pdb --no-cov"
-test-detailed = "pytest tests/ -vv --tb=long --no-cov"
-
-# Specialized minimal tasks for automated execution
-test-summary = "pytest tests/ -q --tb=no --no-header --disable-warnings --no-cov"
-test-agent = "pytest tests/ -q --tb=no --no-header --disable-warnings --no-summary --no-cov"
-test-ci = "pytest tests/ -q --tb=line --no-header --no-cov"
-
-# Server tasks
-server = "python -m agentic_neurodata_conversion.mcp_server"
-server-dev = "python -m agentic_neurodata_conversion.mcp_server --reload --debug"
-server-prod = "python -m agentic_neurodata_conversion.mcp_server --host 0.0.0.0 --port 8000"
-
-# Documentation tasks
-docs = "mkdocs serve"
-docs-build = "mkdocs build"
-docs-deploy = "mkdocs gh-deploy"
+dev = "sh -c 'cd backend/src && uvicorn api.main:app --reload --host 0.0.0.0 --port 8000'"
+test = "pytest backend/tests -v --cov=backend/src --cov-report=term-missing"
+test-unit = "pytest backend/tests/unit -v"
+test-integration = "pytest backend/tests/integration -v"
+lint = "ruff check backend/"
+format = "ruff format backend/"
+typecheck = "mypy backend/src"
 
 # Utility tasks
-clean = """
-rm -rf build/ dist/ *.egg-info/ .coverage htmlcov/ .pytest_cache/ .mypy_cache/ .ruff_cache/ __pycache__/
-find . -type d -name __pycache__ -exec rm -rf {} +
-find . -type f -name "*.pyc" -delete
-"""
+generate-fixtures = "python backend/tests/fixtures/generate_toy_dataset.py"
+clean = "rm -rf backend/src/__pycache__ backend/tests/__pycache__ .pytest_cache .coverage htmlcov"
+serve = "python run_server.py"
 
-# Pre-commit tasks
-pre-commit-update = "pre-commit autoupdate"
+[feature.dev.dependencies]
+ruff = ">=0.7.4"
+mypy = ">=1.13.0"
+ipython = ">=8.29.0"
 
-# Build and release tasks
-build = "python -m build"
-check-build = { cmd = "python -m twine check dist/*", depends-on = ["build"] }
-
-# Environment info
-info = """
-echo "Pixi Environment Information:"
-echo "Python: $(python --version)"
-echo "Pip: $(pip --version)"
-echo "Platform: $(python -c 'import platform; print(platform.platform())')"
-echo "Architecture: $(python -c 'import platform; print(platform.architecture())')"
-pixi info
-"""
-
-# Example workflow tasks
-example-workflow = "python examples/python_client/workflow_example.py"
-example-simple = "python examples/python_client/simple_client.py"
-
-# Data management tasks (for future use with DataLad)
-data-init = "echo 'DataLad initialization placeholder'"
-data-get = "echo 'DataLad data retrieval placeholder'"
-data-status = "echo 'DataLad status check placeholder'"
-
-# Deployment tasks
-deploy-dev = "python scripts/deploy.py dev"
-deploy-prod = "python scripts/deploy.py prod"
-deploy-test = "python scripts/deploy.py test"
-deploy-stop = "python scripts/deploy.py stop"
-deploy-status = "python scripts/deploy.py status"
-deploy-logs = "python scripts/deploy.py logs"
-deploy-build = "python scripts/deploy.py build"
-deploy-clean = "python scripts/deploy.py stop --remove-volumes && docker system prune -f && docker volume prune -f"
-
-# Kubernetes deployment tasks
-k8s-deploy = "python scripts/deploy_k8s.py deploy"
-k8s-update = "python scripts/deploy_k8s.py update"
-k8s-status = "python scripts/deploy_k8s.py status"
-k8s-logs = "python scripts/deploy_k8s.py logs"
-k8s-delete = "python scripts/deploy_k8s.py delete"
-
-# Health check tasks
-health-check = "python scripts/health_check.py"
-health-check-json = "python scripts/health_check.py --json"
-health-check-quiet = "python scripts/health_check.py --quiet"
-
-# Setup tasks for deployment
-setup-dev-env = "python scripts/setup_env.py dev"
-setup-prod-env = "python scripts/setup_env.py prod"
-
-# Help task for deployment
-deploy-help = "python -c 'print(\"\\nAvailable Deployment Tasks:\\n\\nDocker Deployment:\\n  pixi run deploy-dev      - Start development environment\\n  pixi run deploy-prod     - Start production environment\\n  pixi run deploy-test     - Run tests in container\\n  pixi run deploy-stop     - Stop all services\\n  pixi run deploy-status   - Show deployment status\\n  pixi run deploy-logs     - Show service logs\\n  pixi run deploy-build    - Build Docker images\\n  pixi run deploy-clean    - Clean up containers and volumes\\n\\nKubernetes Deployment:\\n  pixi run k8s-deploy      - Deploy to Kubernetes\\n  pixi run k8s-update      - Update Kubernetes deployment\\n  pixi run k8s-status      - Show Kubernetes status\\n  pixi run k8s-logs        - Show Kubernetes logs\\n  pixi run k8s-delete      - Delete Kubernetes deployment\\n\\nHealth Checks:\\n  pixi run health-check    - Run health check\\n  pixi run health-check-json - Health check with JSON output\\n  pixi run health-check-quiet - Quiet health check\\n\\nSetup:\\n  pixi run setup-dev-env   - Setup development environment\\n  pixi run setup-prod-env  - Setup production environment\\n\\nDocker Images:\\n  pixi run docker-build    - Build Docker images\\n  pixi run docker-pull     - Pull latest images\\n  pixi run docker-push     - Push images to registry\\n\")'"
-
-# Docker image management
-docker-build = "docker-compose build"
-docker-pull = "docker-compose pull"
-docker-push = { cmd = """
-if [ -z "$REGISTRY" ]; then
-  echo "Error: REGISTRY variable not set"
-  echo "Usage: REGISTRY=your-registry.com pixi run docker-push"
-  exit 1
-fi
-docker tag agentic-neurodata-conversion:latest $REGISTRY/agentic-neurodata-conversion:latest
-docker push $REGISTRY/agentic-neurodata-conversion:latest
-""" }
-
-# Activation scripts removed to avoid warnings
+[environments]
+default = {features = ["dev"], solve-group = "default"}
