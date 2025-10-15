@@ -54,9 +54,8 @@ neuroconv = ">=0.4.0"
 pynwb = ">=3.1.2,<4"
 nwbinspector = ">=0.4.0"
 
-# Knowledge graph and validation
-linkml = ">=1.5.0"
-rdflib = ">=7.1.4,<8"
+# Note: LinkML and RDF libraries deferred to post-MVP per constitution
+# (Knowledge graph features not needed for MVP)
 
 # CLI and utilities
 click = ">=8.0.0"
@@ -86,8 +85,8 @@ pre-commit = ">=3.0.0"
 ipython = ">=8.0.0"
 jupyter = ">=1.0.0"
 notebook = ">=7.0.0"
-datalad = ">=0.9.3,<2"
 pytest-timeout = ">=2.4.0,<3"
+# Note: DataLad deferred to post-MVP per constitution
 
 # Security and quality tools
 bandit = ">=1.7.0"
