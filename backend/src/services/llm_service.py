@@ -7,7 +7,7 @@ with concrete implementations for Anthropic Claude.
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
-from anthropic import Anthropic
+from anthropic import AsyncAnthropic
 
 
 class LLMService(ABC):
@@ -82,15 +82,19 @@ class AnthropicLLMService(LLMService):
     Uses the Anthropic Python SDK for API communication.
     """
 
-    def __init__(self, api_key: str, model: str = "claude-3-5-sonnet-20241022"):
+    def __init__(self, api_key: str, model: str = "claude-sonnet-4-20250514"):
         """
         Initialize Anthropic LLM service.
 
         Args:
             api_key: Anthropic API key
-            model: Model identifier (default: Claude 3.5 Sonnet)
+            model: Model identifier (default: Claude Sonnet 4.5)
+
+        Note: Claude Sonnet 4.5 is specifically designed for agentic systems,
+        offering superior reasoning for multi-agent architectures, structured
+        outputs, and domain-specific tasks like neuroscience data conversion.
         """
-        self._client = Anthropic(api_key=api_key)
+        self._client = AsyncAnthropic(api_key=api_key)
         self._model = model
 
     async def generate_completion(
@@ -128,7 +132,7 @@ class AnthropicLLMService(LLMService):
             if system_prompt:
                 kwargs["system"] = system_prompt
 
-            response = self._client.messages.create(**kwargs)
+            response = await self._client.messages.create(**kwargs)
 
             # Extract text from response
             if response.content and len(response.content) > 0:

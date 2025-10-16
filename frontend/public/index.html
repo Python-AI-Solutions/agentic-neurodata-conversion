@@ -185,9 +185,114 @@
             background: #d1e7dd;
             border-radius: 6px;
         }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #495057;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-group .help-text {
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        .success-banner {
+            background: #d1e7dd;
+            border-left: 5px solid #198754;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 6px;
+        }
+
+        .warning-banner {
+            background: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 6px;
+        }
+
+        .error-banner {
+            background: #f8d7da;
+            border-left: 5px solid #dc3545;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 6px;
+        }
+
+        .connection-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .connection-status.connected {
+            background: #d1e7dd;
+            color: #0a3622;
+        }
+
+        .connection-status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
     </style>
 </head>
 <body>
+    <div class="connection-status disconnected" id="connectionStatus">
+        ⚠️ Connecting...
+    </div>
+
     <div class="container">
         <div class="header">
             <h1>🧠 Agentic Neurodata Conversion</h1>
@@ -232,10 +337,56 @@
             <h2>⚠️ Validation Issues Found</h2>
             <div class="retry-dialog">
                 <p><strong>The converted NWB file has validation issues.</strong></p>
+                <div id="issueBreakdown" style="margin: 20px 0;">
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
+                        <h3 style="margin-bottom: 10px;">Auto-Fixable Issues:</h3>
+                        <ul id="autoFixableList" style="margin-left: 20px;">
+                            <li>Loading...</li>
+                        </ul>
+                    </div>
+                    <div style="background: #fff3cd; padding: 15px; border-radius: 6px;">
+                        <h3 style="margin-bottom: 10px;">Requires Your Input:</h3>
+                        <ul id="userInputRequiredList" style="margin-left: 20px;">
+                            <li>Loading...</li>
+                        </ul>
+                    </div>
+                </div>
                 <p>Would you like to retry with corrections?</p>
                 <div style="margin-top: 20px;">
                     <button class="btn" onclick="approveRetry()">🔄 Retry with Corrections</button>
-                    <button class="btn btn-secondary" onclick="rejectRetry()">❌ Cancel</button>
+                    <button class="btn btn-secondary" onclick="rejectRetry()">❌ Decline Retry</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card hidden" id="passedWithIssuesCard">
+            <h2 style="color: #856404;">⚠️ Conversion Completed with Minor Issues</h2>
+            <div style="background: #fff3cd; padding: 20px; border-radius: 6px;">
+                <p><strong>The NWB file was successfully created but has minor validation issues.</strong></p>
+                <p>You can either accept the file as-is or attempt to improve it:</p>
+                <div id="minorIssuesList" style="margin: 20px 0; padding: 15px; background: white; border-radius: 6px;">
+                    <h3>Issues Found:</h3>
+                    <ul id="minorIssuesContent" style="margin-left: 20px;">
+                        <li>Loading...</li>
+                    </ul>
+                </div>
+                <div style="margin-top: 20px;">
+                    <button class="btn" onclick="acceptAsIs()">✓ Accept As-Is</button>
+                    <button class="btn" onclick="attemptImprovement()">🔧 Attempt Improvement</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal hidden" id="userInputModal">
+            <div class="modal-content">
+                <h2>Additional Information Needed</h2>
+                <p id="userInputPrompt">Please provide the following information:</p>
+                <div id="userInputForm" style="margin: 20px 0;">
+                    <!-- Dynamic form fields will be inserted here -->
+                </div>
+                <div style="margin-top: 20px;">
+                    <button class="btn" onclick="submitUserInput()">Submit</button>
+                    <button class="btn btn-secondary" onclick="closeUserInputModal()">Cancel</button>
                 </div>
             </div>
         </div>
@@ -263,8 +414,13 @@
 
     <script>
         const API_BASE = 'http://localhost:8000';
+        const WS_URL = 'ws://localhost:8000/ws';
         let selectedFile = null;
         let statusInterval = null;
+        let websocket = null;
+        let reconnectAttempts = 0;
+        const MAX_RECONNECT_ATTEMPTS = 5;
+        let correctionContext = null;
 
         // File upload handling
         const uploadSection = document.getElementById('uploadSection');
@@ -309,6 +465,82 @@
             selectedFile = null;
             fileInput.value = '';
             document.getElementById('selectedFile').classList.add('hidden');
+        }
+
+        // WebSocket connection management
+        function connectWebSocket() {
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                return;
+            }
+
+            try {
+                websocket = new WebSocket(WS_URL);
+
+                websocket.onopen = () => {
+                    console.log('WebSocket connected');
+                    reconnectAttempts = 0;
+                    updateConnectionStatus(true);
+                };
+
+                websocket.onmessage = (event) => {
+                    try {
+                        const message = JSON.parse(event.data);
+                        handleWebSocketMessage(message);
+                    } catch (error) {
+                        console.error('Error parsing WebSocket message:', error);
+                    }
+                };
+
+                websocket.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    updateConnectionStatus(false);
+                };
+
+                websocket.onclose = () => {
+                    console.log('WebSocket closed');
+                    updateConnectionStatus(false);
+
+                    // Attempt to reconnect with exponential backoff
+                    if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                        const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000);
+                        reconnectAttempts++;
+                        console.log(`Reconnecting in ${delay}ms... (attempt ${reconnectAttempts})`);
+                        setTimeout(connectWebSocket, delay);
+                    }
+                };
+            } catch (error) {
+                console.error('Error creating WebSocket:', error);
+                updateConnectionStatus(false);
+            }
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusEl = document.getElementById('connectionStatus');
+            if (connected) {
+                statusEl.className = 'connection-status connected';
+                statusEl.textContent = '✓ Connected';
+            } else {
+                statusEl.className = 'connection-status disconnected';
+                statusEl.textContent = reconnectAttempts >= MAX_RECONNECT_ATTEMPTS
+                    ? '⚠️ Connection Failed'
+                    : '⚠️ Connecting...';
+            }
+        }
+
+        function handleWebSocketMessage(message) {
+            console.log('WebSocket message:', message);
+
+            // Handle different event types
+            if (message.event_type === 'status_change') {
+                checkStatus(); // Refresh status display
+            } else if (message.event_type === 'log') {
+                addLog(message.data.level, message.data.message);
+            } else if (message.event_type === 'validation_complete') {
+                refreshLogs();
+                checkStatus();
+            } else if (message.event_type === 'conversion_complete') {
+                checkStatus();
+            }
         }
 
         async function uploadFile() {
@@ -360,16 +592,33 @@
 
                 updateStatusDisplay(data);
 
-                // Handle different states
+                // Hide all conditional cards first
+                document.getElementById('retryCard').classList.add('hidden');
+                document.getElementById('passedWithIssuesCard').classList.add('hidden');
+                document.getElementById('downloadCard').classList.add('hidden');
+
+                // Handle different states based on validation_status
                 if (data.status === 'awaiting_user_input') {
                     stopStatusPolling();
-                    // Might need format selection - check logs
+                    // Check if this is for metadata input (from retry flow)
+                    await checkForUserInputRequest();
                 } else if (data.status === 'awaiting_retry_approval') {
                     stopStatusPolling();
-                    showRetryDialog();
+                    await showRetryDialog();
                 } else if (data.status === 'completed') {
                     stopStatusPolling();
-                    showDownload();
+
+                    // Check validation status for status-aware UI
+                    if (data.validation_status === 'passed') {
+                        // Clean PASSED - show download with success banner
+                        showDownload('success');
+                    } else if (data.validation_status === 'passed_with_issues') {
+                        // PASSED_WITH_ISSUES - show improvement option
+                        await showPassedWithIssues();
+                    } else {
+                        // Default completed state
+                        showDownload('default');
+                    }
                     refreshLogs();
                 } else if (data.status === 'failed') {
                     stopStatusPolling();
@@ -395,12 +644,251 @@
             `;
         }
 
-        function showRetryDialog() {
+        async function showRetryDialog() {
+            // Fetch correction context from new endpoint
+            try {
+                const response = await fetch(`${API_BASE}/api/correction-context`);
+                const data = await response.json();
+
+                correctionContext = data;
+
+                // Update UI with issue breakdown
+                const autoFixableList = document.getElementById('autoFixableList');
+                const userInputRequiredList = document.getElementById('userInputRequiredList');
+
+                if (data.status === 'available') {
+                    // Display auto-fixable issues
+                    if (data.auto_fixable && data.auto_fixable.length > 0) {
+                        autoFixableList.innerHTML = data.auto_fixable.map(issue => `
+                            <li>
+                                <strong>${issue.issue}</strong><br>
+                                <small style="color: #6c757d;">${issue.suggestion}</small>
+                            </li>
+                        `).join('');
+                    } else {
+                        autoFixableList.innerHTML = '<li>None</li>';
+                    }
+
+                    // Display user input required issues
+                    if (data.user_input_required && data.user_input_required.length > 0) {
+                        userInputRequiredList.innerHTML = data.user_input_required.map(issue => `
+                            <li>
+                                <strong>${issue.issue}</strong><br>
+                                <small style="color: #6c757d;">${issue.suggestion}</small>
+                            </li>
+                        `).join('');
+                    } else {
+                        userInputRequiredList.innerHTML = '<li>None - all issues can be auto-fixed</li>';
+                    }
+                } else {
+                    // Fallback if no context available
+                    autoFixableList.innerHTML = '<li>Validation issues found - check logs for details</li>';
+                    userInputRequiredList.innerHTML = '<li>None</li>';
+                }
+
+            } catch (error) {
+                console.error('Error fetching correction context:', error);
+                // Fallback display
+                document.getElementById('autoFixableList').innerHTML = '<li>Error loading issue details</li>';
+                document.getElementById('userInputRequiredList').innerHTML = '<li>Check logs for details</li>';
+            }
+
             document.getElementById('retryCard').classList.remove('hidden');
         }
 
-        function showDownload() {
-            document.getElementById('downloadCard').classList.remove('hidden');
+        async function showPassedWithIssues() {
+            // Fetch validation results to show minor issues
+            try {
+                const response = await fetch(`${API_BASE}/api/logs?limit=50`);
+                const data = await response.json();
+
+                // Parse logs to find validation issues
+                const issuesLog = data.logs.find(log =>
+                    log.message.includes('validation') ||
+                    log.message.includes('warning')
+                );
+
+                const minorIssuesContent = document.getElementById('minorIssuesContent');
+                minorIssuesContent.innerHTML = '<li>Minor validation warnings found (check logs for details)</li>';
+
+            } catch (error) {
+                console.error('Error fetching validation results:', error);
+            }
+
+            document.getElementById('passedWithIssuesCard').classList.remove('hidden');
+        }
+
+        function showDownload(mode = 'default') {
+            const downloadCard = document.getElementById('downloadCard');
+            const downloadSection = downloadCard.querySelector('.download-section');
+
+            // Update styling based on mode
+            if (mode === 'success') {
+                downloadSection.style.background = '#d1e7dd';
+                downloadSection.innerHTML = `
+                    <h2>✅ Conversion Completed Successfully!</h2>
+                    <div class="success-banner">
+                        <strong>Perfect!</strong> Your NWB file passed all validation checks with no issues.
+                    </div>
+                    <p style="margin: 15px 0;">Your NWB file is ready to download and upload to DANDI</p>
+                    <button class="btn" onclick="downloadNWB()">⬇️ Download NWB File</button>
+                    <button class="btn btn-secondary" onclick="resetSession()">Start New Conversion</button>
+                `;
+            } else {
+                downloadSection.style.background = '#d1e7dd';
+                downloadSection.innerHTML = `
+                    <h2>✅ Conversion Completed!</h2>
+                    <p style="margin: 15px 0;">Your NWB file is ready to download</p>
+                    <button class="btn" onclick="downloadNWB()">⬇️ Download NWB File</button>
+                    <button class="btn btn-secondary" onclick="resetSession()">Start New Conversion</button>
+                `;
+            }
+
+            downloadCard.classList.remove('hidden');
+        }
+
+        async function acceptAsIs() {
+            // User accepts the PASSED_WITH_ISSUES file
+            document.getElementById('passedWithIssuesCard').classList.add('hidden');
+            showDownload('default');
+            addLog('info', 'User accepted file with minor issues');
+        }
+
+        async function attemptImprovement() {
+            // User wants to attempt fixing the minor issues
+            try {
+                const response = await fetch(`${API_BASE}/api/retry-approval`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({decision: 'approve'})
+                });
+
+                if (response.ok) {
+                    document.getElementById('passedWithIssuesCard').classList.add('hidden');
+                    startStatusPolling();
+                    addLog('info', 'Attempting to improve file quality...');
+                } else {
+                    addLog('error', 'Failed to start improvement process');
+                }
+            } catch (error) {
+                addLog('error', `Improvement error: ${error.message}`);
+            }
+        }
+
+        // Check for user input requests from backend
+        async function checkForUserInputRequest() {
+            try {
+                // Try to fetch correction context which may contain required_fields
+                const response = await fetch(`${API_BASE}/api/correction-context`);
+                const data = await response.json();
+
+                // Also check logs for user input requirements
+                const logsResponse = await fetch(`${API_BASE}/api/logs?limit=10`);
+                const logsData = await logsResponse.json();
+
+                const userInputLog = logsData.logs.find(log =>
+                    log.message.includes('User input required') && log.context
+                );
+
+                if (userInputLog && userInputLog.context.required_fields) {
+                    // Show user input modal with required fields
+                    showUserInputModal(userInputLog.context.required_fields);
+                } else {
+                    addLog('info', 'User input required - check logs for details');
+                }
+            } catch (error) {
+                console.error('Error checking for user input request:', error);
+            }
+        }
+
+        // User input modal functions
+        function showUserInputModal(fields) {
+            const modal = document.getElementById('userInputModal');
+            const form = document.getElementById('userInputForm');
+
+            // Clear previous form
+            form.innerHTML = '';
+
+            // Create form fields dynamically
+            fields.forEach(field => {
+                const formGroup = document.createElement('div');
+                formGroup.className = 'form-group';
+
+                const label = document.createElement('label');
+                label.textContent = field.label;
+                label.setAttribute('for', field.name);
+
+                let input;
+                if (field.type === 'select') {
+                    input = document.createElement('select');
+                    field.options.forEach(option => {
+                        const opt = document.createElement('option');
+                        opt.value = option.value;
+                        opt.textContent = option.label;
+                        input.appendChild(opt);
+                    });
+                } else if (field.type === 'textarea') {
+                    input = document.createElement('textarea');
+                } else {
+                    input = document.createElement('input');
+                    input.type = field.type || 'text';
+                }
+
+                input.id = field.name;
+                input.name = field.name;
+                input.required = field.required || false;
+
+                if (field.placeholder) {
+                    input.placeholder = field.placeholder;
+                }
+
+                formGroup.appendChild(label);
+                formGroup.appendChild(input);
+
+                if (field.helpText) {
+                    const helpText = document.createElement('div');
+                    helpText.className = 'help-text';
+                    helpText.textContent = field.helpText;
+                    formGroup.appendChild(helpText);
+                }
+
+                form.appendChild(formGroup);
+            });
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeUserInputModal() {
+            document.getElementById('userInputModal').classList.add('hidden');
+        }
+
+        async function submitUserInput() {
+            const form = document.getElementById('userInputForm');
+            const inputs = form.querySelectorAll('input, select, textarea');
+
+            const inputData = {};
+            inputs.forEach(input => {
+                inputData[input.name] = input.value;
+            });
+
+            try {
+                const response = await fetch(`${API_BASE}/api/user-input`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({input_data: inputData})
+                });
+
+                if (response.ok) {
+                    closeUserInputModal();
+                    startStatusPolling();
+                    addLog('info', 'User input submitted successfully');
+                } else {
+                    const data = await response.json();
+                    addLog('error', `Failed to submit input: ${data.detail || 'Unknown error'}`);
+                }
+            } catch (error) {
+                addLog('error', `Input submission error: ${error.message}`);
+            }
         }
 
         async function approveRetry() {
@@ -491,6 +979,7 @@
         }
 
         // Initialize
+        connectWebSocket();
         refreshLogs();
         checkStatus();
     </script>

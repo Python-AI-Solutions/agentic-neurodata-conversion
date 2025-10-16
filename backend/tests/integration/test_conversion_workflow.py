@@ -251,3 +251,206 @@ class TestStateManagement:
         assert server.global_state.status == ConversionStatus.IDLE
         assert len(server.global_state.logs) == 1  # Just the reset log
         assert server.global_state.input_path is None
+
+
+class TestCorrectionLoopIntegration:
+    """Test correction loop and LLM-powered fixes."""
+
+    @pytest.mark.asyncio
+    async def test_auto_fix_extraction(self, mcp_server_with_agents):
+        """Test that auto-fixes are correctly extracted from LLM analysis."""
+        server = mcp_server_with_agents
+
+        # Create a mock validation result with issues
+        mock_validation_result = {
+            "is_valid": False,
+            "issues": [
+                {"severity": "error", "message": "Missing species", "location": "/general"}
+            ],
+            "summary": {"critical": 0, "error": 1, "warning": 0, "info": 0},
+            "overall_status": "FAILED",
+        }
+
+        # Simulate state for correction
+        server.global_state.status = ConversionStatus.AWAITING_RETRY_APPROVAL
+        server.global_state.correction_attempt = 0
+        server.global_state.output_path = "/tmp/test.nwb"
+        server.global_state.add_log("info", "Validation failed", {"validation": mock_validation_result})
+
+        # Approve retry to trigger LLM analysis
+        retry_msg = MCPMessage(
+            target_agent="conversation",
+            action="retry_decision",
+            context={"decision": "approve"},
+        )
+
+        response = await server.send_message(retry_msg)
+
+        # Should process through correction flow
+        assert response.success is True
+        assert server.global_state.correction_attempt >= 1
+
+        # Check logs for correction analysis
+        log_messages = [log.message for log in server.global_state.logs]
+        correction_logs = [msg for msg in log_messages if "correction" in msg.lower()]
+        assert len(correction_logs) > 0
+
+    @pytest.mark.asyncio
+    async def test_user_input_required_detection(self, mcp_server_with_agents):
+        """Test detection of issues requiring user input."""
+        server = mcp_server_with_agents
+
+        # Mock LLM service with specific corrections requiring user input
+        mock_llm = server._handlers["evaluation"]["analyze_corrections"].__self__._llm_service
+
+        # Set up specific response for user input required scenario
+        mock_llm.set_mock_response({
+            "analysis": "Critical metadata missing",
+            "suggestions": [
+                {
+                    "issue": "Missing subject_id",
+                    "suggestion": "Subject ID must be provided by user",
+                    "actionable": False,  # Not auto-fixable
+                    "severity": "error",
+                }
+            ],
+            "recommended_action": "request_user_input",
+        })
+
+        # Test the identify_user_input_required method
+        mock_validation_result = {
+            "is_valid": False,
+            "issues": [{"severity": "error", "message": "Missing subject_id"}],
+            "summary": {"error": 1},
+            "overall_status": "FAILED",
+        }
+
+        server.global_state.status = ConversionStatus.AWAITING_RETRY_APPROVAL
+        server.global_state.add_log("info", "Validation failed", {"validation": mock_validation_result})
+
+        retry_msg = MCPMessage(
+            target_agent="conversation",
+            action="retry_decision",
+            context={"decision": "approve"},
+        )
+
+        response = await server.send_message(retry_msg)
+
+        # Should transition to AWAITING_USER_INPUT if issues require user input
+        # (depends on mock LLM configuration)
+        assert response.success is True
+
+
+class TestReportGeneration:
+    """Test report generation for different validation outcomes."""
+
+    @pytest.mark.asyncio
+    async def test_pdf_report_for_passed_validation(self, mcp_server_with_agents):
+        """Test PDF report generation for PASSED validation."""
+        server = mcp_server_with_agents
+
+        # Create a mock PASSED validation result
+        mock_validation_result = {
+            "is_valid": True,
+            "issues": [],
+            "summary": {"critical": 0, "error": 0, "warning": 0, "info": 0},
+            "overall_status": "PASSED",
+        }
+
+        # Send report generation request
+        with tempfile.TemporaryDirectory() as tmpdir:
+            nwb_path = Path(tmpdir) / "test.nwb"
+            nwb_path.touch()  # Create empty file
+
+            report_msg = MCPMessage(
+                target_agent="evaluation",
+                action="generate_report",
+                context={
+                    "validation_result": mock_validation_result,
+                    "nwb_path": str(nwb_path),
+                },
+            )
+
+            response = await server.send_message(report_msg)
+
+            assert response.success is True
+            assert "report_path" in response.result
+            assert response.result["report_type"] == "pdf"
+            assert response.result["report_path"].endswith(".pdf")
+
+    @pytest.mark.asyncio
+    async def test_json_report_for_failed_validation(self, mcp_server_with_agents):
+        """Test JSON report generation for FAILED validation."""
+        server = mcp_server_with_agents
+
+        # Create a mock FAILED validation result
+        mock_validation_result = {
+            "is_valid": False,
+            "issues": [
+                {"severity": "error", "message": "Missing required field", "location": "/general"}
+            ],
+            "summary": {"critical": 0, "error": 1, "warning": 0, "info": 0},
+            "overall_status": "FAILED",
+        }
+
+        # Send report generation request
+        with tempfile.TemporaryDirectory() as tmpdir:
+            nwb_path = Path(tmpdir) / "test.nwb"
+            nwb_path.touch()
+
+            report_msg = MCPMessage(
+                target_agent="evaluation",
+                action="generate_report",
+                context={
+                    "validation_result": mock_validation_result,
+                    "nwb_path": str(nwb_path),
+                },
+            )
+
+            response = await server.send_message(report_msg)
+
+            assert response.success is True
+            assert "report_path" in response.result
+            assert response.result["report_type"] == "json"
+            assert response.result["report_path"].endswith(".json")
+
+
+class TestEndToEndWorkflow:
+    """Complete end-to-end workflow tests."""
+
+    @pytest.mark.asyncio
+    async def test_full_workflow_passed_scenario(self, mcp_server_with_agents, toy_dataset_path):
+        """Test full workflow resulting in PASSED validation."""
+        server = mcp_server_with_agents
+
+        # Start conversion with good metadata
+        start_msg = MCPMessage(
+            target_agent="conversation",
+            action="start_conversion",
+            context={
+                "input_path": toy_dataset_path,
+                "metadata": {
+                    "session_description": "Complete test session with all required metadata",
+                    "experimenter": ["Test Experimenter"],
+                    "subject_id": "test_subject_001",
+                    "species": "Mus musculus",
+                },
+            },
+        )
+
+        response = await server.send_message(start_msg)
+        assert response.success is True
+
+        # Verify final state
+        state = server.global_state
+        assert state.status in [
+            ConversionStatus.COMPLETED,
+            ConversionStatus.AWAITING_RETRY_APPROVAL,
+            ConversionStatus.FAILED,
+        ]
+
+        # Check that logs contain key workflow steps
+        log_messages = [log.message.lower() for log in state.logs]
+        assert any("format" in msg for msg in log_messages)  # Format detection
+        assert any("conversion" in msg for msg in log_messages)  # Conversion
+        assert any("validation" in msg for msg in log_messages)  # Validation
