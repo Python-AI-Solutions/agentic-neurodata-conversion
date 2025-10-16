@@ -72,11 +72,94 @@ def get_or_create_mcp_server() -> MCPServer:
             )
 
         # Register agents
-        register_conversion_agent(_mcp_server)
+        register_conversion_agent(_mcp_server, llm_service=llm_service)
         register_evaluation_agent(_mcp_server, llm_service=llm_service)
         register_conversation_agent(_mcp_server, llm_service=llm_service)
 
     return _mcp_server
+
+
+async def _generate_upload_welcome_message(
+    filename: str,
+    file_size_mb: float,
+    llm_service,
+) -> dict:
+    """
+    Use LLM to generate a welcoming, informative upload response.
+
+    Args:
+        filename: Uploaded filename
+        file_size_mb: File size in MB
+        llm_service: LLM service instance
+
+    Returns:
+        Dictionary with message and detected info
+    """
+    # Fallback if no LLM
+    if not llm_service:
+        return {
+            "message": "File uploaded successfully, conversion started",
+            "detected_info": {},
+        }
+
+    # Analyze filename for clues
+    system_prompt = """You are a neuroscience data expert analyzing uploaded files.
+Based on the filename and size, provide:
+1. A warm, welcoming message
+2. What you detect about the file (format, likely data type)
+3. Brief expectations (conversion time, what happens next)
+
+Be friendly, specific, and helpful. Keep it to 2-3 sentences."""
+
+    user_prompt = f"""A user just uploaded a file:
+Filename: {filename}
+Size: {file_size_mb:.1f}MB
+
+Generate a welcoming message that shows you understand their file."""
+
+    output_schema = {
+        "type": "object",
+        "properties": {
+            "message": {
+                "type": "string",
+                "description": "Welcoming message (2-3 sentences)",
+            },
+            "detected_format": {
+                "type": "string",
+                "description": "Likely format if detectable from name",
+            },
+            "estimated_time_seconds": {
+                "type": "number",
+                "description": "Estimated conversion time",
+            },
+            "data_type": {
+                "type": "string",
+                "description": "Likely data type (ephys, imaging, etc.)",
+            },
+        },
+        "required": ["message"],
+    }
+
+    try:
+        response = await llm_service.generate_structured_output(
+            prompt=user_prompt,
+            output_schema=output_schema,
+            system_prompt=system_prompt,
+        )
+
+        return {
+            "message": response.get("message", "File uploaded successfully, conversion started"),
+            "detected_info": {
+                "format": response.get("detected_format"),
+                "estimated_time_seconds": response.get("estimated_time_seconds"),
+                "data_type": response.get("data_type"),
+            },
+        }
+    except Exception:
+        return {
+            "message": "File uploaded successfully, conversion started",
+            "detected_info": {},
+        }
 
 
 @app.on_event("startup")
@@ -190,9 +273,24 @@ async def upload_file(
             detail=error_msg,
         )
 
+    # Generate LLM-powered welcome message
+    file_size_mb = len(content) / (1024 * 1024)
+
+    # Get LLM service from MCP server
+    llm_service = None
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if api_key:
+        llm_service = create_llm_service(provider="anthropic", api_key=api_key)
+
+    welcome_data = await _generate_upload_welcome_message(
+        filename=file.filename,
+        file_size_mb=file_size_mb,
+        llm_service=llm_service,
+    )
+
     return UploadResponse(
         session_id="session-1",  # MVP: single session
-        message="File uploaded successfully, conversion started",
+        message=welcome_data["message"],  # LLM-POWERED!
         input_path=str(file_path),
         checksum=checksum,
     )
@@ -213,11 +311,12 @@ async def get_status():
         status=state.status,
         validation_status=state.validation_status,
         progress=None,  # MVP: no progress tracking
-        message=None,
+        message=state.llm_message,  # Include LLM conversational message
         input_path=state.input_path,
         output_path=state.output_path,
         correction_attempt=state.correction_attempt,
         can_retry=state.can_retry(),
+        conversation_type=state.conversation_type,  # NEW: conversational type
     )
 
 
@@ -311,6 +410,92 @@ async def submit_user_input(request: UserInputRequest):
     )
 
 
+@app.post("/api/chat")
+async def chat_message(message: str = Form(...)):
+    """
+    Send a conversational message to the LLM-driven chat.
+
+    This enables natural conversation for gathering metadata,
+    answering questions about validation issues, etc.
+
+    Args:
+        message: User's message
+
+    Returns:
+        LLM's response
+    """
+    from models import MCPMessage
+
+    mcp_server = get_or_create_mcp_server()
+
+    # Send conversational message
+    chat_msg = MCPMessage(
+        target_agent="conversation",
+        action="conversational_response",
+        context={"message": message},
+    )
+
+    response = await mcp_server.send_message(chat_msg)
+
+    if not response.success:
+        raise HTTPException(
+            status_code=500,
+            detail=response.error.get("message", "Failed to process message"),
+        )
+
+    result = response.result
+    return {
+        "message": result.get("message"),
+        "status": result.get("status"),
+        "needs_more_info": result.get("needs_more_info", False),
+        "extracted_metadata": result.get("extracted_metadata", {}),
+    }
+
+
+@app.post("/api/chat/smart")
+async def smart_chat(message: str = Form(...)):
+    """
+    Smart chat endpoint that works in ALL states, at ANY time.
+
+    This makes the system feel like Claude.ai - always ready to help.
+    Users can ask questions before upload, during conversion, after validation.
+    The LLM understands context and provides intelligent, state-aware responses.
+
+    Args:
+        message: User's message/question
+
+    Returns:
+        Intelligent response with optional action suggestions
+    """
+    from models import MCPMessage
+
+    mcp_server = get_or_create_mcp_server()
+    state = mcp_server.global_state
+
+    # Route to general query handler
+    query_msg = MCPMessage(
+        target_agent="conversation",
+        action="general_query",
+        context={"query": message},
+    )
+
+    response = await mcp_server.send_message(query_msg)
+
+    if not response.success:
+        raise HTTPException(
+            status_code=500,
+            detail=response.error.get("message", "Failed to process your question"),
+        )
+
+    result = response.result
+    return {
+        "type": result.get("type", "general_query_response"),
+        "answer": result.get("answer"),
+        "suggestions": result.get("suggestions", []),
+        "suggested_action": result.get("suggested_action"),
+    }
+
+
 @app.get("/api/validation", response_model=ValidationResponse)
 async def get_validation_results():
     """
@@ -328,6 +513,78 @@ async def get_validation_results():
         issues=[],
         summary={"critical": 0, "error": 0, "warning": 0, "info": 0},
     )
+
+
+@app.get("/api/correction-context")
+async def get_correction_context():
+    """
+    Get detailed correction context including issue breakdown.
+
+    Returns:
+        Correction context with auto-fixable and user-input-required issues
+    """
+    from models import MCPMessage
+
+    mcp_server = get_or_create_mcp_server()
+    state = mcp_server.global_state
+
+    # Search logs for LLM correction guidance
+    llm_guidance = None
+    validation_result = None
+
+    for log in reversed(state.logs):
+        if "LLM correction guidance" in log.message or "corrections" in log.message.lower():
+            # Try to extract correction data from log context
+            if log.context:
+                llm_guidance = log.context
+        if "validation" in log.message.lower() and log.context:
+            if "overall_status" in log.context:
+                validation_result = log.context
+
+    if not llm_guidance and not validation_result:
+        return {
+            "status": "no_context",
+            "message": "No correction context available",
+            "auto_fixable": [],
+            "user_input_required": [],
+        }
+
+    # Parse LLM guidance to extract issue breakdown
+    auto_fixable = []
+    user_input_required = []
+
+    if llm_guidance:
+        suggestions = llm_guidance.get("suggestions", [])
+        for suggestion in suggestions:
+            issue_info = {
+                "issue": suggestion.get("issue", "Unknown issue"),
+                "suggestion": suggestion.get("suggestion", ""),
+                "severity": suggestion.get("severity", "info"),
+            }
+
+            if suggestion.get("actionable", False):
+                auto_fixable.append(issue_info)
+            else:
+                user_input_required.append(issue_info)
+
+    # If no specific suggestions, extract from validation result
+    if not auto_fixable and not user_input_required and validation_result:
+        summary = validation_result.get("summary", {})
+        if summary.get("error", 0) > 0:
+            auto_fixable.append({
+                "issue": f"{summary['error']} validation errors found",
+                "suggestion": "System will attempt automatic corrections",
+                "severity": "error",
+            })
+
+    return {
+        "status": "available",
+        "correction_attempt": state.correction_attempt,
+        "can_retry": state.can_retry(),
+        "auto_fixable": auto_fixable,
+        "user_input_required": user_input_required,
+        "validation_summary": validation_result.get("summary", {}) if validation_result else {},
+    }
 
 
 @app.get("/api/logs", response_model=LogsResponse)
@@ -382,6 +639,50 @@ async def download_nwb():
         path=str(output_path),
         media_type="application/x-hdf5",
         filename=output_path.name,
+    )
+
+
+@app.get("/api/download/report")
+async def download_report():
+    """
+    Download the evaluation report (PDF or JSON).
+
+    Returns:
+        Report file as download
+    """
+    mcp_server = get_or_create_mcp_server()
+
+    if not mcp_server.global_state.output_path:
+        raise HTTPException(
+            status_code=404,
+            detail="No conversion output available",
+        )
+
+    # Find the report file
+    output_dir = Path(mcp_server.global_state.output_path).parent
+    output_stem = Path(mcp_server.global_state.output_path).stem
+
+    # Try PDF first
+    pdf_report = output_dir / f"{output_stem}_evaluation_report.pdf"
+    if pdf_report.exists():
+        return FileResponse(
+            path=str(pdf_report),
+            media_type="application/pdf",
+            filename=pdf_report.name,
+        )
+
+    # Try JSON
+    json_report = output_dir / f"{output_stem}_correction_context.json"
+    if json_report.exists():
+        return FileResponse(
+            path=str(json_report),
+            media_type="application/json",
+            filename=json_report.name,
+        )
+
+    raise HTTPException(
+        status_code=404,
+        detail="No report file available for download",
     )
 
 

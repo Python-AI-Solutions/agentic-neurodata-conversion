@@ -57,15 +57,29 @@ The API will be available at http://localhost:8000
 
 #### Open the Frontend UI
 
+**🎨 NEW: Chat-Based Interface (Recommended)**
+
+We now have a modern, conversational UI inspired by Claude.ai!
+
 1. Open a new terminal and start a simple HTTP server:
    ```bash
    cd frontend/public
    python -m http.server 3000
    ```
 
-2. Open your browser to http://localhost:3000
+2. Open your browser to:
+   - **Chat UI (Recommended)**: http://localhost:3000/chat-ui.html
+   - Classic UI: http://localhost:3000/index.html
 
-You should see the web interface for uploading and converting files.
+The chat interface provides:
+- 💬 Conversational interaction with AI assistant
+- 🎨 Modern, clean design
+- 🔄 Real-time WebSocket updates
+- ⚡ Interactive action buttons
+- 📊 Status-aware messaging
+- ✨ Smooth animations
+
+See [frontend/public/CHAT_UI_README.md](frontend/public/CHAT_UI_README.md) for details.
 
 ## Features
 

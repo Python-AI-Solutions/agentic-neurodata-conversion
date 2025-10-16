@@ -47,6 +47,10 @@ class StatusResponse(BaseModel):
         default=False,
         description="Whether retry is possible",
     )
+    conversation_type: Optional[str] = Field(
+        default=None,
+        description="Type of conversation (e.g., 'validation_analysis')",
+    )
 
 
 class UserDecision(str, Enum):

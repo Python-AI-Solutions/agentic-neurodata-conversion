@@ -75,6 +75,10 @@ class GlobalState(BaseModel):
     # Metadata
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
+    # Conversational state
+    conversation_type: Optional[str] = Field(default=None)
+    llm_message: Optional[str] = Field(default=None)
+
     # Logs and history
     logs: List[LogEntry] = Field(default_factory=list)
 
@@ -132,6 +136,10 @@ class GlobalState(BaseModel):
         """Increment the retry counter."""
         self.correction_attempt += 1
         self.updated_at = datetime.now()
+
+    def increment_correction_attempt(self) -> None:
+        """Alias for increment_retry for clarity."""
+        self.increment_retry()
 
     def update_status(self, status: ConversionStatus) -> None:
         """
