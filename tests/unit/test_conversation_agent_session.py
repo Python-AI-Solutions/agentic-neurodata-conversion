@@ -353,9 +353,9 @@ async def test_initialize_triggers_conversion_agent_after_initialization(
 
                     # Assert
                     assert mock_post.called
-                    # Verify it's posting to the message router
+                    # Verify it's posting to the correct internal endpoint
                     call_url = mock_post.call_args[0][0]
-                    assert "message/route" in call_url
+                    assert "route_message" in call_url
 
 
 @pytest.mark.asyncio

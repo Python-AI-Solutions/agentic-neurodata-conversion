@@ -275,12 +275,15 @@ Return ONLY the JSON object:"""
 
             # 6. Trigger conversion agent
             await self.http_client.post(
-                f"{self.mcp_server_url}/internal/message/route",
+                f"{self.mcp_server_url}/internal/route_message",
                 json={
-                    "session_id": session_id,
                     "target_agent": "conversion_agent",
-                    "task_name": "convert_dataset",
-                    "payload": {},
+                    "message_type": "agent_execute",
+                    "payload": {
+                        "task_name": "convert_dataset",
+                        "session_id": session_id,
+                        "parameters": {},
+                    },
                 },
             )
 
@@ -356,12 +359,15 @@ Return ONLY the JSON object:"""
 
             # 4. Trigger conversion agent retry
             await self.http_client.post(
-                f"{self.mcp_server_url}/internal/message/route",
+                f"{self.mcp_server_url}/internal/route_message",
                 json={
-                    "session_id": session_id,
                     "target_agent": "conversion_agent",
-                    "task_name": "convert_dataset",
-                    "payload": {},
+                    "message_type": "agent_execute",
+                    "payload": {
+                        "task_name": "convert_dataset",
+                        "session_id": session_id,
+                        "parameters": {},
+                    },
                 },
             )
 

@@ -213,9 +213,9 @@ async def test_handle_clarification_triggers_conversion_agent_retry(
 
                 # Assert
                 assert mock_post.called
-                # Verify it's posting to the message router
+                # Verify it's posting to the correct internal endpoint
                 call_url = mock_post.call_args[0][0]
-                assert "message/route" in call_url
+                assert "route_message" in call_url
                 # Verify it's targeting conversion_agent
                 call_json = mock_post.call_args[1]["json"]
                 assert call_json["target_agent"] == "conversion_agent"
