@@ -3,11 +3,99 @@ LLM service abstraction layer.
 
 Provides a provider-agnostic interface for LLM interactions,
 with concrete implementations for Anthropic Claude.
-"""
-from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
 
-from anthropic import Anthropic
+Features:
+- Exponential backoff retry logic
+- Graceful error recovery
+- Performance monitoring
+- Structured output support
+"""
+import asyncio
+import logging
+import time
+from abc import ABC, abstractmethod
+from typing import Any, Callable, Dict, List, Optional
+
+from anthropic import AsyncAnthropic
+
+# Configure logger for LLM performance monitoring
+logger = logging.getLogger(__name__)
+
+
+async def call_with_retry(
+    func: Callable,
+    max_retries: int = 3,
+    base_delay: float = 1.0,
+    max_delay: float = 10.0,
+    exponential_base: float = 2.0,
+    fallback: Optional[Callable] = None,
+) -> Any:
+    """
+    Call async function with exponential backoff retry.
+
+    Args:
+        func: Async function to call
+        max_retries: Maximum number of retry attempts
+        base_delay: Initial delay in seconds
+        max_delay: Maximum delay between retries
+        exponential_base: Base for exponential backoff calculation
+        fallback: Optional fallback function if all retries fail
+
+    Returns:
+        Result from func or fallback
+
+    Raises:
+        Last exception if all retries fail and no fallback provided
+    """
+    last_exception = None
+
+    for attempt in range(max_retries):
+        try:
+            result = await func()
+            if attempt > 0:
+                logger.info(f"Retry successful on attempt {attempt + 1}/{max_retries}")
+            return result
+
+        except Exception as e:
+            last_exception = e
+            logger.warning(
+                f"Attempt {attempt + 1}/{max_retries} failed: {str(e)[:100]}"
+            )
+
+            # Don't sleep on last attempt
+            if attempt < max_retries - 1:
+                # Calculate exponential backoff
+                delay = min(
+                    base_delay * (exponential_base ** attempt),
+                    max_delay
+                )
+                logger.info(f"Retrying in {delay:.2f} seconds...")
+                await asyncio.sleep(delay)
+
+    # All retries exhausted
+    logger.error(
+        f"All {max_retries} attempts failed. Last error: {str(last_exception)}"
+    )
+
+    # Try fallback if provided
+    if fallback:
+        try:
+            logger.info("Attempting fallback function...")
+            return await fallback()
+        except Exception as fallback_error:
+            logger.error(f"Fallback also failed: {str(fallback_error)}")
+            raise LLMServiceError(
+                f"All retries and fallback failed: {str(last_exception)}",
+                provider="retry_mechanism",
+                details={
+                    "max_retries": max_retries,
+                    "last_error": str(last_exception),
+                    "fallback_error": str(fallback_error)
+                }
+            )
+
+    # No fallback, raise last exception
+    raise last_exception
 
 
 class LLMService(ABC):
@@ -82,15 +170,19 @@ class AnthropicLLMService(LLMService):
     Uses the Anthropic Python SDK for API communication.
     """
 
-    def __init__(self, api_key: str, model: str = "claude-3-5-sonnet-20241022"):
+    def __init__(self, api_key: str, model: str = "claude-sonnet-4-20250514"):
         """
         Initialize Anthropic LLM service.
 
         Args:
             api_key: Anthropic API key
-            model: Model identifier (default: Claude 3.5 Sonnet)
+            model: Model identifier (default: Claude Sonnet 4.5)
+
+        Note: Claude Sonnet 4.5 is specifically designed for agentic systems,
+        offering superior reasoning for multi-agent architectures, structured
+        outputs, and domain-specific tasks like neuroscience data conversion.
         """
-        self._client = Anthropic(api_key=api_key)
+        self._client = AsyncAnthropic(api_key=api_key)
         self._model = model
 
     async def generate_completion(
@@ -99,23 +191,25 @@ class AnthropicLLMService(LLMService):
         system_prompt: Optional[str] = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
+        enable_retry: bool = True,
     ) -> str:
         """
-        Generate a text completion using Claude.
+        Generate a text completion using Claude with automatic retry.
 
         Args:
             prompt: User prompt
             system_prompt: Optional system prompt
             temperature: Sampling temperature (0.0-1.0)
             max_tokens: Maximum tokens to generate
+            enable_retry: Enable automatic retry with exponential backoff
 
         Returns:
             Generated text completion
 
         Raises:
-            LLMServiceError: If API call fails
+            LLMServiceError: If API call fails after all retries
         """
-        try:
+        async def _api_call():
             messages = [{"role": "user", "content": prompt}]
 
             kwargs = {
@@ -128,24 +222,58 @@ class AnthropicLLMService(LLMService):
             if system_prompt:
                 kwargs["system"] = system_prompt
 
-            response = self._client.messages.create(**kwargs)
+            # Start performance monitoring
+            start_time = time.time()
+            logger.info(
+                f"LLM API call starting: model={self._model}, "
+                f"max_tokens={max_tokens}, prompt_length={len(prompt)}"
+            )
 
-            # Extract text from response
-            if response.content and len(response.content) > 0:
-                return response.content[0].text
-            else:
+            try:
+                response = await self._client.messages.create(**kwargs)
+
+                # Log performance metrics
+                duration = time.time() - start_time
+                if duration > 10:
+                    logger.error(
+                        f"LLM API call VERY SLOW: {duration:.2f}s - "
+                        f"model={self._model}, tokens={max_tokens}"
+                    )
+                elif duration > 5:
+                    logger.warning(
+                        f"LLM API call slow: {duration:.2f}s - "
+                        f"model={self._model}, tokens={max_tokens}"
+                    )
+                else:
+                    logger.info(f"LLM API call completed: {duration:.2f}s")
+
+                # Extract text from response
+                if response.content and len(response.content) > 0:
+                    return response.content[0].text
+                else:
+                    raise LLMServiceError(
+                        "Empty response from API",
+                        provider="anthropic",
+                        details={"model": self._model, "duration": duration},
+                    )
+
+            except Exception as e:
+                duration = time.time() - start_time if 'start_time' in locals() else 0
+                logger.error(
+                    f"LLM API call failed after {duration:.2f}s: {str(e)} - "
+                    f"model={self._model}"
+                )
                 raise LLMServiceError(
-                    "Empty response from API",
+                    f"Failed to generate completion: {str(e)}",
                     provider="anthropic",
-                    details={"model": self._model},
+                    details={"model": self._model, "exception": str(e), "duration": duration},
                 )
 
-        except Exception as e:
-            raise LLMServiceError(
-                f"Failed to generate completion: {str(e)}",
-                provider="anthropic",
-                details={"model": self._model, "exception": str(e)},
-            )
+        # Use retry logic if enabled
+        if enable_retry:
+            return await call_with_retry(_api_call, max_retries=3)
+        else:
+            return await _api_call()
 
     async def generate_structured_output(
         self,
@@ -172,6 +300,13 @@ class AnthropicLLMService(LLMService):
             LLMServiceError: If generation fails or output parsing fails
         """
         import json
+
+        # Start performance monitoring
+        start_time = time.time()
+        logger.info(
+            f"LLM structured output call starting: model={self._model}, "
+            f"prompt_length={len(prompt)}, schema_keys={list(output_schema.keys())}"
+        )
 
         # Enhance prompt with schema
         enhanced_prompt = f"""{prompt}
@@ -202,22 +337,41 @@ Respond ONLY with the JSON object, no additional text."""
                 json_str = completion.strip()
 
             result = json.loads(json_str)
+
+            # Log successful parsing
+            duration = time.time() - start_time
+            logger.info(
+                f"LLM structured output completed and parsed: {duration:.2f}s - "
+                f"result_keys={list(result.keys())}"
+            )
+
             return result
 
         except json.JSONDecodeError as e:
+            duration = time.time() - start_time
+            logger.error(
+                f"LLM structured output JSON parsing failed after {duration:.2f}s: {str(e)} - "
+                f"model={self._model}, response_preview={completion[:100]}"
+            )
             raise LLMServiceError(
                 f"Failed to parse JSON from response: {str(e)}",
                 provider="anthropic",
                 details={
                     "model": self._model,
                     "response": completion[:500],  # First 500 chars
+                    "duration": duration,
                 },
             )
         except Exception as e:
+            duration = time.time() - start_time if 'start_time' in locals() else 0
+            logger.error(
+                f"LLM structured output failed after {duration:.2f}s: {str(e)} - "
+                f"model={self._model}"
+            )
             raise LLMServiceError(
                 f"Failed to generate structured output: {str(e)}",
                 provider="anthropic",
-                details={"model": self._model, "exception": str(e)},
+                details={"model": self._model, "exception": str(e), "duration": duration},
             )
 
 

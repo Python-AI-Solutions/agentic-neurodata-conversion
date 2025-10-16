@@ -1,0 +1,30 @@
+**************************************************
+NWBInspector Report Summary
+
+Timestamp: 2025-10-16T18:38:35.337575
+Platform: macOS-26.0.1-arm64-arm-64bit-Mach-O
+NWBInspector version: 0.6.5
+
+Found 5 issues over 1 files:
+       5 - BEST_PRACTICE_SUGGESTION
+**************************************************
+
+
+4  BEST_PRACTICE_SUGGESTION
+===========================
+
+4.0  /Users/adityapatane/trial/Noise4Sam_test.nwb: check_experimenter_exists - 'NWBFile' object at location '/'
+       Message: Experimenter is missing.
+
+4.1  /Users/adityapatane/trial/Noise4Sam_test.nwb: check_experiment_description - 'NWBFile' object at location '/'
+       Message: Experiment description is missing.
+
+4.2  /Users/adityapatane/trial/Noise4Sam_test.nwb: check_institution - 'NWBFile' object at location '/'
+       Message: Metadata /general/institution is missing.
+
+4.3  /Users/adityapatane/trial/Noise4Sam_test.nwb: check_keywords - 'NWBFile' object at location '/'
+       Message: Metadata /general/keywords is missing.
+
+4.4  /Users/adityapatane/trial/Noise4Sam_test.nwb: check_subject_exists - 'NWBFile' object at location '/'
+       Message: Subject is missing.
+

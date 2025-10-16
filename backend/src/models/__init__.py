@@ -22,6 +22,9 @@ from .state import (
     LogEntry,
     LogLevel,
     ValidationStatus,
+    ValidationOutcome,
+    ConversationPhase,
+    MetadataRequestPolicy,
 )
 from .validation import (
     CorrectionContext,
@@ -54,6 +57,9 @@ __all__ = [
     "LogEntry",
     "LogLevel",
     "ValidationStatus",
+    "ValidationOutcome",
+    "ConversationPhase",
+    "MetadataRequestPolicy",
     # Validation models
     "CorrectionContext",
     "ValidationIssue",

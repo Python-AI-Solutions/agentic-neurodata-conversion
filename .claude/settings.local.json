@@ -7,7 +7,14 @@
       "Bash(pixi run python:*)",
       "Bash(curl -X POST http://localhost:8000/api/upload -F \"file=@test_data/spikeglx/Noise4Sam_g0_t0.imec0.ap.bin\")",
       "Bash(curl:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(find:*)",
+      "Bash(python3 -c \"import sys, json; data = json.load(sys.stdin); print(f''''\\n✅ Chat Response:''''); print(f''''{data.get(\"\"response\"\", data)[:200]}...'''')\")",
+      "Bash(python3:*)",
+      "Read(//private/var/folders/ks/g26dg74n6l9djm0hbp0dz_cm0000gn/T/nwb_conversions/**)",
+      "Bash(/dev/null)",
+      "Bash(lsof -ti:300)",
+      "Bash(node -c chat-ui.html)"
     ],
     "deny": [],
     "ask": []

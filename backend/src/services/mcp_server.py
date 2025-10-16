@@ -7,13 +7,8 @@ and manages the global state.
 import asyncio
 from typing import Any, Callable, Dict, List, Optional
 
-from models import (
-    GlobalState,
-    LogLevel,
-    MCPEvent,
-    MCPMessage,
-    MCPResponse,
-)
+from models.state import GlobalState, LogLevel
+from models.mcp import MCPEvent, MCPMessage, MCPResponse
 
 
 class MCPServer:

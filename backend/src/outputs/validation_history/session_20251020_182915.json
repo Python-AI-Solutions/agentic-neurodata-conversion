@@ -1,0 +1,26 @@
+{
+  "timestamp": "2025-10-20T18:29:15.295900",
+  "file_info": {
+    "format": "unknown",
+    "size_mb": 0.5853023529052734,
+    "nwb_version": "unknown"
+  },
+  "validation": {
+    "is_valid": true,
+    "total_issues": 1,
+    "summary": {
+      "critical": 0,
+      "error": 0,
+      "warning": 0,
+      "info": 1
+    }
+  },
+  "issues": [
+    {
+      "severity": "info",
+      "message": "Description is missing.",
+      "check_function": null
+    }
+  ],
+  "resolution_actions": []
+}
