@@ -5,9 +5,11 @@ This module defines the Pydantic models for the MCP server's REST API endpoints,
 providing type safety and automatic validation for all HTTP requests and responses.
 """
 
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
+
+from agentic_neurodata_conversion.models.mcp_message import MessageType
 
 
 class SessionInitializeRequest(BaseModel):
@@ -45,7 +47,9 @@ class SessionStatusResponse(BaseModel):
 class SessionClarifyRequest(BaseModel):
     """Request to provide clarification when errors occur."""
 
-    user_input: str = Field(..., description="User's clarification or correction text")
+    user_input: Optional[str] = Field(
+        None, description="User's clarification or correction text"
+    )
     updated_metadata: Optional[dict[str, str]] = Field(
         None, description="Updated metadata fields (key-value pairs)"
     )
@@ -76,3 +80,38 @@ class SessionResultResponse(BaseModel):
     validation_issues: list[dict[str, str]] = Field(
         default_factory=list, description="List of validation issues (if any)"
     )
+
+
+class HealthCheckResponse(BaseModel):
+    """Response from health check endpoint."""
+
+    status: str = Field(..., description="Service status: healthy or unhealthy")
+    version: str = Field(..., description="Package version (e.g., '0.1.0')")
+    agents_registered: list[str] = Field(
+        ..., description="List of registered agent names"
+    )
+    redis_connected: bool = Field(..., description="Whether Redis connection is active")
+
+
+# Internal API Models (for agent-to-MCP communication)
+
+
+class AgentRegistrationRequest(BaseModel):
+    """Request for internal agent registration."""
+
+    agent_name: str = Field(..., description="Unique agent identifier")
+    agent_type: str = Field(
+        ..., description="Agent type: conversation, conversion, or evaluation"
+    )
+    base_url: str = Field(..., description="Base URL for agent communication")
+    capabilities: list[str] = Field(
+        default_factory=list, description="List of agent capabilities"
+    )
+
+
+class RouteMessageRequest(BaseModel):
+    """Request to route a message to another agent."""
+
+    target_agent: str = Field(..., description="Name of target agent")
+    message_type: MessageType = Field(..., description="Type of MCP message")
+    payload: dict[str, Any] = Field(default_factory=dict, description="Message payload")

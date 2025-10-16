@@ -80,6 +80,9 @@ pytest-xdist = ">=3.0.0"
 # Fake Redis for testing (not available in conda)
 fakeredis = ">=2.20.0"
 
+# HTTP mocking for tests
+respx = ">=0.20.0"
+
 # Code quality tools
 ruff = ">=0.1.0"
 mypy = ">=1.5.0"

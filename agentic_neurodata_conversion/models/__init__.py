@@ -9,6 +9,9 @@ This module contains all data models used throughout the system:
 """
 
 from agentic_neurodata_conversion.models.api_models import (
+    AgentRegistrationRequest,
+    HealthCheckResponse,
+    RouteMessageRequest,
     SessionClarifyRequest,
     SessionClarifyResponse,
     SessionInitializeRequest,
@@ -51,4 +54,7 @@ __all__ = [
     "SessionClarifyRequest",
     "SessionClarifyResponse",
     "SessionResultResponse",
+    "HealthCheckResponse",
+    "AgentRegistrationRequest",
+    "RouteMessageRequest",
 ]
