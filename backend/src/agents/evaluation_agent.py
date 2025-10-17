@@ -70,7 +70,8 @@ class EvaluationAgent:
                 error_message="nwb_path is required for validation",
             )
 
-        state.update_validation_status(ValidationStatus.RUNNING)
+        # ValidationStatus is for final outcomes, not intermediate states
+        # ConversionStatus.VALIDATING is used for the running state
         state.add_log(
             LogLevel.INFO,
             f"Starting NWB validation: {nwb_path}",
@@ -93,24 +94,40 @@ class EvaluationAgent:
                 # Has critical or error issues
                 overall_status = "FAILED"
 
+            # Bug #2 fix: Store overall_status in state (Story 7.2)
+            state.overall_status = overall_status
+
             # Update state based on validation result
-            if validation_result.is_valid:
-                state.update_validation_status(ValidationStatus.PASSED)
+            # Bug #6 fix: Set validation_status to passed_improved if this is a successful improvement
+            if validation_result.is_valid and overall_status == "PASSED":
+                # Check if this is after a correction attempt (Story 8.8 line 957)
+                if state.correction_attempt > 0:
+                    state.update_validation_status(ValidationStatus.PASSED_IMPROVED)
+                else:
+                    state.update_validation_status(ValidationStatus.PASSED)
+
                 state.add_log(
                     LogLevel.INFO,
                     f"Validation {overall_status.lower()}",
+                    {
+                        "nwb_path": nwb_path,
+                        "summary": validation_result.summary,
+                        "overall_status": overall_status,
+                        "validation_status": state.validation_status.value if state.validation_status else None,
+                    },
+                )
+            elif validation_result.is_valid and overall_status == "PASSED_WITH_ISSUES":
+                # Don't set final validation_status yet - wait for user decision
+                state.add_log(
+                    LogLevel.INFO,
+                    f"Validation {overall_status.lower()} (awaiting user decision)",
                     {"nwb_path": nwb_path, "summary": validation_result.summary, "overall_status": overall_status},
                 )
             else:
-                # Check severity of issues
-                if validation_result.summary.get("critical", 0) > 0 or validation_result.summary.get("error", 0) > 0:
-                    state.update_validation_status(ValidationStatus.FAILED_WITH_ERRORS)
-                else:
-                    state.update_validation_status(ValidationStatus.FAILED_WITH_WARNINGS)
-
+                # FAILED status - don't set validation_status yet, wait for user decision
                 state.add_log(
                     LogLevel.WARNING,
-                    "Validation failed",
+                    "Validation failed (awaiting user decision)",
                     {
                         "nwb_path": nwb_path,
                         "summary": validation_result.summary,
@@ -831,9 +848,10 @@ Focus on the most critical issues first."""
                 report_base = "evaluation_report"
 
             if overall_status in ['PASSED', 'PASSED_WITH_ISSUES']:
-                # Generate PDF report
+                # Generate both PDF and text reports
                 output_dir = Path(state.output_path).parent if state.output_path else Path("outputs")
-                report_path = output_dir / f"{report_base}_evaluation_report.pdf"
+                pdf_report_path = output_dir / f"{report_base}_evaluation_report.pdf"
+                text_report_path = output_dir / f"{report_base}_inspection_report.txt"
 
                 # Extract file info from NWB file if not in validation result
                 if 'file_info' not in validation_result_data and nwb_path:
@@ -844,23 +862,36 @@ Focus on the most critical issues first."""
                 if self._llm_service and not llm_analysis:
                     llm_analysis = await self._generate_quality_assessment(validation_result_data)
 
+                # Generate PDF report (detailed with LLM analysis)
                 self._report_service.generate_pdf_report(
-                    report_path,
+                    pdf_report_path,
                     validation_result_data,
                     llm_analysis
                 )
 
+                # Generate text report (NWB Inspector style - clear and structured)
+                self._report_service.generate_text_report(
+                    text_report_path,
+                    validation_result_data
+                )
+
                 state.add_log(
                     LogLevel.INFO,
-                    f"Generated PDF evaluation report: {report_path}",
-                    {"report_path": str(report_path), "status": overall_status},
+                    f"Generated evaluation reports: PDF and text",
+                    {
+                        "pdf_report": str(pdf_report_path),
+                        "text_report": str(text_report_path),
+                        "status": overall_status
+                    },
                 )
 
                 return MCPResponse.success_response(
                     reply_to=message.message_id,
                     result={
-                        "report_path": str(report_path),
-                        "report_type": "pdf",
+                        "report_path": str(pdf_report_path),  # Primary report (for backwards compatibility)
+                        "pdf_report_path": str(pdf_report_path),
+                        "text_report_path": str(text_report_path),
+                        "report_type": "pdf_and_text",
                     },
                 )
 

@@ -19,6 +19,8 @@ from models import (
 )
 from services import LLMService, MCPServer
 from agents.conversational_handler import ConversationalHandler
+from agents.metadata_inference import MetadataInferenceEngine
+from agents.adaptive_retry import AdaptiveRetryStrategy
 
 
 class ConversationAgent:
@@ -45,6 +47,12 @@ class ConversationAgent:
         self._llm_service = llm_service
         self._conversational_handler = (
             ConversationalHandler(llm_service) if llm_service else None
+        )
+        self._metadata_inference_engine = (
+            MetadataInferenceEngine(llm_service) if llm_service else None
+        )
+        self._adaptive_retry_strategy = (
+            AdaptiveRetryStrategy(llm_service) if llm_service else None
         )
         # Conversation history now managed in GlobalState to prevent memory leaks
 
@@ -124,7 +132,59 @@ class ConversationAgent:
                 },
             )
 
-        # Step 1.5: Check for DANDI-required metadata BEFORE conversion
+        # Step 1.5: Intelligent Metadata Inference from File
+        # Try to automatically infer metadata to reduce user burden
+        if self._metadata_inference_engine:
+            state.add_log(
+                LogLevel.INFO,
+                "Running intelligent metadata inference from file",
+            )
+
+            try:
+                inference_result = await self._metadata_inference_engine.infer_metadata(
+                    input_path=input_path,
+                    state=state,
+                )
+
+                inferred_metadata = inference_result.get("inferred_metadata", {})
+                confidence_scores = inference_result.get("confidence_scores", {})
+
+                # Pre-fill metadata with high-confidence inferences (>= 80% confidence)
+                high_confidence_inferences = {
+                    key: value
+                    for key, value in inferred_metadata.items()
+                    if confidence_scores.get(key, 0) >= 80
+                }
+
+                if high_confidence_inferences:
+                    # Merge with existing metadata (existing takes priority)
+                    for key, value in high_confidence_inferences.items():
+                        if not metadata.get(key):  # Only fill if not already provided
+                            metadata[key] = value
+
+                    state.add_log(
+                        LogLevel.INFO,
+                        "Pre-filled metadata from file analysis",
+                        {
+                            "inferred_fields": list(high_confidence_inferences.keys()),
+                            "suggestions": inference_result.get("suggestions", []),
+                        }
+                    )
+
+                    # Update state with inferred metadata
+                    state.metadata.update(metadata)
+
+                    # Store inference result for user to review
+                    state.metadata["_inference_result"] = inference_result
+
+            except Exception as e:
+                state.add_log(
+                    LogLevel.WARNING,
+                    f"Metadata inference failed (non-critical): {e}",
+                )
+                # Continue without inference - not critical
+
+        # Step 1.6: Check for DANDI-required metadata BEFORE conversion
         # This prevents the bug where we convert first, then ask for metadata after
         if self._conversational_handler:
             # Check if we have the 3 essential DANDI fields
@@ -198,6 +258,14 @@ Example: University of California, Berkeley
                 # INFINITE LOOP FIX: Add this assistant message to conversation history
                 # This is critical - without this, the conversation history check at line 148 will always fail
                 state.add_conversation_message(role="assistant", content=message_text)
+
+                # Store input_path for later use when resuming conversion after skip
+                state.pending_conversion_input_path = input_path
+                state.add_log(
+                    LogLevel.DEBUG,
+                    "Stored pending_conversion_input_path for metadata conversation",
+                    {"input_path": input_path}
+                )
 
                 return MCPResponse.success_response(
                     reply_to=message.message_id,
@@ -1263,6 +1331,86 @@ The conversion report has been generated with full details."""
             state.user_provided_input_this_attempt = False
             state.auto_corrections_applied_this_attempt = False
 
+        # Use adaptive retry strategy to determine best approach
+        if self._adaptive_retry_strategy and validation_result_data:
+            state.add_log(
+                LogLevel.INFO,
+                "Running adaptive retry analysis",
+            )
+
+            try:
+                retry_recommendation = await self._adaptive_retry_strategy.analyze_and_recommend_strategy(
+                    state=state,
+                    current_validation_result=validation_result_data,
+                )
+
+                state.add_log(
+                    LogLevel.INFO,
+                    "Adaptive retry recommendation",
+                    {
+                        "should_retry": retry_recommendation.get("should_retry"),
+                        "strategy": retry_recommendation.get("strategy"),
+                        "approach": retry_recommendation.get("approach"),
+                    }
+                )
+
+                # Check if we should ask user for help instead of retrying
+                if retry_recommendation.get("ask_user"):
+                    await state.update_status(ConversionStatus.AWAITING_USER_INPUT)
+
+                    user_message = retry_recommendation.get("message", "We need your help to fix these issues.")
+
+                    # Add specific questions if provided
+                    questions = retry_recommendation.get("questions_for_user", [])
+                    if questions:
+                        user_message += "\n\n" + "\n".join(f"• {q}" for q in questions)
+
+                    state.add_log(
+                        LogLevel.INFO,
+                        "Asking user for help based on adaptive retry analysis",
+                    )
+
+                    return MCPResponse.success_response(
+                        reply_to=message.message_id,
+                        result={
+                            "status": "awaiting_user_input",
+                            "message": user_message,
+                            "needs_user_input": True,
+                            "retry_recommendation": retry_recommendation,
+                        },
+                    )
+
+                # If recommended not to retry, inform user
+                if not retry_recommendation.get("should_retry"):
+                    state.validation_status = ValidationStatus.FAILED_PERSISTENT
+                    await state.update_status(ConversionStatus.FAILED)
+
+                    state.add_log(
+                        LogLevel.INFO,
+                        "Adaptive retry recommends stopping attempts",
+                    )
+
+                    return MCPResponse.success_response(
+                        reply_to=message.message_id,
+                        result={
+                            "status": "failed",
+                            "validation_status": "failed_persistent",
+                            "message": retry_recommendation.get("message"),
+                            "retry_recommendation": retry_recommendation,
+                        },
+                    )
+
+                # Store the recommended approach for use during retry
+                state.metadata["_retry_approach"] = retry_recommendation.get("approach")
+                state.metadata["_retry_reasoning"] = retry_recommendation.get("reasoning", "")
+
+            except Exception as e:
+                state.add_log(
+                    LogLevel.WARNING,
+                    f"Adaptive retry analysis failed (non-critical): {e}",
+                )
+                # Continue with normal retry if analysis fails
+
         # Analyze corrections with LLM if available
         if self._llm_service:
             await state.update_status(ConversionStatus.CONVERTING)
@@ -1393,12 +1541,29 @@ The conversion report has been generated with full details."""
                     )
 
             # If no LLM analysis, just restart without corrections
+            # ✅ FIX: Use pending_conversion_input_path with fallback
+            conversion_path = state.pending_conversion_input_path or state.input_path
+            if not conversion_path or str(conversion_path) == "None":
+                state.add_log(
+                    LogLevel.ERROR,
+                    "Cannot restart conversion - input_path not available",
+                    {
+                        "pending_conversion_input_path": str(state.pending_conversion_input_path) if state.pending_conversion_input_path else "None",
+                        "input_path": str(state.input_path) if state.input_path else "None"
+                    }
+                )
+                return MCPResponse.error_response(
+                    reply_to=message.message_id,
+                    error_code="INVALID_STATE",
+                    error_message="Cannot proceed with retry. The file path is not available. Please try uploading the file again.",
+                )
+
             restart_response = await self.handle_start_conversion(
                 MCPMessage(
                     target_agent="conversation",
                     action="start_conversion",
                     context={
-                        "input_path": str(state.input_path),
+                        "input_path": str(conversion_path),
                         "metadata": state.metadata,
                     },
                 ),
@@ -1677,13 +1842,32 @@ The conversion report has been generated with full details."""
                 }
             )
 
+            # ✅ FIX: Validate that we have a valid input_path before proceeding
+            # Use pending_conversion_input_path if available, fallback to input_path
+            # This prevents 500 errors when state.input_path is None or invalid
+            conversion_path = state.pending_conversion_input_path or state.input_path
+            if not conversion_path or str(conversion_path) == "None":
+                state.add_log(
+                    LogLevel.ERROR,
+                    "Cannot restart conversion - input_path not available",
+                    {
+                        "pending_conversion_input_path": str(state.pending_conversion_input_path) if state.pending_conversion_input_path else "None",
+                        "input_path": str(state.input_path) if state.input_path else "None"
+                    }
+                )
+                return MCPResponse.error_response(
+                    reply_to=message.message_id,
+                    error_code="INVALID_STATE",
+                    error_message="Cannot proceed with conversion. The file path is not available. Please try uploading the file again.",
+                )
+
             # Restart conversion WITHOUT asking for more metadata
             return await self.handle_start_conversion(
                 MCPMessage(
                     target_agent="conversation",
                     action="start_conversion",
                     context={
-                        "input_path": str(state.input_path),
+                        "input_path": str(conversion_path),
                         "metadata": state.metadata,  # Use existing metadata only
                     },
                 ),
@@ -1712,13 +1896,31 @@ The conversion report has been generated with full details."""
                 skip_ack_message = f"No problem! Skipping {current_field}."
                 state.add_conversation_message(role="assistant", content=skip_ack_message)
 
+                # ✅ FIX: Validate input_path before restarting
+                # Use pending_conversion_input_path if available, fallback to input_path
+                conversion_path = state.pending_conversion_input_path or state.input_path
+                if not conversion_path or str(conversion_path) == "None":
+                    state.add_log(
+                        LogLevel.ERROR,
+                        "Cannot restart conversion - input_path not available",
+                        {
+                            "pending_conversion_input_path": str(state.pending_conversion_input_path) if state.pending_conversion_input_path else "None",
+                            "input_path": str(state.input_path) if state.input_path else "None"
+                        }
+                    )
+                    return MCPResponse.error_response(
+                        reply_to=message.message_id,
+                        error_code="INVALID_STATE",
+                        error_message="Cannot proceed with conversion. Please upload a file first.",
+                    )
+
                 # Restart conversion to ask for next field
                 return await self.handle_start_conversion(
                     MCPMessage(
                         target_agent="conversation",
                         action="start_conversion",
                         context={
-                            "input_path": str(state.input_path),
+                            "input_path": str(conversion_path),
                             "metadata": state.metadata,
                         },
                     ),
@@ -1740,12 +1942,30 @@ The conversion report has been generated with full details."""
             sequential_ack = "Sure! I'll ask one question at a time."
             state.add_conversation_message(role="assistant", content=sequential_ack)
 
+            # ✅ FIX: Validate input_path before restarting
+            # Use pending_conversion_input_path if available, fallback to input_path
+            conversion_path = state.pending_conversion_input_path or state.input_path
+            if not conversion_path or str(conversion_path) == "None":
+                state.add_log(
+                    LogLevel.ERROR,
+                    "Cannot restart conversion - input_path not available",
+                    {
+                        "pending_conversion_input_path": str(state.pending_conversion_input_path) if state.pending_conversion_input_path else "None",
+                        "input_path": str(state.input_path) if state.input_path else "None"
+                    }
+                )
+                return MCPResponse.error_response(
+                    reply_to=message.message_id,
+                    error_code="INVALID_STATE",
+                    error_message="Cannot proceed with conversion. Please upload a file first.",
+                )
+
             return await self.handle_start_conversion(
                 MCPMessage(
                     target_agent="conversation",
                     action="start_conversion",
                     context={
-                        "input_path": str(state.input_path),
+                        "input_path": str(conversion_path),
                         "metadata": state.metadata,
                     },
                 ),
@@ -1804,13 +2024,31 @@ The conversion report has been generated with full details."""
                     {"has_extracted_metadata": bool(extracted_metadata)},
                 )
 
+                # ✅ FIX: Use pending_conversion_input_path with fallback
+                # This ensures we use the correct path when user provides metadata
+                conversion_path = state.pending_conversion_input_path or state.input_path
+                if not conversion_path or str(conversion_path) == "None":
+                    state.add_log(
+                        LogLevel.ERROR,
+                        "Cannot restart conversion - input_path not available",
+                        {
+                            "pending_conversion_input_path": str(state.pending_conversion_input_path) if state.pending_conversion_input_path else "None",
+                            "input_path": str(state.input_path) if state.input_path else "None"
+                        }
+                    )
+                    return MCPResponse.error_response(
+                        reply_to=message.message_id,
+                        error_code="INVALID_STATE",
+                        error_message="Cannot proceed with conversion. The file path is not available. Please try uploading the file again.",
+                    )
+
                 # Restart conversion with updated metadata (even if none extracted, user said proceed)
                 return await self.handle_start_conversion(
                     MCPMessage(
                         target_agent="conversation",
                         action="start_conversion",
                         context={
-                            "input_path": str(state.input_path),
+                            "input_path": str(conversion_path),
                             "metadata": state.metadata,
                         },
                     ),

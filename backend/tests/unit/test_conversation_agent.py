@@ -34,7 +34,8 @@ class TestConversationAgentInitialization:
         assert agent._mcp_server is mcp_server
         assert agent._llm_service is llm_service
         assert agent._conversational_handler is not None
-        assert isinstance(agent._conversation_history, list)
+        # Conversation history is now in GlobalState, not in agent
+        # assert isinstance(agent._conversation_history, list)  # Removed: moved to GlobalState
 
     def test_init_without_llm_service(self):
         """Test agent initializes without LLM service."""

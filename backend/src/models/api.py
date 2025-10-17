@@ -7,7 +7,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 from .state import ConversionStatus, ValidationStatus
 from .validation import ValidationIssue
@@ -27,6 +27,10 @@ class StatusResponse(BaseModel):
 
     status: ConversionStatus
     validation_status: Optional[ValidationStatus] = None
+    overall_status: Optional[str] = Field(
+        default=None,
+        description="NWB Inspector evaluation result: PASSED, PASSED_WITH_ISSUES, or FAILED (Bug #12)",
+    )
     progress: Optional[float] = Field(
         default=None,
         ge=0.0,
@@ -54,10 +58,15 @@ class StatusResponse(BaseModel):
 
 
 class UserDecision(str, Enum):
-    """User decision for retry approval."""
+    """
+    User decision for retry/improvement approval.
 
-    APPROVE = "approve"
-    REJECT = "reject"
+    Story 8.3 (requirements.md lines 813-824)
+    """
+
+    APPROVE = "approve"  # Start improvement/retry
+    REJECT = "reject"    # Decline retry
+    ACCEPT = "accept"    # Accept as-is (PASSED_WITH_ISSUES only)
 
 
 class RetryApprovalRequest(BaseModel):
@@ -131,8 +140,10 @@ class DownloadInfo(BaseModel):
     checksum: str = Field(description="SHA256 checksum")
     created_at: datetime = Field(description="File creation timestamp")
 
-    class Config:
-        json_encoders = {datetime: lambda v: v.isoformat()}
+    # Pydantic V2 configuration
+    model_config = ConfigDict(
+        json_encoders={datetime: lambda v: v.isoformat()}
+    )
 
 
 class ErrorResponse(BaseModel):
@@ -149,8 +160,10 @@ class ErrorResponse(BaseModel):
         description="Error timestamp",
     )
 
-    class Config:
-        json_encoders = {datetime: lambda v: v.isoformat()}
+    # Pydantic V2 configuration
+    model_config = ConfigDict(
+        json_encoders={datetime: lambda v: v.isoformat()}
+    )
 
 
 class WebSocketMessage(BaseModel):
@@ -163,5 +176,7 @@ class WebSocketMessage(BaseModel):
         description="Event timestamp",
     )
 
-    class Config:
-        json_encoders = {datetime: lambda v: v.isoformat()}
+    # Pydantic V2 configuration
+    model_config = ConfigDict(
+        json_encoders={datetime: lambda v: v.isoformat()}
+    )

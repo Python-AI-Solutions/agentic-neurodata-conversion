@@ -144,9 +144,11 @@ class MetadataRequestStrategy:
     4. Respect field-level and global skip preferences
     """
 
-    def __init__(self):
+    def __init__(self, llm_service=None, state: Optional[GlobalState] = None):
         self._current_phase: Optional[str] = None
         self._current_field_index: int = 0
+        self.llm_service = llm_service
+        self.state = state
 
     def get_next_request(
         self,
@@ -390,16 +392,44 @@ Your task is to analyze user responses when they're being asked for metadata (li
 Classify their intent into one of these categories:
 
 1. **"global"** - User wants to skip ALL remaining metadata questions and proceed with conversion
-   Examples: "skip for now", "just proceed", "do it without metadata", "I'll add that later"
+   Examples:
+   - "skip for now" → global (wants to skip all questions now)
+   - "just proceed" → global (wants to move forward without answering)
+   - "do it without metadata" → global (explicitly skipping all)
+   - "I'll add that later" → global (deferring all questions)
+   - "not right now" → global (temporal skip of all questions)
+   - "maybe later" → global (uncertain but wants to proceed)
 
 2. **"field"** - User wants to skip ONLY this specific field but might answer others
-   Examples: "skip this one", "not this field", "I don't have that", "pass on this"
+   Examples:
+   - "skip this one" → field (specifically this field)
+   - "not this field" → field (just this one)
+   - "I don't have that" → field (missing this specific info)
+   - "pass on this" → field (skip this particular question)
+   - "skip" → field (simple skip without "all" or "for now")
+   - "don't know" → field (can't answer this one)
 
 3. **"sequential"** - User wants to answer questions one-by-one instead of all at once
-   Examples: "ask one by one", "one at a time", "ask separately"
+   Examples:
+   - "ask one by one" → sequential (explicit request)
+   - "one at a time" → sequential (wants individual questions)
+   - "ask separately" → sequential (wants separate questions)
+   - "ask individually" → sequential (wants step-by-step)
 
 4. **"none"** - User is NOT trying to skip - they're providing data or asking a question
-   Examples: "John Smith, MIT, mouse recording", "what is institution?", "can you explain?"
+   Examples:
+   - "John Smith, MIT, mouse recording" → none (providing data)
+   - "what is institution?" → none (asking clarification)
+   - "can you explain?" → none (needs help)
+   - "Dr. Smith performed the experiment" → none (answering question)
+
+**Reasoning approach:**
+1. Check for explicit "all" or "everything" keywords → likely global
+2. Check for "for now" or "later" → likely global (temporal deferral)
+3. Check for "this" or "this one" with skip → likely field (specific)
+4. Check for question words (what, how, why) → likely none (asking question)
+5. Check for name-like patterns, dates, institutions → likely none (providing data)
+6. Check for "one by one" or "separately" → sequential
 
 Respond with ONLY the category name: "global", "field", "sequential", or "none"."""
 

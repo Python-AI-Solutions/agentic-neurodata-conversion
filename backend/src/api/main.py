@@ -6,7 +6,11 @@ Main API server with REST endpoints and WebSocket support.
 import os
 import tempfile
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
+
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,6 +24,7 @@ from agents import (
 from models import (
     ConversionStatus,
     ErrorResponse,
+    LogLevel,
     LogsResponse,
     RetryApprovalRequest,
     RetryApprovalResponse,
@@ -31,6 +36,8 @@ from models import (
     ValidationResponse,
     WebSocketMessage,
 )
+from models.metadata import NWBMetadata
+from pydantic import ValidationError
 from services import MCPServer, create_llm_service, get_mcp_server
 
 # Initialize FastAPI app
@@ -194,13 +201,15 @@ async def health_check():
 @app.post("/api/upload", response_model=UploadResponse)
 async def upload_file(
     file: UploadFile = File(...),
+    additional_files: List[UploadFile] = File(default=[]),
     metadata: Optional[str] = Form(None),
 ):
     """
-    Upload a neurodata file for conversion.
+    Upload neurodata file(s) for conversion. Supports multiple files.
 
     Args:
-        file: Uploaded file
+        file: Main uploaded file (required)
+        additional_files: Additional files (e.g., .meta files for SpikeGLX)
         metadata: Optional JSON metadata string
 
     Returns:
@@ -211,52 +220,197 @@ async def upload_file(
 
     mcp_server = get_or_create_mcp_server()
 
-    # Check if already processing
-    if mcp_server.global_state.status != ConversionStatus.IDLE:
+    # Check if already processing - only block if actively converting/validating
+    # Allow uploads when: IDLE, AWAITING_USER_INPUT, COMPLETED, FAILED
+    BLOCKING_STATUSES = {
+        ConversionStatus.UPLOADING,
+        ConversionStatus.DETECTING_FORMAT,
+        ConversionStatus.CONVERTING,
+        ConversionStatus.VALIDATING,
+    }
+
+    if mcp_server.global_state.status in BLOCKING_STATUSES:
         raise HTTPException(
             status_code=409,
-            detail="Another conversion is in progress. Please wait or reset.",
+            detail=f"Cannot upload while {mcp_server.global_state.status.value}. Please wait or reset.",
         )
 
-    # Save uploaded file
-    file_path = _upload_dir / file.filename
+    # Validate file type
+    ALLOWED_EXTENSIONS = {
+        '.bin', '.dat', '.continuous', '.nwb', '.meta', '.json',
+        '.rhd', '.rhs', '.ncs', '.nev', '.ntt', '.plx', '.tif', '.avi'
+    }
+    file_ext = Path(file.filename).suffix.lower()
+    if file_ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type: {file_ext}. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}"
+        )
+
+    # Validate file size (max 5GB for now)
+    MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024  # 5GB in bytes
     content = await file.read()
+    await file.close()  # Bug #13: Explicitly close file handle after reading
+
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large: {len(content) / (1024**3):.2f}GB. Maximum: 5GB"
+        )
+
+    if len(content) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Empty file uploaded"
+        )
+
+    # Save main file
+    file_path = _upload_dir / file.filename
 
     with open(file_path, "wb") as f:
         f.write(content)
 
+    # Save additional files (e.g., .meta files, other companion files)
+    uploaded_files = [file.filename]
+    for additional_file in additional_files:
+        add_file_path = _upload_dir / additional_file.filename
+        add_content = await additional_file.read()
+        with open(add_file_path, "wb") as f:
+            f.write(add_content)
+        uploaded_files.append(additional_file.filename)
+
     # For SpikeGLX files, also check if we need to copy the corresponding .meta file
-    # This helps when users upload only the .bin file
+    # (only if not already provided by user)
     if ".ap.bin" in file.filename or ".lf.bin" in file.filename:
         meta_filename = file.filename.replace(".bin", ".meta")
-        # Check if meta file exists in our test data directory
-        test_meta = Path("test_data/spikeglx") / meta_filename
-        if test_meta.exists():
-            import shutil
-            shutil.copy(test_meta, _upload_dir / meta_filename)
+        meta_file_path = _upload_dir / meta_filename
 
-    # Calculate checksum
+        # Only copy from test_data if user didn't upload it
+        if not meta_file_path.exists():
+            test_meta = Path("test_data/spikeglx") / meta_filename
+            if test_meta.exists():
+                import shutil
+                shutil.copy(test_meta, _upload_dir / meta_filename)
+                uploaded_files.append(meta_filename)
+
+    # Calculate checksum of main file
     checksum = hashlib.sha256(content).hexdigest()
 
-    # Parse metadata if provided
+    # INFINITE LOOP FIX: Only reset state if we're NOT in an active metadata conversation
+    # If user is already in a conversation, preserve the conversation state
+    # This prevents infinite loops when user accidentally re-uploads or page refreshes
+    current_status = mcp_server.global_state.status
+    in_active_conversation = (
+        current_status == ConversionStatus.AWAITING_USER_INPUT and
+        (len(mcp_server.global_state.conversation_history) > 0 or
+         mcp_server.global_state.conversation_type == "required_metadata")  # Also check if we're waiting for metadata
+    )
+
+    if not in_active_conversation:
+        # Reset state for new upload session (Bug #8 fix)
+        # This prevents retry counter and metadata flags from carrying over
+        mcp_server.global_state.correction_attempt = 0
+        mcp_server.global_state.user_declined_fields.clear()
+        mcp_server.global_state.metadata_requests_count = 0
+        mcp_server.global_state.user_wants_minimal = False
+        mcp_server.global_state.user_wants_sequential = False
+        mcp_server.global_state.validation_status = None  # Bug #17: Reset validation status
+        mcp_server.global_state.overall_status = None  # Bug #9: Reset overall_status
+        mcp_server.global_state.conversation_history = []  # Clear old conversations
+    else:
+        # Preserve conversation state but update file paths
+        mcp_server.global_state.add_log(
+            LogLevel.INFO,
+            "Re-upload detected during active conversation - preserving conversation state",
+            {"previous_request_count": mcp_server.global_state.metadata_requests_count}
+        )
+
+    # Parse and validate metadata if provided
+    # NOTE: Metadata is OPTIONAL during upload - we collect it during conversation
+    # But if metadata IS provided, we validate it strictly
     metadata_dict = {}
     if metadata:
         try:
-            metadata_dict = json.loads(metadata)
-        except json.JSONDecodeError:
+            metadata_raw = json.loads(metadata)
+        except json.JSONDecodeError as e:
             raise HTTPException(
                 status_code=400,
-                detail="Invalid JSON in metadata field",
+                detail=f"Invalid JSON in metadata field: {str(e)}",
             )
+
+        # Only validate if user actually provided metadata fields
+        # Empty dict {} means "no metadata yet" - this is OK for initial upload
+        if metadata_raw:  # Non-empty metadata provided
+            # ✅ STRICT VALIDATION with Pydantic
+            # We validate strictly when metadata is provided, but allow partial metadata
+            # Required fields will be enforced before conversion starts
+            try:
+                # Allow partial metadata by making fields optional during upload
+                # Full validation happens before conversion in conversation_agent
+                validated_metadata = NWBMetadata(**metadata_raw)
+                # Convert validated model back to dict
+                metadata_dict = validated_metadata.model_dump(exclude_none=True)
+            except ValidationError as e:
+                # Build user-friendly error messages
+                errors = []
+                for error in e.errors():
+                    field = " → ".join(str(loc) for loc in error["loc"])
+                    message = error["msg"]
+                    errors.append(f"{field}: {message}")
+
+                raise HTTPException(
+                    status_code=422,  # Unprocessable Entity
+                    detail={
+                        "message": "Metadata validation failed",
+                        "errors": errors,
+                        "hint": "Please check the required fields and formats. See /docs for examples."
+                    }
+                )
 
     # Start conversion workflow
     from models import MCPMessage
+
+    # INFINITE LOOP FIX: Skip sending start_conversion if already in active conversation
+    # This prevents duplicate metadata requests when user accidentally re-uploads
+    if in_active_conversation:
+        mcp_server.global_state.add_log(
+            LogLevel.INFO,
+            "Upload during active conversation - skipping duplicate start_conversion message",
+            {"status": str(current_status), "conversation_type": mcp_server.global_state.conversation_type}
+        )
+
+        # Just acknowledge the upload without starting a new workflow
+        # Return the current metadata request message from state
+        current_message = mcp_server.global_state.llm_message or "Please continue the conversation to provide the requested information."
+
+        return UploadResponse(
+            session_id="session-1",
+            message=current_message,
+            input_path=str(file_path),
+            checksum=checksum,
+        )
+
+    # Determine the correct input path
+    # For SpikeGLX, use the directory (or specifically the .bin file)
+    conversion_input_path = str(file_path)
+    if ".meta" in file.filename:
+        # If user uploaded .meta file first, find the corresponding .bin file
+        bin_filename = file.filename.replace(".meta", ".bin")
+        bin_path = _upload_dir / bin_filename
+        if bin_path.exists():
+            conversion_input_path = str(_upload_dir)  # Use directory for SpikeGLX
+        else:
+            # .bin file doesn't exist yet, use .meta for now
+            conversion_input_path = str(file_path)
+    elif ".ap.bin" in file.filename or ".lf.bin" in file.filename:
+        # For .bin files, use the directory path for SpikeGLX detection
+        conversion_input_path = str(_upload_dir)
 
     start_msg = MCPMessage(
         target_agent="conversation",
         action="start_conversion",
         context={
-            "input_path": str(file_path),
+            "input_path": conversion_input_path,
             "metadata": metadata_dict,
         },
     )
@@ -273,7 +427,30 @@ async def upload_file(
             detail=error_msg,
         )
 
-    # Generate LLM-powered welcome message
+    # Check if we're awaiting user input (metadata, format selection, etc.)
+    # This is NOT an error - it means the system needs more information from the user
+    result_status = response.result.get("status") if response.result else None
+    if result_status == "awaiting_user_input":
+        # Save the message and conversation type to state so frontend can display it
+        if response.result.get("message"):
+            mcp_server.global_state.llm_message = response.result.get("message")
+        if response.result.get("conversation_type"):
+            mcp_server.global_state.conversation_type = response.result.get("conversation_type")
+        mcp_server.global_state.add_log(
+            LogLevel.INFO,
+            "Upload successful - awaiting user input for metadata",
+        )
+
+        # CRITICAL FIX: Return immediately with the metadata request message
+        # Do NOT continue to generate welcome message - that would override the metadata request!
+        return UploadResponse(
+            session_id="session-1",
+            message=response.result.get("message", "Please provide additional information"),
+            input_path=str(file_path),
+            checksum=checksum,
+        )
+
+    # Generate LLM-powered welcome message (only if NOT awaiting user input)
     file_size_mb = len(content) / (1024 * 1024)
 
     # Get LLM service from MCP server
@@ -310,12 +487,13 @@ async def get_status():
     return StatusResponse(
         status=state.status,
         validation_status=state.validation_status,
+        overall_status=state.overall_status,  # Bug #12: Include overall_status
         progress=None,  # MVP: no progress tracking
         message=state.llm_message,  # Include LLM conversational message
         input_path=state.input_path,
         output_path=state.output_path,
         correction_attempt=state.correction_attempt,
-        can_retry=state.can_retry(),
+        can_retry=True,  # Bug #14 fix: Always allow retry (unlimited with user permission)
         conversation_type=state.conversation_type,  # NEW: conversational type
     )
 
@@ -580,7 +758,7 @@ async def get_correction_context():
     return {
         "status": "available",
         "correction_attempt": state.correction_attempt,
-        "can_retry": state.can_retry(),
+        "can_retry": True,  # Bug #14 fix: Always allow retry
         "auto_fixable": auto_fixable,
         "user_input_required": user_input_required,
         "validation_summary": validation_result.get("summary", {}) if validation_result else {},

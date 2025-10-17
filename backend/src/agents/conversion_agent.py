@@ -93,7 +93,7 @@ class ConversionAgent:
                 error_message="input_path is required for format detection",
             )
 
-        state.update_status(ConversionStatus.DETECTING_FORMAT)
+        await state.update_status(ConversionStatus.DETECTING_FORMAT)
         state.add_log(
             LogLevel.INFO,
             f"Starting format detection for: {input_path}",
@@ -223,29 +223,90 @@ class ConversionAgent:
         return None
 
     def _is_spikeglx(self, path: Path) -> bool:
-        """Check if data is SpikeGLX format."""
+        """
+        Check if data is SpikeGLX format.
+
+        Improved detection that checks for:
+        - AP (action potential) band files
+        - LF (local field potential) band files
+        - Companion .meta files
+        - NIDQ (National Instruments DAQ) files
+        """
         if path.is_dir():
-            # Look for .ap.bin and .ap.meta files
+            # Look for .ap.bin/.lf.bin and corresponding .meta files
             ap_bins = list(path.glob("*.ap.bin"))
-            ap_metas = list(path.glob("*.ap.meta"))
-            return len(ap_bins) > 0 and len(ap_metas) > 0
+            lf_bins = list(path.glob("*.lf.bin"))
+            nidq_bins = list(path.glob("*.nidq.bin"))
+            meta_files = list(path.glob("*.meta"))
+
+            # Valid if we have at least one data file with a matching .meta
+            has_data = len(ap_bins) > 0 or len(lf_bins) > 0 or len(nidq_bins) > 0
+            has_meta = len(meta_files) > 0
+
+            return has_data and has_meta
         elif path.is_file():
-            # Check if it's a .bin or .meta file
-            return path.suffix in [".bin"] and (".ap." in path.name or ".lf." in path.name)
+            # Check if it's a SpikeGLX file by extension pattern
+            is_bin = path.suffix == ".bin"
+            has_spikeglx_pattern = any([
+                ".ap." in path.name,
+                ".lf." in path.name,
+                ".nidq." in path.name,
+            ])
+            return is_bin and has_spikeglx_pattern
         return False
 
     def _is_openephys(self, path: Path) -> bool:
-        """Check if data is OpenEphys format."""
+        """
+        Check if data is OpenEphys format.
+
+        Improved detection for both old and new OpenEphys formats:
+        - New format: structure.oebin file
+        - Old format: settings.xml file
+        - Binary format: continuous/ folder with .dat files
+        """
         if path.is_dir():
-            # Look for structure.oebin or settings.xml
-            return (path / "structure.oebin").exists() or (path / "settings.xml").exists()
+            # New Open Ephys format (>= 0.4.0)
+            if (path / "structure.oebin").exists():
+                return True
+
+            # Old Open Ephys format (< 0.4.0)
+            if (path / "settings.xml").exists():
+                return True
+
+            # Binary format check
+            continuous_dir = path / "continuous"
+            if continuous_dir.exists() and continuous_dir.is_dir():
+                # Look for .continuous or .dat files
+                continuous_files = list(continuous_dir.glob("*.continuous")) + list(continuous_dir.glob("*.dat"))
+                if len(continuous_files) > 0:
+                    return True
+
         return False
 
     def _is_neuropixels(self, path: Path) -> bool:
-        """Check if data is Neuropixels format."""
-        # Neuropixels data often has specific naming patterns
-        if path.is_file() and ".nidq." in path.name:
-            return True
+        """
+        Check if data is Neuropixels format.
+
+        Neuropixels probes use SpikeGLX for acquisition, so we look for:
+        - NIDQ (National Instruments) files
+        - Imec probe files (imec0, imec1, etc.)
+        - Specific Neuropixels naming patterns
+        """
+        if path.is_file():
+            # NIDQ files are common in Neuropixels recordings
+            if ".nidq." in path.name:
+                return True
+            # Imec probe files
+            if ".imec" in path.name and ".bin" in path.suffix:
+                return True
+
+        if path.is_dir():
+            # Check for imec probe folders or files
+            imec_files = list(path.glob("*imec*.bin"))
+            nidq_files = list(path.glob("*.nidq.bin"))
+            if len(imec_files) > 0 or len(nidq_files) > 0:
+                return True
+
         return False
 
     async def _detect_format_with_llm(
@@ -434,7 +495,8 @@ Be specific about the format name used by NeuroConv."""
                 error_message="input_path, output_path, and format are required",
             )
 
-        state.update_status(ConversionStatus.CONVERTING)
+        await state.update_status(ConversionStatus.CONVERTING)
+        state.update_progress(0, "Initializing conversion...", "initialization")
         state.add_log(
             LogLevel.INFO,
             f"Starting NWB conversion: {format_name}",
@@ -450,6 +512,8 @@ Be specific about the format name used by NeuroConv."""
             from pathlib import Path
             file_size_mb = Path(input_path).stat().st_size / (1024 * 1024) if Path(input_path).exists() else 0
 
+            state.update_progress(10, f"Analyzing {format_name} data ({file_size_mb:.1f} MB)...", "analysis")
+
             narration_start = await self._narrate_progress(
                 stage="starting",
                 format_name=format_name,
@@ -458,6 +522,7 @@ Be specific about the format name used by NeuroConv."""
             )
 
             # Optimize conversion parameters with LLM
+            state.update_progress(20, "Optimizing conversion parameters...", "optimization")
             optimization = await self._optimize_conversion_parameters(
                 format_name=format_name,
                 file_size_mb=file_size_mb,
@@ -465,6 +530,7 @@ Be specific about the format name used by NeuroConv."""
             )
 
             # 🎯 PRIORITY 5: Narrate processing
+            state.update_progress(30, "Processing data...", "processing")
             narration_processing = await self._narrate_progress(
                 stage="processing",
                 format_name=format_name,
@@ -473,14 +539,17 @@ Be specific about the format name used by NeuroConv."""
             )
 
             # Run conversion
+            state.update_progress(50, "Converting to NWB format...", "conversion")
             self._run_neuroconv_conversion(
                 input_path=input_path,
                 output_path=output_path,
                 format_name=format_name,
                 metadata=metadata,
+                state=state,
             )
 
             # 🎯 PRIORITY 5: Narrate finalization
+            state.update_progress(90, "Finalizing NWB file...", "finalization")
             narration_finalizing = await self._narrate_progress(
                 stage="finalizing",
                 format_name=format_name,
@@ -489,6 +558,7 @@ Be specific about the format name used by NeuroConv."""
             )
 
             # Calculate checksum
+            state.update_progress(98, "Calculating file checksum...", "checksum")
             checksum = self._calculate_checksum(output_path)
             state.checksums[output_path] = checksum
 
@@ -501,6 +571,7 @@ Be specific about the format name used by NeuroConv."""
             )
 
             state.output_path = output_path
+            state.update_progress(100, "Conversion completed successfully!", "complete")
             state.add_log(
                 LogLevel.INFO,
                 "Conversion completed successfully",
@@ -521,6 +592,15 @@ Be specific about the format name used by NeuroConv."""
 
         except Exception as e:
             error_msg = f"Conversion failed: {str(e)}"
+
+            # Use LLM to explain the error if available
+            user_friendly_explanation = await self._explain_conversion_error(
+                error=e,
+                format_name=format_name,
+                input_path=input_path,
+                state=state,
+            )
+
             state.add_log(
                 LogLevel.ERROR,
                 error_msg,
@@ -528,14 +608,113 @@ Be specific about the format name used by NeuroConv."""
                     "input_path": input_path,
                     "format": format_name,
                     "exception": str(e),
+                    "user_explanation": user_friendly_explanation,
                 },
             )
             return MCPResponse.error_response(
                 reply_to=message.message_id,
                 error_code="CONVERSION_FAILED",
-                error_message=error_msg,
-                error_context={"exception": str(e)},
+                error_message=user_friendly_explanation or error_msg,
+                error_context={
+                    "exception": str(e),
+                    "technical_details": error_msg,
+                },
             )
+
+    async def _explain_conversion_error(
+        self,
+        error: Exception,
+        format_name: str,
+        input_path: str,
+        state: GlobalState,
+    ) -> Optional[str]:
+        """
+        Use LLM to generate user-friendly error explanations.
+
+        Transforms technical error messages into actionable guidance that
+        helps users understand what went wrong and how to fix it.
+
+        Args:
+            error: The exception that occurred
+            format_name: Data format being converted
+            input_path: Path to input file
+            state: Global state for logging
+
+        Returns:
+            User-friendly error explanation, or None if LLM unavailable
+        """
+        if not self._llm_service:
+            return None
+
+        from pathlib import Path
+
+        error_type = type(error).__name__
+        error_message = str(error)
+
+        # Gather context about the file
+        file_context = {}
+        try:
+            path = Path(input_path)
+            if path.exists():
+                if path.is_file():
+                    file_context["type"] = "file"
+                    file_context["name"] = path.name
+                    file_context["size_mb"] = round(path.stat().st_size / (1024 * 1024), 2)
+                    file_context["parent_dir"] = str(path.parent)
+                    # List sibling files for context
+                    siblings = [f.name for f in path.parent.iterdir() if f.is_file()][:10]
+                    file_context["sibling_files"] = siblings
+                else:
+                    file_context["type"] = "directory"
+                    file_context["name"] = path.name
+                    files = [f.name for f in path.iterdir() if f.is_file()][:20]
+                    file_context["files"] = files
+        except Exception:
+            pass
+
+        system_prompt = """You are a helpful neuroscience data conversion assistant.
+
+Your job is to explain technical errors in simple, actionable terms.
+
+When explaining errors:
+1. Start with what went wrong in plain English
+2. Explain the likely cause
+3. Provide specific, actionable steps to fix it
+4. Be empathetic and encouraging
+5. Keep it concise (2-4 sentences)
+
+Focus on helping the user resolve the issue, not on technical jargon."""
+
+        user_prompt = f"""An error occurred during NWB conversion:
+
+Format: {format_name}
+Error Type: {error_type}
+Error Message: {error_message}
+File Context: {file_context}
+
+Please explain what went wrong and how to fix it in user-friendly language."""
+
+        try:
+            explanation = await self._llm_service.generate_completion(
+                prompt=user_prompt,
+                system_prompt=system_prompt,
+                temperature=0.3,  # Lower temperature for more focused explanations
+                max_tokens=300,
+            )
+
+            state.add_log(
+                LogLevel.INFO,
+                "Generated user-friendly error explanation via LLM",
+            )
+
+            return explanation.strip()
+
+        except Exception as e:
+            state.add_log(
+                LogLevel.WARNING,
+                f"Failed to generate error explanation via LLM: {e}",
+            )
+            return None
 
     async def _optimize_conversion_parameters(
         self,
@@ -708,6 +887,7 @@ Provide a brief, friendly update about what's happening now."""
         output_path: str,
         format_name: str,
         metadata: Dict[str, Any],
+        state: GlobalState,
     ) -> None:
         """
         Run NeuroConv conversion.
@@ -716,22 +896,32 @@ Provide a brief, friendly update about what's happening now."""
             input_path: Path to input data
             output_path: Path for output NWB file
             format_name: Format name (e.g., "SpikeGLX")
-            metadata: Metadata dictionary
+            metadata: Metadata dictionary (flat structure from user)
+            state: Global state for progress tracking
 
         Raises:
             Exception: If conversion fails
         """
         from neuroconv import NWBConverter
-        from neuroconv.datainterfaces import SpikeGLXRecordingInterface
+        from neuroconv.datainterfaces import (
+            SpikeGLXRecordingInterface,
+            OpenEphysRecordingInterface,
+            OpenEphysBinaryRecordingInterface,
+        )
 
         # Map format names to interface classes
-        # For MVP, we support SpikeGLX. Add more formats as needed.
         format_map = {
             "SpikeGLX": SpikeGLXRecordingInterface,
+            "OpenEphys": OpenEphysRecordingInterface,
+            "OpenEphysBinary": OpenEphysBinaryRecordingInterface,
+            "Neuropixels": SpikeGLXRecordingInterface,  # Neuropixels data uses SpikeGLX format
         }
 
         if format_name not in format_map:
-            raise ValueError(f"Unsupported format: {format_name}. Supported: {list(format_map.keys())}")
+            raise ValueError(
+                f"Unsupported format: {format_name}. "
+                f"Supported formats: {', '.join(sorted(format_map.keys()))}"
+            )
 
         interface_class = format_map[format_name]
 
@@ -739,9 +929,10 @@ Provide a brief, friendly update about what's happening now."""
         from pathlib import Path
         input_file = Path(input_path)
 
-        # For SpikeGLX, always use folder_path (even if a single file was uploaded)
-        # because the interface needs to find the corresponding .meta file
-        if format_name == "SpikeGLX":
+        # Format-specific interface initialization
+        state.update_progress(55, f"Initializing {format_name} interface...", "interface_init")
+
+        if format_name in ["SpikeGLX", "Neuropixels"]:
             if input_file.is_file():
                 # Use the parent directory
                 folder_path = str(input_file.parent)
@@ -749,6 +940,7 @@ Provide a brief, friendly update about what's happening now."""
                 folder_path = input_path
 
             # Try to detect available streams and use the first non-SYNC stream
+            state.update_progress(60, "Detecting data streams...", "stream_detection")
             try:
                 # First try without stream_id to see what's available
                 from spikeinterface.extractors import SpikeGLXRecordingExtractor
@@ -764,11 +956,41 @@ Provide a brief, friendly update about what's happening now."""
                 stream_id = non_sync_streams[0] if non_sync_streams else stream_ids[0]
 
                 data_interface = interface_class(folder_path=folder_path, stream_id=stream_id)
-            except Exception:
-                # Fallback: try without stream_id and let it fail with a better error
+            except ValueError as e:
+                # Filename parsing error - provide helpful message
+                if "Cannot parse filename" in str(e):
+                    raise ValueError(
+                        f"SpikeGLX filename format not recognized. "
+                        f"Expected format: '<name>_g<gate>_t<trigger>.imec<probe>.ap.bin' or similar. "
+                        f"Files in {folder_path}: {list(Path(folder_path).glob('*.bin'))}"
+                    ) from e
+                raise
+            except Exception as e:
+                # Other errors - provide context
+                raise ValueError(
+                    f"Failed to initialize SpikeGLX interface for {folder_path}. "
+                    f"Error: {str(e)}. "
+                    f"Make sure .bin and .meta files are present."
+                ) from e
+
+        elif format_name in ["OpenEphys", "OpenEphysBinary"]:
+            # OpenEphys requires a folder path
+            if input_file.is_file():
+                folder_path = str(input_file.parent)
+            else:
+                folder_path = input_path
+
+            try:
                 data_interface = interface_class(folder_path=folder_path)
+            except Exception as e:
+                raise ValueError(
+                    f"Failed to initialize OpenEphys interface for {folder_path}. "
+                    f"Error: {str(e)}. "
+                    f"Make sure the folder contains structure.oebin or settings.xml."
+                ) from e
+
         else:
-            # For other formats
+            # Generic format handling
             if input_file.is_file():
                 data_interface = interface_class(file_path=input_path)
             else:
@@ -776,21 +998,140 @@ Provide a brief, friendly update about what's happening now."""
 
         # For single-interface conversions, just use the interface directly
         # Get metadata from interface
+        state.update_progress(70, "Extracting file metadata...", "metadata_extraction")
         interface_metadata = data_interface.get_metadata()
 
-        # Merge user-provided metadata
-        for key, value in metadata.items():
-            if key in interface_metadata:
-                interface_metadata[key].update(value)
+        # 🔧 FIX: Map flat user metadata to NWB's nested structure
+        # User provides: {"experimenter": "Dr. Smith", "institution": "MIT", ...}
+        # NWB expects: {"NWBFile": {"experimenter": [...], "institution": "..."}, "Subject": {...}}
+        import logging
+
+        state.update_progress(75, "Applying user-provided metadata...", "metadata_mapping")
+        logger = logging.getLogger(__name__)
+        logger.debug(f"Flat user metadata: {metadata}")
+
+        structured_metadata = self._map_flat_to_nested_metadata(metadata)
+
+        logger.debug(f"Structured metadata: {structured_metadata}")
+
+        # Merge structured user metadata with interface metadata
+        for top_level_key, nested_dict in structured_metadata.items():
+            if top_level_key not in interface_metadata:
+                interface_metadata[top_level_key] = {}
+
+            if isinstance(nested_dict, dict):
+                interface_metadata[top_level_key].update(nested_dict)
             else:
-                interface_metadata[key] = value
+                interface_metadata[top_level_key] = nested_dict
+
+        logger.debug(f"Final NWBFile metadata: {interface_metadata.get('NWBFile', {})}")
+        logger.debug(f"Final Subject metadata: {interface_metadata.get('Subject', {})}")
 
         # Run conversion directly from interface
-        data_interface.run_conversion(
-            nwbfile_path=output_path,
-            metadata=interface_metadata,
-            overwrite=True,
-        )
+        state.update_progress(80, "Writing NWB file to disk...", "writing")
+        try:
+            data_interface.run_conversion(
+                nwbfile_path=output_path,
+                metadata=interface_metadata,
+                overwrite=True,
+            )
+        except Exception as e:
+            # Bug #16: Clean up partial/corrupt file on conversion error
+            if Path(output_path).exists():
+                try:
+                    Path(output_path).unlink()
+                    logger.debug(f"Cleaned up partial NWB file: {output_path}")
+                except Exception as cleanup_error:
+                    logger.warning(f"Failed to clean up partial file: {cleanup_error}")
+            raise  # Re-raise original exception
+
+        state.update_progress(95, "Verifying NWB file integrity...", "verification")
+
+    def _map_flat_to_nested_metadata(self, flat_metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Map flat user-provided metadata to NWB's nested structure.
+
+        User provides metadata like:
+            {"experimenter": "Dr. Smith", "institution": "MIT", "subject_id": "mouse001"}
+
+        NWB expects nested structure like:
+            {
+                "NWBFile": {
+                    "experimenter": ["Dr. Smith"],
+                    "institution": "MIT",
+                    "session_description": "...",
+                    "experiment_description": "...",
+                    "keywords": [...]
+                },
+                "Subject": {
+                    "subject_id": "mouse001",
+                    "species": "Mus musculus",
+                    "age": "P90D"
+                }
+            }
+
+        Args:
+            flat_metadata: Flat metadata dictionary from user
+
+        Returns:
+            Nested metadata dictionary matching NWB structure
+        """
+        # Define the mapping from flat field names to NWB nested structure
+        NWBFILE_FIELDS = {
+            "experimenter",
+            "institution",
+            "session_description",
+            "experiment_description",
+            "keywords",
+            "related_publications",
+            "session_id",
+            "lab",
+            "protocol",
+            "notes",
+        }
+
+        SUBJECT_FIELDS = {
+            "subject_id",
+            "species",
+            "age",
+            "sex",
+            "description",
+            "weight",
+            "strain",
+            "genotype",
+        }
+
+        nested = {}
+
+        for key, value in flat_metadata.items():
+            if key in NWBFILE_FIELDS:
+                if "NWBFile" not in nested:
+                    nested["NWBFile"] = {}
+
+                # Handle list fields that NWB expects as lists
+                if key in ["experimenter", "keywords", "related_publications"]:
+                    # If user provided a string, convert to list
+                    if isinstance(value, str):
+                        nested["NWBFile"][key] = [value]
+                    elif isinstance(value, list):
+                        nested["NWBFile"][key] = value
+                    else:
+                        nested["NWBFile"][key] = [str(value)]
+                else:
+                    nested["NWBFile"][key] = value
+
+            elif key in SUBJECT_FIELDS:
+                if "Subject" not in nested:
+                    nested["Subject"] = {}
+                nested["Subject"][key] = value
+
+            else:
+                # Unknown field - try to place it in NWBFile as a fallback
+                if "NWBFile" not in nested:
+                    nested["NWBFile"] = {}
+                nested["NWBFile"][key] = value
+
+        return nested
 
     def _calculate_checksum(self, file_path: str) -> str:
         """
@@ -876,12 +1217,16 @@ Provide a brief, friendly update about what's happening now."""
                 )
 
             # Re-run conversion with corrected metadata
+            # Get format from state metadata (Bug #18 fix)
+            format_name = state.metadata.get("format", "SpikeGLX")
+
             reconvert_message = MCPMessage(
                 target_agent="conversion",
                 action="run_conversion",
                 context={
                     "input_path": state.input_path,
                     "output_path": state.output_path,  # Same output path
+                    "format": format_name,  # Bug #18: Add missing format parameter
                     "metadata": corrected_metadata,
                 },
                 reply_to=message.message_id,

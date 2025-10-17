@@ -10,6 +10,7 @@ import json
 from models import GlobalState, LogLevel
 from services import LLMService
 from agents.metadata_strategy import MetadataRequestStrategy
+from agents.context_manager import ConversationContextManager
 
 
 class ConversationalHandler:
@@ -31,7 +32,10 @@ class ConversationalHandler:
             llm_service: LLM service for generating responses
         """
         self.llm_service = llm_service
-        self.metadata_strategy = MetadataRequestStrategy()
+        # Pass llm_service to metadata_strategy so it can use LLM-based detection
+        self.metadata_strategy = MetadataRequestStrategy(llm_service=llm_service)
+        # Initialize context manager for smart conversation summarization
+        self.context_manager = ConversationContextManager(llm_service=llm_service)
 
     def detect_user_decline(self, user_message: str) -> bool:
         """
@@ -302,8 +306,58 @@ Respond in JSON format as specified."""
 
 The user is responding to questions about missing metadata. Your job is to:
 1. Extract structured metadata from their natural language response
-2. Map it to NWB fields
+2. Map it to NWB fields (using proper neuroscience terminology)
 3. Determine if we have enough information or need to ask follow-up questions
+
+**Examples of good extraction:**
+
+Example 1:
+User: "I'm from Stanford, recording from mouse V1 during visual stimulation"
+Extracted:
+{
+    "extracted_metadata": {
+        "institution": "Stanford University",
+        "experiment_description": "Recording from mouse primary visual cortex during visual stimulation",
+        "subject": {"species": "Mus musculus", "brain_region": "V1"}
+    },
+    "needs_more_info": true,
+    "follow_up_message": "Great! Could you also provide the experimenter name(s)?",
+    "ready_to_proceed": false
+}
+
+Example 2:
+User: "Dr. Jane Smith and Dr. Bob Johnson, we recorded on 2024-01-15"
+Extracted:
+{
+    "extracted_metadata": {
+        "experimenter": ["Dr. Jane Smith", "Dr. Bob Johnson"],
+        "session_start_time": "2024-01-15T00:00:00"
+    },
+    "needs_more_info": false,
+    "follow_up_message": "Perfect! I have the experimenter information and date.",
+    "ready_to_proceed": true
+}
+
+Example 3:
+User: "UC Berkeley. Mouse neural activity study. Keywords: V1, vision, neuropixels"
+Extracted:
+{
+    "extracted_metadata": {
+        "institution": "University of California, Berkeley",
+        "experiment_description": "Mouse neural activity study in visual cortex",
+        "keywords": ["V1", "vision", "neuropixels", "electrophysiology", "mouse"]
+    },
+    "needs_more_info": false,
+    "follow_up_message": "Excellent! That's very helpful metadata.",
+    "ready_to_proceed": true
+}
+
+**Think step-by-step:**
+1. Identify named entities (people, institutions, dates, species, brain regions)
+2. Infer scientific terminology (expand abbreviations like "V1" → "primary visual cortex")
+3. Map to proper NWB schema fields
+4. Add inferred keywords based on context
+5. Fill in reasonable defaults where appropriate (e.g., "mouse" → "Mus musculus")
 
 Return JSON in this format:
 {
@@ -327,10 +381,27 @@ Return JSON in this format:
         validation_info = context.get("validation_result", {})
         previous_messages = context.get("conversation_history", [])
 
-        conversation_history = "\n".join([
-            f"{msg['role']}: {msg['content']}"
-            for msg in previous_messages[-5:]  # Last 5 messages for context
-        ])
+        # Use context manager to intelligently manage conversation history
+        try:
+            managed_messages = await self.context_manager.manage_context(
+                conversation_history=previous_messages,
+                state=state,
+            )
+            # Use managed context for better LLM understanding
+            conversation_history = "\n".join([
+                f"{msg['role']}: {msg['content']}"
+                for msg in managed_messages
+            ])
+        except Exception as e:
+            # Fallback to simple truncation if context management fails
+            state.add_log(
+                LogLevel.WARNING,
+                f"Context management failed, using fallback: {e}",
+            )
+            conversation_history = "\n".join([
+                f"{msg['role']}: {msg['content']}"
+                for msg in previous_messages[-5:]  # Last 5 messages for context
+            ])
 
         user_prompt = f"""Previous conversation:
 {conversation_history}
