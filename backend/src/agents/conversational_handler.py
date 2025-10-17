@@ -9,6 +9,7 @@ import json
 
 from models import GlobalState, LogLevel
 from services import LLMService
+from agents.metadata_strategy import MetadataRequestStrategy
 
 
 class ConversationalHandler:
@@ -30,6 +31,49 @@ class ConversationalHandler:
             llm_service: LLM service for generating responses
         """
         self.llm_service = llm_service
+        self.metadata_strategy = MetadataRequestStrategy()
+
+    def detect_user_decline(self, user_message: str) -> bool:
+        """
+        Detect if user is declining to provide information.
+
+        Looks for common decline patterns like "skip", "no", "don't ask", etc.
+
+        Args:
+            user_message: User's message text
+
+        Returns:
+            True if user is declining/skipping, False otherwise
+        """
+        skip_type = self.metadata_strategy.detect_skip_type(user_message)
+        return skip_type in ["field", "global"]
+
+    async def detect_skip_type_with_llm(self, user_message: str, conversation_context: str = "") -> str:
+        """
+        Intelligently detect user's skip intent using LLM.
+
+        This understands natural language variations and context better than keyword matching.
+
+        Args:
+            user_message: User's message text
+            conversation_context: Recent conversation for context
+
+        Returns:
+            "field", "global", "sequential", or "none"
+        """
+        return await self.metadata_strategy.detect_skip_type_with_llm(user_message, conversation_context)
+
+    def detect_skip_type(self, user_message: str) -> str:
+        """
+        Keyword-based skip detection (fallback method).
+
+        Args:
+            user_message: User's message text
+
+        Returns:
+            "field", "global", "sequential", or "none"
+        """
+        return self.metadata_strategy.detect_skip_type(user_message)
 
     async def analyze_validation_and_respond(
         self,
@@ -53,6 +97,22 @@ class ConversationalHandler:
         Returns:
             Dict with response_type and content for the user
         """
+        # CHECK IF USER ALREADY DECLINED OR WE'VE ALREADY ASKED ONCE
+        if state.user_wants_minimal or state.metadata_requests_count >= 1:
+            state.add_log(
+                LogLevel.INFO,
+                "User wants minimal metadata or exceeded request limit - proceeding without asking",
+                {"user_wants_minimal": state.user_wants_minimal, "requests_count": state.metadata_requests_count}
+            )
+            return {
+                "type": "proceed_minimal",
+                "message": "Understood! I'll complete the conversion with the data I have. The file will be valid but may not meet all recommended standards for data sharing.",
+                "needs_user_input": False,
+                "proceed_with_minimal": True,
+                "severity": "low",
+                "validation_result": validation_result,
+            }
+
         state.add_log(
             LogLevel.INFO,
             "Analyzing validation results with LLM",
@@ -142,39 +202,69 @@ Respond in JSON format as specified."""
                 {"needs_user_input": response_data.get("needs_user_input", False)},
             )
 
-            # If user input is needed, use smart metadata request generator
-            # to get contextual, intelligent field requests
-            smart_metadata = None
+            # If user input is needed, use priority-based metadata strategy
             if response_data.get("needs_user_input", False):
+                # Increment the metadata request counter
+                state.metadata_requests_count += 1
+                state.add_log(
+                    LogLevel.INFO,
+                    f"Requesting metadata from user (attempt {state.metadata_requests_count})",
+                )
+
+                # Use the new hybrid strategy to determine what to ask
                 try:
-                    state.add_log(
-                        LogLevel.INFO,
-                        "Generating smart metadata requests based on file analysis",
-                    )
-                    smart_metadata = await self.generate_smart_metadata_requests(
-                        validation_result=validation_result,
-                        nwb_file_path=nwb_file_path,
+                    metadata_request = self.metadata_strategy.get_next_request(
                         state=state,
+                        validation_result=validation_result,
                     )
-                    state.add_log(
-                        LogLevel.INFO,
-                        f"Smart metadata request generated: {len(smart_metadata.get('required_fields', []))} fields identified",
-                    )
+
+                    if metadata_request.get("action") == "proceed":
+                        # Nothing left to ask, proceed with minimal
+                        return {
+                            "type": "proceed_minimal",
+                            "message": "I have all the metadata you've provided. Proceeding with conversion!",
+                            "needs_user_input": False,
+                            "proceed_with_minimal": True,
+                            "severity": "low",
+                            "validation_result": validation_result,
+                        }
+
+                    # Return the strategic request
+                    return {
+                        "type": "conversational",
+                        "message": metadata_request.get("message"),
+                        "needs_user_input": True,
+                        "phase": metadata_request.get("phase"),
+                        "priority": metadata_request.get("priority"),
+                        "can_skip": metadata_request.get("can_skip", True),
+                        "fields": metadata_request.get("fields", []),
+                        "field": metadata_request.get("field"),
+                        "suggested_fixes": response_data.get("suggested_fixes", []),
+                        "severity": response_data.get("severity", "medium"),
+                        "validation_result": validation_result,
+                    }
+
                 except Exception as e:
                     state.add_log(
                         LogLevel.WARNING,
-                        f"Smart metadata generation failed, using basic analysis: {e}",
+                        f"Metadata strategy failed, using fallback: {e}",
                     )
+                    # Fallback to simple response
+                    return {
+                        "type": "conversational",
+                        "message": response_data.get("message"),
+                        "needs_user_input": True,
+                        "suggested_fixes": response_data.get("suggested_fixes", []),
+                        "severity": response_data.get("severity", "medium"),
+                        "validation_result": validation_result,
+                    }
 
-            # Merge LLM analysis with smart metadata requests
+            # No user input needed
             return {
                 "type": "conversational",
-                "message": smart_metadata.get("message") if smart_metadata else response_data.get("message"),
-                "needs_user_input": response_data.get("needs_user_input", False),
+                "message": response_data.get("message"),
+                "needs_user_input": False,
                 "suggested_fixes": response_data.get("suggested_fixes", []),
-                "required_fields": smart_metadata.get("required_fields", []) if smart_metadata else [],
-                "suggestions": smart_metadata.get("suggestions", []) if smart_metadata else [],
-                "detected_data_type": smart_metadata.get("detected_data_type") if smart_metadata else None,
                 "severity": response_data.get("severity", "medium"),
                 "validation_result": validation_result,
             }

@@ -25,7 +25,7 @@
 
         /* Sidebar */
         .sidebar {
-            width: 260px;
+            width: 380px;
             background: #2d2d2d;
             color: #fff;
             display: flex;
@@ -178,6 +178,7 @@
         .logs-content {
             flex: 1;
             overflow-y: auto;
+            overflow-x: auto;
             padding: 8px;
             font-family: 'Monaco', 'Menlo', monospace;
             font-size: 10px;
@@ -190,6 +191,7 @@
             background: #1a1a1a;
             border-radius: 4px;
             border-left: 2px solid #666;
+            white-space: nowrap;
         }
 
         .log-entry.debug {
@@ -770,8 +772,8 @@
             <div class="input-area">
                 <div class="input-container">
                     <div class="file-input-wrapper">
-                        <input type="file" id="fileInput" class="file-input" accept=".bin,.dat,.continuous,.nwb">
-                        <button class="file-button" onclick="document.getElementById('fileInput').click()" title="Upload file">
+                        <input type="file" id="fileInput" class="file-input" accept=".bin,.dat,.continuous,.nwb,.meta,.json" multiple>
+                        <button class="file-button" onclick="document.getElementById('fileInput').click()" title="Upload files (multiple allowed)">
                             📎
                         </button>
                     </div>
@@ -812,8 +814,11 @@
         let websocket = null;
         let reconnectAttempts = 0;
         const MAX_RECONNECT_ATTEMPTS = 5;
-        let currentFile = null;
+        let currentFiles = []; // Changed to array to support multiple files
         let conversionInProgress = false;
+        let conversionMonitorInterval = null; // Bug #10: Track monitoring interval
+        let lastDisplayedMessage = null; // Track last message to prevent duplicates
+        let lastDisplayedStatus = null; // Track last status to detect changes
 
         // WebSocket connection
         function connectWebSocket() {
@@ -884,11 +889,19 @@
 
         // File handling
         document.getElementById('fileInput').addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                currentFile = file;
-                addUserMessage(`📎 Selected file: ${file.name}`);
-                addAssistantMessage('Great! I can see you\'ve selected a file. Would you like to start the conversion now?', [
+            const files = Array.from(e.target.files);
+            if (files.length > 0) {
+                currentFiles = files;
+
+                // Display all selected files
+                const fileNames = files.map(f => f.name).join(', ');
+                const fileCount = files.length;
+                const message = fileCount === 1
+                    ? `📎 Selected file: ${fileNames}`
+                    : `📎 Selected ${fileCount} files: ${fileNames}`;
+
+                addUserMessage(message);
+                addAssistantMessage('Great! I can see you\'ve selected ' + (fileCount === 1 ? 'a file' : 'multiple files') + '. The system will automatically use the necessary files for conversion. Would you like to start now?', [
                     { text: '🚀 Start Conversion', onClick: () => startConversion(), variant: 'primary' },
                     { text: '✏️ Add Metadata First', onClick: () => requestMetadata(), variant: 'secondary' }
                 ]);
@@ -957,6 +970,18 @@
             addAssistantMessage(loading);
         }
 
+        function removeLoadingMessage() {
+            const messagesContainer = document.getElementById('messages');
+            if (!messagesContainer) return;
+            const loadingElements = messagesContainer.querySelectorAll('.loading');
+            loadingElements.forEach(el => {
+                const messageDiv = el.closest('.message');
+                if (messageDiv) {
+                    messageDiv.remove();
+                }
+            });
+        }
+
         // Status monitoring
         async function checkStatus() {
             try {
@@ -1001,16 +1026,27 @@
 
         // Conversion workflow
         async function startConversion() {
-            if (!currentFile) {
-                addAssistantMessage('Please select a file first.');
+            if (!currentFiles || currentFiles.length === 0) {
+                addAssistantMessage('Please select at least one file first.');
                 return;
             }
 
             conversionInProgress = true;
             addLoadingMessage();
+            startLogsAutoRefresh(); // Start auto-refreshing logs during conversion
 
             const formData = new FormData();
-            formData.append('file', currentFile);
+
+            // Append all files - backend will determine which to use
+            currentFiles.forEach((file, index) => {
+                // The main data file goes as 'file', others as 'additional_files'
+                if (index === 0) {
+                    formData.append('file', file);
+                } else {
+                    formData.append('additional_files', file);
+                }
+            });
+
             formData.append('metadata', JSON.stringify({
                 session_description: 'Conversion via chat interface'
             }));
@@ -1022,7 +1058,11 @@
                 });
 
                 if (response.ok) {
-                    addAssistantMessage('✅ File uploaded successfully! Starting conversion...');
+                    const fileCount = currentFiles.length;
+                    const message = fileCount === 1
+                        ? '✅ File uploaded successfully! Starting conversion...'
+                        : `✅ ${fileCount} files uploaded successfully! Starting conversion...`;
+                    addAssistantMessage(message);
                     monitorConversion();
                 } else {
                     const error = await response.json();
@@ -1036,17 +1076,34 @@
         }
 
         function monitorConversion() {
-            const interval = setInterval(async () => {
-                await checkStatus();
+            // Bug #10: Clear existing interval first to prevent multiple intervals
+            if (conversionMonitorInterval) {
+                clearInterval(conversionMonitorInterval);
+                conversionMonitorInterval = null;
+            }
 
-                const response = await fetch(`${API_BASE}/api/status`);
-                const data = await response.json();
+            conversionMonitorInterval = setInterval(async () => {
+                try {
+                    // Check status - the function internally handles all status transitions
+                    await checkStatus();
 
-                if (['completed', 'failed', 'awaiting_retry_approval', 'awaiting_user_input'].includes(data.status)) {
-                    clearInterval(interval);
+                    // Note: We don't need to check for terminal states here because
+                    // checkStatus() internally handles state transitions and we clear
+                    // the interval when we detect the final state through the UI
+                } catch (error) {
+                    console.error('Monitor error:', error);
+                    // Continue monitoring even on errors - they may be transient
                 }
             }, 2000);
         }
+
+        // Bug #10: Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (conversionMonitorInterval) {
+                clearInterval(conversionMonitorInterval);
+                conversionMonitorInterval = null;
+            }
+        });
 
         async function handleRetryApproval() {
             const response = await fetch(`${API_BASE}/api/correction-context`);
@@ -1115,19 +1172,52 @@
         }
 
         async function handleUserInputRequest() {
-            const response = await fetch(`${API_BASE}/api/logs?limit=10`);
-            const data = await response.json();
+            // Get the current status which includes the message
+            const statusResponse = await fetch(`${API_BASE}/api/status`);
+            const statusData = await statusResponse.json();
 
-            const userInputLog = data.logs.find(log =>
-                log.message.includes('User input required') && log.context
-            );
+            // Display the message from the backend (metadata request)
+            if (statusData.message) {
+                // BUGFIX: Only display message if it's different from the last one OR status changed
+                // This prevents duplicate messages when polling status every 2 seconds
+                const messageHash = statusData.message.substring(0, 100); // Use first 100 chars as hash
+                const statusChanged = lastDisplayedStatus !== statusData.status;
 
-            if (userInputLog && userInputLog.context.required_fields) {
-                showUserInputModal(userInputLog.context.required_fields);
+                if (lastDisplayedMessage !== messageHash || statusChanged) {
+                    removeLoadingMessage();
+                    addAssistantMessage(statusData.message);
+
+                    // Update tracking variables
+                    lastDisplayedMessage = messageHash;
+                    lastDisplayedStatus = statusData.status;
+                }
+
+                // Enable conversational input so user can respond
+                enableConversationalInput();
+            } else {
+                // Fallback: check logs for older format
+                const response = await fetch(`${API_BASE}/api/logs?limit=10`);
+                const data = await response.json();
+
+                const userInputLog = data.logs.find(log =>
+                    log.message.includes('User input required') && log.context
+                );
+
+                if (userInputLog && userInputLog.context.required_fields) {
+                    showUserInputModal(userInputLog.context.required_fields);
+                }
             }
         }
 
         async function handleCompletion(data) {
+            // Stop monitoring and log auto-refresh
+            if (conversionMonitorInterval) {
+                clearInterval(conversionMonitorInterval);
+                conversionMonitorInterval = null;
+            }
+            stopLogsAutoRefresh();
+            await refreshLogs(); // Final log refresh
+
             if (data.validation_status === 'passed') {
                 addAssistantMessage(
                     '🎉 Conversion completed successfully! Your NWB file passed all validation checks.',
@@ -1150,6 +1240,14 @@
         }
 
         function handleFailure() {
+            // Stop monitoring and log auto-refresh
+            if (conversionMonitorInterval) {
+                clearInterval(conversionMonitorInterval);
+                conversionMonitorInterval = null;
+            }
+            stopLogsAutoRefresh();
+            refreshLogs(); // Final log refresh
+
             addAssistantMessage('❌ Conversion failed. Please check the logs or try again with a different file.');
             conversionInProgress = false;
         }
@@ -1258,15 +1356,21 @@
                 addUserMessage(message);
                 input.value = '';
 
-                // Check if we're in conversational validation mode first
+                // Reset message tracking so the next assistant response will be displayed
+                lastDisplayedMessage = null;
+                lastDisplayedStatus = null;
+
+                // Check if we're in a conversational state requiring metadata/validation input
                 const statusResponse = await fetch(`${API_BASE}/api/status`);
                 const statusData = await statusResponse.json();
 
-                if (statusData.status === 'awaiting_user_input' && statusData.conversation_type === 'validation_analysis') {
-                    // Send to conversational metadata extraction endpoint
+                // Use conversational endpoint for metadata requests and validation analysis
+                const conversationTypes = ['validation_analysis', 'required_metadata'];
+                if (statusData.status === 'awaiting_user_input' && conversationTypes.includes(statusData.conversation_type)) {
+                    // Send to conversational response endpoint
                     await sendConversationalMessage(message);
                 } else {
-                    // Use smart chat for EVERYTHING else - works in ALL states
+                    // Use smart chat for general queries
                     await sendSmartChatMessage(message);
                 }
             }
@@ -1311,11 +1415,11 @@
 
                     // Handle suggested actions from LLM
                     if (data.suggested_action) {
-                        if (data.suggested_action === 'start_conversion' && currentFile) {
+                        if (data.suggested_action === 'start_conversion' && currentFiles && currentFiles.length > 0) {
                             // LLM determined user wants to start
                             addAssistantMessage('Starting conversion now...');
                             startConversion();
-                        } else if (data.suggested_action === 'upload_file' && !currentFile) {
+                        } else if (data.suggested_action === 'upload_file' && (!currentFiles || currentFiles.length === 0)) {
                             // LLM determined user needs to upload
                             addAssistantMessage('👆 You can upload a file using the button above.');
                         }
@@ -1408,8 +1512,16 @@
             displayLogs(logs);
         }
 
+        function isScrolledToBottom(element) {
+            // Check if user is within 50px of the bottom
+            return element.scrollHeight - element.scrollTop - element.clientHeight < 50;
+        }
+
         function displayLogs(logs) {
             const container = document.getElementById('logsContent');
+
+            // Check if we should auto-scroll BEFORE updating content
+            const shouldAutoScroll = isScrolledToBottom(container);
 
             if (!logs || logs.length === 0) {
                 container.innerHTML = '<div class="logs-empty">No logs available yet. Start a conversion to see logs.</div>';
@@ -1447,8 +1559,10 @@
 
             container.innerHTML = html;
 
-            // Auto-scroll to bottom
-            container.scrollTop = container.scrollHeight;
+            // Only auto-scroll if user was already at the bottom
+            if (shouldAutoScroll) {
+                container.scrollTop = container.scrollHeight;
+            }
         }
 
         function formatLogContext(context) {
@@ -1506,32 +1620,7 @@
             }
         }
 
-        // Override startConversion to start auto-refresh
-        const originalStartConversion = startConversion;
-        startConversion = async function() {
-            await originalStartConversion();
-            // Start auto-refreshing logs
-            startLogsAutoRefresh();
-        };
-
-        // Stop auto-refresh when conversion completes
-        const originalHandleCompletion = handleCompletion;
-        handleCompletion = async function(data) {
-            await originalHandleCompletion(data);
-            stopLogsAutoRefresh();
-            // Do one final refresh to get all logs
-            await refreshLogs();
-        };
-
-        const originalHandleFailure = handleFailure;
-        handleFailure = function() {
-            originalHandleFailure();
-            stopLogsAutoRefresh();
-            // Do one final refresh to get all logs
-            refreshLogs();
-        };
-
-        // Initialize
+        // Initialize on page load
         connectWebSocket();
         checkStatus();
         refreshLogs(); // Load initial logs

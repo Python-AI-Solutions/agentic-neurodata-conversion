@@ -46,8 +46,7 @@ class ConversationAgent:
         self._conversational_handler = (
             ConversationalHandler(llm_service) if llm_service else None
         )
-        # Store conversation history for context
-        self._conversation_history: List[Dict[str, str]] = []
+        # Conversation history now managed in GlobalState to prevent memory leaks
 
     async def handle_start_conversion(
         self,
@@ -110,7 +109,7 @@ class ConversationAgent:
 
         # Handle ambiguous format detection
         if confidence == "ambiguous" or not detected_format:
-            state.update_status(ConversionStatus.AWAITING_USER_INPUT)
+            await state.update_status(ConversionStatus.AWAITING_USER_INPUT)
             state.add_log(
                 LogLevel.INFO,
                 "Format detection ambiguous - awaiting user input",
@@ -125,9 +124,100 @@ class ConversationAgent:
                 },
             )
 
-        # Step 1.5: Proactive Issue Detection (NEW!)
+        # Step 1.5: Check for DANDI-required metadata BEFORE conversion
+        # This prevents the bug where we convert first, then ask for metadata after
+        if self._conversational_handler:
+            # Check if we have the 3 essential DANDI fields
+            required_fields = {
+                "experimenter": metadata.get("experimenter"),
+                "institution": metadata.get("institution"),
+                "experiment_description": metadata.get("experiment_description") or metadata.get("session_description"),
+            }
+
+            # Filter out fields the user already declined
+            missing_fields = [
+                field for field, value in required_fields.items()
+                if not value and field not in state.user_declined_fields
+            ]
+
+            # INFINITE LOOP FIX: Check if we're already in a conversation about metadata
+            # This prevents re-asking if user accidentally re-uploads or refreshes page
+            in_metadata_conversation = (
+                state.status == ConversionStatus.AWAITING_USER_INPUT and
+                state.conversation_type == "required_metadata" and
+                len(state.conversation_history) > 0
+            )
+
+            # If critical fields are missing AND we haven't asked yet AND we're not already in a metadata conversation
+            # Also check if user wants minimal conversion (skip asking)
+
+            # DETAILED DEBUG LOGGING FOR INFINITE LOOP BUG
+            state.add_log(
+                LogLevel.DEBUG,
+                "Metadata check conditions",
+                {
+                    "missing_fields": missing_fields,
+                    "metadata_requests_count": state.metadata_requests_count,
+                    "user_wants_minimal": state.user_wants_minimal,
+                    "in_metadata_conversation": in_metadata_conversation,
+                    "conversation_type": state.conversation_type,
+                    "status": state.status.value,
+                    "conversation_history_length": len(state.conversation_history),
+                }
+            )
+
+            if missing_fields and state.metadata_requests_count < 1 and not state.user_wants_minimal and not in_metadata_conversation:
+                await state.update_status(ConversionStatus.AWAITING_USER_INPUT)
+                state.conversation_type = "required_metadata"  # BUG FIX: Set conversation type so we can detect if already in this conversation
+                state.metadata_requests_count += 1
+                state.add_log(
+                    LogLevel.INFO,
+                    f"Missing DANDI-required metadata ({', '.join(missing_fields)}) - requesting from user before conversion",
+                    {"missing_fields": missing_fields, "request_count": state.metadata_requests_count},
+                )
+
+                # Generate friendly message asking for required metadata
+                message_text = f"""🔴 **Critical Information Needed**
+
+To create a DANDI-compatible NWB file, I need 3 essential fields:
+
+• **Experimenter Name(s)**: Required by DANDI for attribution and reproducibility
+Example: ["Dr. Jane Smith", "Dr. John Doe"]
+
+• **Experiment Description**: Required by DANDI to help others understand your data
+Example: Recording of neural activity in mouse V1 during visual stimulation
+
+• **Institution**: Required by DANDI for institutional affiliation
+Example: University of California, Berkeley
+
+**How would you like to proceed?**
+• Provide all at once (e.g., "Dr. Smith, MIT, recording neural activity")
+• Answer one by one (say "ask one by one")
+• Skip for now (file won't be DANDI-compatible)"""
+
+                # INFINITE LOOP FIX: Add this assistant message to conversation history
+                # This is critical - without this, the conversation history check at line 148 will always fail
+                state.add_conversation_message(role="assistant", content=message_text)
+
+                return MCPResponse.success_response(
+                    reply_to=message.message_id,
+                    result={
+                        "status": "awaiting_user_input",
+                        "conversation_type": "required_metadata",
+                        "message": message_text,
+                        "needs_user_input": True,
+                        "required_fields": missing_fields,
+                        "can_skip": False,  # These are critical for DANDI
+                        "phase": "pre_conversion",
+                    },
+                )
+
+        # Step 1.6: Proactive Issue Detection (OPTIONAL - can be disabled)
         # Analyze file BEFORE conversion to predict potential issues
-        if self._llm_service:
+        # This feature can have false positives, so allow users to proceed anyway
+        enable_proactive_detection = metadata.get("enable_proactive_detection", False)  # Disabled by default
+
+        if self._llm_service and enable_proactive_detection:
             state.add_log(LogLevel.INFO, "Running proactive issue analysis...")
 
             prediction = await self._proactive_issue_detection(
@@ -136,27 +226,21 @@ class ConversationAgent:
                 state=state,
             )
 
-            # If high risk or low success probability, warn user
+            # If high risk or low success probability, warn user BUT allow proceeding
             if prediction["risk_level"] == "high" or prediction.get("success_probability", 100) < 70:
-                state.update_status(ConversionStatus.AWAITING_USER_INPUT)
+                # Log the warning but don't block conversion
                 state.add_log(
                     LogLevel.WARNING,
-                    f"Proactive analysis detected risks - advising user",
+                    f"Proactive analysis detected risks (can proceed anyway)",
                     {"risk_level": prediction["risk_level"], "success_probability": prediction.get("success_probability")},
                 )
-
-                return MCPResponse.success_response(
-                    reply_to=message.message_id,
-                    result={
-                        "status": "high_risk_detected",
-                        "risk_level": prediction["risk_level"],
-                        "success_probability": prediction.get("success_probability"),
-                        "message": prediction.get("warning_message", "Potential issues detected before conversion"),
-                        "predicted_issues": prediction.get("predicted_issues", []),
-                        "suggested_fixes": prediction.get("suggested_fixes", []),
-                        "can_proceed_anyway": True,
-                    },
-                )
+                # Store warning in metadata for user to see, but continue conversion
+                state.metadata["proactive_warning"] = {
+                    "risk_level": prediction["risk_level"],
+                    "success_probability": prediction.get("success_probability"),
+                    "message": prediction.get("warning_message"),
+                    "predicted_issues": prediction.get("predicted_issues", []),
+                }
 
         # Step 2: Run conversion
         return await self._run_conversion(
@@ -624,6 +708,106 @@ Create a friendly, informative message."""
             )
             return fallback_messages.get(status, "Operation completed")
 
+    async def _finalize_with_minimal_metadata(
+        self,
+        original_message_id: str,
+        output_path: str,
+        validation_result: Dict[str, Any],
+        format_name: str,
+        input_path: str,
+        state: GlobalState,
+    ) -> MCPResponse:
+        """
+        Complete conversion with minimal metadata and create informative report.
+
+        This is called when user declines to provide additional metadata.
+        Instead of looping infinitely asking for metadata, we:
+        1. Accept the conversion as-is
+        2. Generate a comprehensive report showing what's missing
+        3. Provide guidance on how to add metadata later if needed
+
+        Args:
+            original_message_id: Original message ID for reply
+            output_path: Path to generated NWB file
+            validation_result: Validation result with issues
+            format_name: Data format name
+            input_path: Input file path
+            state: Global state
+
+        Returns:
+            MCPResponse with completion status and guidance
+        """
+        from pathlib import Path
+
+        state.add_log(
+            LogLevel.INFO,
+            "Finalizing conversion with minimal metadata",
+            {"output_path": output_path},
+        )
+
+        # Generate evaluation report (even with warnings)
+        report_msg = MCPMessage(
+            target_agent="evaluation",
+            action="generate_report",
+            context={
+                "validation_result": validation_result,
+                "nwb_path": output_path,
+            },
+        )
+
+        report_response = await self._mcp_server.send_message(report_msg)
+        report_path = None
+        if report_response.success:
+            report_path = report_response.result.get("report_path")
+
+        # Extract missing fields from validation issues
+        missing_fields = []
+        for issue in validation_result.get("issues", []):
+            issue_msg = issue.get("message", "").lower()
+            if "missing" in issue_msg or "not found" in issue_msg:
+                # Extract field name from message
+                for field in ["experimenter", "institution", "keywords", "subject", "session_description"]:
+                    if field in issue_msg:
+                        missing_fields.append(field)
+
+        # Generate helpful completion message
+        completion_message = f"""Conversion complete! Your NWB file has been created at: {Path(output_path).name}
+
+**Status:** Completed with warnings
+
+**What was created:**
+- Valid NWB file structure ✓
+- Your {format_name} data successfully converted ✓
+- File size: {Path(output_path).stat().st_size / (1024 * 1024):.1f} MB
+
+**Missing recommended metadata:**
+{chr(10).join(f"- {field}" for field in missing_fields) if missing_fields else "- Some metadata fields"}
+
+**What this means:**
+- Your file is technically valid and can be used for analysis
+- It may not meet requirements for data sharing (e.g., DANDI archive)
+- You can add metadata later if needed
+
+**How to add metadata later:**
+1. Use PyNWB to programmatically update the file
+2. Re-run conversion with metadata when available
+3. Contact support for assistance
+
+The conversion report has been generated with full details."""
+
+        return MCPResponse.success_response(
+            reply_to=original_message_id,
+            result={
+                "status": "completed_with_warnings",
+                "output_path": output_path,
+                "validation": validation_result,
+                "report_path": report_path,
+                "message": completion_message,
+                "missing_fields": list(set(missing_fields)),
+                "user_declined_metadata": True,
+            },
+        )
+
     async def _run_conversion(
         self,
         original_message_id: str,
@@ -668,7 +852,7 @@ Create a friendly, informative message."""
         convert_response = await self._mcp_server.send_message(convert_msg)
 
         if not convert_response.success:
-            state.update_status(ConversionStatus.FAILED)
+            await state.update_status(ConversionStatus.FAILED)
 
             # Use LLM to explain the error in user-friendly terms
             error_explanation = await self._explain_error_to_user(
@@ -701,7 +885,7 @@ Create a friendly, informative message."""
         validate_response = await self._mcp_server.send_message(validate_msg)
 
         if not validate_response.success:
-            state.update_status(ConversionStatus.FAILED)
+            await state.update_status(ConversionStatus.FAILED)
 
             # Use LLM to explain validation failure
             error_explanation = await self._explain_error_to_user(
@@ -747,7 +931,7 @@ Create a friendly, informative message."""
 
         # Check validation status - engage conversationally if there are improvable issues
         if validation_result["is_valid"] and not has_improvable_issues:
-            state.update_status(ConversionStatus.COMPLETED)
+            await state.update_status(ConversionStatus.COMPLETED)
             state.add_log(
                 LogLevel.INFO,
                 "Conversion completed successfully with valid NWB file",
@@ -800,8 +984,9 @@ Create a friendly, informative message."""
             )
         else:
             # Validation failed - use LLM to analyze and respond intelligently
-            if self._conversational_handler and state.can_retry():
-                state.update_status(ConversionStatus.AWAITING_USER_INPUT)
+            # Bug #14 fix: Always allow retry (unlimited with user permission)
+            if self._conversational_handler:
+                await state.update_status(ConversionStatus.AWAITING_USER_INPUT)
                 state.add_log(
                     LogLevel.INFO,
                     "Using LLM to analyze validation issues and engage user",
@@ -815,12 +1000,30 @@ Create a friendly, informative message."""
                         state=state,
                     )
 
+                    # CHECK IF WE SHOULD PROCEED WITH MINIMAL METADATA
+                    if llm_analysis.get("proceed_with_minimal", False):
+                        await state.update_status(ConversionStatus.COMPLETED)
+                        state.add_log(
+                            LogLevel.INFO,
+                            "User wants minimal conversion - completing with warnings",
+                        )
+
+                        # Generate completion report with warnings
+                        return await self._finalize_with_minimal_metadata(
+                            original_message_id=original_message_id,
+                            output_path=output_path,
+                            validation_result=validation_result,
+                            format_name=format_name,
+                            input_path=input_path,
+                            state=state,
+                        )
+
                     # Add to conversation history
-                    self._conversation_history.append({
-                        "role": "assistant",
-                        "content": llm_analysis.get("message", ""),
-                        "context": llm_analysis,
-                    })
+                    state.add_conversation_message(
+                        role="assistant",
+                        content=llm_analysis.get("message", ""),
+                        context=llm_analysis
+                    )
 
                     # Store conversational state for frontend
                     state.conversation_type = "validation_analysis"
@@ -850,52 +1053,37 @@ Create a friendly, informative message."""
                     # Fallback to original rigid behavior
                     pass
 
-            # Original rigid fallback behavior
-            if state.can_retry():
-                state.update_status(ConversionStatus.AWAITING_RETRY_APPROVAL)
-                state.add_log(
-                    LogLevel.WARNING,
-                    "Validation failed - awaiting retry approval",
-                )
+            # Bug #14 fix: Always allow retry - unlimited attempts with user permission
+            # (Story 8.7 line 933, Story 8.8 line 953)
+            await state.update_status(ConversionStatus.AWAITING_RETRY_APPROVAL)
+            state.add_log(
+                LogLevel.WARNING,
+                "Validation failed - awaiting retry approval",
+            )
 
-                # Generate LLM-powered retry message
-                retry_message = await self._generate_status_message(
-                    status="retry_available",
-                    context={
-                        "format": format_name,
-                        "file_size_mb": Path(output_path).stat().st_size / (1024 * 1024) if Path(output_path).exists() else 0,
-                        "validation_summary": validation_result.get("summary", {}),
-                        "output_path": output_path,
-                        "input_filename": Path(input_path).name,
-                        "retry_count": state.correction_attempt,
-                    },
-                    state=state,
-                )
+            # Generate LLM-powered retry message
+            retry_message = await self._generate_status_message(
+                status="retry_available",
+                context={
+                    "format": format_name,
+                    "file_size_mb": Path(output_path).stat().st_size / (1024 * 1024) if Path(output_path).exists() else 0,
+                    "validation_summary": validation_result.get("summary", {}),
+                    "output_path": output_path,
+                    "input_filename": Path(input_path).name,
+                    "retry_count": state.correction_attempt,
+                },
+                state=state,
+            )
 
-                return MCPResponse.success_response(
-                    reply_to=original_message_id,
-                    result={
-                        "status": "awaiting_retry_approval",
-                        "validation": validation_result,
-                        "can_retry": True,
-                        "message": retry_message,  # LLM-POWERED!
-                    },
-                )
-            else:
-                state.update_status(ConversionStatus.FAILED)
-                state.add_log(
-                    LogLevel.ERROR,
-                    "Validation failed - max retry attempts reached",
-                )
-                return MCPResponse.success_response(
-                    reply_to=original_message_id,
-                    result={
-                        "status": "failed",
-                        "validation": validation_result,
-                        "can_retry": False,
-                        "message": "Conversion failed - max retry attempts reached",
-                    },
-                )
+            return MCPResponse.success_response(
+                reply_to=original_message_id,
+                result={
+                    "status": "awaiting_retry_approval",
+                    "validation": validation_result,
+                    "can_retry": True,
+                    "message": retry_message,  # LLM-POWERED!
+                },
+            )
 
     async def handle_user_format_selection(
         self,
@@ -960,11 +1148,11 @@ Create a friendly, informative message."""
         """
         decision = message.context.get("decision")
 
-        if decision not in ["approve", "reject"]:
+        if decision not in ["approve", "reject", "accept"]:
             return MCPResponse.error_response(
                 reply_to=message.message_id,
                 error_code="INVALID_DECISION",
-                error_message="decision must be 'approve' or 'reject'",
+                error_message="decision must be 'approve', 'reject', or 'accept'",
             )
 
         if state.status != ConversionStatus.AWAITING_RETRY_APPROVAL:
@@ -974,16 +1162,46 @@ Create a friendly, informative message."""
                 error_message=f"Cannot accept retry decision in state: {state.status}",
             )
 
-        if decision == "reject":
-            state.update_status(ConversionStatus.FAILED)
+        # Bug #3 fix: Handle "accept" for PASSED_WITH_ISSUES
+        if decision == "accept":
+            # Only valid for PASSED_WITH_ISSUES (has warnings but no critical errors)
+            if state.overall_status != "PASSED_WITH_ISSUES":
+                return MCPResponse.error_response(
+                    reply_to=message.message_id,
+                    error_code="INVALID_DECISION",
+                    error_message="'accept' decision only valid for PASSED_WITH_ISSUES status",
+                )
+
+            # Set validation_status to passed_accepted (Story 8.3a line 840)
+            state.validation_status = ValidationStatus.PASSED_ACCEPTED
+            await state.update_status(ConversionStatus.COMPLETED)
             state.add_log(
                 LogLevel.INFO,
-                "User rejected retry",
+                "User accepted file with warnings (validation_status=passed_accepted)",
+            )
+
+            return MCPResponse.success_response(
+                reply_to=message.message_id,
+                result={
+                    "status": "completed",
+                    "validation_status": "passed_accepted",
+                    "message": "File accepted with warnings. Download ready.",
+                },
+            )
+
+        if decision == "reject":
+            # Bug #7 fix: Set validation_status to failed_user_declined (Story 8.8 line 958)
+            state.validation_status = ValidationStatus.FAILED_USER_DECLINED
+            await state.update_status(ConversionStatus.FAILED)
+            state.add_log(
+                LogLevel.INFO,
+                "User rejected retry (validation_status=failed_user_declined)",
             )
             return MCPResponse.success_response(
                 reply_to=message.message_id,
                 result={
                     "status": "failed",
+                    "validation_status": "failed_user_declined",
                     "message": "Conversion terminated by user",
                 },
             )
@@ -995,21 +1213,63 @@ Create a friendly, informative message."""
             f"User approved retry (attempt {state.correction_attempt})",
         )
 
+        # Get the most recent validation result from state
+        # Note: In a production system, we'd store this more robustly
+        validation_result_data = None
+        for log in reversed(state.logs):
+            if "validation" in log.context:
+                validation_result_data = log.context.get("validation")
+                break
+
+        # Bug #11 fix: Detect "no progress" before starting retry (Story 4.7 lines 461-466)
+        if validation_result_data:
+            current_issues = validation_result_data.get("issues", [])
+
+            # Check if we're making no progress
+            if state.detect_no_progress(current_issues):
+                state.add_log(
+                    LogLevel.WARNING,
+                    "No progress detected - same validation errors with no changes applied",
+                    {
+                        "correction_attempt": state.correction_attempt,
+                        "issue_count": len(current_issues),
+                    },
+                )
+
+                # Warn user and ask for confirmation
+                warning_message = (
+                    f"⚠️ No changes detected since last attempt (attempt #{state.correction_attempt}).\n\n"
+                    f"The same {len(current_issues)} validation errors still exist because:\n"
+                    f"- No user input was provided\n"
+                    f"- No automatic corrections were applied\n\n"
+                    f"Retrying with no changes will likely produce the same errors.\n\n"
+                    f"**Recommended actions:**\n"
+                    f"1. Provide additional information when prompted\n"
+                    f"2. Check if the source data files have the required information\n"
+                    f"3. Consider declining this retry if data cannot be corrected\n\n"
+                    f"Would you still like to proceed with retry?"
+                )
+
+                # For now, log the warning and continue (actual UI confirmation can be added later)
+                state.add_log(
+                    LogLevel.WARNING,
+                    "Proceeding with retry despite no progress warning",
+                )
+
+            # Store current issues for next iteration's comparison
+            state.previous_validation_issues = current_issues
+
+            # Reset the "changes made" flags for this new attempt
+            state.user_provided_input_this_attempt = False
+            state.auto_corrections_applied_this_attempt = False
+
         # Analyze corrections with LLM if available
         if self._llm_service:
-            state.update_status(ConversionStatus.CONVERTING)
+            await state.update_status(ConversionStatus.CONVERTING)
             state.add_log(
                 LogLevel.INFO,
                 "Analyzing validation issues with LLM for corrections",
             )
-
-            # Get the most recent validation result from state
-            # Note: In a production system, we'd store this more robustly
-            validation_result_data = None
-            for log in reversed(state.logs):
-                if "validation" in log.context:
-                    validation_result_data = log.context.get("validation")
-                    break
 
             if validation_result_data:
                 # Send message to evaluation agent to analyze corrections
@@ -1045,7 +1305,7 @@ Create a friendly, informative message."""
 
                     if user_input_required:
                         # Some issues need user input - transition to AWAITING_USER_INPUT state
-                        state.update_status(ConversionStatus.AWAITING_USER_INPUT)
+                        await state.update_status(ConversionStatus.AWAITING_USER_INPUT)
                         state.add_log(
                             LogLevel.INFO,
                             f"User input required for {len(user_input_required)} issues",
@@ -1062,6 +1322,10 @@ Create a friendly, informative message."""
                         )
 
                     # Send corrections to conversion agent
+                    # Bug #11 fix: Mark if auto-corrections are being applied
+                    if auto_fixes:
+                        state.auto_corrections_applied_this_attempt = True
+
                     correction_response = await self._mcp_server.send_message(
                         MCPMessage(
                             target_agent="conversion",
@@ -1143,7 +1407,7 @@ Create a friendly, informative message."""
             return restart_response
         else:
             # No LLM available - ask user for manual corrections
-            state.update_status(ConversionStatus.AWAITING_USER_INPUT)
+            await state.update_status(ConversionStatus.AWAITING_USER_INPUT)
             state.add_log(
                 LogLevel.WARNING,
                 "No LLM service available - cannot auto-analyze corrections",
@@ -1311,17 +1575,50 @@ Create a friendly, informative message."""
                 error_message="User message is required",
             )
 
+        # Input validation: check message length
+        if len(user_message) > 10000:
+            return MCPResponse.error_response(
+                reply_to=message.message_id,
+                error_code="MESSAGE_TOO_LONG",
+                error_message="Message too long. Please keep your message under 10,000 characters.",
+            )
+
+        # Strip excessive whitespace
+        user_message = user_message.strip()
+        if not user_message:
+            return MCPResponse.error_response(
+                reply_to=message.message_id,
+                error_code="EMPTY_MESSAGE",
+                error_message="Message cannot be empty or whitespace only.",
+            )
+
         # Add user message to conversation history
-        self._conversation_history.append({
-            "role": "user",
-            "content": user_message,
-        })
+        state.add_conversation_message(role="user", content=user_message)
 
         state.add_log(
             LogLevel.INFO,
             f"Processing conversational response from user",
             {"message_preview": user_message[:100]},
         )
+
+        # Bug #8 fix: Check for explicit cancellation (Story 8.8 line 959)
+        if user_message.lower() in ["cancel", "quit", "stop", "abort", "exit"]:
+            state.validation_status = ValidationStatus.FAILED_USER_ABANDONED
+            await state.update_status(ConversionStatus.FAILED)
+            state.add_log(
+                LogLevel.INFO,
+                "User abandoned correction loop (validation_status=failed_user_abandoned)",
+                {"message": user_message},
+            )
+
+            return MCPResponse.success_response(
+                reply_to=message.message_id,
+                result={
+                    "status": "failed",
+                    "validation_status": "failed_user_abandoned",
+                    "message": "Conversion cancelled by user",
+                },
+            )
 
         if not self._conversational_handler:
             return MCPResponse.error_response(
@@ -1330,18 +1627,143 @@ Create a friendly, informative message."""
                 error_message="LLM service not configured for conversational responses",
             )
 
+        # CHECK IF USER IS DECLINING TO PROVIDE METADATA
+        # Use LLM-based detection for better understanding of user intent
+        conversation_context = "\n".join([
+            f"{msg['role']}: {msg['content'][:100]}"
+            for msg in state.conversation_history[-3:]  # Last 3 exchanges for context
+        ]) if state.conversation_history else ""
+
+        skip_type = await self._conversational_handler.detect_skip_type_with_llm(
+            user_message,
+            conversation_context
+        )
+
+        state.add_log(
+            LogLevel.INFO,
+            f"User intent detected: {skip_type}",
+            {"user_message": user_message[:100], "skip_type": skip_type}
+        )
+
+        if skip_type == "global":
+            # User wants to skip ALL remaining questions
+            state.user_wants_minimal = True
+            # Mark all DANDI fields as declined
+            state.user_declined_fields.update(["experimenter", "institution", "experiment_description"])
+
+            # DETAILED DEBUG LOGGING
+            state.add_log(
+                LogLevel.INFO,
+                "User requested to skip all remaining questions - proceeding with minimal conversion",
+                {
+                    "message": user_message[:100],
+                    "user_wants_minimal": state.user_wants_minimal,
+                    "metadata_requests_count": state.metadata_requests_count,
+                    "user_declined_fields": list(state.user_declined_fields),
+                },
+            )
+
+            # Add assistant response to history
+            decline_message = "Understood! I'll complete the conversion with the data you've provided. The NWB file will be created, though it may not include all recommended metadata fields."
+            state.add_conversation_message(role="assistant", content=decline_message)
+
+            state.add_log(
+                LogLevel.DEBUG,
+                "About to restart conversion after global skip",
+                {
+                    "user_wants_minimal": state.user_wants_minimal,
+                    "metadata_requests_count": state.metadata_requests_count,
+                    "status_before": state.status.value,
+                }
+            )
+
+            # Restart conversion WITHOUT asking for more metadata
+            return await self.handle_start_conversion(
+                MCPMessage(
+                    target_agent="conversation",
+                    action="start_conversion",
+                    context={
+                        "input_path": str(state.input_path),
+                        "metadata": state.metadata,  # Use existing metadata only
+                    },
+                ),
+                state,
+            )
+
+        elif skip_type == "field":
+            # User wants to skip THIS specific field only
+            # Get the current field being asked from conversation context
+            last_context = (
+                state.conversation_history[-1].get("context", {})
+                if len(state.conversation_history) >= 1
+                else {}
+            )
+
+            current_field = last_context.get("field")
+            if current_field:
+                state.user_declined_fields.add(current_field)
+                state.add_log(
+                    LogLevel.INFO,
+                    f"User skipped field: {current_field}",
+                    {"message": user_message[:100]},
+                )
+
+                # Add assistant response acknowledging the skip
+                skip_ack_message = f"No problem! Skipping {current_field}."
+                state.add_conversation_message(role="assistant", content=skip_ack_message)
+
+                # Restart conversion to ask for next field
+                return await self.handle_start_conversion(
+                    MCPMessage(
+                        target_agent="conversation",
+                        action="start_conversion",
+                        context={
+                            "input_path": str(state.input_path),
+                            "metadata": state.metadata,
+                        },
+                    ),
+                    state,
+                )
+
+        elif skip_type == "sequential":
+            # User wants to answer questions one by one (for batch requests)
+            state.add_log(
+                LogLevel.INFO,
+                "User requested sequential questioning",
+            )
+
+            # Save the sequential preference in state (THIS IS THE FIX!)
+            state.user_wants_sequential = True
+
+            # This will be handled by the strategy on next round
+            # For now, acknowledge and restart
+            sequential_ack = "Sure! I'll ask one question at a time."
+            state.add_conversation_message(role="assistant", content=sequential_ack)
+
+            return await self.handle_start_conversion(
+                MCPMessage(
+                    target_agent="conversation",
+                    action="start_conversion",
+                    context={
+                        "input_path": str(state.input_path),
+                        "metadata": state.metadata,
+                    },
+                ),
+                state,
+            )
+
         try:
             # Build conversation context
             last_context = (
-                self._conversation_history[-2].get("context", {})
-                if len(self._conversation_history) >= 2
+                state.conversation_history[-2].get("context", {})
+                if len(state.conversation_history) >= 2
                 else {}
             )
 
             context = {
                 "validation_result": last_context.get("validation_result", {}),
                 "issues": last_context.get("suggested_fixes", []),
-                "conversation_history": self._conversation_history,
+                "conversation_history": state.conversation_history,
             }
 
             # Process user response with LLM
@@ -1352,38 +1774,48 @@ Create a friendly, informative message."""
             )
 
             # Add assistant response to conversation history
-            self._conversation_history.append({
-                "role": "assistant",
-                "content": response.get("follow_up_message", ""),
-                "context": response,
-            })
+            state.add_conversation_message(
+                role="assistant",
+                content=response.get("follow_up_message", ""),
+                context=response
+            )
 
             # Check if we're ready to proceed with fixes
             if response.get("ready_to_proceed", False):
                 extracted_metadata = response.get("extracted_metadata", {})
 
+                # BUG FIX: Update metadata if any extracted, even if empty dict
+                # Empty dict is valid when user wants to skip/use defaults
                 if extracted_metadata:
-                    # Merge extracted metadata with existing metadata
                     state.metadata.update(extracted_metadata)
-
                     state.add_log(
                         LogLevel.INFO,
-                        "Metadata extracted from conversation, starting reconversion",
+                        "Metadata extracted from conversation",
                         {"metadata_fields": list(extracted_metadata.keys())},
                     )
 
-                    # Restart conversion with updated metadata
-                    return await self.handle_start_conversion(
-                        MCPMessage(
-                            target_agent="conversation",
-                            action="start_conversion",
-                            context={
-                                "input_path": str(state.input_path),
-                                "metadata": state.metadata,
-                            },
-                        ),
-                        state,
-                    )
+                # Bug #11 fix: Mark that user provided input for "no progress" detection
+                # Mark true regardless of whether metadata was extracted - user engaged with the system
+                state.user_provided_input_this_attempt = True
+
+                state.add_log(
+                    LogLevel.INFO,
+                    "User indicated ready to proceed, starting conversion",
+                    {"has_extracted_metadata": bool(extracted_metadata)},
+                )
+
+                # Restart conversion with updated metadata (even if none extracted, user said proceed)
+                return await self.handle_start_conversion(
+                    MCPMessage(
+                        target_agent="conversation",
+                        action="start_conversion",
+                        context={
+                            "input_path": str(state.input_path),
+                            "metadata": state.metadata,
+                        },
+                    ),
+                    state,
+                )
 
             # Continue conversation
             return MCPResponse.success_response(
@@ -1459,15 +1891,15 @@ Create a friendly, informative message."""
                 "detected_format": state.metadata.get("format"),
                 "validation_status": state.validation_status.value if state.validation_status else None,
                 "correction_attempt": state.correction_attempt,
-                "can_retry": state.can_retry(),
+                "can_retry": True,  # Bug #14 fix: Always allow retry
                 "output_path": str(state.output_path) if state.output_path else None,
             }
 
             # Recent conversation history for context
             recent_history = "\n".join([
                 f"{msg['role']}: {msg['content'][:100]}"
-                for msg in self._conversation_history[-3:]  # Last 3 exchanges
-            ]) if self._conversation_history else "No previous conversation"
+                for msg in state.conversation_history[-3:]  # Last 3 exchanges
+            ]) if state.conversation_history else "No previous conversation"
 
             system_prompt = """You are an expert NWB (Neurodata Without Borders) conversion assistant.
 
@@ -1531,14 +1963,8 @@ Respond in JSON format."""
             )
 
             # Add to conversation history
-            self._conversation_history.append({
-                "role": "user",
-                "content": user_query,
-            })
-            self._conversation_history.append({
-                "role": "assistant",
-                "content": response.get("answer", ""),
-            })
+            state.add_conversation_message(role="user", content=user_query)
+            state.add_conversation_message(role="assistant", content=response.get("answer", ""))
 
             state.add_log(
                 LogLevel.INFO,
