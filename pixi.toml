@@ -53,6 +53,7 @@ redis = ">=5.0.0"
 neuroconv = ">=0.4.0"
 pynwb = ">=3.1.2,<4"
 nwbinspector = ">=0.4.0"
+spikeinterface = ">=0.99.0"
 
 # Note: LinkML and RDF libraries deferred to post-MVP per constitution
 # (Knowledge graph features not needed for MVP)

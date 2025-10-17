@@ -42,7 +42,8 @@ def generate_continuous_file(
         duration_seconds: Duration of recording in seconds (default: 10)
         sampling_rate: Sampling rate in Hz (default: 30000)
     """
-    # Create header (1024 bytes)
+    # Create header (1024 bytes) - OpenEphys legacy format
+    # Header format: key = value pairs with spaces around equals sign
     header = b"header\n"
     header += b"sampleRate = 30000.0\n"
     header += b"bufferSize = 1024\n"
