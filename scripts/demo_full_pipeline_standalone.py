@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 """
-Multi-Agent NWB Conversion Pipeline - Complete Demonstration Script
+Multi-Agent NWB Conversion Pipeline - Standalone Demonstration Script
 
 This script demonstrates the complete information flow through the entire
-multi-agent pipeline, showing exactly how data flows between components.
+multi-agent pipeline WITHOUT requiring Redis (filesystem-only mode).
 
 Usage:
-    pixi run python scripts/demo_full_pipeline.py
+    pixi run python scripts/demo_full_pipeline_standalone.py
 
 Output:
     - Detailed logs of each step
@@ -76,7 +76,7 @@ class PipelineDemo:
 
     def log_json(self, data: dict, indent: int = 5):
         """Log JSON data with indentation."""
-        json_str = json.dumps(data, indent=2)
+        json_str = json.dumps(data, indent=2, default=str)
         for line in json_str.split('\n'):
             print(f"{' ' * indent}{line}")
 
@@ -84,14 +84,14 @@ class PipelineDemo:
         """Initialize all components."""
         self.log("PIPELINE INITIALIZATION", "HEADER")
 
-        self.log("Initializing Context Manager", "STEP")
+        self.log("Initializing Context Manager (Filesystem-Only Mode)", "STEP")
         self.context_manager = ContextManager(
-            redis_url="redis://localhost:6379/0",
+            redis_url=None,  # Disable Redis
             filesystem_base_path="./demo_sessions",
         )
-        await self.context_manager.connect()
-        self.log("Context Manager connected (Redis + Filesystem)", "SUBSTEP")
-        self.log(f"Storage: Redis (primary) + ./demo_sessions/ (backup)", "DATA")
+        # No need to connect for filesystem-only mode
+        self.log("Context Manager initialized (Filesystem-Only)", "SUBSTEP")
+        self.log(f"Storage: ./demo_sessions/ only (no Redis)", "DATA")
 
         self.log("Initializing Agents", "STEP")
 
@@ -135,7 +135,6 @@ class PipelineDemo:
         self.log(f"Session created: {self.session_id}", "SUBSTEP")
         self.log(f"Initial workflow_stage: {WorkflowStage.INITIALIZED.value}", "DATA")
         self.log(f"Storage locations:", "DATA")
-        self.log(f"  - Redis: session:{self.session_id}", "DATA")
         self.log(f"  - Filesystem: ./demo_sessions/sessions/{self.session_id}.json", "DATA")
 
         return session
@@ -205,7 +204,7 @@ class PipelineDemo:
         self.log("Agent will:", "SUBSTEP")
         self.log("1. Get session context (dataset_path, metadata)", "DATA")
         self.log("2. Prepare NWB metadata from session metadata", "DATA")
-        self.log("3. Use NeuroConv to convert OpenEphys → NWB", "DATA")
+        self.log("3. Use NeuroConv to convert OpenEphys -> NWB", "DATA")
         self.log("4. Apply gzip compression", "DATA")
         self.log("5. Track conversion duration", "DATA")
         self.log("6. Update session context with conversion_results", "DATA")
@@ -339,17 +338,16 @@ class PipelineDemo:
             self.log(f"Size: {size_str}", "DATA")
 
         self.log("Information Flow Summary", "STEP")
-        self.log("1. User Request → MCP Server", "DATA")
-        self.log("2. MCP Server → Conversation Agent (metadata extraction)", "DATA")
-        self.log("3. Conversation Agent → Session Context (dataset_info, metadata)", "DATA")
-        self.log("4. Conversation Agent → Conversion Agent (handoff)", "DATA")
-        self.log("5. Conversion Agent → Session Context (conversion_results)", "DATA")
-        self.log("6. Conversion Agent → Evaluation Agent (handoff)", "DATA")
-        self.log("7. Evaluation Agent → Session Context (validation_results)", "DATA")
-        self.log("8. Session Context → User (final results)", "DATA")
+        self.log("1. User Request -> MCP Server", "DATA")
+        self.log("2. MCP Server -> Conversation Agent (metadata extraction)", "DATA")
+        self.log("3. Conversation Agent -> Session Context (dataset_info, metadata)", "DATA")
+        self.log("4. Conversation Agent -> Conversion Agent (handoff)", "DATA")
+        self.log("5. Conversion Agent -> Session Context (conversion_results)", "DATA")
+        self.log("6. Conversion Agent -> Evaluation Agent (handoff)", "DATA")
+        self.log("7. Evaluation Agent -> Session Context (validation_results)", "DATA")
+        self.log("8. Session Context -> User (final results)", "DATA")
 
         self.log("Data Storage Locations", "STEP")
-        self.log(f"Redis: session:{self.session_id}", "DATA")
         self.log(f"Filesystem: ./demo_sessions/sessions/{self.session_id}.json", "DATA")
         self.log(f"NWB Output: {session.conversion_results.nwb_file_path if session.conversion_results else 'N/A'}", "DATA")
         self.log(f"Report: {session.validation_results.validation_report_path if session.validation_results else 'N/A'}", "DATA")
@@ -357,10 +355,8 @@ class PipelineDemo:
     async def cleanup(self):
         """Cleanup resources."""
         self.log("CLEANUP", "HEADER")
-
-        if self.context_manager:
-            await self.context_manager.disconnect()
-            self.log("Context Manager disconnected", "SUBSTEP")
+        # Filesystem-only mode doesn't need disconnection
+        self.log("No cleanup needed (Filesystem-Only Mode)", "SUBSTEP")
 
     async def run(self, dataset_path: str):
         """Run complete demonstration."""
@@ -384,6 +380,7 @@ async def main():
     print("\n")
     print("=" * 80)
     print("  Multi-Agent NWB Conversion Pipeline - Full Demonstration".center(80))
+    print("  (Standalone Mode - No Redis Required)".center(80))
     print("=" * 80)
     print("\n")
 
