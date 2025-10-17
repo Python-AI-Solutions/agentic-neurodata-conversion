@@ -106,6 +106,21 @@ async def test_report_includes_session_id(
 ) -> None:
     """Test report includes session_id."""
     session_id = "test-session-002"
+    # Use issues with warnings only (no critical) to match "passed_with_warnings" status
+    issues_with_warnings = [
+        ValidationIssue(
+            severity="BEST_PRACTICE_VIOLATION",
+            message="Violation issue 1",
+            location="/test/location2",
+            check_name="test_check2",
+        ),
+        ValidationIssue(
+            severity="BEST_PRACTICE_SUGGESTION",
+            message="Suggestion issue 1",
+            location="/test/location3",
+            check_name="test_check3",
+        ),
+    ]
     overall_status = "passed_with_warnings"
     issue_count = {"CRITICAL": 0, "BEST_PRACTICE_VIOLATION": 1, "BEST_PRACTICE_SUGGESTION": 1}
     metadata_score = 90.0
@@ -116,7 +131,7 @@ async def test_report_includes_session_id(
         session_id=session_id,
         overall_status=overall_status,
         issue_count=issue_count,
-        issues=sample_issues,
+        issues=issues_with_warnings,
         metadata_score=metadata_score,
         best_practices_score=best_practices_score,
     )
