@@ -242,6 +242,9 @@ class GlobalState(BaseModel):
         self.progress_percent = 0.0
         self.progress_message = None
         self.current_stage = None
+        # Bug fix: Clear LLM message and conversation type to prevent old messages showing after reset
+        self.llm_message = None
+        self.conversation_type = None
         self.updated_at = datetime.now()
 
     def update_progress(
