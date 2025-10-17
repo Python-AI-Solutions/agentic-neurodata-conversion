@@ -106,10 +106,12 @@ class SessionContext(BaseModel):
     validation_results: Optional[ValidationResults] = None
     requires_user_clarification: bool = False
     clarification_prompt: Optional[str] = None
+    output_nwb_path: Optional[str] = None
+    output_report_path: Optional[str] = None
 
     class Config:
         """Pydantic configuration."""
 
         json_encoders = {
-            datetime: lambda v: v.isoformat() + "Z",
+            datetime: lambda v: v.isoformat(),
         }

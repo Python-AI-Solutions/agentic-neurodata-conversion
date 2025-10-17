@@ -3,7 +3,6 @@
 from datetime import datetime
 from pathlib import Path
 import time
-import traceback
 from typing import Any
 
 from neuroconv.datainterfaces import OpenEphysRecordingInterface
@@ -211,7 +210,6 @@ class ConversionAgent(BaseAgent):
         # Get error details
         error_type = type(error).__name__
         error_message = str(error)
-        stack_trace = traceback.format_exc()
 
         # Create LLM prompt
         prompt = f"""A conversion error occurred while converting an OpenEphys dataset to NWB format.

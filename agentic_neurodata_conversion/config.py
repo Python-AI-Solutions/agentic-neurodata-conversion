@@ -74,12 +74,12 @@ def get_conversation_agent_config() -> AgentConfig:
 
     # Prefer Anthropic if both are present
     if anthropic_key:
-        provider = "anthropic"
-        api_key = anthropic_key
+        provider: Literal["anthropic", "openai"] = "anthropic"
+        api_key: str = anthropic_key
         default_model = "claude-3-5-sonnet-20241022"
     else:
         provider = "openai"
-        api_key = openai_key
+        api_key = openai_key  # type: ignore[assignment]
         default_model = "gpt-4-turbo"
 
     model = os.getenv("CONVERSATION_LLM_MODEL", default_model)
@@ -87,7 +87,7 @@ def get_conversation_agent_config() -> AgentConfig:
     return AgentConfig(
         agent_name="conversation_agent",
         agent_type="conversation",
-        llm_provider=provider,  # type: ignore
+        llm_provider=provider,
         llm_model=model,
         llm_api_key=api_key,
         temperature=0.7,
@@ -108,12 +108,12 @@ def get_conversion_agent_config() -> AgentConfig:
         )
 
     if anthropic_key:
-        provider = "anthropic"
-        api_key = anthropic_key
+        provider: Literal["anthropic", "openai"] = "anthropic"
+        api_key: str = anthropic_key
         default_model = "claude-3-5-sonnet-20241022"
     else:
         provider = "openai"
-        api_key = openai_key
+        api_key = openai_key  # type: ignore[assignment]
         default_model = "gpt-4-turbo"
 
     model = os.getenv("CONVERSION_LLM_MODEL", default_model)
@@ -121,7 +121,7 @@ def get_conversion_agent_config() -> AgentConfig:
     return AgentConfig(
         agent_name="conversion_agent",
         agent_type="conversion",
-        llm_provider=provider,  # type: ignore
+        llm_provider=provider,
         llm_model=model,
         llm_api_key=api_key,
         temperature=0.3,
@@ -142,12 +142,12 @@ def get_evaluation_agent_config() -> AgentConfig:
         )
 
     if anthropic_key:
-        provider = "anthropic"
-        api_key = anthropic_key
+        provider: Literal["anthropic", "openai"] = "anthropic"
+        api_key: str = anthropic_key
         default_model = "claude-3-5-sonnet-20241022"
     else:
         provider = "openai"
-        api_key = openai_key
+        api_key = openai_key  # type: ignore[assignment]
         default_model = "gpt-4-turbo"
 
     model = os.getenv("EVALUATION_LLM_MODEL", default_model)
@@ -155,7 +155,7 @@ def get_evaluation_agent_config() -> AgentConfig:
     return AgentConfig(
         agent_name="evaluation_agent",
         agent_type="evaluation",
-        llm_provider=provider,  # type: ignore
+        llm_provider=provider,
         llm_model=model,
         llm_api_key=api_key,
         temperature=0.4,

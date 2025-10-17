@@ -236,10 +236,8 @@ def _generate_status_message(session: SessionContext) -> str:
         return "Validating NWB file and generating report."
     elif stage == WorkflowStage.COMPLETED:
         return "Conversion completed successfully."
-    elif stage == WorkflowStage.FAILED:
+    else:  # WorkflowStage.FAILED
         return "Conversion failed. Please check error details."
-    else:
-        return "Processing session."
 
 
 @router.get("/sessions/{session_id}/status", response_model=SessionStatusResponse)
@@ -429,16 +427,8 @@ async def get_session_result(
     # Extract LLM summary
     llm_validation_summary = session.validation_results.llm_validation_summary or ""
 
-    # Convert ValidationIssue objects to dicts
-    validation_issues = [
-        {
-            "severity": issue.severity,
-            "message": issue.message,
-            "location": issue.location or "",
-            "check_name": issue.check_name,
-        }
-        for issue in session.validation_results.issues
-    ]
+    # Validation issues are already ValidationIssue objects
+    validation_issues = session.validation_results.issues
 
     # 4. Return response
     return SessionResultResponse(
