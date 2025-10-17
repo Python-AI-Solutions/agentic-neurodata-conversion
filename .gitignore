@@ -310,6 +310,11 @@ migration_summary_*.md
 setup_proper_structure.sh
 migrate_structure.sh
 
+# Test-generated reports and artifacts
+reports/
+*.validation.json
+*_validation.json
+
 # Dask
 dask-worker-space/
 
