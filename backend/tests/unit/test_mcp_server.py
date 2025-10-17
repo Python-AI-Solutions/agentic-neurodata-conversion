@@ -214,10 +214,11 @@ class TestStateManagement:
         assert isinstance(state, GlobalState)
         assert state.status == ConversionStatus.IDLE
 
-    def test_reset_state(self, mcp_server):
+    @pytest.mark.asyncio
+    async def test_reset_state(self, mcp_server):
         """Test resetting global state."""
         # Modify state
-        mcp_server.global_state.update_status(ConversionStatus.CONVERTING)
+        await mcp_server.global_state.update_status(ConversionStatus.CONVERTING)  # Fixed: await async call
         mcp_server.global_state.input_path = "/path/to/input"
         mcp_server.global_state.correction_attempt = 2
 

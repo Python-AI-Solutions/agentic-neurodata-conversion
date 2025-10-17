@@ -309,6 +309,93 @@ class ReportService:
 
         return output_path
 
+    def generate_text_report(
+        self,
+        output_path: Path,
+        validation_result: Dict[str, Any],
+    ) -> Path:
+        """
+        Generate text report in NWB Inspector style (clear and structured).
+
+        Args:
+            output_path: Path where text report should be saved
+            validation_result: Validation result dictionary
+
+        Returns:
+            Path to generated text report
+        """
+        import platform
+        from datetime import datetime
+
+        lines = []
+
+        # Header
+        lines.append("*" * 50)
+        lines.append("NWBInspector Report Summary")
+        lines.append("")
+        lines.append(f"Timestamp: {datetime.now().isoformat()}")
+        lines.append(f"Platform: {platform.platform()}")
+        lines.append(f"NWBInspector version: 0.6.5")  # TODO: Get actual version
+        lines.append("")
+
+        # Summary
+        issues = validation_result.get('issues', [])
+        issue_counts = validation_result.get('issue_counts', {})
+
+        total_issues = len(issues)
+        files_count = 1  # Single file for now
+
+        lines.append(f"Found {total_issues} issues over {files_count} files:")
+
+        for severity, count in sorted(issue_counts.items()):
+            if count > 0:
+                lines.append(f"       {count} - {severity}")
+
+        lines.append("*" * 50)
+        lines.append("")
+        lines.append("")
+
+        # Group issues by severity
+        issues_by_severity = {}
+        for issue in issues:
+            severity = issue.get('severity', 'UNKNOWN')
+            if severity not in issues_by_severity:
+                issues_by_severity[severity] = []
+            issues_by_severity[severity].append(issue)
+
+        # Print issues grouped by severity
+        severity_order = ['CRITICAL', 'ERROR', 'WARNING', 'BEST_PRACTICE_VIOLATION', 'BEST_PRACTICE_SUGGESTION']
+
+        for sev_idx, severity in enumerate(severity_order):
+            if severity not in issues_by_severity:
+                continue
+
+            issues_list = issues_by_severity[severity]
+            if not issues_list:
+                continue
+
+            lines.append(f"{sev_idx}  {severity}")
+            lines.append("=" * 27)
+            lines.append("")
+
+            for issue_idx, issue in enumerate(issues_list):
+                nwb_file = validation_result.get('nwb_file_path', 'Unknown file')
+                check_name = issue.get('check_name', 'unknown_check')
+                object_type = issue.get('object_type', 'NWBFile')
+                location = issue.get('location', '/')
+
+                lines.append(f"{sev_idx}.{issue_idx}  {nwb_file}: {check_name} - '{object_type}' object at location '{location}'")
+                lines.append(f"       Message: {issue.get('message', 'No message')}")
+                lines.append("")
+
+            lines.append("")
+
+        # Write to file
+        with open(output_path, 'w') as f:
+            f.write('\n'.join(lines))
+
+        return output_path
+
     def _format_filesize(self, bytes_value: int) -> str:
         """Format file size in human-readable format."""
         for unit in ['B', 'KB', 'MB', 'GB']:

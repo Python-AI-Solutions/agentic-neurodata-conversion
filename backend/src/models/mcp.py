@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class MCPMessage(BaseModel):
@@ -41,8 +41,10 @@ class MCPMessage(BaseModel):
         description="Message ID this is replying to",
     )
 
-    class Config:
-        json_encoders = {datetime: lambda v: v.isoformat()}
+    # Pydantic V2 configuration
+    model_config = ConfigDict(
+        json_encoders={datetime: lambda v: v.isoformat()}
+    )
 
 
 class MCPResponse(BaseModel):
@@ -75,8 +77,10 @@ class MCPResponse(BaseModel):
         description="Response creation timestamp",
     )
 
-    class Config:
-        json_encoders = {datetime: lambda v: v.isoformat()}
+    # Pydantic V2 configuration
+    model_config = ConfigDict(
+        json_encoders={datetime: lambda v: v.isoformat()}
+    )
 
     @classmethod
     def success_response(
@@ -154,5 +158,7 @@ class MCPEvent(BaseModel):
         description="Event creation timestamp",
     )
 
-    class Config:
-        json_encoders = {datetime: lambda v: v.isoformat()}
+    # Pydantic V2 configuration
+    model_config = ConfigDict(
+        json_encoders={datetime: lambda v: v.isoformat()}
+    )
