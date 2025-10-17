@@ -130,9 +130,7 @@ async def test_initialize_session_handles_generic_exception(
         mock_get_context.side_effect = RuntimeError("Database connection failed")
 
         # Act
-        result = await conversation_agent._initialize_session(
-            session_id, dataset_path
-        )
+        result = await conversation_agent._initialize_session(session_id, dataset_path)
 
         # Assert
         assert result["status"] == "error"

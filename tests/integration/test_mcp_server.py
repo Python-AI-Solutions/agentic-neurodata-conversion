@@ -23,7 +23,9 @@ from agentic_neurodata_conversion.mcp_server.context_manager import ContextManag
 
 
 @pytest.fixture
-def test_client(redis_client: fakeredis.aioredis.FakeRedis, tmp_path: Any) -> TestClient:
+def test_client(
+    redis_client: fakeredis.aioredis.FakeRedis, tmp_path: Any
+) -> TestClient:
     """
     Create TestClient with mocked Redis for integration tests.
 
@@ -235,7 +237,10 @@ class TestEndpointAccessibility:
 
         # Should fail because no conversation_agent is registered, but the
         # endpoint should be accessible (not 404/405)
-        assert response.status_code in [500, 200]  # Either fails at agent check or succeeds
+        assert response.status_code in [
+            500,
+            200,
+        ]  # Either fails at agent check or succeeds
 
     def test_internal_register_agent_accessible(self, test_client: TestClient) -> None:
         """
@@ -319,7 +324,10 @@ class TestAppMetadata:
         Verifies that the FastAPI app has a description set.
         """
         assert test_client.app.description is not None
-        assert "MCP" in test_client.app.description or "Model Context Protocol" in test_client.app.description
+        assert (
+            "MCP" in test_client.app.description
+            or "Model Context Protocol" in test_client.app.description
+        )
 
 
 class TestShutdownSequence:

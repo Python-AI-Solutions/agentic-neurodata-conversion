@@ -168,6 +168,7 @@ class TestMCPServerCommunication:
             # Verify request payload
             request = route.calls.last.request
             import json
+
             json_data = json.loads(request.content)
             assert json_data["agent_name"] == "test_agent"
             assert json_data["agent_type"] == "conversation"
@@ -257,6 +258,7 @@ class TestMCPServerCommunication:
             # Verify request payload
             request = route.calls.last.request
             import json
+
             json_data = json.loads(request.content)
             assert json_data["workflow_stage"] == "collecting_metadata"
             assert json_data["current_agent"] == "test_agent"
@@ -361,7 +363,9 @@ class TestLLMCalls:
             assert call_kwargs["temperature"] == 0.3
             assert len(call_kwargs["messages"]) == 2
             assert call_kwargs["messages"][0]["role"] == "system"
-            assert call_kwargs["messages"][0]["content"] == "You are a helpful assistant"
+            assert (
+                call_kwargs["messages"][0]["content"] == "You are a helpful assistant"
+            )
             assert call_kwargs["messages"][1]["role"] == "user"
             assert call_kwargs["messages"][1]["content"] == "Test prompt"
 
@@ -447,9 +451,7 @@ class TestLLMCalls:
 
         # Fail once with rate limit, then succeed
         mock_completions.create.side_effect = [
-            OpenAIRateLimitError(
-                "Rate limit exceeded", response=Mock(), body=None
-            ),
+            OpenAIRateLimitError("Rate limit exceeded", response=Mock(), body=None),
             mock_response,
         ]
 
@@ -511,10 +513,10 @@ class TestLLMCalls:
 
                 # Verify exponential backoff: 2^0, 2^1, 2^2, 2^3
                 assert mock_sleep.call_count == 4
-                assert mock_sleep.call_args_list[0][0][0] == 1   # 2^0
-                assert mock_sleep.call_args_list[1][0][0] == 2   # 2^1
-                assert mock_sleep.call_args_list[2][0][0] == 4   # 2^2
-                assert mock_sleep.call_args_list[3][0][0] == 8   # 2^3
+                assert mock_sleep.call_args_list[0][0][0] == 1  # 2^0
+                assert mock_sleep.call_args_list[1][0][0] == 2  # 2^1
+                assert mock_sleep.call_args_list[2][0][0] == 4  # 2^2
+                assert mock_sleep.call_args_list[3][0][0] == 8  # 2^3
 
     @pytest.mark.asyncio
     async def test_call_llm_fails_after_max_retries(self) -> None:

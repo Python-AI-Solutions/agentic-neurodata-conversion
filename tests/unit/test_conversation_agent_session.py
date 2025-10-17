@@ -111,9 +111,7 @@ async def test_handle_message_routes_to_initialize_session(
                 with patch.object(
                     conversation_agent.http_client, "post", new_callable=AsyncMock
                 ) as mock_post:
-                    mock_post.return_value = MagicMock(
-                        spec=Response, status_code=200
-                    )
+                    mock_post.return_value = MagicMock(spec=Response, status_code=200)
 
                     # Act
                     result = await conversation_agent.handle_message(message)
@@ -155,9 +153,7 @@ async def test_initialize_session_with_valid_openephys_dataset(
                 with patch.object(
                     conversation_agent.http_client, "post", new_callable=AsyncMock
                 ) as mock_post:
-                    mock_post.return_value = MagicMock(
-                        spec=Response, status_code=200
-                    )
+                    mock_post.return_value = MagicMock(spec=Response, status_code=200)
 
                     # Act
                     result = await conversation_agent._initialize_session(
@@ -201,9 +197,7 @@ async def test_initialize_updates_session_context_with_dataset_info(
                 with patch.object(
                     conversation_agent.http_client, "post", new_callable=AsyncMock
                 ) as mock_post:
-                    mock_post.return_value = MagicMock(
-                        spec=Response, status_code=200
-                    )
+                    mock_post.return_value = MagicMock(spec=Response, status_code=200)
 
                     # Act
                     await conversation_agent._initialize_session(
@@ -249,9 +243,7 @@ async def test_initialize_updates_session_context_with_metadata(
                 with patch.object(
                     conversation_agent.http_client, "post", new_callable=AsyncMock
                 ) as mock_post:
-                    mock_post.return_value = MagicMock(
-                        spec=Response, status_code=200
-                    )
+                    mock_post.return_value = MagicMock(spec=Response, status_code=200)
 
                     # Act
                     await conversation_agent._initialize_session(
@@ -296,9 +288,7 @@ async def test_initialize_sets_workflow_stage_to_collecting_metadata(
                 with patch.object(
                     conversation_agent.http_client, "post", new_callable=AsyncMock
                 ) as mock_post:
-                    mock_post.return_value = MagicMock(
-                        spec=Response, status_code=200
-                    )
+                    mock_post.return_value = MagicMock(spec=Response, status_code=200)
 
                     # Act
                     await conversation_agent._initialize_session(
@@ -308,7 +298,9 @@ async def test_initialize_sets_workflow_stage_to_collecting_metadata(
                     # Assert
                     assert mock_update_context.called
                     updates = mock_update_context.call_args_list[0][0][1]
-                    assert updates["workflow_stage"] == WorkflowStage.COLLECTING_METADATA
+                    assert (
+                        updates["workflow_stage"] == WorkflowStage.COLLECTING_METADATA
+                    )
 
 
 @pytest.mark.asyncio
@@ -342,9 +334,7 @@ async def test_initialize_triggers_conversion_agent_after_initialization(
                 with patch.object(
                     conversation_agent.http_client, "post", new_callable=AsyncMock
                 ) as mock_post:
-                    mock_post.return_value = MagicMock(
-                        spec=Response, status_code=200
-                    )
+                    mock_post.return_value = MagicMock(spec=Response, status_code=200)
 
                     # Act
                     await conversation_agent._initialize_session(
@@ -389,9 +379,7 @@ async def test_initialize_returns_success_status_with_results(
                 with patch.object(
                     conversation_agent.http_client, "post", new_callable=AsyncMock
                 ) as mock_post:
-                    mock_post.return_value = MagicMock(
-                        spec=Response, status_code=200
-                    )
+                    mock_post.return_value = MagicMock(spec=Response, status_code=200)
 
                     # Act
                     result = await conversation_agent._initialize_session(

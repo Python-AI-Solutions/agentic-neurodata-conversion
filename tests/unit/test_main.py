@@ -135,13 +135,17 @@ class TestLifespan:
         from fastapi import FastAPI
 
         # Mock the dependencies
-        with patch(
-            "agentic_neurodata_conversion.mcp_server.main.ContextManager"
-        ) as mock_context_manager_cls, patch(
-            "agentic_neurodata_conversion.mcp_server.main.AgentRegistry"
-        ) as mock_agent_registry_cls, patch(
-            "agentic_neurodata_conversion.mcp_server.main.MessageRouter"
-        ) as mock_message_router_cls:
+        with (
+            patch(
+                "agentic_neurodata_conversion.mcp_server.main.ContextManager"
+            ) as mock_context_manager_cls,
+            patch(
+                "agentic_neurodata_conversion.mcp_server.main.AgentRegistry"
+            ) as mock_agent_registry_cls,
+            patch(
+                "agentic_neurodata_conversion.mcp_server.main.MessageRouter"
+            ) as mock_message_router_cls,
+        ):
             # Create mock instances
             mock_context_manager = AsyncMock()
             mock_context_manager.connect = AsyncMock()
@@ -197,13 +201,17 @@ class TestLifespan:
         from fastapi import FastAPI
 
         # Mock the dependencies
-        with patch(
-            "agentic_neurodata_conversion.mcp_server.main.ContextManager"
-        ) as mock_context_manager_cls, patch(
-            "agentic_neurodata_conversion.mcp_server.main.AgentRegistry"
-        ) as mock_agent_registry_cls, patch(
-            "agentic_neurodata_conversion.mcp_server.main.MessageRouter"
-        ) as mock_message_router_cls:
+        with (
+            patch(
+                "agentic_neurodata_conversion.mcp_server.main.ContextManager"
+            ) as mock_context_manager_cls,
+            patch(
+                "agentic_neurodata_conversion.mcp_server.main.AgentRegistry"
+            ) as mock_agent_registry_cls,
+            patch(
+                "agentic_neurodata_conversion.mcp_server.main.MessageRouter"
+            ) as mock_message_router_cls,
+        ):
             # Create mock instances
             mock_context_manager = AsyncMock()
             mock_context_manager.connect = AsyncMock()
@@ -239,15 +247,20 @@ class TestLifespan:
         from fastapi import FastAPI
 
         # Mock the dependencies
-        with patch(
-            "agentic_neurodata_conversion.mcp_server.main.ContextManager"
-        ) as mock_context_manager_cls, patch(
-            "agentic_neurodata_conversion.mcp_server.main.AgentRegistry"
-        ) as mock_agent_registry_cls, patch(
-            "agentic_neurodata_conversion.mcp_server.main.MessageRouter"
-        ) as mock_message_router_cls, patch(
-            "agentic_neurodata_conversion.mcp_server.main.settings"
-        ) as mock_settings:
+        with (
+            patch(
+                "agentic_neurodata_conversion.mcp_server.main.ContextManager"
+            ) as mock_context_manager_cls,
+            patch(
+                "agentic_neurodata_conversion.mcp_server.main.AgentRegistry"
+            ) as mock_agent_registry_cls,
+            patch(
+                "agentic_neurodata_conversion.mcp_server.main.MessageRouter"
+            ) as mock_message_router_cls,
+            patch(
+                "agentic_neurodata_conversion.mcp_server.main.settings"
+            ) as mock_settings,
+        ):
             # Configure mock settings
             mock_settings.redis_url = "redis://test:6379/0"
             mock_settings.redis_session_ttl = 3600
