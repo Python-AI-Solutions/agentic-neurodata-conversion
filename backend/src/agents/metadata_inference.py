@@ -279,40 +279,66 @@ class MetadataInferenceEngine:
         Returns:
             Dictionary with LLM inferences including confidence and reasoning
         """
-        system_prompt = """You are an expert neuroscience data curator specializing in NWB metadata.
+        system_prompt = """You are an expert neuroscience data curator with deep knowledge of:
+- Electrophysiology recording systems (SpikeGLX/Neuropixels, Open Ephys, Intan, etc.)
+- Common neuroscience experimental paradigms and protocols
+- NWB metadata requirements and DANDI archive standards
+- Brain anatomy and common recording targets
+- Model organisms used in neuroscience research
 
-Your job is to analyze file metadata and make intelligent inferences about:
-1. Recording type and modality (electrophysiology, calcium imaging, behavior, etc.)
-2. Likely experimental subject (species, age range, etc.)
-3. Likely brain regions recorded from
-4. Suggested keywords for searchability
-5. Experiment type and purpose
+Your job is to analyze file metadata and make intelligent, context-aware inferences about:
+1. Recording type and modality (electrophysiology, calcium imaging, behavior, optogenetics, etc.)
+2. Experimental subject (species, age range, likely strain if mouse/rat)
+3. Brain regions recorded from (with full anatomical names)
+4. Experimental context (task, stimulation, recording conditions)
+5. Suggested metadata to help with data discovery
+6. Likely experimenter details based on filename patterns
 
-Provide confident inferences with reasoning, and indicate confidence level (0-100)."""
+Be specific, confident, and provide detailed reasoning. Use domain knowledge to make smart guesses."""
 
-        user_prompt = f"""Analyze this neuroscience data file and infer NWB metadata:
+        user_prompt = f"""Analyze this neuroscience data file and infer rich NWB metadata.
 
 **File Metadata:**
 {json.dumps(file_meta, indent=2)}
 
-**Heuristic Inferences (from rules):**
+**Heuristic Inferences (from patterns):**
 {json.dumps(heuristic_inferences, indent=2)}
 
-**Task:**
-Based on the file properties, infer:
-1. What type of neuroscience recording is this? (electrophysiology, imaging, behavior, etc.)
-2. What species is likely being recorded? (if not already inferred)
-3. What brain region(s)? (expand abbreviations, e.g., "V1" → "primary visual cortex")
-4. What experiment type? (acute recording, chronic recording, etc.)
-5. Suggested keywords for data discovery
-6. What should the experiment_description say?
+**Your Task:**
+Based on ALL available information (filename, format, size, structure, patterns), intelligently infer:
 
-For each inference:
-- Provide the inferred value
-- Explain your reasoning (why you think this)
-- Give confidence score 0-100
+1. **Recording Modality**: What type of recording is this? (electrophysiology, imaging, behavior, etc.)
+   - Look at file format, data streams, sampling rates
 
-Return JSON format."""
+2. **Species**: What animal is this recording from?
+   - Check filename for patterns (mouse, rat, primate, etc.)
+   - Consider typical species for this recording type
+
+3. **Brain Region**: Where was this recorded?
+   - Look for anatomical abbreviations in filename (v1, hpc, pfc, etc.)
+   - Expand to full anatomical names
+
+4. **Experiment Type**: What kind of experiment?
+   - Acute vs. chronic recording
+   - Awake vs. anesthetized
+   - Spontaneous vs. task-driven
+
+5. **Experiment Description**: Generate a rich, specific description
+   - Include modality, species, brain region, recording system
+   - Example: "Extracellular electrophysiology recording from mouse primary visual cortex (V1) using Neuropixels probes during visual stimulation"
+
+6. **Keywords**: Suggest 5-7 keywords for data discovery
+   - Include modality, species, brain region, recording system, paradigm
+
+7. **Institution/Lab Hints**: Any clues about origin?
+   - Filename patterns, metadata, naming conventions
+
+For EACH inference:
+- Provide the specific value
+- Explain your reasoning (what clues led to this inference)
+- Give confidence score 0-100 (be conservative for guesses)
+
+Return detailed JSON with your best inferences."""
 
         output_schema = {
             "type": "object",
@@ -322,21 +348,33 @@ Return JSON format."""
                     "properties": {
                         "recording_modality": {"type": "string"},
                         "species": {"type": "string"},
+                        "species_strain": {"type": "string"},
                         "brain_region": {"type": "string"},
                         "brain_region_full": {"type": "string"},
                         "experiment_type": {"type": "string"},
                         "experiment_description": {"type": "string"},
                         "keywords": {"type": "array", "items": {"type": "string"}},
+                        "session_description": {"type": "string"},
+                        "experimenter_hint": {"type": "string"},
+                        "institution_hint": {"type": "string"},
+                        "recording_system": {"type": "string"},
+                        "recording_conditions": {"type": "string"},
                     },
                 },
                 "confidence_scores": {
                     "type": "object",
                     "description": "Confidence 0-100 for each inferred field",
+                    "additionalProperties": {"type": "number"}
                 },
                 "reasoning": {
                     "type": "object",
-                    "description": "Explanation of how each inference was made",
+                    "description": "Detailed explanation of how each inference was made",
+                    "additionalProperties": {"type": "string"}
                 },
+                "analysis_summary": {
+                    "type": "string",
+                    "description": "Brief summary of the file analysis"
+                }
             },
             "required": ["inferred_metadata", "confidence_scores", "reasoning"],
         }

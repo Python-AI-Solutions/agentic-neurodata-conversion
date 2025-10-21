@@ -44,6 +44,45 @@ class ValidationStatus(str, Enum):
     FAILED_USER_ABANDONED = "failed_user_abandoned"  # User cancelled during input
 
 
+class ValidationOutcome(str, Enum):
+    """
+    NWB Inspector validation outcome.
+
+    WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Replace string-based overall_status
+    with type-safe enum (Recommendation 6.2)
+    """
+    PASSED = "PASSED"
+    PASSED_WITH_ISSUES = "PASSED_WITH_ISSUES"
+    FAILED = "FAILED"
+
+
+class ConversationPhase(str, Enum):
+    """
+    Current phase of user conversation.
+
+    WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Replace string-based conversation_type
+    with type-safe enum (Recommendation 6.2, Breaking Point #3)
+    """
+    IDLE = "idle"  # No active conversation
+    METADATA_COLLECTION = "required_metadata"  # Collecting required metadata
+    VALIDATION_ANALYSIS = "validation_analysis"  # Analyzing validation failures
+    IMPROVEMENT_DECISION = "improvement_decision"  # User deciding improve/accept
+
+
+class MetadataRequestPolicy(str, Enum):
+    """
+    Policy for metadata requests.
+
+    WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Unify metadata_requests_count and
+    user_wants_minimal into single enum (Recommendation 6.4, Breaking Point #5)
+    """
+    NOT_ASKED = "not_asked"  # Haven't requested metadata yet
+    ASKED_ONCE = "asked_once"  # Requested once, awaiting response
+    USER_PROVIDED = "user_provided"  # User gave metadata
+    USER_DECLINED = "user_declined"  # User explicitly declined
+    PROCEEDING_MINIMAL = "proceeding_minimal"  # Proceeding with minimal metadata
+
+
 class LogLevel(str, Enum):
     """Log entry severity levels."""
 
@@ -68,6 +107,10 @@ class LogEntry(BaseModel):
     )
 
 
+# WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Add retry limit (Recommendation 6.5, Breaking Point #7)
+MAX_RETRY_ATTEMPTS = 5
+
+
 class GlobalState(BaseModel):
     """
     Central state object tracking the entire conversion pipeline.
@@ -81,13 +124,22 @@ class GlobalState(BaseModel):
         default=None,
         description="Final session outcome including user decisions (Story 2.1, 8.8)"
     )
-    overall_status: Optional[str] = Field(
+    # WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Use ValidationOutcome enum instead of string
+    overall_status: Optional[ValidationOutcome] = Field(
         default=None,
         description="NWB Inspector evaluation result: PASSED, PASSED_WITH_ISSUES, or FAILED (Story 7.2)"
     )
 
     # Thread safety - not serialized by Pydantic (Pydantic V2: private field)
     _status_lock: Optional[asyncio.Lock] = None
+    _conversation_lock: Optional[asyncio.Lock] = None
+    _llm_lock: Optional[asyncio.Lock] = None
+
+    # LLM processing state
+    llm_processing: bool = Field(
+        default=False,
+        description="EDGE CASE FIX #1: Flag indicating LLM call in progress (prevents concurrent LLM calls)"
+    )
 
     # File paths
     input_path: Optional[str] = Field(default=None)
@@ -99,6 +151,18 @@ class GlobalState(BaseModel):
 
     # Metadata
     metadata: Dict[str, Any] = Field(default_factory=dict)
+    inference_result: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Internal metadata inference results (not included in NWB output)"
+    )
+    user_provided_metadata: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Metadata explicitly provided by user (separate from auto-inferred)"
+    )
+    auto_extracted_metadata: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Metadata automatically extracted from file analysis (separate from user-provided)"
+    )
 
     # Progress tracking
     progress_percent: float = Field(default=0.0, ge=0.0, le=100.0)
@@ -106,7 +170,16 @@ class GlobalState(BaseModel):
     current_stage: Optional[str] = Field(default=None)
 
     # Conversational state
-    conversation_type: Optional[str] = Field(default=None)
+    # WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Use ConversationPhase enum instead of string
+    conversation_phase: ConversationPhase = Field(
+        default=ConversationPhase.IDLE,
+        description="Current phase of user conversation"
+    )
+    # Deprecated: kept for backward compatibility during migration, use conversation_phase instead
+    conversation_type: Optional[str] = Field(
+        default=None,
+        description="DEPRECATED: Use conversation_phase instead"
+    )
     llm_message: Optional[str] = Field(default=None)
     conversation_history: List[Dict[str, Any]] = Field(
         default_factory=list,
@@ -118,14 +191,20 @@ class GlobalState(BaseModel):
         default_factory=set,
         description="Fields/metadata that user explicitly declined to provide"
     )
+    # WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Use MetadataRequestPolicy enum
+    metadata_policy: MetadataRequestPolicy = Field(
+        default=MetadataRequestPolicy.NOT_ASKED,
+        description="Policy for metadata requests - replaces metadata_requests_count and user_wants_minimal"
+    )
+    # Deprecated: kept for backward compatibility during migration
     metadata_requests_count: int = Field(
         default=0,
         ge=0,
-        description="Number of times we've asked user for metadata"
+        description="DEPRECATED: Use metadata_policy instead. Number of times we've asked user for metadata"
     )
     user_wants_minimal: bool = Field(
         default=False,
-        description="User has indicated they want minimal metadata conversion"
+        description="DEPRECATED: Use metadata_policy instead. User has indicated they want minimal metadata conversion"
     )
     user_wants_sequential: bool = Field(
         default=False,
@@ -136,8 +215,9 @@ class GlobalState(BaseModel):
     logs: List[LogEntry] = Field(default_factory=list)
 
     # Correction tracking
-    # Bug #14 fix: No max limit - unlimited retries with user permission (Story 8.7 line 933, Story 8.8 line 953)
-    correction_attempt: int = Field(default=0, ge=0)
+    # WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Add retry limit (Breaking Point #7)
+    # Changed from unlimited to MAX_RETRY_ATTEMPTS=5
+    correction_attempt: int = Field(default=0, ge=0, le=MAX_RETRY_ATTEMPTS)
 
     # Bug #11 fix: Track previous validation issues for "no progress" detection (Story 4.7 lines 461-466)
     previous_validation_issues: Optional[List[Dict[str, Any]]] = Field(
@@ -170,9 +250,12 @@ class GlobalState(BaseModel):
     )
 
     def __init__(self, **data):
-        """Initialize GlobalState with async lock."""
+        """Initialize GlobalState with async locks."""
         super().__init__(**data)
-        self._status_lock = asyncio.Lock()
+        # Use object.__setattr__ for private fields in Pydantic V2
+        object.__setattr__(self, '_status_lock', asyncio.Lock())
+        object.__setattr__(self, '_conversation_lock', asyncio.Lock())
+        object.__setattr__(self, '_llm_lock', asyncio.Lock())
 
     def add_log(self, level: LogLevel, message: str, context: Optional[Dict[str, Any]] = None) -> None:
         """
@@ -193,7 +276,10 @@ class GlobalState(BaseModel):
 
     def add_conversation_message(self, role: str, content: str, context: Optional[Dict[str, Any]] = None) -> None:
         """
-        Add a message to conversation history with rolling window.
+        Add a message to conversation history with rolling window (SYNCHRONOUS VERSION - for backward compatibility).
+
+        DEPRECATED: Use add_conversation_message_safe() for thread-safe async operations.
+        This method is kept for backward compatibility but is NOT thread-safe.
 
         Keeps only the last 50 messages to prevent memory leaks.
 
@@ -218,23 +304,87 @@ class GlobalState(BaseModel):
 
         self.updated_at = datetime.now()
 
+    async def add_conversation_message_safe(self, role: str, content: str, context: Optional[Dict[str, Any]] = None) -> None:
+        """
+        Add a message to conversation history with rolling window (THREAD-SAFE ASYNC VERSION).
+
+        BUG FIX #1: Prevents race conditions in concurrent access to conversation_history.
+        Use this method instead of add_conversation_message() in async contexts.
+
+        Keeps only the last 50 messages to prevent memory leaks.
+
+        Args:
+            role: Role of the speaker ("user" or "assistant")
+            content: Message content
+            context: Optional context data
+        """
+        message = {
+            "role": role,
+            "content": content,
+            "timestamp": datetime.now().isoformat(),
+        }
+        if context:
+            message["context"] = context
+
+        async with self._conversation_lock:
+            self.conversation_history.append(message)
+
+            # Rolling window: keep only last 50 messages
+            if len(self.conversation_history) > 50:
+                self.conversation_history = self.conversation_history[-50:]
+
+        self.updated_at = datetime.now()
+
+    async def get_conversation_history_snapshot(self) -> List[Dict[str, Any]]:
+        """
+        Get an immutable snapshot of conversation history (THREAD-SAFE).
+
+        BUG FIX #1: Safe to iterate without race conditions even if history is being modified.
+
+        Returns:
+            Copy of conversation history list
+        """
+        async with self._conversation_lock:
+            return list(self.conversation_history)  # Return copy
+
+    async def clear_conversation_history_safe(self) -> None:
+        """
+        Clear conversation history (THREAD-SAFE).
+
+        BUG FIX #1: Prevents race conditions when clearing history.
+        """
+        async with self._conversation_lock:
+            self.conversation_history.clear()
+
     def reset(self) -> None:
-        """Reset state to initial values for a new conversion."""
+        """
+        Reset state to initial values for a new conversion.
+
+        WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Complete state reset (Breaking Point #6)
+        """
         self.status = ConversionStatus.IDLE
         self.validation_status = None
-        self.overall_status = None  # Bug #15: Reset overall_status
+        self.overall_status = None
         self.input_path = None
         self.output_path = None
         self.pending_conversion_input_path = None
         self.metadata = {}
+        # WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Clear all metadata caches
+        self.inference_result = {}
+        self.auto_extracted_metadata = {}
+        self.user_provided_metadata = {}
         self.logs = []
         self.correction_attempt = 0
         self.checksums = {}
-        # Bug #11 fix: Reset "no progress" detection fields
+        # Reset "no progress" detection fields
         self.previous_validation_issues = None
         self.user_provided_input_this_attempt = False
         self.auto_corrections_applied_this_attempt = False
         self.user_declined_fields = set()
+        # Reset new enum fields
+        self.conversation_phase = ConversationPhase.IDLE
+        self.metadata_policy = MetadataRequestPolicy.NOT_ASKED
+        # Reset deprecated fields for backward compatibility
         self.metadata_requests_count = 0
         self.user_wants_minimal = False
         self.user_wants_sequential = False
@@ -242,7 +392,6 @@ class GlobalState(BaseModel):
         self.progress_percent = 0.0
         self.progress_message = None
         self.current_stage = None
-        # Bug fix: Clear LLM message and conversation type to prevent old messages showing after reset
         self.llm_message = None
         self.conversation_type = None
         self.updated_at = datetime.now()
@@ -405,3 +554,69 @@ class GlobalState(BaseModel):
                     "validation_status": validation_status.value
                 },
             )
+
+    async def set_validation_result(
+        self,
+        overall_status: ValidationOutcome,
+        requires_user_decision: bool = False,
+        conversation_phase: Optional[ConversationPhase] = None
+    ) -> None:
+        """
+        Atomically update validation result and related state.
+
+        WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Atomic state updates (Recommendation 6.3, Breaking Point #2)
+
+        Args:
+            overall_status: NWB Inspector validation outcome
+            requires_user_decision: Whether user needs to make a decision
+            conversation_phase: Optional conversation phase to set
+        """
+        if self._status_lock is None:
+            self._status_lock = asyncio.Lock()
+
+        async with self._status_lock:
+            self.overall_status = overall_status
+
+            if requires_user_decision:
+                self.status = ConversionStatus.AWAITING_USER_INPUT
+                self.conversation_phase = conversation_phase or ConversationPhase.IMPROVEMENT_DECISION
+                # Set deprecated field for backward compatibility
+                self.conversation_type = self.conversation_phase.value
+            else:
+                self.status = ConversionStatus.COMPLETED
+                self.conversation_phase = ConversationPhase.IDLE
+                self.conversation_type = None
+
+            self.updated_at = datetime.now()
+            self.add_log(
+                LogLevel.INFO,
+                f"Validation result set atomically: {overall_status.value}, "
+                f"status: {self.status.value}, phase: {self.conversation_phase.value}",
+                {
+                    "overall_status": overall_status.value,
+                    "status": self.status.value,
+                    "conversation_phase": self.conversation_phase.value,
+                },
+            )
+
+    @property
+    def can_retry(self) -> bool:
+        """
+        Check if more retry attempts are allowed.
+
+        WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Add retry limit (Recommendation 6.5, Breaking Point #7)
+
+        Returns:
+            True if more retries allowed, False otherwise
+        """
+        return self.correction_attempt < MAX_RETRY_ATTEMPTS
+
+    @property
+    def retry_attempts_remaining(self) -> int:
+        """
+        Get number of retry attempts remaining.
+
+        Returns:
+            Number of retries left
+        """
+        return max(0, MAX_RETRY_ATTEMPTS - self.correction_attempt)

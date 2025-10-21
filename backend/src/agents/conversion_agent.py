@@ -21,6 +21,7 @@ from models import (
     MCPResponse,
 )
 from utils.file_versioning import create_versioned_file, compute_sha256
+from agents.intelligent_format_detector import IntelligentFormatDetector
 
 
 class ConversionAgent:
@@ -39,6 +40,9 @@ class ConversionAgent:
         """
         self._supported_formats = self._get_supported_formats()
         self._llm_service = llm_service
+        self._format_detector = (
+            IntelligentFormatDetector(llm_service) if llm_service else None
+        )
 
     def _get_supported_formats(self) -> List[str]:
         """

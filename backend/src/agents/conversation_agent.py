@@ -7,6 +7,7 @@ Responsible for:
 - Managing retry logic
 - Gathering user input
 """
+import json
 from typing import Any, Dict, List, Optional
 
 from models import (
@@ -16,11 +17,19 @@ from models import (
     MCPMessage,
     MCPResponse,
     ValidationStatus,
+    ValidationOutcome,
+    ConversationPhase,
+    MetadataRequestPolicy,
 )
+from models.workflow_state_manager import WorkflowStateManager
 from services import LLMService, MCPServer
 from agents.conversational_handler import ConversationalHandler
 from agents.metadata_inference import MetadataInferenceEngine
 from agents.adaptive_retry import AdaptiveRetryStrategy
+from agents.error_recovery import IntelligentErrorRecovery
+from agents.predictive_metadata import PredictiveMetadataSystem
+from agents.smart_autocorrect import SmartAutoCorrectionSystem
+from agents.nwb_dandi_schema import NWBDANDISchema
 
 
 class ConversationAgent:
@@ -54,7 +63,178 @@ class ConversationAgent:
         self._adaptive_retry_strategy = (
             AdaptiveRetryStrategy(llm_service) if llm_service else None
         )
+        self._error_recovery = (
+            IntelligentErrorRecovery(llm_service) if llm_service else None
+        )
+        self._predictive_metadata = (
+            PredictiveMetadataSystem(llm_service) if llm_service else None
+        )
+        self._smart_autocorrect = (
+            SmartAutoCorrectionSystem(llm_service) if llm_service else None
+        )
+        self._workflow_manager = WorkflowStateManager()
         # Conversation history now managed in GlobalState to prevent memory leaks
+
+    async def _generate_dynamic_metadata_request(
+        self,
+        missing_fields: List[str],
+        inference_result: Dict[str, Any],
+        file_info: Dict[str, Any],
+        state: GlobalState,
+    ) -> str:
+        """
+        Generate dynamic, file-specific metadata request using LLM.
+
+        Instead of a fixed template, this creates personalized questions that:
+        1. Acknowledge what was learned from file analysis
+        2. Show file-specific context
+        3. Only ask for what's actually missing
+        4. Provide relevant examples based on the file type
+
+        Args:
+            missing_fields: List of required fields that are missing
+            inference_result: Results from metadata inference engine
+            file_info: Basic file information (name, format, size)
+            state: Global state
+
+        Returns:
+            Customized message asking for missing metadata
+        """
+        if not self._llm_service:
+            # Fallback to basic template if no LLM
+            return f"""📋 **DANDI Metadata Collection**
+
+To create a comprehensive NWB file for the DANDI archive, I'd like to collect the following metadata:
+{chr(10).join(f"• **{field.replace('_', ' ').title()}**" for field in missing_fields)}
+
+**All fields are optional!** You can:
+- Provide any/all fields you have
+- Skip individual fields: "skip experimenter"
+- Skip all: "skip all" or "proceed with minimal metadata"
+
+Please provide what you're comfortable sharing, or skip to proceed."""
+
+        try:
+            inferred_metadata = inference_result.get("inferred_metadata", {})
+            confidence_scores = inference_result.get("confidence_scores", {})
+            suggestions = inference_result.get("suggestions", [])
+
+            # Build summary of what we successfully inferred
+            inferred_summary = []
+            for key, value in inferred_metadata.items():
+                conf = confidence_scores.get(key, 0)
+                if conf >= 70:  # Only mention high-confidence inferences
+                    inferred_summary.append({
+                        "field": key,
+                        "value": str(value),
+                        "confidence": conf
+                    })
+
+            # Check conversation history to adapt the message
+            conversation_context = ""
+            request_count = state.metadata_requests_count
+            recent_user_messages = [msg for msg in state.conversation_history if msg.get('role') == 'user']
+
+            if request_count > 0 and recent_user_messages:
+                conversation_context = f"""
+**Previous Conversation Context:**
+This is NOT the first time asking. Previous request count: {request_count}
+Recent user responses: {json.dumps([msg.get('content', '')[:100] for msg in recent_user_messages[-2:]], indent=2)}
+
+IMPORTANT: Adapt your message to acknowledge their previous responses. Don't repeat the exact same format.
+If they've already provided some information, acknowledge it specifically.
+If this is a follow-up, be more concise and focused on ONLY what's still missing."""
+
+            system_prompt = f"""You are a friendly, intelligent NWB conversion assistant.
+
+Generate a personalized metadata request that:
+1. Warmly acknowledges what was learned from analyzing the file
+2. Shows you actually analyzed THIS specific file
+3. Only asks for what's truly missing
+4. Uses file-specific context in examples
+5. Maintains an encouraging, conversational tone (like Claude.ai)
+6. Makes the user feel their file is understood
+7. ADAPTS based on conversation history - don't repeat yourself!
+
+Be specific, contextual, and helpful - not generic.
+{f"CRITICAL: This is request #{request_count + 1}. Vary your approach and be more concise." if request_count > 0 else ""}"""
+
+            user_prompt = f"""Generate a metadata request message for this specific file.
+
+**File Information:**
+- Name: {file_info.get('name', 'unknown')}
+- Format: {file_info.get('format', 'unknown')}
+- Size: {file_info.get('size_mb', 0):.1f} MB
+
+**What I Successfully Inferred from Analysis:**
+{json.dumps(inferred_summary, indent=2) if inferred_summary else "Limited automatic inference"}
+
+**What I Still Need to Ask User:**
+{json.dumps(missing_fields, indent=2)}
+
+{conversation_context}
+
+**Create a friendly, file-specific message that:**
+1. Starts by acknowledging the file analysis ("I've analyzed your [format] file...")
+2. Mentions 2-3 specific things you discovered (probe type, format, possible species, etc.)
+3. Explains you'd like to collect comprehensive DANDI metadata for better discoverability
+4. Asks for the missing fields with clear explanations
+5. Provides file-relevant examples (e.g., if it's a mouse recording, use mouse examples)
+6. CLEARLY states that ALL fields are optional - users can skip individual fields or skip all
+7. Makes it easy to skip: "You can skip any field by typing 'skip [field]' or 'skip all'"
+{"8. BE CONCISE - this is a follow-up, not the first request!" if request_count > 0 else ""}
+
+Keep it warm, conversational, and emphasize that skipping is totally fine.
+{"VARY YOUR WORDING - don't use the exact same phrasing as before!" if request_count > 0 else ""}"""
+
+            output_schema = {
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "The personalized metadata request message (2-4 paragraphs max)"
+                    },
+                    "context_highlights": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Key file details mentioned in the message"
+                    }
+                },
+                "required": ["message"]
+            }
+
+            response = await self._llm_service.generate_structured_output(
+                prompt=user_prompt,
+                output_schema=output_schema,
+                system_prompt=system_prompt,
+            )
+
+            state.add_log(
+                LogLevel.INFO,
+                "Generated dynamic metadata request based on file analysis",
+                {
+                    "inferred_fields_count": len(inferred_summary),
+                    "missing_fields_count": len(missing_fields),
+                    "context_highlights": response.get("context_highlights", [])
+                }
+            )
+
+            return response.get("message", "")
+
+        except Exception as e:
+            state.add_log(
+                LogLevel.WARNING,
+                f"Failed to generate dynamic metadata request, using fallback: {e}",
+            )
+            # Fallback with some file context
+            return f"""🔍 **File Analysis Complete**
+
+I've analyzed your {file_info.get('format', 'unknown')} file: `{file_info.get('name', 'file')}`
+
+To create a DANDI-compatible NWB file, I need:
+{chr(10).join(f"• **{field.replace('_', ' ').title()}**" for field in missing_fields)}
+
+Please provide these details, or say "skip for now" to proceed with minimal metadata."""
 
     async def handle_start_conversion(
         self,
@@ -157,25 +337,31 @@ class ConversationAgent:
                 }
 
                 if high_confidence_inferences:
-                    # Merge with existing metadata (existing takes priority)
+                    # CRITICAL: Store auto-extracted metadata SEPARATELY from user-provided
+                    # This allows us to track provenance and avoid asking users for auto-detectable info
+                    state.auto_extracted_metadata.update(high_confidence_inferences)
+
+                    # Merge: auto-extracted + user-provided (user takes priority)
                     for key, value in high_confidence_inferences.items():
-                        if not metadata.get(key):  # Only fill if not already provided
+                        if not metadata.get(key):  # Only fill if not already provided by user
                             metadata[key] = value
 
                     state.add_log(
                         LogLevel.INFO,
-                        "Pre-filled metadata from file analysis",
+                        "Auto-extracted metadata from file analysis (stored separately)",
                         {
-                            "inferred_fields": list(high_confidence_inferences.keys()),
+                            "auto_extracted_fields": list(high_confidence_inferences.keys()),
+                            "confidence_scores": {k: confidence_scores.get(k, 0) for k in high_confidence_inferences.keys()},
                             "suggestions": inference_result.get("suggestions", []),
                         }
                     )
 
-                    # Update state with inferred metadata
+                    # Update combined metadata
                     state.metadata.update(metadata)
 
-                    # Store inference result for user to review
-                    state.metadata["_inference_result"] = inference_result
+                    # Store full inference result separately (not in metadata that goes to NWB)
+                    # This is internal diagnostic info, not part of the NWB schema
+                    state.inference_result = inference_result
 
             except Exception as e:
                 state.add_log(
@@ -186,12 +372,24 @@ class ConversationAgent:
 
         # Step 1.6: Check for DANDI-required metadata BEFORE conversion
         # This prevents the bug where we convert first, then ask for metadata after
+        #
+        # USER REQUIREMENT: Ask for ALL 7 essential DANDI fields
+        # Users can skip any fields they don't want to provide
+        # This ensures comprehensive metadata collection while respecting user choice
         if self._conversational_handler:
-            # Check if we have the 3 essential DANDI fields
+            # Check for ALL 7 essential DANDI fields (session + subject metadata)
+            # These are recommended for DANDI archive compatibility
             required_fields = {
+                # Session-level metadata (critical for DANDI)
                 "experimenter": metadata.get("experimenter"),
                 "institution": metadata.get("institution"),
                 "experiment_description": metadata.get("experiment_description") or metadata.get("session_description"),
+
+                # Subject-level metadata (highly recommended for DANDI)
+                "subject_id": metadata.get("subject_id"),
+                "species": metadata.get("species"),
+                "sex": metadata.get("sex"),
+                "age": metadata.get("age"),
             }
 
             # Filter out fields the user already declined
@@ -200,60 +398,45 @@ class ConversationAgent:
                 if not value and field not in state.user_declined_fields
             ]
 
-            # INFINITE LOOP FIX: Check if we're already in a conversation about metadata
-            # This prevents re-asking if user accidentally re-uploads or refreshes page
-            in_metadata_conversation = (
-                state.status == ConversionStatus.AWAITING_USER_INPUT and
-                state.conversation_type == "required_metadata" and
-                len(state.conversation_history) > 0
-            )
-
-            # If critical fields are missing AND we haven't asked yet AND we're not already in a metadata conversation
-            # Also check if user wants minimal conversion (skip asking)
-
-            # DETAILED DEBUG LOGGING FOR INFINITE LOOP BUG
+            # WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Use centralized WorkflowStateManager
+            # Replaces complex 4-condition check with single source of truth
             state.add_log(
                 LogLevel.DEBUG,
                 "Metadata check conditions",
                 {
                     "missing_fields": missing_fields,
-                    "metadata_requests_count": state.metadata_requests_count,
-                    "user_wants_minimal": state.user_wants_minimal,
-                    "in_metadata_conversation": in_metadata_conversation,
-                    "conversation_type": state.conversation_type,
+                    "metadata_policy": state.metadata_policy.value,
+                    "conversation_phase": state.conversation_phase.value,
                     "status": state.status.value,
                     "conversation_history_length": len(state.conversation_history),
                 }
             )
 
-            if missing_fields and state.metadata_requests_count < 1 and not state.user_wants_minimal and not in_metadata_conversation:
+            if self._workflow_manager.should_request_metadata(state):
                 await state.update_status(ConversionStatus.AWAITING_USER_INPUT)
-                state.conversation_type = "required_metadata"  # BUG FIX: Set conversation type so we can detect if already in this conversation
-                state.metadata_requests_count += 1
+                # Use new enums instead of strings
+                state.conversation_phase = ConversationPhase.METADATA_COLLECTION
+                state.conversation_type = state.conversation_phase.value  # Backward compatibility
+                # Update metadata policy using WorkflowStateManager
+                self._workflow_manager.update_metadata_policy_after_request(state)
                 state.add_log(
                     LogLevel.INFO,
                     f"Missing DANDI-required metadata ({', '.join(missing_fields)}) - requesting from user before conversion",
-                    {"missing_fields": missing_fields, "request_count": state.metadata_requests_count},
+                    {"missing_fields": missing_fields, "metadata_policy": state.metadata_policy.value},
                 )
 
-                # Generate friendly message asking for required metadata
-                message_text = f"""🔴 **Critical Information Needed**
-
-To create a DANDI-compatible NWB file, I need 3 essential fields:
-
-• **Experimenter Name(s)**: Required by DANDI for attribution and reproducibility
-Example: ["Dr. Jane Smith", "Dr. John Doe"]
-
-• **Experiment Description**: Required by DANDI to help others understand your data
-Example: Recording of neural activity in mouse V1 during visual stimulation
-
-• **Institution**: Required by DANDI for institutional affiliation
-Example: University of California, Berkeley
-
-**How would you like to proceed?**
-• Provide all at once (e.g., "Dr. Smith, MIT, recording neural activity")
-• Answer one by one (say "ask one by one")
-• Skip for now (file won't be DANDI-compatible)"""
+                # Generate DYNAMIC, file-specific message asking for required metadata
+                from pathlib import Path
+                message_text = await self._generate_dynamic_metadata_request(
+                    missing_fields=missing_fields,
+                    inference_result=getattr(state, 'inference_result', {}),
+                    file_info={
+                        "name": Path(input_path).name,
+                        "format": detected_format,
+                        "size_mb": Path(input_path).stat().st_size / (1024 * 1024) if Path(input_path).exists() else 0,
+                    },
+                    state=state,
+                )
 
                 # INFINITE LOOP FIX: Add this assistant message to conversation history
                 # This is critical - without this, the conversation history check at line 148 will always fail
@@ -433,6 +616,82 @@ Respond in JSON format."""
                 "suggested_actions": ["Check the error logs", "Contact support if the issue persists"],
                 "is_recoverable": False,
             }
+
+    async def _generate_missing_metadata_message(
+        self,
+        missing_fields: List[str],
+        metadata: Dict[str, Any],
+        state: GlobalState,
+    ) -> str:
+        """
+        Generate user-friendly message for missing required metadata using LLM.
+
+        Args:
+            missing_fields: List of missing required fields
+            metadata: Current metadata (what we have)
+            state: Global state
+
+        Returns:
+            User-friendly message explaining what's needed
+        """
+        system_prompt = """You are a helpful NWB conversion assistant.
+Explain to users what metadata is missing and why it's needed, in a friendly, non-technical way."""
+
+        user_prompt = f"""The user tried to convert their data to NWB format, but some required metadata is missing.
+
+Missing fields: {missing_fields}
+Current metadata provided: {list(metadata.keys())}
+
+Generate a friendly, conversational message that:
+1. Explains what specific information is missing
+2. Why it's required by the NWB format
+3. Gives a clear example of what to provide
+4. Encourages them to provide it
+
+Be warm, specific, and actionable. Keep it concise (2-3 sentences)."""
+
+        try:
+            response = await self._llm_service.generate_response(
+                prompt=user_prompt,
+                system_prompt=system_prompt,
+            )
+            return response
+        except Exception:
+            return self._generate_fallback_missing_metadata_message(missing_fields)
+
+    def _generate_fallback_missing_metadata_message(
+        self,
+        missing_fields: List[str],
+    ) -> str:
+        """
+        Generate basic message for missing metadata (fallback without LLM).
+
+        Args:
+            missing_fields: List of missing required fields
+
+        Returns:
+            Basic message explaining what's needed
+        """
+        field_descriptions = {
+            "sex": "subject's sex (M/F/U)",
+            "subject.sex": "subject's sex in subject metadata (M/F/U)",
+            "session_start_time": "when the recording session started (ISO 8601 format)",
+            "session_description": "brief description of this recording session",
+        }
+
+        explanations = []
+        for field in missing_fields:
+            desc = field_descriptions.get(field, field)
+            explanations.append(f"- {desc}")
+
+        return f"""Cannot start conversion - missing required NWB metadata:
+
+{chr(10).join(explanations)}
+
+Please provide this information before conversion can proceed. For example:
+- sex: "M" (for male), "F" (for female), or "U" (for unknown)
+
+You can provide this via the chat interface."""
 
     async def _proactive_issue_detection(
         self,
@@ -876,6 +1135,27 @@ The conversion report has been generated with full details."""
             },
         )
 
+    def _validate_required_nwb_metadata(
+        self,
+        metadata: Dict[str, Any],
+    ) -> tuple[bool, List[str]]:
+        """
+        Validate that all required NWB metadata fields are present BEFORE conversion.
+
+        This prevents conversion failures mid-process and provides early feedback.
+        Uses the NWB/DANDI schema to dynamically validate all required fields.
+
+        Args:
+            metadata: Metadata dictionary to validate
+
+        Returns:
+            Tuple of (is_valid, list_of_missing_fields)
+        """
+        # Use schema-driven validation instead of hardcoded field lists
+        is_valid, missing_fields = NWBDANDISchema.validate_metadata(metadata)
+
+        return is_valid, missing_fields
+
     async def _run_conversion(
         self,
         original_message_id: str,
@@ -899,6 +1179,42 @@ The conversion report has been generated with full details."""
         """
         import tempfile
         from pathlib import Path
+
+        # BUG FIX #2: Validate required metadata BEFORE starting conversion
+        # This prevents mid-conversion failures and provides early feedback
+        is_valid, missing_fields = self._validate_required_nwb_metadata(metadata)
+
+        if not is_valid:
+            state.add_log(
+                LogLevel.WARNING,
+                f"Cannot proceed with conversion - missing required NWB metadata: {missing_fields}",
+                {"missing_fields": missing_fields}
+            )
+
+            # Generate user-friendly explanation
+            if self._llm_service:
+                try:
+                    explanation = await self._generate_missing_metadata_message(
+                        missing_fields=missing_fields,
+                        metadata=metadata,
+                        state=state,
+                    )
+                except Exception:
+                    explanation = self._generate_fallback_missing_metadata_message(missing_fields)
+            else:
+                explanation = self._generate_fallback_missing_metadata_message(missing_fields)
+
+            await state.update_status(ConversionStatus.AWAITING_USER_INPUT)
+
+            return MCPResponse.error_response(
+                reply_to=original_message_id,
+                error_code="MISSING_REQUIRED_METADATA",
+                error_message=explanation,
+                error_context={
+                    "missing_fields": missing_fields,
+                    "provided_metadata": list(metadata.keys()),
+                },
+            )
 
         # Generate output path
         output_dir = Path(tempfile.gettempdir()) / "nwb_conversions"
@@ -977,28 +1293,22 @@ The conversion report has been generated with full details."""
             )
 
         validation_result = validate_response.result.get("validation_result")
+        overall_status_str = validation_result.get("overall_status", "UNKNOWN")
 
-        # Check if there are any issues that could benefit from conversational input
-        # Even if is_valid=True, we want to engage user about INFO-level missing metadata
-        has_improvable_issues = False
-        if validation_result.get("issues"):
-            # Look for missing metadata that user could provide
-            metadata_keywords = [
-                "experimenter",
-                "experiment description",
-                "institution",
-                "keywords",
-                "subject",
-                "session description",
-            ]
-            for issue in validation_result["issues"]:
-                issue_msg = issue.get("message", "").lower()
-                if any(keyword in issue_msg for keyword in metadata_keywords):
-                    has_improvable_issues = True
-                    break
+        # WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Use ValidationOutcome enum
+        # Convert string to enum for type-safe comparisons
+        try:
+            overall_status = ValidationOutcome(overall_status_str)
+        except ValueError:
+            # Fallback for unknown values
+            overall_status = overall_status_str
 
-        # Check validation status - engage conversationally if there are improvable issues
-        if validation_result["is_valid"] and not has_improvable_issues:
+        # Handle the three validation outcomes as per requirements (Story 8.1-8.3)
+        # 1. PASSED - No issues at all
+        # 2. PASSED_WITH_ISSUES - Has warnings/best practice issues
+        # 3. FAILED - Has critical/error issues
+
+        if overall_status == ValidationOutcome.PASSED:
             await state.update_status(ConversionStatus.COMPLETED)
             state.add_log(
                 LogLevel.INFO,
@@ -1050,8 +1360,101 @@ The conversion report has been generated with full details."""
                     "message": status_message,  # LLM-POWERED!
                 },
             )
+
+        elif overall_status == ValidationOutcome.PASSED_WITH_ISSUES:
+            # Validation passed but has warnings - user chooses IMPROVE or ACCEPT
+            # (Requirements Story 8.3, lines 837-848)
+
+            # Generate report with warnings highlighted
+            report_msg = MCPMessage(
+                target_agent="evaluation",
+                action="generate_report",
+                context={
+                    "validation_result": validation_result,
+                    "nwb_path": output_path,
+                },
+            )
+
+            report_response = await self._mcp_server.send_message(report_msg)
+            report_path = None
+            if report_response.success:
+                report_path = report_response.result.get("report_path")
+
+            # Store validation result for improvement decision handler
+            state.metadata["last_validation_result"] = validation_result
+
+            # Generate user-friendly message about warnings
+            warnings_summary = validation_result.get("summary", {})
+            warning_count = warnings_summary.get("warning", 0)
+            best_practice_count = warnings_summary.get("best_practice", 0)
+            info_count = warnings_summary.get("info", 0)
+
+            # Build issue summary message (FIX: Include INFO issues)
+            issue_parts = []
+            if warning_count > 0:
+                issue_parts.append(f"{warning_count} warning{'s' if warning_count != 1 else ''}")
+            if best_practice_count > 0:
+                issue_parts.append(f"{best_practice_count} best practice suggestion{'s' if best_practice_count != 1 else ''}")
+            if info_count > 0:
+                issue_parts.append(f"{info_count} informational issue{'s' if info_count != 1 else ''}")
+
+            issue_summary = ", ".join(issue_parts) if issue_parts else "some issues"
+
+            # Build detailed issue list to show user WHAT the problems are
+            issues_list = validation_result.get("issues", [])
+            issue_details = []
+            for idx, issue in enumerate(issues_list[:5], 1):  # Show top 5 issues
+                severity = issue.get("severity", "INFO")
+                message_text = issue.get("message", "Unknown issue")
+                issue_details.append(f"  {idx}. [{severity}] {message_text}")
+
+            if len(issues_list) > 5:
+                issue_details.append(f"  ... and {len(issues_list) - 5} more issues")
+
+            issue_details_text = "\n".join(issue_details) if issue_details else "  (No details available)"
+
+            message = (
+                f"✅ Your NWB file passed validation, but has {issue_summary}.\n\n"
+                "**Issues found:**\n"
+                f"{issue_details_text}\n\n"
+                "The file is technically valid and can be used, but fixing these issues "
+                "will improve data quality and DANDI archive compatibility.\n\n"
+                "Would you like to improve the file by fixing these issues, or accept it as-is?"
+            )
+
+            state.llm_message = message
+            await state.update_status(ConversionStatus.AWAITING_USER_INPUT)
+            # Use enum instead of string
+            state.conversation_phase = ConversationPhase.IMPROVEMENT_DECISION
+            state.conversation_type = state.conversation_phase.value  # Backward compatibility
+
+            state.add_log(
+                LogLevel.INFO,
+                "Validation PASSED_WITH_ISSUES - awaiting user decision (improve or accept)",
+                {
+                    "warnings": warning_count,
+                    "best_practice": best_practice_count,
+                    "info": info_count,
+                    "overall_status": overall_status,
+                },
+            )
+
+            return MCPResponse.success_response(
+                reply_to=original_message_id,
+                result={
+                    "status": "awaiting_user_input",
+                    "conversation_type": "improvement_decision",
+                    "overall_status": overall_status,
+                    "message": message,
+                    "output_path": output_path,
+                    "validation": validation_result,
+                    "report_path": report_path,
+                },
+            )
+
         else:
-            # Validation failed - use LLM to analyze and respond intelligently
+            # Validation FAILED - has critical or error issues
+            # Use LLM to analyze and respond intelligently
             # Bug #14 fix: Always allow retry (unlimited with user permission)
             if self._conversational_handler:
                 await state.update_status(ConversionStatus.AWAITING_USER_INPUT)
@@ -1094,7 +1497,8 @@ The conversion report has been generated with full details."""
                     )
 
                     # Store conversational state for frontend
-                    state.conversation_type = "validation_analysis"
+                    state.conversation_phase = ConversationPhase.VALIDATION_ANALYSIS
+                    state.conversation_type = state.conversation_phase.value  # Backward compatibility
                     state.llm_message = llm_analysis.get("message")
 
                     return MCPResponse.success_response(
@@ -1233,7 +1637,13 @@ The conversion report has been generated with full details."""
         # Bug #3 fix: Handle "accept" for PASSED_WITH_ISSUES
         if decision == "accept":
             # Only valid for PASSED_WITH_ISSUES (has warnings but no critical errors)
-            if state.overall_status != "PASSED_WITH_ISSUES":
+            # Use enum comparison
+            try:
+                status_enum = ValidationOutcome(state.overall_status) if isinstance(state.overall_status, str) else state.overall_status
+            except (ValueError, AttributeError):
+                status_enum = state.overall_status
+
+            if status_enum != ValidationOutcome.PASSED_WITH_ISSUES:
                 return MCPResponse.error_response(
                     reply_to=message.message_id,
                     error_code="INVALID_DECISION",
@@ -1812,7 +2222,8 @@ The conversion report has been generated with full details."""
 
         if skip_type == "global":
             # User wants to skip ALL remaining questions
-            state.user_wants_minimal = True
+            # Use WorkflowStateManager to update metadata policy
+            self._workflow_manager.update_metadata_policy_after_user_declined(state)
             # Mark all DANDI fields as declined
             state.user_declined_fields.update(["experimenter", "institution", "experiment_description"])
 
@@ -2000,19 +2411,28 @@ The conversion report has been generated with full details."""
                 context=response
             )
 
+            # ✅ FIX: ALWAYS persist extracted metadata incrementally, even if not ready to proceed
+            # This allows multi-turn metadata collection conversations
+            extracted_metadata = response.get("extracted_metadata", {})
+            if extracted_metadata:
+                # CRITICAL: Track user-provided metadata separately
+                state.user_provided_metadata.update(extracted_metadata)
+
+                # Merge: auto-extracted + user-provided (user takes priority)
+                combined_metadata = {**state.auto_extracted_metadata, **state.user_provided_metadata}
+                state.metadata = combined_metadata
+
+                state.add_log(
+                    LogLevel.INFO,
+                    "User-provided metadata extracted and persisted incrementally",
+                    {
+                        "user_provided_fields": list(extracted_metadata.keys()),
+                        "total_metadata_fields": list(combined_metadata.keys()),
+                    },
+                )
+
             # Check if we're ready to proceed with fixes
             if response.get("ready_to_proceed", False):
-                extracted_metadata = response.get("extracted_metadata", {})
-
-                # BUG FIX: Update metadata if any extracted, even if empty dict
-                # Empty dict is valid when user wants to skip/use defaults
-                if extracted_metadata:
-                    state.metadata.update(extracted_metadata)
-                    state.add_log(
-                        LogLevel.INFO,
-                        "Metadata extracted from conversation",
-                        {"metadata_fields": list(extracted_metadata.keys())},
-                    )
 
                 # Bug #11 fix: Mark that user provided input for "no progress" detection
                 # Mark true regardless of whether metadata was extracted - user engaged with the system
@@ -2232,6 +2652,220 @@ Respond in JSON format."""
             )
 
 
+    async def handle_improvement_decision(
+        self,
+        message: MCPMessage,
+        state: GlobalState,
+    ) -> MCPResponse:
+        """
+        Handle user decision for PASSED_WITH_ISSUES validation.
+
+        When validation passes but has warnings, user chooses:
+        - "improve" - Enter correction loop to fix warnings
+        - "accept" - Accept file as-is and finalize
+
+        Args:
+            message: MCP message with context containing 'decision'
+            state: Global state
+
+        Returns:
+            MCPResponse with result
+        """
+        decision = message.context.get("decision")
+
+        if decision == "accept":
+            # User accepts file with warnings - finalize
+            state.add_log(
+                LogLevel.INFO,
+                "User accepted file with warnings (PASSED_WITH_ISSUES)",
+                {"validation_status": "passed_accepted"},
+            )
+
+            # Set final validation status
+            await state.update_validation_status(ValidationStatus.PASSED_ACCEPTED)
+            await state.update_status(ConversionStatus.COMPLETED)
+
+            # Generate final message
+            state.llm_message = (
+                "✅ File accepted as-is with warnings. "
+                "Your NWB file is ready for download. "
+                "You can view the warnings in the validation report."
+            )
+
+            return MCPResponse.success_response(
+                reply_to=message.message_id,
+                result={
+                    "status": "completed",
+                    "message": state.llm_message,
+                    "validation_status": "passed_accepted",
+                },
+            )
+
+        elif decision == "improve":
+            # User wants to improve - enter correction loop
+            state.add_log(
+                LogLevel.INFO,
+                "User chose to improve warnings (PASSED_WITH_ISSUES)",
+                {"entering_correction_loop": True},
+            )
+
+            # Increment correction attempt
+            state.increment_correction_attempt()
+
+            # Get correction context from evaluation agent
+            # This will categorize issues and prepare for reconversion
+            eval_msg = MCPMessage(
+                target_agent="evaluation",
+                action="analyze_corrections",
+                context={
+                    "validation_result": state.metadata.get("last_validation_result", {}),
+                    "correction_attempt": state.correction_attempt,
+                },
+            )
+
+            eval_response = await self._mcp_server.send_message(eval_msg)
+
+            if not eval_response.success:
+                return MCPResponse.error_response(
+                    reply_to=message.message_id,
+                    error_code="CORRECTION_ANALYSIS_FAILED",
+                    error_message="Failed to analyze corrections",
+                )
+
+            correction_context = eval_response.result.get("correction_context", {})
+
+            # Categorize issues
+            auto_fixable = correction_context.get("auto_fixable_issues", [])
+            user_input_required = correction_context.get("user_input_required", [])
+
+            # If user input is needed, request it
+            if user_input_required:
+                # Generate smart prompts for missing data
+                if self._llm_service:
+                    prompt_msg = await self._generate_correction_prompts(
+                        user_input_required,
+                        state,
+                    )
+                else:
+                    prompt_msg = self._generate_basic_correction_prompts(
+                        user_input_required
+                    )
+
+                state.llm_message = prompt_msg
+                await state.update_status(ConversionStatus.AWAITING_USER_INPUT)
+                state.conversation_type = "correction_input"
+
+                return MCPResponse.success_response(
+                    reply_to=message.message_id,
+                    result={
+                        "status": "awaiting_user_input",
+                        "message": prompt_msg,
+                        "auto_fixable_count": len(auto_fixable),
+                        "user_input_required_count": len(user_input_required),
+                    },
+                )
+
+            # If only auto-fixable issues, reconvert immediately
+            else:
+                state.add_log(
+                    LogLevel.INFO,
+                    f"All {len(auto_fixable)} issues are auto-fixable, reconverting",
+                )
+
+                # Apply corrections and reconvert
+                reconvert_msg = MCPMessage(
+                    target_agent="conversion",
+                    action="apply_corrections",
+                    context={
+                        "input_path": str(state.input_path),
+                        "correction_context": correction_context,
+                        "metadata": state.metadata,
+                    },
+                )
+
+                await self._mcp_server.send_message(reconvert_msg)
+
+                return MCPResponse.success_response(
+                    reply_to=message.message_id,
+                    result={
+                        "status": "reconverting",
+                        "message": "Applying automatic corrections and reconverting...",
+                    },
+                )
+
+        else:
+            return MCPResponse.error_response(
+                reply_to=message.message_id,
+                error_code="INVALID_DECISION",
+                error_message=f"Invalid decision: {decision}. Must be 'improve' or 'accept'.",
+            )
+
+    async def _generate_correction_prompts(
+        self,
+        issues: List[Dict[str, Any]],
+        state: GlobalState,
+    ) -> str:
+        """
+        Generate smart prompts for correction issues using LLM.
+
+        Args:
+            issues: List of issues requiring user input
+            state: Global state
+
+        Returns:
+            Formatted prompt message
+        """
+        # Use LLM to generate contextual prompts with examples
+        system_prompt = """You are helping a user fix validation warnings in their NWB file.
+Generate clear, specific prompts for each issue with helpful examples."""
+
+        user_prompt = f"""The NWB file has {len(issues)} warnings that need user input:
+
+Issues:
+{json.dumps(issues, indent=2)}
+
+Generate a friendly message asking for the missing information. Include:
+1. What needs to be fixed
+2. Why it matters
+3. Specific examples for each field
+
+Return JSON with a 'message' field."""
+
+        output_schema = {
+            "type": "object",
+            "properties": {
+                "message": {"type": "string"}
+            },
+            "required": ["message"]
+        }
+
+        try:
+            response = await self._llm_service.generate_structured_output(
+                prompt=user_prompt,
+                output_schema=output_schema,
+                system_prompt=system_prompt,
+            )
+            return response.get("message", self._generate_basic_correction_prompts(issues))
+        except Exception:
+            return self._generate_basic_correction_prompts(issues)
+
+    def _generate_basic_correction_prompts(self, issues: List[Dict[str, Any]]) -> str:
+        """
+        Generate basic correction prompts without LLM.
+
+        Args:
+            issues: List of issues requiring user input
+
+        Returns:
+            Formatted prompt message
+        """
+        prompt = f"⚠️ Found {len(issues)} warnings that need your input:\n\n"
+        for i, issue in enumerate(issues, 1):
+            prompt += f"{i}. **{issue.get('check_name', 'Unknown')}**: {issue.get('message', '')}\n"
+        prompt += "\nPlease provide the requested information to continue."
+        return prompt
+
+
 def register_conversation_agent(
     mcp_server: MCPServer,
     llm_service: Optional[LLMService] = None,
@@ -2267,6 +2901,12 @@ def register_conversation_agent(
         "conversation",
         "retry_decision",
         agent.handle_retry_decision,
+    )
+
+    mcp_server.register_handler(
+        "conversation",
+        "improvement_decision",
+        agent.handle_improvement_decision,
     )
 
     mcp_server.register_handler(

@@ -423,6 +423,13 @@
             background: #dc2626;
         }
 
+        .btn:disabled,
+        .btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
         /* File Upload */
         .upload-zone {
             padding: 40px;
@@ -816,9 +823,21 @@
         const MAX_RECONNECT_ATTEMPTS = 5;
         let currentFiles = []; // Changed to array to support multiple files
         let conversionInProgress = false;
+        let lastProgressMessage = null; // FIX #6: Track progress messages
         let conversionMonitorInterval = null; // Bug #10: Track monitoring interval
         let lastDisplayedMessage = null; // Track last message to prevent duplicates
         let lastDisplayedStatus = null; // Track last status to detect changes
+
+        // UX Fix #3: Workflow state management to disable old buttons
+        let workflowState = {
+            stage: 'idle', // idle → uploaded → converting → validating → completed
+            canStartConversion: false,
+            canAddMetadata: false,
+            canImprove: false,
+            canAccept: false,
+            canDownload: false
+        };
+        let activeButtons = []; // Track all active buttons to disable them later
 
         // WebSocket connection
         function connectWebSocket() {
@@ -887,6 +906,28 @@
             }
         }
 
+        // UX Fix #3: Button state management functions
+        function updateWorkflowState(newState) {
+            // Merge new state into current state
+            workflowState = { ...workflowState, ...newState };
+            console.log('Workflow state updated:', workflowState);
+        }
+
+        function disablePreviousButtons() {
+            // Disable all previously created buttons
+            activeButtons.forEach(button => {
+                if (button && button.parentNode) { // Check if button still exists in DOM
+                    button.disabled = true;
+                    button.classList.add('disabled');
+                }
+            });
+        }
+
+        function registerButton(button) {
+            // Track this button so we can disable it later
+            activeButtons.push(button);
+        }
+
         // File handling
         document.getElementById('fileInput').addEventListener('change', async (e) => {
             const files = Array.from(e.target.files);
@@ -901,6 +942,10 @@
                     : `📎 Selected ${fileCount} files: ${fileNames}`;
 
                 addUserMessage(message);
+
+                // UX Fix #3: Update workflow state to uploaded
+                updateWorkflowState({ stage: 'uploaded', canStartConversion: true, canAddMetadata: true });
+
                 addAssistantMessage('Great! I can see you\'ve selected ' + (fileCount === 1 ? 'a file' : 'multiple files') + '. The system will automatically use the necessary files for conversion. Would you like to start now?', [
                     { text: '🚀 Start Conversion', onClick: () => startConversion(), variant: 'primary' },
                     { text: '✏️ Add Metadata First', onClick: () => requestMetadata(), variant: 'secondary' }
@@ -942,6 +987,10 @@
                     btn.className = `btn btn-${action.variant || 'secondary'}`;
                     btn.textContent = action.text;
                     btn.onclick = action.onClick;
+
+                    // UX Fix #3: Register button for state management
+                    registerButton(btn);
+
                     actionsDiv.appendChild(btn);
                 });
 
@@ -990,8 +1039,23 @@
 
                 updateStatusBadge(data.status);
 
-                // Check if this is a conversational response from LLM
-                if (data.status === 'awaiting_user_input' && data.conversation_type === 'validation_analysis') {
+                // FIX #6: Show progress message for long-running operations
+                if (data.status === 'converting' && !lastProgressMessage) {
+                    addAssistantMessage('⏳ Converting your data to NWB format... This may take a minute.');
+                    lastProgressMessage = 'converting';
+                } else if (data.status === 'validating' && lastProgressMessage !== 'validating') {
+                    addAssistantMessage('🔍 Validating NWB file with NWB Inspector...');
+                    lastProgressMessage = 'validating';
+                } else if (data.status === 'idle' || data.status === 'completed') {
+                    lastProgressMessage = null; // Reset for next conversion
+                }
+
+                // Handle different states based on overall_status (validation result)
+                // Priority: Check overall_status first for validation outcomes
+                if (data.overall_status === 'PASSED_WITH_ISSUES' && data.status === 'awaiting_user_input') {
+                    // User needs to decide: improve or accept
+                    await handlePassedWithIssues(data);
+                } else if (data.status === 'awaiting_user_input' && data.conversation_type === 'validation_analysis') {
                     await handleConversationalValidation(data);
                 } else if (data.status === 'awaiting_retry_approval') {
                     await handleRetryApproval();
@@ -1001,9 +1065,112 @@
                     await handleCompletion(data);
                 } else if (data.status === 'failed') {
                     handleFailure();
+                } else {
+                    // FIX #7: Fallback for unknown or unexpected states
+                    console.warn('Unknown status:', data.status, 'conversation_type:', data.conversation_type);
+                    // Don't show error to user unless truly stuck
                 }
             } catch (error) {
                 console.error('Status check error:', error);
+            }
+        }
+
+        // Handle PASSED_WITH_ISSUES validation outcome
+        async function handlePassedWithIssues(data) {
+            // Only show once - check if we've already displayed this decision
+            const messageHash = `passed_with_issues_${data.correction_attempt}`;
+            if (lastDisplayedMessage === messageHash) {
+                return; // Already shown
+            }
+            lastDisplayedMessage = messageHash;
+
+            removeLoadingMessage();
+
+            // UX Fix #3: Update workflow state to validating
+            updateWorkflowState({ stage: 'validating', canImprove: true, canAccept: true });
+
+            // Get validation details
+            const message = data.message || '✅ Your file passed validation but has some warnings.';
+
+            addAssistantMessage(
+                message + '\n\nWould you like to improve the file by fixing these warnings, or accept it as-is?',
+                [
+                    { text: '🔧 Improve File', onClick: () => improveFile(), variant: 'primary' },
+                    { text: '✅ Accept As-Is', onClick: () => acceptFile(), variant: 'success' }
+                ]
+            );
+        }
+
+        async function improveFile() {
+            addUserMessage('🔧 Improve File');
+
+            // UX Fix #3: Disable Improve/Accept buttons after decision made
+            disablePreviousButtons();
+            updateWorkflowState({ canImprove: false, canAccept: false });
+
+            addLoadingMessage();
+
+            try {
+                const formData = new FormData();
+                formData.append('decision', 'improve');
+
+                const response = await fetch(`${API_BASE}/api/improvement-decision`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                removeLoadingMessage();
+
+                if (response.ok) {
+                    const data = await response.json();
+                    addAssistantMessage(data.message || '🔧 Analyzing improvements needed...');
+                    monitorConversion(); // Continue monitoring for next steps
+                } else {
+                    addAssistantMessage('❌ Failed to start improvement process');
+                }
+            } catch (error) {
+                removeLoadingMessage();
+                addAssistantMessage(`❌ Error: ${error.message}`);
+            }
+        }
+
+        async function acceptFile() {
+            addUserMessage('✅ Accept As-Is');
+
+            // UX Fix #3: Disable Improve/Accept buttons after decision made
+            disablePreviousButtons();
+            updateWorkflowState({ canImprove: false, canAccept: false, stage: 'completed', canDownload: true });
+
+            addLoadingMessage();
+
+            try {
+                const formData = new FormData();
+                formData.append('decision', 'accept');
+
+                const response = await fetch(`${API_BASE}/api/improvement-decision`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                removeLoadingMessage();
+
+                if (response.ok) {
+                    const data = await response.json();
+                    addAssistantMessage(
+                        data.message || '✅ File accepted! Ready for download.',
+                        [
+                            { text: '⬇️ Download NWB File', onClick: () => downloadNWB(), variant: 'success' },
+                            { text: '📄 Download Report', onClick: () => downloadReport(), variant: 'primary' }
+                        ]
+                    );
+                    conversionInProgress = false;
+                    stopLogsAutoRefresh();
+                } else {
+                    addAssistantMessage('❌ Failed to accept file');
+                }
+            } catch (error) {
+                removeLoadingMessage();
+                addAssistantMessage(`❌ Error: ${error.message}`);
             }
         }
 
@@ -1024,22 +1191,25 @@
             badge.textContent = status.replace(/_/g, ' ').toUpperCase();
         }
 
-        // Conversion workflow
+        // Conversion workflow - FIXED to use conversational metadata collection
         async function startConversion() {
             if (!currentFiles || currentFiles.length === 0) {
                 addAssistantMessage('Please select at least one file first.');
                 return;
             }
 
-            conversionInProgress = true;
-            addLoadingMessage();
-            startLogsAutoRefresh(); // Start auto-refreshing logs during conversion
+            // UX Fix #3: Disable previous buttons (Start Conversion, Add Metadata)
+            disablePreviousButtons();
+            updateWorkflowState({ stage: 'metadata_collection', canStartConversion: false, canAddMetadata: false });
 
+            conversionInProgress = true;
+            startLogsAutoRefresh(); // Start auto-refreshing logs
+
+            // ✅ FIX: Upload file WITHOUT metadata first
             const formData = new FormData();
 
             // Append all files - backend will determine which to use
             currentFiles.forEach((file, index) => {
-                // The main data file goes as 'file', others as 'additional_files'
                 if (index === 0) {
                     formData.append('file', file);
                 } else {
@@ -1047,32 +1217,93 @@
                 }
             });
 
-            formData.append('metadata', JSON.stringify({
-                session_description: 'Conversion via chat interface'
-            }));
+            // ✅ DO NOT append metadata - let backend request it via conversation
 
             try {
-                const response = await fetch(`${API_BASE}/api/upload`, {
+                addLoadingMessage();
+
+                // Step 1: Upload file (without metadata)
+                const uploadResponse = await fetch(`${API_BASE}/api/upload`, {
                     method: 'POST',
                     body: formData
                 });
 
-                if (response.ok) {
-                    const fileCount = currentFiles.length;
-                    const message = fileCount === 1
-                        ? '✅ File uploaded successfully! Starting conversion...'
-                        : `✅ ${fileCount} files uploaded successfully! Starting conversion...`;
-                    addAssistantMessage(message);
+                if (!uploadResponse.ok) {
+                    const error = await uploadResponse.json();
+                    removeLoadingMessage();
+                    addAssistantMessage(`❌ Upload failed: ${error.detail || 'Unknown error'}`);
+                    conversionInProgress = false;
+                    return;
+                }
+
+                const uploadData = await uploadResponse.json();
+                removeLoadingMessage();
+
+                // Don't show upload message - backend will request metadata next
+                console.log('Upload successful:', uploadData);
+
+                // Step 2: Start conversion workflow
+                addLoadingMessage();
+                const startResponse = await fetch(`${API_BASE}/api/start-conversion`, {
+                    method: 'POST'
+                });
+
+                removeLoadingMessage();
+
+                if (startResponse.ok) {
+                    const startData = await startResponse.json();
+
+                    // ✅ FIX: Check if backend is requesting metadata
+                    const statusResponse = await fetch(`${API_BASE}/api/status`);
+                    const statusData = await statusResponse.json();
+
+                    if (statusData.conversation_type === 'required_metadata' ||
+                        statusData.status === 'awaiting_user_input') {
+                        // Backend is requesting metadata - guide user to provide it
+                        showMetadataCollectionPrompt();
+                    } else {
+                        // Backend proceeding without metadata (unlikely but handle it)
+                        addAssistantMessage(startData.message || '🚀 Conversion started!');
+                    }
+
                     monitorConversion();
                 } else {
-                    const error = await response.json();
-                    addAssistantMessage(`❌ Upload failed: ${error.detail || 'Unknown error'}`);
+                    const error = await startResponse.json();
+                    addAssistantMessage(`❌ Failed to start conversion: ${error.detail || 'Unknown error'}`);
                     conversionInProgress = false;
                 }
             } catch (error) {
-                addAssistantMessage(`❌ Upload error: ${error.message}`);
+                removeLoadingMessage();
+                addAssistantMessage(`❌ Error: ${error.message}`);
                 conversionInProgress = false;
             }
+        }
+
+        // NEW FUNCTION: Guide user through metadata collection
+        function showMetadataCollectionPrompt() {
+            addAssistantMessage(
+                "📋 Before converting, I need some information about your experiment. " +
+                "You can provide details naturally, like:\n\n" +
+                "\"Dr Jane Smith from MIT, male C57BL/6 mouse age P60 ID mouse001, visual cortex recording\"\n\n" +
+                "Or just tell me piece by piece - I'll ask for what I need!"
+            );
+
+            // Highlight chat input to guide user
+            const textInput = document.getElementById('textInput');
+            textInput.focus();
+            textInput.placeholder = "Type experiment details (experimenter, institution, subject, etc.)...";
+            textInput.style.borderColor = '#667eea';
+            textInput.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+
+            // Reset border after user starts typing
+            textInput.addEventListener('input', function resetBorder() {
+                textInput.style.borderColor = '';
+                textInput.style.boxShadow = '';
+                textInput.removeEventListener('input', resetBorder);
+            }, { once: true });
+
+            // Update workflow state
+            workflowState.stage = 'collecting_metadata';
         }
 
         function monitorConversion() {
@@ -1082,6 +1313,7 @@
                 conversionMonitorInterval = null;
             }
 
+            // FIX #1: Use faster polling (1s) to catch rapid state transitions
             conversionMonitorInterval = setInterval(async () => {
                 try {
                     // Check status - the function internally handles all status transitions
@@ -1094,7 +1326,7 @@
                     console.error('Monitor error:', error);
                     // Continue monitoring even on errors - they may be transient
                 }
-            }, 2000);
+            }, 1000); // Changed from 2000ms to 1000ms
         }
 
         // Bug #10: Cleanup on page unload
@@ -1180,7 +1412,10 @@
             if (statusData.message) {
                 // BUGFIX: Only display message if it's different from the last one OR status changed
                 // This prevents duplicate messages when polling status every 2 seconds
-                const messageHash = statusData.message.substring(0, 100); // Use first 100 chars as hash
+                // FIX #2: Use full message hash for better duplicate detection
+                const messageHash = statusData.message ?
+                    statusData.message.split(' ').slice(0, 20).join(' ') : // First 20 words
+                    `${statusData.status}_${statusData.conversation_type}`;
                 const statusChanged = lastDisplayedStatus !== statusData.status;
 
                 if (lastDisplayedMessage !== messageHash || statusChanged) {
@@ -1217,6 +1452,9 @@
             }
             stopLogsAutoRefresh();
             await refreshLogs(); // Final log refresh
+
+            // UX Fix #3: Update workflow state to completed
+            updateWorkflowState({ stage: 'completed', canDownload: true });
 
             if (data.validation_status === 'passed') {
                 addAssistantMessage(
@@ -1339,6 +1577,17 @@
         }
 
         async function resetConversation() {
+            // UX Fix #3: Reset workflow state
+            workflowState = {
+                stage: 'idle',
+                canStartConversion: false,
+                canAddMetadata: false,
+                canImprove: false,
+                canAccept: false,
+                canDownload: false
+            };
+            activeButtons = [];
+
             await fetch(`${API_BASE}/api/reset`, { method: 'POST' });
             location.reload();
         }
@@ -1365,7 +1614,7 @@
                 const statusData = await statusResponse.json();
 
                 // Use conversational endpoint for metadata requests and validation analysis
-                const conversationTypes = ['validation_analysis', 'required_metadata'];
+                const conversationTypes = ['validation_analysis', 'required_metadata', 'improvement_decision'];
                 if (statusData.status === 'awaiting_user_input' && conversationTypes.includes(statusData.conversation_type)) {
                     // Send to conversational response endpoint
                     await sendConversationalMessage(message);
@@ -1459,17 +1708,42 @@
                         addAssistantMessage(data.message);
                     }
 
-                    // Check if conversation is continuing or ready to proceed
-                    if (data.status === 'conversation_continues' && data.needs_more_info) {
-                        // Continue conversation - user can respond again
+                    // ✅ FIX: Check ready_to_proceed field explicitly (PRIMARY SIGNAL)
+                    // Frontend should rely on this explicit flag from backend
+                    if (data.ready_to_proceed === true) {
+                        // User confirmed ready - conversion will start automatically
+                        addAssistantMessage('Perfect! Starting conversion with your metadata...');
+                        monitorConversion();
+                    } else if (data.needs_more_info === true || data.status === 'conversation_continues') {
+                        // Continue multi-turn conversation - backend needs more info
+                        enableConversationalInput();
+                    } else if (data.status === 'busy') {
+                        // LLM still processing previous request
+                        addAssistantMessage('⏳ Still processing your previous message. Please wait...');
                         enableConversationalInput();
                     } else {
-                        // Metadata extracted, reconversion starting
-                        addAssistantMessage('Great! I have all the information I need. Starting reconversion...');
-                        monitorConversion();
+                        // Unexpected state - log and let user try again
+                        console.warn('Unexpected chat response state:', data);
+                        enableConversationalInput();  // Safe default: keep conversation active
                     }
                 } else {
-                    addAssistantMessage('❌ Sorry, I had trouble processing your response. Could you try again?');
+                    // ✅ FIX: Better error handling based on HTTP status and error type
+                    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+
+                    if (errorData.error === 'timeout') {
+                        addAssistantMessage('⏱️ That request took too long. The AI might be overloaded. Please try rephrasing or try again.');
+                    } else if (errorData.error === 'busy') {
+                        addAssistantMessage('⏳ I\'m still processing your previous message. Please wait a moment...');
+                    } else if (response.status === 500) {
+                        addAssistantMessage('❌ Server error occurred. Please check the logs in the panel on the right or try again.');
+                    } else if (response.status === 503) {
+                        addAssistantMessage('❌ Backend service unavailable. Please ensure the backend is running.');
+                    } else {
+                        addAssistantMessage(`❌ Error: ${errorData.error || errorData.message || 'Something went wrong'}. Please try again.`);
+                    }
+
+                    // Keep conversation active even on error
+                    enableConversationalInput();
                 }
             } catch (error) {
                 addAssistantMessage(`❌ Error: ${error.message}`);
@@ -1622,6 +1896,17 @@
 
         // Initialize on page load
         connectWebSocket();
+        // FIX #4: Sync conversionInProgress with backend state
+        fetch(`${API_BASE}/api/status`)
+            .then(res => res.json())
+            .then(data => {
+                const activeStatuses = ['converting', 'validating', 'awaiting_user_input'];
+                if (activeStatuses.includes(data.status)) {
+                    conversionInProgress = true;
+                    monitorConversion();
+                }
+            })
+            .catch(err => console.error('Initial status check failed:', err));
         checkStatus();
         refreshLogs(); // Load initial logs
     </script>
