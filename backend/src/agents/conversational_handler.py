@@ -7,10 +7,11 @@ instead of rigid predefined workflows.
 from typing import Any, Dict, List, Optional
 import json
 
-from models import GlobalState, LogLevel
+from models import GlobalState, LogLevel, MetadataRequestPolicy
 from services import LLMService
 from agents.metadata_strategy import MetadataRequestStrategy
 from agents.context_manager import ConversationContextManager
+from agents.nwb_dandi_schema import NWBDANDISchema
 
 
 class ConversationalHandler:
@@ -101,12 +102,18 @@ class ConversationalHandler:
         Returns:
             Dict with response_type and content for the user
         """
-        # CHECK IF USER ALREADY DECLINED OR WE'VE ALREADY ASKED ONCE
-        if state.user_wants_minimal or state.metadata_requests_count >= 1:
+        # WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Use MetadataRequestPolicy enum
+        # Check if user declined or we've already asked
+        should_skip = (
+            state.metadata_policy in [MetadataRequestPolicy.USER_DECLINED, MetadataRequestPolicy.PROCEEDING_MINIMAL] or
+            state.metadata_policy == MetadataRequestPolicy.ASKED_ONCE
+        )
+
+        if should_skip:
             state.add_log(
                 LogLevel.INFO,
                 "User wants minimal metadata or exceeded request limit - proceeding without asking",
-                {"user_wants_minimal": state.user_wants_minimal, "requests_count": state.metadata_requests_count}
+                {"metadata_policy": state.metadata_policy.value}
             )
             return {
                 "type": "proceed_minimal",
@@ -208,11 +215,15 @@ Respond in JSON format as specified."""
 
             # If user input is needed, use priority-based metadata strategy
             if response_data.get("needs_user_input", False):
-                # Increment the metadata request counter
-                state.metadata_requests_count += 1
+                # Update metadata policy to indicate we've asked
+                if state.metadata_policy == MetadataRequestPolicy.NOT_ASKED:
+                    state.metadata_policy = MetadataRequestPolicy.ASKED_ONCE
+                    # Maintain backward compatibility
+                    state.metadata_requests_count += 1
+
                 state.add_log(
                     LogLevel.INFO,
-                    f"Requesting metadata from user (attempt {state.metadata_requests_count})",
+                    f"Requesting metadata from user (policy: {state.metadata_policy.value})",
                 )
 
                 # Use the new hybrid strategy to determine what to ask
@@ -302,80 +313,9 @@ Respond in JSON format as specified."""
             f"Processing user message with LLM: {user_message[:100]}...",
         )
 
-        system_prompt = """You are helping extract metadata from user responses to fix NWB file issues.
-
-The user is responding to questions about missing metadata. Your job is to:
-1. Extract structured metadata from their natural language response
-2. Map it to NWB fields (using proper neuroscience terminology)
-3. Determine if we have enough information or need to ask follow-up questions
-
-**Examples of good extraction:**
-
-Example 1:
-User: "I'm from Stanford, recording from mouse V1 during visual stimulation"
-Extracted:
-{
-    "extracted_metadata": {
-        "institution": "Stanford University",
-        "experiment_description": "Recording from mouse primary visual cortex during visual stimulation",
-        "subject": {"species": "Mus musculus", "brain_region": "V1"}
-    },
-    "needs_more_info": true,
-    "follow_up_message": "Great! Could you also provide the experimenter name(s)?",
-    "ready_to_proceed": false
-}
-
-Example 2:
-User: "Dr. Jane Smith and Dr. Bob Johnson, we recorded on 2024-01-15"
-Extracted:
-{
-    "extracted_metadata": {
-        "experimenter": ["Dr. Jane Smith", "Dr. Bob Johnson"],
-        "session_start_time": "2024-01-15T00:00:00"
-    },
-    "needs_more_info": false,
-    "follow_up_message": "Perfect! I have the experimenter information and date.",
-    "ready_to_proceed": true
-}
-
-Example 3:
-User: "UC Berkeley. Mouse neural activity study. Keywords: V1, vision, neuropixels"
-Extracted:
-{
-    "extracted_metadata": {
-        "institution": "University of California, Berkeley",
-        "experiment_description": "Mouse neural activity study in visual cortex",
-        "keywords": ["V1", "vision", "neuropixels", "electrophysiology", "mouse"]
-    },
-    "needs_more_info": false,
-    "follow_up_message": "Excellent! That's very helpful metadata.",
-    "ready_to_proceed": true
-}
-
-**Think step-by-step:**
-1. Identify named entities (people, institutions, dates, species, brain regions)
-2. Infer scientific terminology (expand abbreviations like "V1" → "primary visual cortex")
-3. Map to proper NWB schema fields
-4. Add inferred keywords based on context
-5. Fill in reasonable defaults where appropriate (e.g., "mouse" → "Mus musculus")
-
-Return JSON in this format:
-{
-    "extracted_metadata": {
-        "experimenter": ["Name1", "Name2"],
-        "experiment_description": "Description",
-        "institution": "Institution name",
-        "keywords": ["keyword1", "keyword2"],
-        "subject": {
-            "subject_id": "ID",
-            "species": "Species",
-            "age": "Age"
-        }
-    },
-    "needs_more_info": true/false,
-    "follow_up_message": "Your conversational follow-up question or confirmation",
-    "ready_to_proceed": true/false
-}"""
+        # Generate system prompt dynamically from NWB/DANDI schema
+        # This ensures ALL required and recommended fields are covered
+        system_prompt = NWBDANDISchema.generate_llm_extraction_prompt()
 
         # Build context from previous conversation
         validation_info = context.get("validation_result", {})
@@ -419,12 +359,28 @@ Please extract the metadata from the user's response and determine next steps.""
             output_schema = {
                 "type": "object",
                 "properties": {
-                    "extracted_metadata": {"type": "object"},
-                    "needs_more_info": {"type": "boolean"},
-                    "follow_up_message": {"type": "string"},
-                    "ready_to_proceed": {"type": "boolean"}
+                    "extracted_metadata": {
+                        "type": "object",
+                        "description": "Structured metadata extracted from user response"
+                    },
+                    "needs_more_info": {
+                        "type": "boolean",
+                        "description": "Whether more information is needed from user"
+                    },
+                    "follow_up_message": {
+                        "type": "string",
+                        "description": "Conversational follow-up message or confirmation"
+                    },
+                    "ready_to_proceed": {
+                        "type": "boolean",
+                        "description": "Whether we have enough info to proceed with conversion"
+                    },
+                    "confidence": {
+                        "type": "number",
+                        "description": "Confidence score 0-100 for the extraction quality"
+                    }
                 },
-                "required": ["extracted_metadata", "needs_more_info", "ready_to_proceed"]
+                "required": ["extracted_metadata", "needs_more_info", "ready_to_proceed", "follow_up_message"]
             }
 
             response_data = await self.llm_service.generate_structured_output(

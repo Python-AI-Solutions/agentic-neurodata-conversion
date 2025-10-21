@@ -9,7 +9,13 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, ConfigDict
 
-from .state import ConversionStatus, ValidationStatus
+from .state import (
+    ConversionStatus,
+    ValidationStatus,
+    ValidationOutcome,
+    ConversationPhase,
+    MetadataRequestPolicy,
+)
 from .validation import ValidationIssue
 
 
@@ -19,7 +25,10 @@ class UploadResponse(BaseModel):
     session_id: str = Field(description="Unique session identifier")
     message: str = Field(description="Status message")
     input_path: str = Field(description="Path to uploaded file")
-    checksum: str = Field(description="SHA256 checksum of uploaded file")
+    checksum: str = Field(default="", description="SHA256 checksum of uploaded file")
+    status: Optional[str] = Field(default=None, description="Upload status")
+    uploaded_files: Optional[List[str]] = Field(default=None, description="List of uploaded files")
+    conversation_active: Optional[bool] = Field(default=None, description="Whether conversation is active")
 
 
 class StatusResponse(BaseModel):

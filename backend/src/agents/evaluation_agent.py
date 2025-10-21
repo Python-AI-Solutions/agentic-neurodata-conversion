@@ -18,10 +18,16 @@ from models import (
     MCPResponse,
     ValidationResult,
     ValidationStatus,
+    ValidationOutcome,
 )
 from services import LLMService
 from services.report_service import ReportService
 from services.prompt_service import PromptService
+
+# Import intelligent evaluation modules
+from agents.intelligent_validation_analyzer import IntelligentValidationAnalyzer
+from agents.smart_issue_resolution import SmartIssueResolution
+from agents.validation_history_learning import ValidationHistoryLearner
 
 
 class EvaluationAgent:
@@ -41,6 +47,17 @@ class EvaluationAgent:
         self._llm_service = llm_service
         self._report_service = ReportService()
         self._prompt_service = PromptService()
+
+        # Initialize intelligent evaluation modules
+        self._validation_analyzer = (
+            IntelligentValidationAnalyzer(llm_service) if llm_service else None
+        )
+        self._issue_resolution = (
+            SmartIssueResolution(llm_service) if llm_service else None
+        )
+        self._history_learner = (
+            ValidationHistoryLearner(llm_service) if llm_service else None
+        )
 
     async def handle_run_validation(
         self,
@@ -81,25 +98,26 @@ class EvaluationAgent:
         try:
             validation_result = await self._run_nwb_inspector(nwb_path)
 
+            # WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Use ValidationOutcome enum
             # Determine overall status for reporting
             if validation_result.is_valid:
                 # No critical or error issues
                 if len(validation_result.issues) == 0:
-                    overall_status = "PASSED"
+                    overall_status = ValidationOutcome.PASSED
                 elif validation_result.summary.get("warning", 0) > 0 or validation_result.summary.get("info", 0) > 0:
-                    overall_status = "PASSED_WITH_ISSUES"
+                    overall_status = ValidationOutcome.PASSED_WITH_ISSUES
                 else:
-                    overall_status = "PASSED"
+                    overall_status = ValidationOutcome.PASSED
             else:
                 # Has critical or error issues
-                overall_status = "FAILED"
+                overall_status = ValidationOutcome.FAILED
 
             # Bug #2 fix: Store overall_status in state (Story 7.2)
             state.overall_status = overall_status
 
             # Update state based on validation result
             # Bug #6 fix: Set validation_status to passed_improved if this is a successful improvement
-            if validation_result.is_valid and overall_status == "PASSED":
+            if validation_result.is_valid and overall_status == ValidationOutcome.PASSED:
                 # Check if this is after a correction attempt (Story 8.8 line 957)
                 if state.correction_attempt > 0:
                     state.update_validation_status(ValidationStatus.PASSED_IMPROVED)
@@ -108,20 +126,20 @@ class EvaluationAgent:
 
                 state.add_log(
                     LogLevel.INFO,
-                    f"Validation {overall_status.lower()}",
+                    f"Validation {overall_status.value.lower()}",
                     {
                         "nwb_path": nwb_path,
                         "summary": validation_result.summary,
-                        "overall_status": overall_status,
+                        "overall_status": overall_status.value,
                         "validation_status": state.validation_status.value if state.validation_status else None,
                     },
                 )
-            elif validation_result.is_valid and overall_status == "PASSED_WITH_ISSUES":
+            elif validation_result.is_valid and overall_status == ValidationOutcome.PASSED_WITH_ISSUES:
                 # Don't set final validation_status yet - wait for user decision
                 state.add_log(
                     LogLevel.INFO,
-                    f"Validation {overall_status.lower()} (awaiting user decision)",
-                    {"nwb_path": nwb_path, "summary": validation_result.summary, "overall_status": overall_status},
+                    f"Validation {overall_status.value.lower()} (awaiting user decision)",
+                    {"nwb_path": nwb_path, "summary": validation_result.summary, "overall_status": overall_status.value},
                 )
             else:
                 # FAILED status - don't set validation_status yet, wait for user decision
@@ -132,13 +150,14 @@ class EvaluationAgent:
                         "nwb_path": nwb_path,
                         "summary": validation_result.summary,
                         "issue_count": len(validation_result.issues),
-                        "overall_status": overall_status,
+                        "overall_status": overall_status.value,
                     },
                 )
 
             # Create enriched validation result with overall_status
             validation_result_dict = validation_result.model_dump()
-            validation_result_dict["overall_status"] = overall_status
+            # Serialize enum to string value for JSON response
+            validation_result_dict["overall_status"] = overall_status.value
 
             # Use LLM to prioritize and explain issues if available
             if self._llm_service and validation_result.issues:
@@ -177,6 +196,82 @@ class EvaluationAgent:
                     state.add_log(
                         LogLevel.WARNING,
                         f"Quality scoring failed: {e}",
+                    )
+
+            # 🎯 NEW: Intelligent Validation Analysis
+            if self._validation_analyzer and validation_result.issues:
+                try:
+                    file_context = {
+                        "nwb_path": nwb_path,
+                        "file_size_mb": Path(nwb_path).stat().st_size / (1024 * 1024) if Path(nwb_path).exists() else 0,
+                        "nwb_version": validation_result_dict.get("file_info", {}).get("nwb_version", "unknown"),
+                    }
+
+                    deep_analysis = await self._validation_analyzer.analyze_validation_results(
+                        validation_result=validation_result,
+                        file_context=file_context,
+                        state=state,
+                    )
+                    validation_result_dict["deep_analysis"] = deep_analysis
+
+                    state.add_log(
+                        LogLevel.INFO,
+                        f"Deep validation analysis: {len(deep_analysis.get('root_causes', []))} root causes, "
+                        f"{len(deep_analysis.get('quick_wins', []))} quick wins",
+                        {"analysis_summary": deep_analysis.get("analysis_summary", "")},
+                    )
+                except Exception as e:
+                    state.add_log(
+                        LogLevel.WARNING,
+                        f"Deep validation analysis failed: {e}",
+                    )
+
+            # 🎯 NEW: Smart Resolution Plan
+            if self._issue_resolution and validation_result.issues:
+                try:
+                    file_context = {
+                        "nwb_path": nwb_path,
+                        "file_size_mb": Path(nwb_path).stat().st_size / (1024 * 1024) if Path(nwb_path).exists() else 0,
+                        "nwb_version": validation_result_dict.get("file_info", {}).get("nwb_version", "unknown"),
+                    }
+
+                    resolution_plan = await self._issue_resolution.generate_resolution_plan(
+                        issues=validation_result.issues,
+                        file_context=file_context,
+                        existing_metadata=state.metadata,
+                        state=state,
+                    )
+                    validation_result_dict["resolution_plan"] = resolution_plan
+
+                    state.add_log(
+                        LogLevel.INFO,
+                        f"Generated resolution plan with {len(resolution_plan.get('workflows', []))} workflows",
+                    )
+                except Exception as e:
+                    state.add_log(
+                        LogLevel.WARNING,
+                        f"Resolution plan generation failed: {e}",
+                    )
+
+            # 🎯 NEW: Record to validation history for learning
+            if self._history_learner:
+                try:
+                    file_context = {
+                        "format": state.metadata.get("format", "unknown"),
+                        "file_size_mb": Path(nwb_path).stat().st_size / (1024 * 1024) if Path(nwb_path).exists() else 0,
+                        "nwb_version": validation_result_dict.get("file_info", {}).get("nwb_version", "unknown"),
+                    }
+
+                    await self._history_learner.record_validation_session(
+                        validation_result=validation_result,
+                        file_context=file_context,
+                        resolution_actions=None,  # Will be populated if user applies fixes
+                        state=state,
+                    )
+                except Exception as e:
+                    state.add_log(
+                        LogLevel.DEBUG,
+                        f"History recording failed: {e}",
                     )
 
             return MCPResponse.success_response(
@@ -869,10 +964,11 @@ Focus on the most critical issues first."""
                     llm_analysis
                 )
 
-                # Generate text report (NWB Inspector style - clear and structured)
+                # Generate text report (NWB Inspector style with LLM analysis)
                 self._report_service.generate_text_report(
                     text_report_path,
-                    validation_result_data
+                    validation_result_data,
+                    llm_analysis  # Pass LLM analysis to text report too!
                 )
 
                 state.add_log(

@@ -26,6 +26,7 @@ from models import (
     ErrorResponse,
     LogLevel,
     LogsResponse,
+    MCPMessage,
     RetryApprovalRequest,
     RetryApprovalResponse,
     StatusResponse,
@@ -37,6 +38,9 @@ from models import (
     WebSocketMessage,
 )
 from models.metadata import NWBMetadata
+# WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Phase 2 Integration
+from models.workflow_state_manager import WorkflowStateManager
+from models.state import ValidationOutcome, ConversationPhase, MetadataRequestPolicy
 from pydantic import ValidationError
 from services import MCPServer, create_llm_service, get_mcp_server
 
@@ -60,6 +64,9 @@ app.add_middleware(
 _mcp_server: Optional[MCPServer] = None
 _upload_dir: Path = Path(tempfile.gettempdir()) / "nwb_uploads"
 _upload_dir.mkdir(exist_ok=True)
+
+# WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Phase 2 - Initialize WorkflowStateManager
+_workflow_manager = WorkflowStateManager()
 
 
 def get_or_create_mcp_server() -> MCPServer:
@@ -220,20 +227,44 @@ async def upload_file(
 
     mcp_server = get_or_create_mcp_server()
 
-    # Check if already processing - only block if actively converting/validating
-    # Allow uploads when: IDLE, AWAITING_USER_INPUT, COMPLETED, FAILED
-    BLOCKING_STATUSES = {
-        ConversionStatus.UPLOADING,
-        ConversionStatus.DETECTING_FORMAT,
-        ConversionStatus.CONVERTING,
-        ConversionStatus.VALIDATING,
-    }
-
-    if mcp_server.global_state.status in BLOCKING_STATUSES:
+    # WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Phase 2 - Use WorkflowStateManager
+    if not _workflow_manager.can_accept_upload(mcp_server.global_state):
         raise HTTPException(
             status_code=409,
             detail=f"Cannot upload while {mcp_server.global_state.status.value}. Please wait or reset.",
         )
+
+    # EDGE CASE FIX #2: Validate file count and types (prevent multiple separate datasets)
+    total_files = 1 + len(additional_files)
+
+    # Check for too many files
+    if total_files > 10:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Too many files uploaded ({total_files}). Maximum 10 files allowed. "
+                   "If you have multiple datasets, please upload them one at a time."
+        )
+
+    # Check for multiple primary data files (suggests multiple separate datasets)
+    primary_extensions = {'.bin', '.dat', '.continuous', '.h5', '.nwb'}
+    all_files_list = [file] + additional_files
+    primary_files = [f for f in all_files_list
+                     if any(f.filename.lower().endswith(ext) for ext in primary_extensions)]
+
+    if len(primary_files) > 1:
+        # Check if this is a legitimate multi-file format
+        filenames = [f.filename for f in primary_files]
+        is_spikeglx_set = any('.ap.bin' in fn or '.lf.bin' in fn for fn in filenames)
+        is_openephys_set = all('.continuous' in fn for fn in filenames)
+
+        if not (is_spikeglx_set or is_openephys_set):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Multiple data files detected ({len(primary_files)}). "
+                       f"This system processes ONE recording session at a time. "
+                       f"Please upload files for a single session only. "
+                       f"Files: {', '.join(filenames)}"
+            )
 
     # Validate file type
     ALLOWED_EXTENSIONS = {
@@ -296,15 +327,8 @@ async def upload_file(
     # Calculate checksum of main file
     checksum = hashlib.sha256(content).hexdigest()
 
-    # INFINITE LOOP FIX: Only reset state if we're NOT in an active metadata conversation
-    # If user is already in a conversation, preserve the conversation state
-    # This prevents infinite loops when user accidentally re-uploads or page refreshes
-    current_status = mcp_server.global_state.status
-    in_active_conversation = (
-        current_status == ConversionStatus.AWAITING_USER_INPUT and
-        (len(mcp_server.global_state.conversation_history) > 0 or
-         mcp_server.global_state.conversation_type == "required_metadata")  # Also check if we're waiting for metadata
-    )
+    # WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Phase 2 - Use WorkflowStateManager
+    in_active_conversation = _workflow_manager.is_in_active_conversation(mcp_server.global_state)
 
     if not in_active_conversation:
         # Reset state for new upload session (Bug #8 fix)
@@ -367,20 +391,22 @@ async def upload_file(
                     }
                 )
 
-    # Start conversion workflow
-    from models import MCPMessage
+    # CRITICAL FIX: DO NOT auto-start conversion on upload
+    # According to requirements (orchestration/SKILL.md), the system should:
+    # 1. Upload file
+    # 2. Acknowledge upload
+    # 3. Wait for user to explicitly start conversion
+    # This prevents the auto-start bug described in the user's screenshot
 
-    # INFINITE LOOP FIX: Skip sending start_conversion if already in active conversation
-    # This prevents duplicate metadata requests when user accidentally re-uploads
+    # INFINITE LOOP FIX: Skip re-acknowledging if already in active conversation
     if in_active_conversation:
         mcp_server.global_state.add_log(
             LogLevel.INFO,
-            "Upload during active conversation - skipping duplicate start_conversion message",
+            "Upload during active conversation - skipping duplicate acknowledgment",
             {"status": str(current_status), "conversation_type": mcp_server.global_state.conversation_type}
         )
 
-        # Just acknowledge the upload without starting a new workflow
-        # Return the current metadata request message from state
+        # Return the current conversation state
         current_message = mcp_server.global_state.llm_message or "Please continue the conversation to provide the requested information."
 
         return UploadResponse(
@@ -388,9 +414,12 @@ async def upload_file(
             message=current_message,
             input_path=str(file_path),
             checksum=checksum,
+            status="conversation_active",
+            uploaded_files=uploaded_files,
+            conversation_active=True,
         )
 
-    # Determine the correct input path
+    # Determine the correct input path for conversion (when user triggers it)
     # For SpikeGLX, use the directory (or specifically the .bin file)
     conversion_input_path = str(file_path)
     if ".meta" in file.filename:
@@ -406,51 +435,23 @@ async def upload_file(
         # For .bin files, use the directory path for SpikeGLX detection
         conversion_input_path = str(_upload_dir)
 
-    start_msg = MCPMessage(
-        target_agent="conversation",
-        action="start_conversion",
-        context={
-            "input_path": conversion_input_path,
-            "metadata": metadata_dict,
-        },
+    # Store the upload information in state WITHOUT starting conversion
+    mcp_server.global_state.input_path = Path(conversion_input_path)
+    mcp_server.global_state.metadata.update(metadata_dict)
+    mcp_server.global_state.pending_conversion_input_path = Path(conversion_input_path)
+
+    mcp_server.global_state.add_log(
+        LogLevel.INFO,
+        "File uploaded successfully - awaiting user command to start conversion",
+        {
+            "file": file.filename,
+            "size_mb": len(content) / (1024 * 1024),
+            "checksum": checksum,
+            "conversion_input_path": conversion_input_path
+        }
     )
 
-    response = await mcp_server.send_message(start_msg)
-
-    if not response.success:
-        error_msg = response.error.get("message", "Unknown error")
-        error_context = response.error.get("context", {})
-        print(f"ERROR: Conversion failed - {error_msg}")
-        print(f"ERROR CONTEXT: {error_context}")
-        raise HTTPException(
-            status_code=500,
-            detail=error_msg,
-        )
-
-    # Check if we're awaiting user input (metadata, format selection, etc.)
-    # This is NOT an error - it means the system needs more information from the user
-    result_status = response.result.get("status") if response.result else None
-    if result_status == "awaiting_user_input":
-        # Save the message and conversation type to state so frontend can display it
-        if response.result.get("message"):
-            mcp_server.global_state.llm_message = response.result.get("message")
-        if response.result.get("conversation_type"):
-            mcp_server.global_state.conversation_type = response.result.get("conversation_type")
-        mcp_server.global_state.add_log(
-            LogLevel.INFO,
-            "Upload successful - awaiting user input for metadata",
-        )
-
-        # CRITICAL FIX: Return immediately with the metadata request message
-        # Do NOT continue to generate welcome message - that would override the metadata request!
-        return UploadResponse(
-            session_id="session-1",
-            message=response.result.get("message", "Please provide additional information"),
-            input_path=str(file_path),
-            checksum=checksum,
-        )
-
-    # Generate LLM-powered welcome message (only if NOT awaiting user input)
+    # Generate LLM-powered welcome message that DOES NOT auto-start conversion
     file_size_mb = len(content) / (1024 * 1024)
 
     # Get LLM service from MCP server
@@ -459,17 +460,56 @@ async def upload_file(
     if api_key:
         llm_service = create_llm_service(provider="anthropic", api_key=api_key)
 
-    welcome_data = await _generate_upload_welcome_message(
-        filename=file.filename,
-        file_size_mb=file_size_mb,
-        llm_service=llm_service,
-    )
+    # Generate welcome message that acknowledges upload WITHOUT starting conversion
+    if llm_service:
+        try:
+            system_prompt = """You are a helpful NWB conversion assistant.
+
+A user just uploaded a file. Acknowledge the upload in a friendly way and explain what happens next.
+Make it clear they need to actively start the conversion process - don't assume they want to start immediately.
+Keep it concise (2-3 sentences max)."""
+
+            user_prompt = f"""The user just uploaded: {file.filename} ({file_size_mb:.2f} MB)
+
+Generate a welcome message that:
+1. Acknowledges the upload
+2. Briefly explains what this system does (convert to NWB format)
+3. Tells them to start the conversion when ready (don't auto-start!)
+
+Return JSON with a 'message' field."""
+
+            output_schema = {
+                "type": "object",
+                "properties": {
+                    "message": {"type": "string"}
+                },
+                "required": ["message"]
+            }
+
+            response = await llm_service.generate_structured_output(
+                prompt=user_prompt,
+                output_schema=output_schema,
+                system_prompt=system_prompt,
+            )
+
+            welcome_message = response.get("message", "File uploaded successfully! Ready to start conversion when you are.")
+        except Exception as e:
+            mcp_server.global_state.add_log(
+                LogLevel.WARNING,
+                f"Failed to generate LLM welcome message: {e}",
+            )
+            welcome_message = f"File '{file.filename}' uploaded successfully! ({file_size_mb:.2f} MB)\n\nReady to convert to NWB format. Start the conversion when you're ready."
+    else:
+        welcome_message = f"File '{file.filename}' uploaded successfully! ({file_size_mb:.2f} MB)\n\nReady to convert to NWB format. Start the conversion when you're ready."
 
     return UploadResponse(
         session_id="session-1",  # MVP: single session
-        message=welcome_data["message"],  # LLM-POWERED!
+        message=welcome_message,
         input_path=str(file_path),
         checksum=checksum,
+        status="upload_acknowledged",
+        uploaded_files=[file.filename],
+        conversation_active=False,
     )
 
 
@@ -493,9 +533,106 @@ async def get_status():
         input_path=state.input_path,
         output_path=state.output_path,
         correction_attempt=state.correction_attempt,
-        can_retry=True,  # Bug #14 fix: Always allow retry (unlimited with user permission)
+        can_retry=mcp_server.global_state.can_retry,  # WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Use retry limit
         conversation_type=state.conversation_type,  # NEW: conversational type
     )
+
+
+@app.post("/api/start-conversion")
+async def start_conversion():
+    """
+    Start the conversion workflow after file upload.
+
+    This triggers the Conversation Agent to:
+    1. Validate metadata
+    2. Request missing fields if needed
+    3. Start conversion once metadata is complete
+
+    Returns:
+        Response with status
+    """
+    mcp_server = get_or_create_mcp_server()
+
+    # WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Phase 2 - Use WorkflowStateManager
+    if not _workflow_manager.can_start_conversion(mcp_server.global_state):
+        if not mcp_server.global_state.input_path:
+            raise HTTPException(
+                status_code=400,
+                detail="No file uploaded. Please upload a file first.",
+            )
+        else:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Conversion already in progress: {mcp_server.global_state.status.value}",
+            )
+
+    # Send message to Conversation Agent to start conversion workflow
+    start_msg = MCPMessage(
+        target_agent="conversation",
+        action="start_conversion",
+        context={
+            "input_path": str(mcp_server.global_state.input_path),
+            "metadata": mcp_server.global_state.metadata,
+        },
+    )
+
+    response = await mcp_server.send_message(start_msg)
+
+    if not response.success:
+        raise HTTPException(
+            status_code=500,
+            detail=response.error.get("message", "Failed to start conversion"),
+        )
+
+    return {
+        "message": "Conversion workflow started",
+        "status": mcp_server.global_state.status.value,
+    }
+
+
+@app.post("/api/improvement-decision")
+async def improvement_decision(decision: str = Form(...)):
+    """
+    Submit improvement decision for PASSED_WITH_ISSUES validation.
+
+    When validation passes but has warnings, user can choose:
+    - "improve" - Enter correction loop to fix warnings
+    - "accept" - Accept file as-is and finalize
+
+    Args:
+        decision: "improve" or "accept"
+
+    Returns:
+        Response with new status
+    """
+    mcp_server = get_or_create_mcp_server()
+
+    if decision not in ["improve", "accept"]:
+        raise HTTPException(
+            status_code=400,
+            detail="Decision must be 'improve' or 'accept'",
+        )
+
+    # Send message to Conversation Agent
+    improvement_msg = MCPMessage(
+        target_agent="conversation",
+        action="improvement_decision",
+        context={"decision": decision},
+    )
+
+    response = await mcp_server.send_message(improvement_msg)
+
+    if not response.success:
+        raise HTTPException(
+            status_code=500,
+            detail=response.error.get("message", "Failed to process decision"),
+        )
+
+    return {
+        "accepted": True,
+        "message": response.result.get("message", "Decision accepted"),
+        "status": mcp_server.global_state.status.value,
+    }
 
 
 @app.post("/api/retry-approval", response_model=RetryApprovalResponse)
@@ -509,8 +646,6 @@ async def retry_approval(request: RetryApprovalRequest):
     Returns:
         Response with new status
     """
-    from models import MCPMessage
-
     mcp_server = get_or_create_mcp_server()
 
     retry_msg = MCPMessage(
@@ -554,8 +689,6 @@ async def submit_user_input(request: UserInputRequest):
     Returns:
         Response with new status
     """
-    from models import MCPMessage
-
     mcp_server = get_or_create_mcp_server()
 
     # Check if we're awaiting format selection
@@ -602,31 +735,172 @@ async def chat_message(message: str = Form(...)):
     Returns:
         LLM's response
     """
-    from models import MCPMessage
-
     mcp_server = get_or_create_mcp_server()
+    state = mcp_server.global_state
 
-    # Send conversational message
-    chat_msg = MCPMessage(
-        target_agent="conversation",
-        action="conversational_response",
-        context={"message": message},
-    )
+    # EDGE CASE FIX #1: Check if LLM is already processing
+    if state.llm_processing:
+        return {
+            "message": "I'm still processing your previous message. Please wait a moment...",
+            "status": "busy",
+            "needs_more_info": False,
+            "extracted_metadata": {},
+        }
 
-    response = await mcp_server.send_message(chat_msg)
+    # Acquire LLM lock to prevent concurrent processing
+    async with state._llm_lock:
+        state.llm_processing = True
+        try:
+            # Send conversational message
+            chat_msg = MCPMessage(
+                target_agent="conversation",
+                action="conversational_response",
+                context={"message": message},
+            )
+
+            # Add timeout to prevent indefinite waiting
+            import asyncio
+            response = await asyncio.wait_for(
+                mcp_server.send_message(chat_msg),
+                timeout=180.0  # 3 minute timeout for LLM processing
+            )
+
+        except asyncio.TimeoutError:
+            state.add_log(
+                LogLevel.ERROR,
+                "Chat LLM call timed out",
+                {"message": message[:100]},
+            )
+            return {
+                "message": "I'm sorry, that request is taking longer than expected. Please try a simpler message or try again in a moment.",
+                "status": "error",
+                "error": "timeout",
+                "needs_more_info": True,
+                "extracted_metadata": {},
+            }
+        except Exception as e:
+            state.add_log(
+                LogLevel.ERROR,
+                f"Chat endpoint error: {str(e)}",
+                {"message": message[:100], "error_type": type(e).__name__},
+            )
+            return {
+                "message": f"I encountered an error: {str(e)}. Please try rephrasing your message.",
+                "status": "error",
+                "error": str(e),
+                "needs_more_info": True,
+                "extracted_metadata": {},
+            }
+        finally:
+            state.llm_processing = False
+
+    # Validate response object
+    if not response:
+        state.add_log(LogLevel.ERROR, "Empty response from conversation agent")
+        return {
+            "message": "I'm having trouble processing that. Could you try rephrasing?",
+            "status": "error",
+            "error": "empty_response",
+            "needs_more_info": True,
+            "extracted_metadata": {},
+        }
 
     if not response.success:
-        raise HTTPException(
-            status_code=500,
-            detail=response.error.get("message", "Failed to process message"),
+        error_msg = response.error.get("message", "Failed to process message") if hasattr(response, 'error') and response.error else "Unknown error"
+        state.add_log(
+            LogLevel.ERROR,
+            "Conversation agent returned error",
+            {"error": error_msg},
+        )
+        return {
+            "message": f"I encountered an issue: {error_msg}. Please try again.",
+            "status": "error",
+            "error": error_msg,
+            "needs_more_info": True,
+            "extracted_metadata": {},
+        }
+
+    result = response.result if hasattr(response, 'result') else {}
+
+    # Validate result has required fields
+    if not isinstance(result, dict):
+        state.add_log(LogLevel.ERROR, "Invalid result type from conversation agent", {"type": str(type(result))})
+        result = {}
+
+    # ✅ FIX: Determine status explicitly based on workflow state
+    # This ensures frontend can reliably detect conversation continuation vs completion
+    ready_to_proceed = result.get("ready_to_proceed", False)
+    needs_more_info = result.get("needs_more_info", True)  # Default to True for safety
+
+    # ✅ CRITICAL FIX: Auto-trigger conversion when user confirms ready
+    # This prevents the Agent 1 → Agent 2 handoff failure
+    if ready_to_proceed and state.input_path:
+        state.add_log(
+            LogLevel.INFO,
+            "User confirmed ready to proceed - triggering conversion",
+            {"ready_to_proceed": ready_to_proceed},
         )
 
-    result = response.result
+        # Trigger conversion workflow in background
+        # Import here to avoid circular dependency
+        import asyncio
+        from agents import register_conversation_agent
+
+        # Create conversion task message
+        conv_agent = register_conversation_agent(mcp_server)
+
+        # Get format from state or detect it
+        format_name = state.detected_format if hasattr(state, 'detected_format') and state.detected_format else "unknown"
+
+        # If format is unknown, we need to detect it first
+        if format_name == "unknown":
+            from agents import register_conversion_agent
+            conv_agent_inst = register_conversion_agent(mcp_server)
+
+            detect_msg = MCPMessage(
+                target_agent="conversion",
+                action="detect_format",
+                context={"input_path": state.input_path},
+            )
+            detect_response = await mcp_server.send_message(detect_msg)
+
+            if detect_response.success:
+                format_name = detect_response.result.get("format", "unknown")
+                state.detected_format = format_name
+                state.add_log(LogLevel.INFO, f"Detected format: {format_name}")
+
+        # Now trigger actual conversion
+        start_msg = MCPMessage(
+            target_agent="conversation",
+            action="start_conversion",
+            context={
+                "input_path": state.input_path,
+                "metadata": state.metadata,
+            },
+        )
+
+        # Trigger conversion asynchronously (don't wait for it)
+        # The frontend will poll /api/status to monitor progress
+        asyncio.create_task(mcp_server.send_message(start_msg))
+
+        response_status = "ready_to_convert"
+    elif needs_more_info:
+        # Continue multi-turn conversation - frontend keeps chat active
+        response_status = "conversation_continues"
+    else:
+        # Conversation complete but user hasn't confirmed ready yet
+        response_status = "conversation_complete"
+
+    # Override with explicit status from result if provided (trust the agent)
+    response_status = result.get("status", response_status)
+
+    # Return response with explicit status for frontend compatibility
     return {
-        "message": result.get("message"),
-        "status": result.get("status"),
-        "needs_more_info": result.get("needs_more_info", False),
+        "message": result.get("message", "I processed your message but have no specific response."),
+        "status": response_status,
+        "needs_more_info": needs_more_info,
         "extracted_metadata": result.get("extracted_metadata", {}),
+        "ready_to_proceed": ready_to_proceed,
     }
 
 
@@ -645,19 +919,32 @@ async def smart_chat(message: str = Form(...)):
     Returns:
         Intelligent response with optional action suggestions
     """
-    from models import MCPMessage
-
     mcp_server = get_or_create_mcp_server()
     state = mcp_server.global_state
 
-    # Route to general query handler
-    query_msg = MCPMessage(
-        target_agent="conversation",
-        action="general_query",
-        context={"query": message},
-    )
+    # EDGE CASE FIX #1: Check if LLM is already processing
+    if state.llm_processing:
+        return {
+            "type": "busy",
+            "answer": "I'm still processing your previous message. Please wait a moment...",
+            "suggestions": [],
+            "actions": [],
+        }
 
-    response = await mcp_server.send_message(query_msg)
+    # Acquire LLM lock to prevent concurrent processing
+    async with state._llm_lock:
+        state.llm_processing = True
+        try:
+            # Route to general query handler
+            query_msg = MCPMessage(
+                target_agent="conversation",
+                action="general_query",
+                context={"query": message},
+            )
+
+            response = await mcp_server.send_message(query_msg)
+        finally:
+            state.llm_processing = False
 
     if not response.success:
         raise HTTPException(
@@ -701,8 +988,6 @@ async def get_correction_context():
     Returns:
         Correction context with auto-fixable and user-input-required issues
     """
-    from models import MCPMessage
-
     mcp_server = get_or_create_mcp_server()
     state = mcp_server.global_state
 

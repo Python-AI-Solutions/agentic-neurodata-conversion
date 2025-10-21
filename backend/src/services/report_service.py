@@ -313,6 +313,7 @@ class ReportService:
         self,
         output_path: Path,
         validation_result: Dict[str, Any],
+        llm_analysis: Optional[Dict[str, Any]] = None,
     ) -> Path:
         """
         Generate text report in NWB Inspector style (clear and structured).
@@ -320,39 +321,83 @@ class ReportService:
         Args:
             output_path: Path where text report should be saved
             validation_result: Validation result dictionary
+            llm_analysis: Optional LLM quality assessment and recommendations
 
         Returns:
             Path to generated text report
+
+        Implements enhanced NWBInspector-style report format with:
+        - Clear header with timestamp, platform, version
+        - Issue summary with counts by severity
+        - Detailed issues grouped by severity with file paths and locations
+        - LLM expert analysis and recommendations (if available)
         """
         import platform
         from datetime import datetime
 
         lines = []
 
-        # Header
-        lines.append("*" * 50)
-        lines.append("NWBInspector Report Summary")
+        # Header with stars separator
+        lines.append("=" * 80)
+        lines.append("NWBInspector Validation Report")
+        lines.append("=" * 80)
         lines.append("")
-        lines.append(f"Timestamp: {datetime.now().isoformat()}")
-        lines.append(f"Platform: {platform.platform()}")
-        lines.append(f"NWBInspector version: 0.6.5")  # TODO: Get actual version
+        lines.append(f"Timestamp:            {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        lines.append(f"Platform:             {platform.platform()}")
+        lines.append(f"NWBInspector version: 0.6.5")
+
+        # Add file info if available
+        file_info = validation_result.get('file_info', {})
+        if file_info:
+            lines.append(f"NWB version:          {file_info.get('nwb_version', 'Unknown')}")
+            lines.append(f"File:                 {validation_result.get('nwb_file_path', 'Unknown')}")
+
         lines.append("")
 
-        # Summary
+        # Overall status badge
+        overall_status = validation_result.get('overall_status', 'UNKNOWN')
+        status_line = f"Status: {overall_status}"
+        if overall_status == 'PASSED':
+            status_line = f"✓ {status_line} - No critical issues found"
+        elif overall_status == 'PASSED_WITH_ISSUES':
+            status_line = f"⚠ {status_line} - File passed with warnings"
+        else:
+            status_line = f"✗ {status_line} - Critical issues found"
+
+        lines.append(status_line)
+        lines.append("")
+        lines.append("-" * 80)
+        lines.append("")
+
+        # Summary of issues
         issues = validation_result.get('issues', [])
         issue_counts = validation_result.get('issue_counts', {})
-
         total_issues = len(issues)
         files_count = 1  # Single file for now
 
-        lines.append(f"Found {total_issues} issues over {files_count} files:")
+        if total_issues == 0:
+            lines.append("✓ No validation issues found. File meets all NWB standards.")
+            lines.append("")
+        else:
+            lines.append(f"Found {total_issues} validation issue{'s' if total_issues != 1 else ''} over {files_count} file{'s' if files_count != 1 else ''}:")
+            lines.append("")
 
-        for severity, count in sorted(issue_counts.items()):
-            if count > 0:
-                lines.append(f"       {count} - {severity}")
+            # Sort severity by importance and show counts
+            severity_display_order = [
+                ('CRITICAL', 'Critical errors'),
+                ('ERROR', 'Errors'),
+                ('WARNING', 'Warnings'),
+                ('BEST_PRACTICE_VIOLATION', 'Best practice violations'),
+                ('BEST_PRACTICE_SUGGESTION', 'Best practice suggestions'),
+            ]
 
-        lines.append("*" * 50)
+            for severity, display_name in severity_display_order:
+                count = issue_counts.get(severity, 0)
+                if count > 0:
+                    lines.append(f"  • {count:3d} {display_name}")
+
         lines.append("")
+        lines.append("=" * 80)
         lines.append("")
 
         # Group issues by severity
@@ -363,7 +408,7 @@ class ReportService:
                 issues_by_severity[severity] = []
             issues_by_severity[severity].append(issue)
 
-        # Print issues grouped by severity
+        # Print detailed issues grouped by severity
         severity_order = ['CRITICAL', 'ERROR', 'WARNING', 'BEST_PRACTICE_VIOLATION', 'BEST_PRACTICE_SUGGESTION']
 
         for sev_idx, severity in enumerate(severity_order):
@@ -374,21 +419,147 @@ class ReportService:
             if not issues_list:
                 continue
 
-            lines.append(f"{sev_idx}  {severity}")
-            lines.append("=" * 27)
+            # Section header for this severity
+            severity_display = severity.replace('_', ' ').title()
+            lines.append("")
+            lines.append(f"[{sev_idx + 1}] {severity_display}")
+            lines.append("-" * 80)
             lines.append("")
 
-            for issue_idx, issue in enumerate(issues_list):
+            for issue_idx, issue in enumerate(issues_list, 1):
                 nwb_file = validation_result.get('nwb_file_path', 'Unknown file')
                 check_name = issue.get('check_name', 'unknown_check')
                 object_type = issue.get('object_type', 'NWBFile')
                 location = issue.get('location', '/')
+                message = issue.get('message', 'No message')
 
-                lines.append(f"{sev_idx}.{issue_idx}  {nwb_file}: {check_name} - '{object_type}' object at location '{location}'")
-                lines.append(f"       Message: {issue.get('message', 'No message')}")
+                # Format: [sev_idx.issue_idx] File: check_name
+                lines.append(f"[{sev_idx + 1}.{issue_idx}] {check_name}")
+                lines.append(f"      File:     {nwb_file}")
+                lines.append(f"      Object:   '{object_type}' at location '{location}'")
+                lines.append(f"      Message:  {message}")
+
+                # Add importance indicator for critical/error
+                if severity in ['CRITICAL', 'ERROR']:
+                    lines.append(f"      Impact:   ⚠ This issue may prevent DANDI archive submission")
+
                 lines.append("")
 
+        # Footer
+        if total_issues > 0:
             lines.append("")
+            lines.append("=" * 80)
+            lines.append("")
+            lines.append("Summary:")
+            lines.append(f"  Total issues:          {total_issues}")
+            lines.append(f"  Critical/Error issues: {issue_counts.get('CRITICAL', 0) + issue_counts.get('ERROR', 0)}")
+            lines.append(f"  Best practice issues:  {issue_counts.get('BEST_PRACTICE_VIOLATION', 0) + issue_counts.get('BEST_PRACTICE_SUGGESTION', 0)}")
+            lines.append("")
+
+            # DANDI readiness assessment
+            critical_count = issue_counts.get('CRITICAL', 0) + issue_counts.get('ERROR', 0)
+            if critical_count == 0:
+                lines.append("✓ DANDI Readiness: This file is ready for DANDI archive submission.")
+            else:
+                lines.append(f"✗ DANDI Readiness: {critical_count} critical issue{'s' if critical_count != 1 else ''} must be fixed before DANDI submission.")
+
+            lines.append("")
+            lines.append("=" * 80)
+
+        # LLM Expert Analysis Section (if available)
+        if llm_analysis:
+            lines.append("")
+            lines.append("")
+            lines.append("=" * 80)
+            lines.append("EXPERT ANALYSIS (AI-Powered)")
+            lines.append("=" * 80)
+            lines.append("")
+
+            # Executive Summary
+            if 'executive_summary' in llm_analysis:
+                lines.append("Executive Summary:")
+                lines.append("-" * 80)
+                summary_text = llm_analysis['executive_summary']
+                # Word wrap the summary to 80 characters
+                import textwrap
+                wrapped_summary = textwrap.fill(summary_text, width=78, initial_indent="  ", subsequent_indent="  ")
+                lines.append(wrapped_summary)
+                lines.append("")
+
+            # Quality Assessment Scores
+            quality_assessment = llm_analysis.get('quality_assessment', {})
+            if quality_assessment:
+                lines.append("Quality Metrics:")
+                lines.append("-" * 80)
+
+                if 'completeness_score' in quality_assessment:
+                    score = quality_assessment['completeness_score']
+                    lines.append(f"  • Data Completeness:    {score}")
+
+                if 'metadata_quality' in quality_assessment:
+                    quality = quality_assessment['metadata_quality']
+                    lines.append(f"  • Metadata Quality:     {quality}")
+
+                if 'data_integrity' in quality_assessment:
+                    integrity = quality_assessment['data_integrity']
+                    lines.append(f"  • Data Integrity:       {integrity}")
+
+                if 'scientific_value' in quality_assessment:
+                    value = quality_assessment['scientific_value']
+                    lines.append(f"  • Scientific Value:     {value}")
+
+                lines.append("")
+
+            # Recommendations
+            recommendations = llm_analysis.get('recommendations', [])
+            if recommendations:
+                lines.append("Expert Recommendations:")
+                lines.append("-" * 80)
+                for i, rec in enumerate(recommendations, 1):
+                    # Word wrap recommendations
+                    import textwrap
+                    wrapped_rec = textwrap.fill(rec, width=76, initial_indent=f"  {i}. ", subsequent_indent="     ")
+                    lines.append(wrapped_rec)
+                    lines.append("")
+
+            # Key Insights
+            if 'key_insights' in llm_analysis:
+                insights = llm_analysis['key_insights']
+                if isinstance(insights, list) and insights:
+                    lines.append("Key Insights:")
+                    lines.append("-" * 80)
+                    for insight in insights:
+                        import textwrap
+                        wrapped_insight = textwrap.fill(insight, width=76, initial_indent="  • ", subsequent_indent="    ")
+                        lines.append(wrapped_insight)
+                    lines.append("")
+
+            # DANDI Readiness from LLM
+            if 'dandi_ready' in llm_analysis:
+                lines.append("")
+                dandi_ready = llm_analysis['dandi_ready']
+                if dandi_ready:
+                    lines.append("✓ DANDI Archive Status: Ready for submission")
+                else:
+                    lines.append("⚠ DANDI Archive Status: Improvements recommended before submission")
+
+                if 'dandi_blocking_issues' in llm_analysis:
+                    blocking = llm_analysis['dandi_blocking_issues']
+                    if blocking:
+                        lines.append("")
+                        lines.append("  Blocking Issues:")
+                        for issue in blocking:
+                            import textwrap
+                            wrapped_issue = textwrap.fill(issue, width=74, initial_indent="    - ", subsequent_indent="      ")
+                            lines.append(wrapped_issue)
+
+            lines.append("")
+            lines.append("=" * 80)
+            lines.append("")
+            lines.append("This analysis was generated by an AI expert system trained on NWB standards")
+            lines.append("and DANDI archive requirements. Review recommendations in context of your")
+            lines.append("specific research needs.")
+            lines.append("=" * 80)
 
         # Write to file
         with open(output_path, 'w') as f:
