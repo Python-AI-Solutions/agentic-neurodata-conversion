@@ -24,6 +24,25 @@ class ReportService:
     Supports both PDF (for PASSED/PASSED_WITH_ISSUES) and JSON (for FAILED).
     """
 
+    # Species common names for scientific quality
+    SPECIES_COMMON_NAMES = {
+        'Mus musculus': 'House mouse',
+        'Rattus norvegicus': 'Norway rat',
+        'Homo sapiens': 'Human',
+        'Macaca mulatta': 'Rhesus macaque',
+        'Danio rerio': 'Zebrafish',
+        'Drosophila melanogaster': 'Fruit fly',
+        'Caenorhabditis elegans': 'Roundworm',
+    }
+
+    # Sex code expansion
+    SEX_CODES = {
+        'M': 'Male',
+        'F': 'Female',
+        'U': 'Unknown',
+        'O': 'Other',
+    }
+
     def __init__(self):
         """Initialize report service."""
         self.styles = getSampleStyleSheet()
@@ -83,6 +102,47 @@ class ReportService:
             fontName='Helvetica-Bold',
         ))
 
+    def _format_species(self, species: str) -> str:
+        """Format species with common name if known."""
+        if species == 'N/A' or not species:
+            return 'N/A'
+
+        common_name = self.SPECIES_COMMON_NAMES.get(species)
+        if common_name:
+            return f"{species} ({common_name})"
+        return species
+
+    def _format_sex(self, sex_code: str) -> str:
+        """Expand sex code to full word."""
+        if not sex_code or sex_code == 'N/A':
+            return 'N/A'
+        return self.SEX_CODES.get(sex_code.upper(), sex_code)
+
+    def _format_age(self, iso_age: str) -> str:
+        """Convert ISO 8601 duration to human-readable format."""
+        if not iso_age or iso_age == 'N/A':
+            return 'N/A'
+
+        import re
+        # Match P90D, P3M, P2Y formats
+        match = re.match(r'P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?', iso_age)
+        if match:
+            years, months, weeks, days = match.groups()
+            parts = []
+            if years:
+                parts.append(f"{years} year{'s' if int(years) != 1 else ''}")
+            if months:
+                parts.append(f"{months} month{'s' if int(months) != 1 else ''}")
+            if weeks:
+                parts.append(f"{weeks} week{'s' if int(weeks) != 1 else ''}")
+            if days:
+                parts.append(f"{days} day{'s' if int(days) != 1 else ''}")
+
+            if parts:
+                readable = ', '.join(parts)
+                return f"{iso_age} ({readable})"
+        return iso_age
+
     def generate_pdf_report(
         self,
         output_path: Path,
@@ -134,16 +194,40 @@ class ReportService:
         file_info = validation_result.get('file_info', {})
         story.append(Paragraph("File Information", self.styles['SectionHeading']))
 
+        # Format experimenter list
+        experimenters = file_info.get('experimenter', [])
+        experimenter_str = ', '.join(experimenters) if experimenters else 'N/A'
+
+        # Format species with common name
+        species_str = self._format_species(file_info.get('species', 'N/A'))
+
+        # Format sex
+        sex_str = self._format_sex(file_info.get('sex', 'N/A'))
+
+        # Format age
+        age_str = self._format_age(file_info.get('age', 'N/A'))
+
         file_data = [
+            # File-level metadata
             ['NWB Version:', file_info.get('nwb_version', 'N/A')],
             ['File Size:', self._format_filesize(file_info.get('file_size_bytes', 0))],
             ['Creation Date:', file_info.get('creation_date', 'N/A')],
-            ['Identifier:', file_info.get('identifier', 'N/A')],
+            ['Identifier:', file_info.get('identifier', 'Unknown')],
             ['Session Description:', file_info.get('session_description', 'N/A')],
-            ['Subject ID:', file_info.get('subject_id', 'N/A')],
-            ['Species:', file_info.get('species', 'N/A')],
-            ['Experimenter:', ', '.join(file_info.get('experimenter', [])) or 'N/A'],
+            ['Session Start Time:', file_info.get('session_start_time', 'N/A')],
+            ['', ''],  # Spacer row
+            # Experimenter and institution info
+            ['Experimenter:', experimenter_str],
             ['Institution:', file_info.get('institution', 'N/A')],
+            ['Lab:', file_info.get('lab', 'N/A')],
+            ['', ''],  # Spacer row
+            # Subject metadata
+            ['Subject ID:', file_info.get('subject_id', 'N/A')],
+            ['Species:', species_str],
+            ['Sex:', sex_str],
+            ['Age:', age_str],
+            ['Date of Birth:', file_info.get('date_of_birth', 'N/A')],
+            ['Description:', file_info.get('description', 'N/A')[:100] + ('...' if len(file_info.get('description', 'N/A')) > 100 else '')],  # Truncate long descriptions
         ]
 
         file_table = Table(file_data, colWidths=[2 * inch, 4 * inch])

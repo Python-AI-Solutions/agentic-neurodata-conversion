@@ -297,30 +297,59 @@ class EvaluationAgent:
 
     def _extract_file_info(self, nwb_path: str) -> Dict[str, Any]:
         """
-        Extract file information from NWB file for reports.
+        Extract comprehensive file information from NWB file for reports.
 
         Args:
             nwb_path: Path to NWB file
 
         Returns:
-            Dictionary with file metadata
+            Dictionary with complete file metadata including experimenter,
+            institution, subject info, etc.
         """
         from datetime import datetime
         import h5py
 
+        # Initialize with all possible NWB metadata fields
         file_info = {
+            # File-level metadata
             'nwb_version': 'Unknown',
             'file_size_bytes': 0,
             'creation_date': 'Unknown',
             'identifier': 'Unknown',
             'session_description': 'N/A',
+            'session_start_time': 'N/A',
+            'session_id': 'N/A',
+
+            # General metadata (experimenter, institution, lab)
+            'experimenter': [],
+            'institution': 'N/A',
+            'lab': 'N/A',
+            'experiment_description': 'N/A',
+
+            # Subject metadata
             'subject_id': 'N/A',
+            'species': 'N/A',
+            'sex': 'N/A',
+            'age': 'N/A',
+            'date_of_birth': 'N/A',
+            'description': 'N/A',
+            'genotype': 'N/A',
+            'strain': 'N/A',
         }
+
+        def decode_value(value):
+            """Helper to decode bytes to string."""
+            if isinstance(value, bytes):
+                return value.decode('utf-8')
+            elif isinstance(value, str):
+                return value
+            else:
+                return str(value)
 
         try:
             nwb_file_path = Path(nwb_path)
 
-            # Get file size
+            # Get file size and creation date
             if nwb_file_path.exists():
                 file_info['file_size_bytes'] = nwb_file_path.stat().st_size
                 file_info['creation_date'] = datetime.fromtimestamp(
@@ -330,39 +359,120 @@ class EvaluationAgent:
             # Try to read NWB metadata using h5py
             try:
                 with h5py.File(nwb_path, 'r') as f:
-                    # Get NWB version
+                    # Extract top-level attributes
                     if 'nwb_version' in f.attrs:
-                        file_info['nwb_version'] = f.attrs['nwb_version'].decode() if isinstance(f.attrs['nwb_version'], bytes) else str(f.attrs['nwb_version'])
+                        file_info['nwb_version'] = decode_value(f.attrs['nwb_version'])
 
-                    # Get identifier
                     if 'identifier' in f.attrs:
-                        file_info['identifier'] = f.attrs['identifier'].decode() if isinstance(f.attrs['identifier'], bytes) else str(f.attrs['identifier'])
-                    elif 'general' in f and 'identifier' in f['general'].attrs:
-                        file_info['identifier'] = f['general'].attrs['identifier'].decode() if isinstance(f['general'].attrs['identifier'], bytes) else str(f['general'].attrs['identifier'])
+                        file_info['identifier'] = decode_value(f.attrs['identifier'])
 
-                    # Get session description
                     if 'session_description' in f.attrs:
-                        file_info['session_description'] = f.attrs['session_description'].decode() if isinstance(f.attrs['session_description'], bytes) else str(f.attrs['session_description'])
-                    elif 'general' in f and 'session_description' in f['general'].attrs:
-                        file_info['session_description'] = f['general'].attrs['session_description'].decode() if isinstance(f['general'].attrs['session_description'], bytes) else str(f['general'].attrs['session_description'])
+                        file_info['session_description'] = decode_value(f.attrs['session_description'])
 
-                    # Get subject ID
-                    if 'general' in f and 'subject' in f['general']:
-                        subject_group = f['general']['subject']
-                        if 'subject_id' in subject_group.attrs:
-                            file_info['subject_id'] = subject_group.attrs['subject_id'].decode() if isinstance(subject_group.attrs['subject_id'], bytes) else str(subject_group.attrs['subject_id'])
+                    if 'session_start_time' in f.attrs:
+                        file_info['session_start_time'] = decode_value(f.attrs['session_start_time'])
+
+                    # Extract general metadata
+                    if 'general' in f:
+                        general = f['general']
+
+                        # Experimenter (can be string or array)
+                        if 'experimenter' in general.attrs:
+                            exp_value = general.attrs['experimenter']
+                            if isinstance(exp_value, bytes):
+                                file_info['experimenter'] = [exp_value.decode('utf-8')]
+                            elif isinstance(exp_value, str):
+                                file_info['experimenter'] = [exp_value]
+                            elif isinstance(exp_value, (list, tuple)):
+                                file_info['experimenter'] = [
+                                    e.decode('utf-8') if isinstance(e, bytes) else str(e)
+                                    for e in exp_value
+                                ]
+                            else:
+                                # Handle numpy arrays or other iterable types
+                                try:
+                                    file_info['experimenter'] = [decode_value(e) for e in exp_value]
+                                except TypeError:
+                                    file_info['experimenter'] = [decode_value(exp_value)]
+
+                        # Institution
+                        if 'institution' in general.attrs:
+                            file_info['institution'] = decode_value(general.attrs['institution'])
+
+                        # Lab
+                        if 'lab' in general.attrs:
+                            file_info['lab'] = decode_value(general.attrs['lab'])
+
+                        # Experiment description
+                        if 'experiment_description' in general.attrs:
+                            file_info['experiment_description'] = decode_value(general.attrs['experiment_description'])
+
+                        # Session ID
+                        if 'session_id' in general.attrs:
+                            file_info['session_id'] = decode_value(general.attrs['session_id'])
+
+                        # Extract subject metadata
+                        if 'subject' in general:
+                            subject_group = general['subject']
+
+                            if 'subject_id' in subject_group.attrs:
+                                file_info['subject_id'] = decode_value(subject_group.attrs['subject_id'])
+
+                            if 'species' in subject_group.attrs:
+                                file_info['species'] = decode_value(subject_group.attrs['species'])
+
+                            if 'sex' in subject_group.attrs:
+                                file_info['sex'] = decode_value(subject_group.attrs['sex'])
+
+                            if 'age' in subject_group.attrs:
+                                file_info['age'] = decode_value(subject_group.attrs['age'])
+
+                            if 'date_of_birth' in subject_group.attrs:
+                                file_info['date_of_birth'] = decode_value(subject_group.attrs['date_of_birth'])
+
+                            if 'description' in subject_group.attrs:
+                                file_info['description'] = decode_value(subject_group.attrs['description'])
+
+                            if 'genotype' in subject_group.attrs:
+                                file_info['genotype'] = decode_value(subject_group.attrs['genotype'])
+
+                            if 'strain' in subject_group.attrs:
+                                file_info['strain'] = decode_value(subject_group.attrs['strain'])
 
             except Exception as e:
-                # If we can't read h5py, try PyNWB
+                # If h5py fails, try PyNWB
                 try:
                     from pynwb import NWBHDF5IO
                     with NWBHDF5IO(nwb_path, 'r') as io:
                         nwbfile = io.read()
+
+                        # File-level attributes
                         file_info['nwb_version'] = str(getattr(nwbfile, 'nwb_version', 'Unknown'))
                         file_info['identifier'] = str(getattr(nwbfile, 'identifier', 'Unknown'))
                         file_info['session_description'] = str(getattr(nwbfile, 'session_description', 'N/A'))
+                        file_info['session_start_time'] = str(getattr(nwbfile, 'session_start_time', 'N/A'))
+                        file_info['session_id'] = str(getattr(nwbfile, 'session_id', 'N/A'))
+
+                        # General metadata
+                        experimenter = getattr(nwbfile, 'experimenter', None)
+                        if experimenter:
+                            file_info['experimenter'] = list(experimenter) if hasattr(experimenter, '__iter__') and not isinstance(experimenter, str) else [str(experimenter)]
+
+                        file_info['institution'] = str(getattr(nwbfile, 'institution', 'N/A'))
+                        file_info['lab'] = str(getattr(nwbfile, 'lab', 'N/A'))
+                        file_info['experiment_description'] = str(getattr(nwbfile, 'experiment_description', 'N/A'))
+
+                        # Subject metadata
                         if nwbfile.subject:
                             file_info['subject_id'] = str(getattr(nwbfile.subject, 'subject_id', 'N/A'))
+                            file_info['species'] = str(getattr(nwbfile.subject, 'species', 'N/A'))
+                            file_info['sex'] = str(getattr(nwbfile.subject, 'sex', 'N/A'))
+                            file_info['age'] = str(getattr(nwbfile.subject, 'age', 'N/A'))
+                            file_info['date_of_birth'] = str(getattr(nwbfile.subject, 'date_of_birth', 'N/A'))
+                            file_info['description'] = str(getattr(nwbfile.subject, 'description', 'N/A'))
+                            file_info['genotype'] = str(getattr(nwbfile.subject, 'genotype', 'N/A'))
+                            file_info['strain'] = str(getattr(nwbfile.subject, 'strain', 'N/A'))
+
                 except Exception as pynwb_error:
                     print(f"Could not extract file info with PyNWB either: {pynwb_error}")
 

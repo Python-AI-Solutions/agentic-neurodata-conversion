@@ -2195,6 +2195,14 @@ The conversion report has been generated with full details."""
                 },
             )
 
+        # Handle auto-fix approval conversation type
+        if state.conversation_type == "auto_fix_approval":
+            return await self._handle_auto_fix_approval_response(
+                user_message,
+                message.message_id,
+                state
+            )
+
         if not self._conversational_handler:
             return MCPResponse.error_response(
                 reply_to=message.message_id,
@@ -2765,31 +2773,41 @@ Respond in JSON format."""
                     },
                 )
 
-            # If only auto-fixable issues, reconvert immediately
+            # If only auto-fixable issues, ask user before auto-correcting
             else:
                 state.add_log(
                     LogLevel.INFO,
-                    f"All {len(auto_fixable)} issues are auto-fixable, reconverting",
+                    f"Found {len(auto_fixable)} auto-fixable issues, asking user for approval",
                 )
 
-                # Apply corrections and reconvert
-                reconvert_msg = MCPMessage(
-                    target_agent="conversion",
-                    action="apply_corrections",
-                    context={
-                        "input_path": str(state.input_path),
-                        "correction_context": correction_context,
-                        "metadata": state.metadata,
-                    },
+                # Store correction context for when user approves
+                state.correction_context = correction_context
+
+                # Generate summary of auto-fixable issues
+                issue_summary = self._generate_auto_fix_summary(auto_fixable)
+
+                # Ask user for approval
+                approval_message = (
+                    f"I found {len(auto_fixable)} issue(s) that I can fix automatically:\n\n"
+                    f"{issue_summary}\n\n"
+                    f"Would you like me to:\n"
+                    f"• **Apply fixes automatically** - I'll fix these issues and reconvert the file\n"
+                    f"• **Show details first** - See exactly what will be changed\n"
+                    f"• **Cancel** - Keep the file as-is\n\n"
+                    f"Please respond with 'apply', 'show details', or 'cancel'."
                 )
 
-                await self._mcp_server.send_message(reconvert_msg)
+                state.llm_message = approval_message
+                await state.update_status(ConversionStatus.AWAITING_USER_INPUT)
+                state.conversation_type = "auto_fix_approval"
 
                 return MCPResponse.success_response(
                     reply_to=message.message_id,
                     result={
-                        "status": "reconverting",
-                        "message": "Applying automatic corrections and reconverting...",
+                        "status": "awaiting_user_input",
+                        "message": approval_message,
+                        "auto_fixable_count": len(auto_fixable),
+                        "needs_approval": True,
                     },
                 )
 
@@ -2848,6 +2866,171 @@ Return JSON with a 'message' field."""
             return response.get("message", self._generate_basic_correction_prompts(issues))
         except Exception:
             return self._generate_basic_correction_prompts(issues)
+
+    async def _handle_auto_fix_approval_response(
+        self,
+        user_message: str,
+        reply_to: str,
+        state: GlobalState
+    ) -> MCPResponse:
+        """
+        Handle user's response to auto-fix approval request.
+
+        Args:
+            user_message: User's message
+            reply_to: Message ID to reply to
+            state: Global state
+
+        Returns:
+            MCPResponse with result
+        """
+        user_msg_lower = user_message.lower().strip()
+
+        # Option 1: User approves auto-fix
+        if any(keyword in user_msg_lower for keyword in ["apply", "yes", "fix", "proceed", "go ahead", "do it"]):
+            state.add_log(
+                LogLevel.INFO,
+                "User approved auto-fixes, applying corrections",
+            )
+
+            # Get stored correction context
+            correction_context = state.correction_context
+            if not correction_context:
+                return MCPResponse.error_response(
+                    reply_to=reply_to,
+                    error_code="NO_CORRECTION_CONTEXT",
+                    error_message="Cannot find correction context. Please try again.",
+                )
+
+            # Apply corrections and reconvert
+            reconvert_msg = MCPMessage(
+                target_agent="conversion",
+                action="apply_corrections",
+                context={
+                    "input_path": str(state.input_path),
+                    "correction_context": correction_context,
+                    "metadata": state.metadata,
+                },
+            )
+
+            await self._mcp_server.send_message(reconvert_msg)
+
+            # Update state
+            state.llm_message = "Applying automatic corrections and reconverting..."
+            await state.update_status(ConversionStatus.PROCESSING)
+            state.conversation_type = None  # Clear conversation type
+
+            return MCPResponse.success_response(
+                reply_to=reply_to,
+                result={
+                    "status": "reconverting",
+                    "message": "Applying automatic corrections and reconverting...",
+                },
+            )
+
+        # Option 2: User wants to see details first
+        elif any(keyword in user_msg_lower for keyword in ["show", "detail", "what", "which", "list"]):
+            state.add_log(
+                LogLevel.INFO,
+                "User requested detailed view of auto-fixable issues",
+            )
+
+            # Get correction context
+            correction_context = state.correction_context
+            if not correction_context:
+                return MCPResponse.error_response(
+                    reply_to=reply_to,
+                    error_code="NO_CORRECTION_CONTEXT",
+                    error_message="Cannot find correction context. Please try again.",
+                )
+
+            auto_fixable = correction_context.get("auto_fixable_issues", [])
+
+            # Generate detailed list
+            detailed_list = "Here are the issues I can fix automatically:\n\n"
+            for i, issue in enumerate(auto_fixable, 1):
+                check_name = issue.get('check_name', 'Unknown')
+                message = issue.get('message', 'No details')
+                severity = issue.get('severity', 'warning')
+                detailed_list += f"{i}. **{check_name}** ({severity})\n   {message}\n\n"
+
+            detailed_list += "\nWould you like me to apply these fixes? (respond with 'apply' or 'cancel')"
+
+            state.llm_message = detailed_list
+            # Keep conversation_type as "auto_fix_approval" for next turn
+
+            return MCPResponse.success_response(
+                reply_to=reply_to,
+                result={
+                    "status": "awaiting_user_input",
+                    "message": detailed_list,
+                },
+            )
+
+        # Option 3: User cancels
+        elif any(keyword in user_msg_lower for keyword in ["cancel", "no", "keep", "don't", "skip"]):
+            state.add_log(
+                LogLevel.INFO,
+                "User cancelled auto-fixes, accepting file as-is",
+            )
+
+            # Accept file with warnings - finalize
+            await state.update_validation_status(ValidationStatus.PASSED_ACCEPTED)
+            await state.update_status(ConversionStatus.COMPLETED)
+
+            state.llm_message = (
+                "Understood! I'll keep the file as-is. "
+                "Your NWB file is ready for download with the existing warnings."
+            )
+            state.conversation_type = None  # Clear conversation type
+
+            return MCPResponse.success_response(
+                reply_to=reply_to,
+                result={
+                    "status": "completed",
+                    "message": state.llm_message,
+                    "validation_status": "passed_accepted",
+                },
+            )
+
+        # User didn't give a clear answer - ask again
+        else:
+            clarification_msg = (
+                "I didn't understand your response. Please respond with:\n"
+                "• **'apply'** - to automatically fix the issues\n"
+                "• **'show details'** - to see exactly what will be changed\n"
+                "• **'cancel'** - to keep the file as-is"
+            )
+
+            state.llm_message = clarification_msg
+
+            return MCPResponse.success_response(
+                reply_to=reply_to,
+                result={
+                    "status": "awaiting_user_input",
+                    "message": clarification_msg,
+                },
+            )
+
+    def _generate_auto_fix_summary(self, issues: List[Dict[str, Any]]) -> str:
+        """
+        Generate summary of auto-fixable issues.
+
+        Args:
+            issues: List of auto-fixable issues
+
+        Returns:
+            Formatted summary message
+        """
+        summary = ""
+        for i, issue in enumerate(issues, 1):
+            issue_name = issue.get('check_name', 'Unknown issue')
+            issue_msg = issue.get('message', 'No details available')
+            # Truncate long messages
+            if len(issue_msg) > 100:
+                issue_msg = issue_msg[:97] + "..."
+            summary += f"{i}. **{issue_name}**: {issue_msg}\n"
+        return summary.strip()
 
     def _generate_basic_correction_prompts(self, issues: List[Dict[str, Any]]) -> str:
         """
