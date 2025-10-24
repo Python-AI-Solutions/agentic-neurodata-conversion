@@ -148,6 +148,7 @@ class ReportService:
         output_path: Path,
         validation_result: Dict[str, Any],
         llm_analysis: Optional[Dict[str, Any]] = None,
+        workflow_trace: Optional[Dict[str, Any]] = None,
     ) -> Path:
         """
         Generate PDF report for PASSED or PASSED_WITH_ISSUES validation.
@@ -337,6 +338,89 @@ class ReportService:
             dandi_text = "✓ This file is ready for DANDI archive submission" if dandi_ready else "⚠ Additional improvements recommended before DANDI submission"
             story.append(Paragraph(f"<b>DANDI Readiness:</b> {dandi_text}", self.styles['Normal']))
 
+        # Workflow Trace Section (for transparency and reproducibility)
+        if workflow_trace:
+            story.append(PageBreak())
+            story.append(Paragraph("Complete Workflow Trace", self.styles['SectionHeading']))
+            story.append(Paragraph(
+                "<i>For scientific transparency and reproducibility, this section documents the complete conversion process.</i>",
+                self.styles['Normal']
+            ))
+            story.append(Spacer(1, 0.2 * inch))
+
+            # Process summary
+            if 'summary' in workflow_trace:
+                summary = workflow_trace['summary']
+                story.append(Paragraph("<b>Process Summary</b>", self.styles['Normal']))
+
+                summary_data = [
+                    ['Start Time:', summary.get('start_time', 'N/A')],
+                    ['End Time:', summary.get('end_time', 'N/A')],
+                    ['Total Duration:', summary.get('duration', 'N/A')],
+                    ['Input Format:', summary.get('input_format', 'N/A')],
+                    ['Output Format:', 'NWB (Neurodata Without Borders)'],
+                ]
+
+                summary_table = Table(summary_data, colWidths=[2 * inch, 4 * inch])
+                summary_table.setStyle(TableStyle([
+                    ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+                    ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+                    ('FONTSIZE', (0, 0), (-1, -1), 10),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                ]))
+                story.append(summary_table)
+                story.append(Spacer(1, 0.2 * inch))
+
+            # Technologies used
+            if 'technologies' in workflow_trace:
+                story.append(Paragraph("<b>Technologies & Standards</b>", self.styles['Normal']))
+                tech_items = []
+                for tech in workflow_trace['technologies']:
+                    tech_items.append(Paragraph(f"• {tech}", self.styles['Normal']))
+                for item in tech_items:
+                    story.append(item)
+                story.append(Spacer(1, 0.2 * inch))
+
+            # Workflow steps
+            if 'steps' in workflow_trace:
+                story.append(Paragraph("<b>Conversion Pipeline Steps</b>", self.styles['Normal']))
+                story.append(Spacer(1, 0.1 * inch))
+
+                for i, step in enumerate(workflow_trace['steps'], 1):
+                    step_title = f"<b>{i}. {step.get('name', 'Unknown Step')}</b>"
+                    story.append(Paragraph(step_title, self.styles['Normal']))
+                    story.append(Paragraph(f"<i>Status: {step.get('status', 'N/A')}</i>", self.styles['Normal']))
+                    if step.get('description'):
+                        story.append(Paragraph(step['description'], self.styles['Normal']))
+                    if step.get('duration'):
+                        story.append(Paragraph(f"<i>Duration: {step['duration']}</i>", self.styles['Normal']))
+                    story.append(Spacer(1, 0.1 * inch))
+
+            # Data provenance
+            if 'provenance' in workflow_trace:
+                story.append(Paragraph("<b>Data Provenance</b>", self.styles['Normal']))
+                prov = workflow_trace['provenance']
+                prov_items = []
+                if 'original_file' in prov:
+                    prov_items.append(f"Original Data: {prov['original_file']}")
+                if 'conversion_method' in prov:
+                    prov_items.append(f"Conversion Method: {prov['conversion_method']}")
+                if 'metadata_sources' in prov:
+                    prov_items.append(f"Metadata Sources: {', '.join(prov['metadata_sources'])}")
+
+                for item in prov_items:
+                    story.append(Paragraph(f"• {item}", self.styles['Normal']))
+                story.append(Spacer(1, 0.2 * inch))
+
+            # Reproducibility note
+            story.append(Paragraph(
+                "<i><b>Note on Reproducibility:</b> This workflow trace enables independent verification "
+                "and reproduction of the conversion process. All steps, technologies, and data sources "
+                "are documented to meet scientific transparency standards required by the neuroscience "
+                "community and DANDI archive.</i>",
+                self.styles['Normal']
+            ))
+
         # Build PDF
         doc.build(story)
         return output_path
@@ -346,6 +430,7 @@ class ReportService:
         output_path: Path,
         validation_result: Dict[str, Any],
         llm_guidance: Optional[Dict[str, Any]] = None,
+        workflow_trace: Optional[Dict[str, Any]] = None,
     ) -> Path:
         """
         Generate JSON report for FAILED validation.
@@ -387,6 +472,10 @@ class ReportService:
         if llm_guidance:
             report['llm_guidance'] = llm_guidance
 
+        # Add workflow trace for transparency and reproducibility
+        if workflow_trace:
+            report['workflow_trace'] = workflow_trace
+
         # Write pretty-printed JSON
         with open(output_path, 'w') as f:
             json.dump(report, f, indent=2, default=str)
@@ -398,6 +487,7 @@ class ReportService:
         output_path: Path,
         validation_result: Dict[str, Any],
         llm_analysis: Optional[Dict[str, Any]] = None,
+        workflow_trace: Optional[Dict[str, Any]] = None,
     ) -> Path:
         """
         Generate text report in NWB Inspector style (clear and structured).
@@ -643,6 +733,106 @@ class ReportService:
             lines.append("This analysis was generated by an AI expert system trained on NWB standards")
             lines.append("and DANDI archive requirements. Review recommendations in context of your")
             lines.append("specific research needs.")
+            lines.append("=" * 80)
+
+        # Workflow Trace Section (for transparency and reproducibility)
+        if workflow_trace:
+            lines.append("")
+            lines.append("")
+            lines.append("=" * 80)
+            lines.append("COMPLETE WORKFLOW TRACE")
+            lines.append("=" * 80)
+            lines.append("")
+            lines.append("For scientific transparency and reproducibility, this section documents")
+            lines.append("the complete conversion process from start to end.")
+            lines.append("")
+            lines.append("-" * 80)
+            lines.append("")
+
+            # Process Summary
+            if 'summary' in workflow_trace:
+                summary = workflow_trace['summary']
+                lines.append("Process Summary:")
+                lines.append("-" * 80)
+                lines.append(f"  Start Time:       {summary.get('start_time', 'N/A')}")
+                lines.append(f"  End Time:         {summary.get('end_time', 'N/A')}")
+                lines.append(f"  Total Duration:   {summary.get('duration', 'N/A')}")
+                lines.append(f"  Input Format:     {summary.get('input_format', 'N/A')}")
+                lines.append(f"  Output Format:    NWB (Neurodata Without Borders)")
+                lines.append("")
+
+            # Technologies Used
+            if 'technologies' in workflow_trace:
+                lines.append("Technologies & Standards:")
+                lines.append("-" * 80)
+                for tech in workflow_trace['technologies']:
+                    lines.append(f"  • {tech}")
+                lines.append("")
+
+            # Workflow Steps
+            if 'steps' in workflow_trace:
+                lines.append("Conversion Pipeline Steps:")
+                lines.append("-" * 80)
+                lines.append("")
+                for i, step in enumerate(workflow_trace['steps'], 1):
+                    lines.append(f"Step {i}: {step.get('name', 'Unknown Step')}")
+                    lines.append(f"  Status: {step.get('status', 'N/A')}")
+                    if step.get('description'):
+                        import textwrap
+                        wrapped_desc = textwrap.fill(
+                            step['description'],
+                            width=76,
+                            initial_indent="  ",
+                            subsequent_indent="  "
+                        )
+                        lines.append(wrapped_desc)
+                    if step.get('duration'):
+                        lines.append(f"  Duration: {step['duration']}")
+                    if step.get('timestamp'):
+                        lines.append(f"  Timestamp: {step['timestamp']}")
+                    lines.append("")
+
+            # Data Provenance
+            if 'provenance' in workflow_trace:
+                lines.append("Data Provenance:")
+                lines.append("-" * 80)
+                prov = workflow_trace['provenance']
+                if 'original_file' in prov:
+                    lines.append(f"  Original Data:      {prov['original_file']}")
+                if 'conversion_method' in prov:
+                    lines.append(f"  Conversion Method:  {prov['conversion_method']}")
+                if 'metadata_sources' in prov:
+                    sources = ', '.join(prov['metadata_sources'])
+                    lines.append(f"  Metadata Sources:   {sources}")
+                if 'agent_versions' in prov:
+                    lines.append(f"  Agent Versions:     {prov['agent_versions']}")
+                lines.append("")
+
+            # User Interactions
+            if 'user_interactions' in workflow_trace:
+                lines.append("User Interactions:")
+                lines.append("-" * 80)
+                for interaction in workflow_trace['user_interactions']:
+                    lines.append(f"  • {interaction.get('timestamp', 'N/A')}: {interaction.get('action', 'N/A')}")
+                lines.append("")
+
+            # Reproducibility Footer
+            lines.append("")
+            lines.append("=" * 80)
+            lines.append("")
+            lines.append("NOTE ON REPRODUCIBILITY:")
+            lines.append("")
+            lines.append("This workflow trace enables independent verification and reproduction")
+            lines.append("of the conversion process. All steps, technologies, data sources, and")
+            lines.append("user interactions are documented to meet scientific transparency standards")
+            lines.append("required by the neuroscience community and DANDI archive.")
+            lines.append("")
+            lines.append("This level of documentation ensures:")
+            lines.append("  • Full transparency of the conversion process")
+            lines.append("  • Ability to reproduce results independently")
+            lines.append("  • Compliance with FAIR data principles")
+            lines.append("  • Trust in the scientific community")
+            lines.append("")
             lines.append("=" * 80)
 
         # Write to file
