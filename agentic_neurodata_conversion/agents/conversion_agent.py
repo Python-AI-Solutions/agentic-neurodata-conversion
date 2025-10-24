@@ -301,6 +301,7 @@ Format:
         Returns:
             Result dictionary with status and conversion details
         """
+        session_context = None  # Initialize to None for exception handler
         try:
             # Step 1: Get session context
             session_context = await self.get_session_context(session_id)
@@ -355,8 +356,10 @@ Format:
                 json={
                     "session_id": session_id,
                     "target_agent": "evaluation_agent",
-                    "action": "validate_nwb",
-                    "payload": {"nwb_file_path": conversion_results.nwb_file_path},
+                    "message_type": "agent_execute",
+                    "payload": {
+                        "action": "validate_nwb",
+                    },
                 },
             )
 

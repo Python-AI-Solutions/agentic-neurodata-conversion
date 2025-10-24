@@ -92,10 +92,26 @@ def start_agent(agent_type: AgentType) -> None:
         # This should never happen due to validation above, but satisfies mypy
         raise ValueError(f"Unexpected agent type: {agent_type}")
 
-    # Register with MCP server (using asyncio.run for the async operation)
+    # Register with MCP server (handle async registration)
     print(f"Registering {agent_type} agent with MCP server...")
     try:
-        response = asyncio.run(agent.register_with_server())
+        # Try to get or create event loop for registration
+        try:
+            # Try to get existing loop
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # Loop is running - create a task and wait for it
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(asyncio.run, agent.register_with_server())
+                    response = future.result()
+            else:
+                # Loop exists but not running - use it
+                response = loop.run_until_complete(agent.register_with_server())
+        except RuntimeError:
+            # No loop exists - create one with asyncio.run (normal case)
+            response = asyncio.run(agent.register_with_server())
+
         print(f"Registration successful: {response}")
     except Exception as e:
         print(f"Registration failed: {e}")

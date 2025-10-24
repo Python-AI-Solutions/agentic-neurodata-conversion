@@ -314,6 +314,7 @@ migrate_structure.sh
 SETUP_STATUS.md
 FINAL_STATUS.md
 *_STATUS.md
+BUG_LIST.md
 demo_sessions/
 demo_output/
 sessions/

@@ -277,12 +277,11 @@ Return ONLY the JSON object:"""
             await self.http_client.post(
                 f"{self.mcp_server_url}/internal/route_message",
                 json={
+                    "session_id": session_id,
                     "target_agent": "conversion_agent",
                     "message_type": "agent_execute",
                     "payload": {
-                        "task_name": "convert_dataset",
-                        "session_id": session_id,
-                        "parameters": {},
+                        "action": "convert_dataset",
                     },
                 },
             )
@@ -361,12 +360,11 @@ Return ONLY the JSON object:"""
             await self.http_client.post(
                 f"{self.mcp_server_url}/internal/route_message",
                 json={
+                    "session_id": session_id,
                     "target_agent": "conversion_agent",
                     "message_type": "agent_execute",
                     "payload": {
-                        "task_name": "convert_dataset",
-                        "session_id": session_id,
-                        "parameters": {},
+                        "action": "convert_dataset",
                     },
                 },
             )
@@ -389,7 +387,7 @@ Return ONLY the JSON object:"""
         """
         Handle incoming MCP message.
 
-        Routes message to appropriate handler based on task_name in payload.
+        Routes message to appropriate handler based on action in payload.
 
         Args:
             message: MCP message to handle
@@ -397,14 +395,13 @@ Return ONLY the JSON object:"""
         Returns:
             Result dictionary from handler
         """
-        # Extract task_name from payload
-        task_name = message.payload.get("task_name")
+        # Extract action from payload
+        action = message.payload.get("action", "")
         session_id = message.session_id or message.payload.get("session_id", "")
 
-        if task_name == "initialize_session":
-            # Extract dataset_path from parameters
-            parameters = message.payload.get("parameters", {})
-            dataset_path = parameters.get("dataset_path")
+        if action == "initialize_session":
+            # Extract dataset_path directly from payload
+            dataset_path = message.payload.get("dataset_path")
             if not dataset_path:
                 return {
                     "status": "error",
@@ -414,11 +411,10 @@ Return ONLY the JSON object:"""
 
             return await self._initialize_session(session_id, dataset_path)
 
-        elif task_name == "handle_clarification":
-            # Extract parameters from payload
-            parameters = message.payload.get("parameters", {})
-            user_input = parameters.get("user_input")
-            updated_metadata = parameters.get("updated_metadata")
+        elif action == "handle_clarification":
+            # Extract parameters directly from payload
+            user_input = message.payload.get("user_input")
+            updated_metadata = message.payload.get("updated_metadata")
 
             return await self._handle_clarification(
                 session_id, user_input, updated_metadata
@@ -427,6 +423,6 @@ Return ONLY the JSON object:"""
         else:
             return {
                 "status": "error",
-                "message": f"Unknown task: {task_name}",
+                "message": f"Unknown action: {action}",
                 "session_id": session_id,
             }
