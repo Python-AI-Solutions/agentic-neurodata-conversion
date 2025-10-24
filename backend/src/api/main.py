@@ -310,19 +310,42 @@ async def upload_file(
             f.write(add_content)
         uploaded_files.append(additional_file.filename)
 
-    # For SpikeGLX files, also check if we need to copy the corresponding .meta file
-    # (only if not already provided by user)
-    if ".ap.bin" in file.filename or ".lf.bin" in file.filename:
+    # Validate that SpikeGLX files have their required companion .meta files
+    if ".ap.bin" in file.filename or ".lf.bin" in file.filename or ".nidq.bin" in file.filename:
         meta_filename = file.filename.replace(".bin", ".meta")
         meta_file_path = _upload_dir / meta_filename
 
-        # Only copy from test_data if user didn't upload it
+        # Check if .meta file was uploaded
         if not meta_file_path.exists():
-            test_meta = Path("test_data/spikeglx") / meta_filename
-            if test_meta.exists():
-                import shutil
-                shutil.copy(test_meta, _upload_dir / meta_filename)
-                uploaded_files.append(meta_filename)
+            raise HTTPException(
+                status_code=400,
+                detail=f"SpikeGLX .bin files require a matching .meta file. "
+                       f"Please upload both '{file.filename}' and '{meta_filename}' together. "
+                       f"The .meta file contains essential recording parameters (sampling rate, "
+                       f"channel count, probe configuration) needed for accurate conversion."
+            )
+
+    # Validate OpenEphys files have required companion files
+    if file.filename == "structure.oebin":
+        # New OpenEphys format - should have accompanying data files
+        # We'll validate this more thoroughly during conversion, but warn user
+        if len(additional_files) == 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"OpenEphys format requires multiple files. When uploading 'structure.oebin', "
+                       f"please also upload the accompanying .dat files and other recording files from the same session folder. "
+                       f"All files from the recording session are needed for complete data extraction."
+            )
+    elif file.filename == "settings.xml":
+        # Old OpenEphys format - should have .continuous files
+        continuous_files = [f for f in additional_files if ".continuous" in f.filename]
+        if len(continuous_files) == 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Old OpenEphys format requires .continuous data files. When uploading 'settings.xml', "
+                       f"please also upload all .continuous files from the same recording session. "
+                       f"All files are needed for complete data extraction."
+            )
 
     # Calculate checksum of main file
     checksum = hashlib.sha256(content).hexdigest()
@@ -436,9 +459,9 @@ async def upload_file(
         conversion_input_path = str(_upload_dir)
 
     # Store the upload information in state WITHOUT starting conversion
-    mcp_server.global_state.input_path = Path(conversion_input_path)
+    mcp_server.global_state.input_path = conversion_input_path  # Keep as string
     mcp_server.global_state.metadata.update(metadata_dict)
-    mcp_server.global_state.pending_conversion_input_path = Path(conversion_input_path)
+    mcp_server.global_state.pending_conversion_input_path = conversion_input_path  # Keep as string
 
     mcp_server.global_state.add_log(
         LogLevel.INFO,
