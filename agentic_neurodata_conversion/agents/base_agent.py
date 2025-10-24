@@ -8,6 +8,7 @@ from anthropic import APIError as AnthropicAPIError
 from anthropic import AsyncAnthropic
 from anthropic import RateLimitError as AnthropicRateLimitError
 from fastapi import FastAPI
+import httpx
 from httpx import AsyncClient
 from openai import APIError as OpenAIAPIError
 from openai import AsyncOpenAI
@@ -41,7 +42,8 @@ class BaseAgent(ABC):
         self.agent_name = config.agent_name
         self.agent_type = config.agent_type
         self.mcp_server_url = config.mcp_server_url
-        self.http_client = AsyncClient()
+        # HTTP client with timeout for agent communication (5 min for long LLM responses)
+        self.http_client = AsyncClient(timeout=httpx.Timeout(300.0, connect=10.0))
         self.llm_client = self._initialize_llm_client()
 
     def _initialize_llm_client(self) -> Any:
@@ -55,9 +57,16 @@ class BaseAgent(ABC):
             ValueError: If LLM provider is not supported
         """
         if self.config.llm_provider == "anthropic":
-            return AsyncAnthropic(api_key=self.config.llm_api_key)
+            # 3 minute timeout for LLM API calls (metadata extraction can be slow)
+            return AsyncAnthropic(
+                api_key=self.config.llm_api_key,
+                timeout=httpx.Timeout(180.0, connect=10.0)
+            )
         elif self.config.llm_provider == "openai":
-            return AsyncOpenAI(api_key=self.config.llm_api_key)
+            return AsyncOpenAI(
+                api_key=self.config.llm_api_key,
+                timeout=httpx.Timeout(180.0, connect=10.0)
+            )
         else:
             raise ValueError(f"Unsupported LLM provider: {self.config.llm_provider}")
 
@@ -163,12 +172,16 @@ class BaseAgent(ABC):
         for attempt in range(max_retries):
             try:
                 if self.config.llm_provider == "anthropic":
-                    response = await self.llm_client.messages.create(
-                        model=self.config.llm_model,
-                        max_tokens=self.config.max_tokens,
-                        temperature=self.config.temperature,
-                        system=system_message if system_message else "",
-                        messages=[{"role": "user", "content": prompt}],
+                    # Wrap with asyncio.wait_for for absolute timeout (3 minutes)
+                    response = await asyncio.wait_for(
+                        self.llm_client.messages.create(
+                            model=self.config.llm_model,
+                            max_tokens=self.config.max_tokens,
+                            temperature=self.config.temperature,
+                            system=system_message if system_message else "",
+                            messages=[{"role": "user", "content": prompt}],
+                        ),
+                        timeout=180.0
                     )
                     text: str = response.content[0].text
                     return text
@@ -179,14 +192,25 @@ class BaseAgent(ABC):
                         messages.append({"role": "system", "content": system_message})
                     messages.append({"role": "user", "content": prompt})
 
-                    response = await self.llm_client.chat.completions.create(
-                        model=self.config.llm_model,
-                        max_tokens=self.config.max_tokens,
-                        temperature=self.config.temperature,
-                        messages=messages,
+                    # Wrap with asyncio.wait_for for absolute timeout (3 minutes)
+                    response = await asyncio.wait_for(
+                        self.llm_client.chat.completions.create(
+                            model=self.config.llm_model,
+                            max_tokens=self.config.max_tokens,
+                            temperature=self.config.temperature,
+                            messages=messages,
+                        ),
+                        timeout=180.0
                     )
                     content: Optional[str] = response.choices[0].message.content
                     return content or ""
+
+            except asyncio.TimeoutError as e:
+                # Timeout after 180s - treat as temporary failure and retry
+                if attempt == max_retries - 1:
+                    raise RuntimeError(f"LLM call timed out after {max_retries} attempts (180s each)") from e
+                wait_time = 2 + attempt  # 2s, 3s, 4s, 5s, 6s
+                await asyncio.sleep(wait_time)
 
             except (AnthropicRateLimitError, OpenAIRateLimitError):
                 # Exponential backoff for rate limits: 2^attempt

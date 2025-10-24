@@ -6,13 +6,13 @@ import asyncio
 import sys
 from typing import TYPE_CHECKING, Literal
 
-import uvicorn
 from dotenv import load_dotenv
+import uvicorn
 
 # Load environment variables from .env file
 load_dotenv()
 
-from agentic_neurodata_conversion.config import (
+from agentic_neurodata_conversion.config import (  # noqa: E402
     AgentConfig,
     get_conversation_agent_config,
     get_conversion_agent_config,
@@ -129,7 +129,9 @@ def start_agent(agent_type: AgentType) -> None:
     print(f"  - LLM provider: {config.llm_provider}")
     print(f"  - Capabilities: {', '.join(agent.get_capabilities())}")
 
-    # Run uvicorn server (blocking call with its own event loop)
+    # Run uvicorn server
+    # Note: Using single worker with async timeouts to prevent blocking
+    # Multi-worker mode requires app factory pattern which conflicts with agent registration
     uvicorn.run(app, host="0.0.0.0", port=config.agent_port, log_level="info")
 
 
