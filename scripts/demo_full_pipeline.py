@@ -17,10 +17,16 @@ Output:
 
 import asyncio
 import json
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -29,7 +35,7 @@ from agentic_neurodata_conversion.mcp_server.context_manager import ContextManag
 from agentic_neurodata_conversion.agents.conversation_agent import ConversationAgent
 from agentic_neurodata_conversion.agents.conversion_agent import ConversionAgent
 from agentic_neurodata_conversion.agents.evaluation_agent import EvaluationAgent
-from agentic_neurodata_conversion.models.mcp_message import MCPMessage
+from agentic_neurodata_conversion.models.mcp_message import MCPMessage, MessageType
 from agentic_neurodata_conversion.models.session_context import (
     SessionContext,
     WorkflowStage,
@@ -150,6 +156,7 @@ class PipelineDemo:
             session_id=self.session_id,
             source_agent="mcp_server",
             target_agent="conversation_agent",
+            message_type=MessageType.AGENT_EXECUTE,
             payload={
                 "action": "initialize_session",
                 "dataset_path": dataset_path,
@@ -194,6 +201,7 @@ class PipelineDemo:
             session_id=self.session_id,
             source_agent="conversation_agent",
             target_agent="conversion_agent",
+            message_type=MessageType.AGENT_EXECUTE,
             payload={
                 "action": "convert_dataset",
             },
@@ -244,6 +252,7 @@ class PipelineDemo:
             session_id=self.session_id,
             source_agent="conversion_agent",
             target_agent="evaluation_agent",
+            message_type=MessageType.AGENT_EXECUTE,
             payload={
                 "action": "validate_nwb",
             },
@@ -386,6 +395,30 @@ async def main():
     print("  Multi-Agent NWB Conversion Pipeline - Full Demonstration".center(80))
     print("=" * 80)
     print("\n")
+
+    # Check for API keys
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+    openai_key = os.environ.get("OPENAI_API_KEY")
+
+    # Filter out placeholder values
+    if anthropic_key and (anthropic_key.startswith("sk-ant-your-") or anthropic_key == "sk-ant-your-api-key-here"):
+        anthropic_key = None
+    if openai_key and (openai_key.startswith("sk-your-") or openai_key == "sk-your-openai-api-key-here"):
+        openai_key = None
+
+    if not anthropic_key and not openai_key:
+        print("\033[93mWARNING: No valid LLM API key found in .env file\033[0m")
+        print("\nThis demo requires an LLM API key for metadata extraction.")
+        print("\nTo fix:")
+        print("  1. Copy .env.example to .env")
+        print("  2. Add your ANTHROPIC_API_KEY or OPENAI_API_KEY")
+        print("  3. Run this script again\n")
+        sys.exit(1)
+
+    if anthropic_key:
+        print(f"\033[92m[OK] Found ANTHROPIC_API_KEY in .env\033[0m")
+    elif openai_key:
+        print(f"\033[92m[OK] Found OPENAI_API_KEY in .env\033[0m")
 
     # Use test dataset
     dataset_path = "./tests/data/synthetic_openephys"

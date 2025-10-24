@@ -310,6 +310,15 @@ migration_summary_*.md
 setup_proper_structure.sh
 migrate_structure.sh
 
+# Demo and status files (temporary/local development)
+SETUP_STATUS.md
+FINAL_STATUS.md
+*_STATUS.md
+demo_sessions/
+demo_output/
+sessions/
+nul
+
 # Test-generated reports and artifacts
 reports/
 *.validation.json

@@ -7,6 +7,10 @@ import sys
 from typing import TYPE_CHECKING, Literal
 
 import uvicorn
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 from agentic_neurodata_conversion.config import (
     AgentConfig,
@@ -47,7 +51,7 @@ def get_agent_config(agent_type: AgentType) -> AgentConfig:
         )
 
 
-async def start_agent(agent_type: AgentType) -> None:
+def start_agent(agent_type: AgentType) -> None:
     """
     Start agent and register with MCP server.
 
@@ -88,10 +92,10 @@ async def start_agent(agent_type: AgentType) -> None:
         # This should never happen due to validation above, but satisfies mypy
         raise ValueError(f"Unexpected agent type: {agent_type}")
 
-    # Register with MCP server
+    # Register with MCP server (using asyncio.run for the async operation)
     print(f"Registering {agent_type} agent with MCP server...")
     try:
-        response = await agent.register_with_server()
+        response = asyncio.run(agent.register_with_server())
         print(f"Registration successful: {response}")
     except Exception as e:
         print(f"Registration failed: {e}")
@@ -109,7 +113,7 @@ async def start_agent(agent_type: AgentType) -> None:
     print(f"  - LLM provider: {config.llm_provider}")
     print(f"  - Capabilities: {', '.join(agent.get_capabilities())}")
 
-    # Run uvicorn server
+    # Run uvicorn server (blocking call with its own event loop)
     uvicorn.run(app, host="0.0.0.0", port=config.agent_port, log_level="info")
 
 
@@ -129,9 +133,9 @@ def main() -> None:
         print(f"Valid types: {', '.join(valid_types)}")
         sys.exit(1)
 
-    # Start agent
+    # Start agent (synchronous function that handles async registration internally)
     try:
-        asyncio.run(start_agent(agent_type))  # type: ignore
+        start_agent(agent_type)  # type: ignore
     except KeyboardInterrupt:
         print(f"\n{agent_type.capitalize()} agent stopped")
     except Exception as e:

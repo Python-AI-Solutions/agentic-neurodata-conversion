@@ -32,6 +32,10 @@ from datetime import datetime
 from pathlib import Path
 
 import httpx
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -382,34 +386,56 @@ class FullPipelineDemo:
 
 
 def get_api_credentials():
-    """Prompt user for API credentials."""
+    """Get API credentials from .env file or prompt user."""
     print("\n" + "="*80)
     print("  LLM API Configuration".center(80))
     print("="*80 + "\n")
 
+    # Check environment variables (from .env file or system)
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+    openai_key = os.environ.get("OPENAI_API_KEY")
+
+    # Filter out placeholder values from .env.example
+    if anthropic_key and (anthropic_key.startswith("sk-ant-your-") or anthropic_key == "sk-ant-your-api-key-here"):
+        anthropic_key = None
+    if openai_key and (openai_key.startswith("sk-your-") or openai_key == "sk-your-openai-api-key-here"):
+        openai_key = None
+
+    # If valid key found in .env, use it
+    if anthropic_key and anthropic_key.startswith("sk-ant-"):
+        print(f"{Colors.GREEN}Found valid ANTHROPIC_API_KEY in .env file{Colors.END}")
+        print(f"Key: {anthropic_key[:15]}...{anthropic_key[-4:]}")
+        try:
+            use_env = input("\nUse this key? [Y/n]: ").strip().lower()
+        except EOFError:
+            # Non-interactive mode, auto-accept
+            use_env = 'y'
+        if use_env in ('', 'y', 'yes'):
+            return anthropic_key, "anthropic"
+
+    if openai_key and openai_key.startswith("sk-"):
+        print(f"{Colors.GREEN}Found valid OPENAI_API_KEY in .env file{Colors.END}")
+        print(f"Key: {openai_key[:10]}...{openai_key[-4:]}")
+        try:
+            use_env = input("\nUse this key? [Y/n]: ").strip().lower()
+        except EOFError:
+            # Non-interactive mode, auto-accept
+            use_env = 'y'
+        if use_env in ('', 'y', 'yes'):
+            return openai_key, "openai"
+
+    # No valid key in .env, prompt user
+    print(f"{Colors.YELLOW}No valid API key found in .env file{Colors.END}\n")
     print("This demo requires an LLM API key for metadata extraction and validation.\n")
+    print("To avoid this prompt in the future:")
+    print("  1. Copy .env.example to .env")
+    print("  2. Add your API key to the .env file\n")
     print("You can use either:")
     print("  1. Anthropic Claude (recommended)")
     print("  2. OpenAI GPT-4\n")
 
-    # Check environment variables first
-    anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
-    openai_key = os.environ.get("OPENAI_API_KEY")
-
-    if anthropic_key:
-        print(f"{Colors.GREEN}Found ANTHROPIC_API_KEY in environment{Colors.END}")
-        use_env = input("Use this key? (y/n): ").strip().lower()
-        if use_env == 'y':
-            return anthropic_key, "anthropic"
-
-    if openai_key:
-        print(f"{Colors.GREEN}Found OPENAI_API_KEY in environment{Colors.END}")
-        use_env = input("Use this key? (y/n): ").strip().lower()
-        if use_env == 'y':
-            return openai_key, "openai"
-
     # Prompt for key
-    print("\nEnter your API key:")
+    print("Enter your API key:")
     print("  - For Anthropic: Get key from https://console.anthropic.com/")
     print("  - For OpenAI: Get key from https://platform.openai.com/api-keys\n")
 
@@ -475,7 +501,11 @@ async def main():
     print(f"\nUsing test dataset: {dataset_path}")
     print(f"Output directory: ./demo_output/\n")
 
-    input("Press Enter to start the demo...")
+    try:
+        input("Press Enter to start the demo...")
+    except EOFError:
+        # Non-interactive mode, auto-start
+        print("Starting demo automatically (non-interactive mode)...")
 
     # Run demo
     success = await demo.run(dataset_path)

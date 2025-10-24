@@ -50,11 +50,18 @@ class ContextManager:
 
     async def connect(self) -> None:
         """
-        Connect to Redis.
+        Connect to Redis (if redis_url is provided).
+
+        If redis_url is None, operates in filesystem-only mode.
 
         Raises:
             Exception: If Redis connection fails
         """
+        if self._redis_url is None:
+            # Filesystem-only mode
+            self._redis = None
+            return
+
         self._redis = Redis.from_url(
             self._redis_url,
             decode_responses=False,  # We'll handle JSON encoding ourselves
@@ -98,7 +105,7 @@ class ContextManager:
 
     async def create_session(self, session: SessionContext) -> None:
         """
-        Create a new session (write-through to both Redis and filesystem).
+        Create a new session (write-through to both Redis and filesystem, or filesystem-only).
 
         Args:
             session: SessionContext to persist
@@ -106,20 +113,18 @@ class ContextManager:
         Raises:
             Exception: If Redis write fails or filesystem write fails
         """
-        if self._redis is None:
-            raise RuntimeError("ContextManager not connected. Call connect() first.")
-
         # Serialize session to JSON
         session_dict = session.model_dump(mode="json")
         session_json = json.dumps(session_dict)
 
-        # Write to Redis with TTL
-        redis_key = self._get_redis_key(session.session_id)
-        await self._redis.setex(
-            redis_key,
-            self._session_ttl_seconds,
-            session_json.encode("utf-8"),
-        )
+        # Write to Redis with TTL (if available)
+        if self._redis is not None:
+            redis_key = self._get_redis_key(session.session_id)
+            await self._redis.setex(
+                redis_key,
+                self._session_ttl_seconds,
+                session_json.encode("utf-8"),
+            )
 
         # Write to filesystem
         fs_path = self._get_filesystem_path(session.session_id)
@@ -128,9 +133,9 @@ class ContextManager:
 
     async def get_session(self, session_id: str) -> Optional[SessionContext]:
         """
-        Retrieve a session (from Redis, with filesystem fallback).
+        Retrieve a session (from Redis with filesystem fallback, or filesystem-only).
 
-        Reads from Redis first. If not found, falls back to filesystem and
+        Reads from Redis first (if available). If not found, falls back to filesystem and
         restores the Redis cache.
 
         Args:
@@ -142,18 +147,15 @@ class ContextManager:
         Raises:
             Exception: If Redis operation fails or data is corrupted
         """
-        if self._redis is None:
-            raise RuntimeError("ContextManager not connected. Call connect() first.")
+        # Try Redis first (if available)
+        if self._redis is not None:
+            redis_key = self._get_redis_key(session_id)
+            data = await self._redis.get(redis_key)
+            if data is not None:
+                session_dict = json.loads(data.decode("utf-8"))
+                return SessionContext(**session_dict)
 
-        redis_key = self._get_redis_key(session_id)
-
-        # Try Redis first
-        data = await self._redis.get(redis_key)
-        if data is not None:
-            session_dict = json.loads(data.decode("utf-8"))
-            return SessionContext(**session_dict)
-
-        # Fallback to filesystem
+        # Fallback to filesystem (or filesystem-only)
         fs_path = self._get_filesystem_path(session_id)
         if not fs_path.exists():
             return None
@@ -163,18 +165,20 @@ class ContextManager:
         session_dict = json.loads(session_json)
         session = SessionContext(**session_dict)
 
-        # Restore to Redis cache with TTL
-        await self._redis.setex(
-            redis_key,
-            self._session_ttl_seconds,
-            session_json.encode("utf-8"),
-        )
+        # Restore to Redis cache with TTL (if available)
+        if self._redis is not None:
+            redis_key = self._get_redis_key(session_id)
+            await self._redis.setex(
+                redis_key,
+                self._session_ttl_seconds,
+                session_json.encode("utf-8"),
+            )
 
         return session
 
     async def update_session(self, session_id: str, updates: dict[str, Any]) -> None:
         """
-        Update a session (write-through to both Redis and filesystem).
+        Update a session (write-through to both Redis and filesystem, or filesystem-only).
 
         Automatically updates the last_updated timestamp.
 
@@ -186,9 +190,6 @@ class ContextManager:
             ValueError: If session doesn't exist
             Exception: If Redis or filesystem write fails
         """
-        if self._redis is None:
-            raise RuntimeError("ContextManager not connected. Call connect() first.")
-
         # Get existing session
         session = await self.get_session(session_id)
         if session is None:
@@ -205,13 +206,14 @@ class ContextManager:
         session_dict = session.model_dump(mode="json")
         session_json = json.dumps(session_dict)
 
-        # Write to Redis with TTL
-        redis_key = self._get_redis_key(session_id)
-        await self._redis.setex(
-            redis_key,
-            self._session_ttl_seconds,
-            session_json.encode("utf-8"),
-        )
+        # Write to Redis with TTL (if available)
+        if self._redis is not None:
+            redis_key = self._get_redis_key(session_id)
+            await self._redis.setex(
+                redis_key,
+                self._session_ttl_seconds,
+                session_json.encode("utf-8"),
+            )
 
         # Write to filesystem
         fs_path = self._get_filesystem_path(session_id)
@@ -219,7 +221,7 @@ class ContextManager:
 
     async def delete_session(self, session_id: str) -> None:
         """
-        Delete a session (from both Redis and filesystem).
+        Delete a session (from both Redis and filesystem, or filesystem-only).
 
         Args:
             session_id: Session identifier
@@ -227,12 +229,10 @@ class ContextManager:
         Note:
             Does not raise error if session doesn't exist (idempotent operation)
         """
-        if self._redis is None:
-            raise RuntimeError("ContextManager not connected. Call connect() first.")
-
-        # Delete from Redis
-        redis_key = self._get_redis_key(session_id)
-        await self._redis.delete(redis_key)
+        # Delete from Redis (if available)
+        if self._redis is not None:
+            redis_key = self._get_redis_key(session_id)
+            await self._redis.delete(redis_key)
 
         # Delete from filesystem
         fs_path = self._get_filesystem_path(session_id)
