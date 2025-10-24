@@ -1,0 +1,259 @@
+F841 Local variable `stack_trace` is assigned to but never used
+   --> agentic_neurodata_conversion\agents\conversion_agent.py:214:9
+    |
+212 |         error_type = type(error).__name__
+213 |         error_message = str(error)
+214 |         stack_trace = traceback.format_exc()
+    |         ^^^^^^^^^^^
+215 |
+216 |         # Create LLM prompt
+    |
+help: Remove assignment to unused variable `stack_trace`
+
+ARG001 Unused function argument: `tmp_path`
+  --> tests\unit\test_conversion_agent_all.py:26:22
+   |
+25 | @pytest.fixture
+26 | def conversion_agent(tmp_path: Path) -> ConversionAgent:
+   |                      ^^^^^^^^
+27 |     """Create ConversionAgent instance for testing."""
+28 |     config = AgentConfig(
+   |
+
+ARG001 Unused function argument: `system_message`
+   --> tests\unit\test_conversion_agent_all.py:178:37
+    |
+176 |     captured_prompt = None
+177 |
+178 |     async def mock_call_llm(prompt, system_message=None):
+    |                                     ^^^^^^^^^^^^^^
+179 |         nonlocal captured_prompt
+180 |         captured_prompt = prompt
+    |
+
+ARG001 Unused function argument: `tmp_path`
+  --> tests\unit\test_conversion_agent_convert.py:35:22
+   |
+34 | @pytest.fixture
+35 | def conversion_agent(tmp_path: Path) -> ConversionAgent:
+   |                      ^^^^^^^^
+36 |     """Create ConversionAgent instance for testing."""
+37 |     config = AgentConfig(
+   |
+
+ARG001 Unused function argument: `tmp_path`
+  --> tests\unit\test_conversion_agent_convert.py:95:5
+   |
+93 |     test_dataset_path: Path,
+94 |     test_metadata: dict,
+95 |     tmp_path: Path,
+   |     ^^^^^^^^
+96 | ) -> None:
+97 |     """Test conversion with valid OpenEphys dataset."""
+   |
+
+ARG001 Unused function argument: `metadata`
+   --> tests\unit\test_conversion_agent_convert.py:104:43
+    |
+102 |     mock_interface = Mock()
+103 |
+104 |     def mock_run_conversion(nwbfile_path, metadata, overwrite=True, compression="gzip"):
+    |                                           ^^^^^^^^
+105 |         # Create a mock NWB file
+106 |         create_mock_nwb_file(Path(nwbfile_path))
+    |
+
+ARG001 Unused function argument: `overwrite`
+   --> tests\unit\test_conversion_agent_convert.py:104:53
+    |
+102 |     mock_interface = Mock()
+103 |
+104 |     def mock_run_conversion(nwbfile_path, metadata, overwrite=True, compression="gzip"):
+    |                                                     ^^^^^^^^^
+105 |         # Create a mock NWB file
+106 |         create_mock_nwb_file(Path(nwbfile_path))
+    |
+
+ARG001 Unused function argument: `compression`
+   --> tests\unit\test_conversion_agent_convert.py:104:69
+    |
+102 |     mock_interface = Mock()
+103 |
+104 |     def mock_run_conversion(nwbfile_path, metadata, overwrite=True, compression="gzip"):
+    |                                                                     ^^^^^^^^^^^
+105 |         # Create a mock NWB file
+106 |         create_mock_nwb_file(Path(nwbfile_path))
+    |
+
+ARG001 Unused function argument: `tmp_path`
+   --> tests\unit\test_conversion_agent_convert.py:145:5
+    |
+143 |     test_dataset_path: Path,
+144 |     test_metadata: dict,
+145 |     tmp_path: Path,
+    |     ^^^^^^^^
+146 | ) -> None:
+147 |     """Test NWB file created successfully."""
+    |
+
+ARG001 Unused function argument: `metadata`
+   --> tests\unit\test_conversion_agent_convert.py:154:43
+    |
+152 |     mock_interface = Mock()
+153 |
+154 |     def mock_run_conversion(nwbfile_path, metadata, overwrite=True, compression="gzip"):
+    |                                           ^^^^^^^^
+155 |         create_mock_nwb_file(Path(nwbfile_path))
+    |
+
+ARG001 Unused function argument: `overwrite`
+   --> tests\unit\test_conversion_agent_convert.py:154:53
+    |
+152 |     mock_interface = Mock()
+153 |
+154 |     def mock_run_conversion(nwbfile_path, metadata, overwrite=True, compression="gzip"):
+    |                                                     ^^^^^^^^^
+155 |         create_mock_nwb_file(Path(nwbfile_path))
+    |
+
+ARG001 Unused function argument: `compression`
+   --> tests\unit\test_conversion_agent_convert.py:154:69
+    |
+152 |     mock_interface = Mock()
+153 |
+154 |     def mock_run_conversion(nwbfile_path, metadata, overwrite=True, compression="gzip"):
+    |                                                                     ^^^^^^^^^^^
+155 |         create_mock_nwb_file(Path(nwbfile_path))
+    |
+
+ARG001 Unused function argument: `tmp_path`
+   --> tests\unit\test_conversion_agent_convert.py:187:5
+    |
+185 |     test_dataset_path: Path,
+186 |     test_metadata: dict,
+187 |     tmp_path: Path,
+    |     ^^^^^^^^
+188 | ) -> None:
+189 |     """Test conversion duration tracked."""
+    |
+
+ARG001 Unused function argument: `metadata`
+   --> tests\unit\test_conversion_agent_convert.py:196:43
+    |
+194 |     mock_interface = Mock()
+195 |
+196 |     def mock_run_conversion(nwbfile_path, metadata, overwrite=True, compression="gzip"):
+    |                                           ^^^^^^^^
+197 |         time.sleep(0.1)  # Small delay to simulate conversion
+198 |         create_mock_nwb_file(Path(nwbfile_path))
+    |
+
+ARG001 Unused function argument: `overwrite`
+   --> tests\unit\test_conversion_agent_convert.py:196:53
+    |
+194 |     mock_interface = Mock()
+195 |
+196 |     def mock_run_conversion(nwbfile_path, metadata, overwrite=True, compression="gzip"):
+    |                                                     ^^^^^^^^^
+197 |         time.sleep(0.1)  # Small delay to simulate conversion
+198 |         create_mock_nwb_file(Path(nwbfile_path))
+    |
+
+ARG001 Unused function argument: `compression`
+   --> tests\unit\test_conversion_agent_convert.py:196:69
+    |
+194 |     mock_interface = Mock()
+195 |
+196 |     def mock_run_conversion(nwbfile_path, metadata, overwrite=True, compression="gzip"):
+    |                                                                     ^^^^^^^^^^^
+197 |         time.sleep(0.1)  # Small delay to simulate conversion
+198 |         create_mock_nwb_file(Path(nwbfile_path))
+    |
+
+ARG001 Unused function argument: `tmp_path`
+   --> tests\unit\test_conversion_agent_convert.py:232:5
+    |
+230 |     test_dataset_path: Path,
+231 |     test_metadata: dict,
+232 |     tmp_path: Path,
+    |     ^^^^^^^^
+233 | ) -> None:
+234 |     """Test output path set correctly."""
+    |
+
+ARG001 Unused function argument: `metadata`
+   --> tests\unit\test_conversion_agent_convert.py:241:43
+    |
+239 |     mock_interface = Mock()
+240 |
+241 |     def mock_run_conversion(nwbfile_path, metadata, overwrite=True, compression="gzip"):
+    |                                           ^^^^^^^^
+242 |         create_mock_nwb_file(Path(nwbfile_path))
+    |
+
+ARG001 Unused function argument: `overwrite`
+   --> tests\unit\test_conversion_agent_convert.py:241:53
+    |
+239 |     mock_interface = Mock()
+240 |
+241 |     def mock_run_conversion(nwbfile_path, metadata, overwrite=True, compression="gzip"):
+    |                                                     ^^^^^^^^^
+242 |         create_mock_nwb_file(Path(nwbfile_path))
+    |
+
+ARG001 Unused function argument: `compression`
+   --> tests\unit\test_conversion_agent_convert.py:241:69
+    |
+239 |     mock_interface = Mock()
+240 |
+241 |     def mock_run_conversion(nwbfile_path, metadata, overwrite=True, compression="gzip"):
+    |                                                                     ^^^^^^^^^^^
+242 |         create_mock_nwb_file(Path(nwbfile_path))
+    |
+
+ARG001 Unused function argument: `tmp_path`
+   --> tests\unit\test_conversion_agent_convert.py:271:5
+    |
+269 |     test_dataset_path: Path,
+270 |     test_metadata: dict,
+271 |     tmp_path: Path,
+    |     ^^^^^^^^
+272 | ) -> None:
+273 |     """Test gzip compression applied."""
+    |
+
+ARG001 Unused function argument: `metadata`
+   --> tests\unit\test_conversion_agent_convert.py:282:23
+    |
+281 |     def run_conv_side_effect(
+282 |         nwbfile_path, metadata, overwrite=True, compression="gzip"
+    |                       ^^^^^^^^
+283 |     ):
+284 |         create_mock_nwb_file(Path(nwbfile_path))
+    |
+
+ARG001 Unused function argument: `overwrite`
+   --> tests\unit\test_conversion_agent_convert.py:282:33
+    |
+281 |     def run_conv_side_effect(
+282 |         nwbfile_path, metadata, overwrite=True, compression="gzip"
+    |                                 ^^^^^^^^^
+283 |     ):
+284 |         create_mock_nwb_file(Path(nwbfile_path))
+    |
+
+SIM102 Use a single `if` statement instead of nested `if` statements
+   --> tests\unit\test_conversion_agent_convert.py:310:21
+    |
+308 |                   # Check within group
+309 |                   for subname in f[name]:
+310 | /                     if isinstance(f[name][subname], h5py.Dataset):
+311 | |                         if f[name][subname].compression is not None:
+    | |____________________________________________________________________^
+312 |                               has_compression = True
+313 |                               break
+    |
+help: Combine `if` statements using `and`
+
+Found 24 errors.
+No fixes available (1 hidden fix can be enabled with the `--unsafe-fixes` option).

@@ -1,0 +1,6 @@
+agentic_neurodata_conversion\config.py:82: error: Incompatible types in assignment (expression has type "Optional[str]", variable has type "str")  [assignment]
+agentic_neurodata_conversion\config.py:116: error: Incompatible types in assignment (expression has type "Optional[str]", variable has type "str")  [assignment]
+agentic_neurodata_conversion\config.py:150: error: Incompatible types in assignment (expression has type "Optional[str]", variable has type "str")  [assignment]
+agentic_neurodata_conversion\mcp_server\api\sessions.py:242: error: Statement is unreachable  [unreachable]
+agentic_neurodata_conversion\mcp_server\api\sessions.py:450: error: Argument "validation_issues" to "SessionResultResponse" has incompatible type "list[dict[str, Any]]"; expected "list[ValidationIssue]"  [arg-type]
+Found 5 errors in 2 files (checked 21 source files)

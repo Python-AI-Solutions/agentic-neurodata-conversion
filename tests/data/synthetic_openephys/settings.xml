@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SETTINGS>
+  <INFO>
+    <VERSION>0.4.4</VERSION>
+    <DATE>15 Jan 2024 12:00:00</DATE>
+  </INFO>
+  <SIGNALCHAIN>
+    <PROCESSOR name="Sources/Rhythm FPGA">
+      <CHANNEL name="CH1" number="0">
+        <SELECTIONSTATE param="1"/>
+      </CHANNEL>
+      <CHANNEL name="CH2" number="1">
+        <SELECTIONSTATE param="1"/>
+      </CHANNEL>
+    </PROCESSOR>
+    <PROCESSOR name="Record Node">
+      <EDITOR>
+        <NWB>
+          <EXPERIMENT_DESCRIPTION value="Synthetic test recording"/>
+          <SESSION_ID value="test-session-001"/>
+        </NWB>
+      </EDITOR>
+    </PROCESSOR>
+  </SIGNALCHAIN>
+</SETTINGS>

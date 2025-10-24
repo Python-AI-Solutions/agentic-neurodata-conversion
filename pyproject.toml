@@ -57,10 +57,7 @@ dependencies = [
     "pynwb>=2.5.0",
     "nwbinspector>=0.4.0",
 
-    # Knowledge graph and validation
-    "linkml>=1.5.0",
-    "linkml-runtime>=1.5.0",
-    "rdflib>=7.0.0",
+    # Note: LinkML and RDF deferred to post-MVP per constitution
 
     # Utilities
     "click>=8.0.0",

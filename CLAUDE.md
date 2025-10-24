@@ -24,10 +24,9 @@
    - Try to avoid adding files to the repository root. Only modify allowed
      locations (see “Filesystem Rules”).
 
-2. **Follow the constitution’s engineering model**
+2. **Follow the constitution's engineering model**
    - MCP‑centric orchestration (no direct module‑to‑module calls).
-   - TDD with coverage gates; schema‑first (LinkML/NWB); DataLad Python API
-     only.
+   - TDD with coverage gates; Pydantic models first for validation.
    - Contract tests on OpenAPI interfaces; CI quality gates must pass before
      merge.
 
@@ -47,35 +46,11 @@
    - Prefer tasks in `pixi.toml` or formal tests over complex `python -c`
      snippets.
 
-6. **Data handling**:
-   - DataLad is installed as a Python package through pixi
-
-- **DO NOT** use `datalad` CLI commands directly
-- **DO NOT** use `pixi run datalad` or `pixi run python -m datalad` for CLI
-- **ALWAYS** use the Python API (likely using scripts):
-- Example usage:
-
-  ```python
-  import datalad.api as dl
-
-  # Create a dataset
-  dl.create(path="my-dataset", description="My dataset")
-
-  # Save changes
-  dl.save(message="Add files")
-
-  # Check status
-  dl.status()
-
-  # Work with subdatasets
-  dl.subdatasets()
-  ```
-
-- **Use Cases**:
-  - Managing large NWB datasets from DANDI
-  - Handling pre-existing conversions as submodules
-  - Version control for evaluation datasets
-  - Efficient storage of large test datasets on remote annexes (gin.g-node.org)
+6. **Session Context Management**:
+   - All workflow state is persisted in session context (Redis + filesystem)
+   - Session context survives server restarts (write-through strategy)
+   - Use context manager for all session CRUD operations
+   - Never store sensitive data (API keys, credentials) in context
 
 ## Filesystem Rules (Strict)
 
