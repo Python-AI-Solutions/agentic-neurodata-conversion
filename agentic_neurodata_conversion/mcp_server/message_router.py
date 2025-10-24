@@ -129,9 +129,9 @@ class MessageRouter:
 
         Args:
             target_agent: Name of the agent to execute the task
-            task_name: Name of the task to execute
+            task_name: Name of the task to execute (mapped to "action" in payload)
             session_id: Session context identifier
-            parameters: Task-specific parameters
+            parameters: Task-specific parameters (flattened into payload)
 
         Returns:
             Agent response as dict with "status" and "result" fields
@@ -142,10 +142,11 @@ class MessageRouter:
             httpx.ConnectError: If connection to agent fails
             httpx.HTTPStatusError: If agent returns HTTP error status
         """
+        # Build payload with "action" field and flattened parameters
         payload = {
-            "task_name": task_name,
+            "action": task_name,  # Use "action" not "task_name" to match agent expectation
             "session_id": session_id,
-            "parameters": parameters,
+            **parameters,  # Flatten parameters into payload
         }
 
         return await self.send_message(

@@ -77,7 +77,7 @@ class BaseAgent(ABC):
         registration_data = {
             "agent_name": self.agent_name,
             "agent_type": self.agent_type,
-            "base_url": f"http://0.0.0.0:{self.config.agent_port}",
+            "base_url": f"http://localhost:{self.config.agent_port}",  # Use localhost not 0.0.0.0 for cross-platform compatibility
             "capabilities": self.get_capabilities(),
         }
 
