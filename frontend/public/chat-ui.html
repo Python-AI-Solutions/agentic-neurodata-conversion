@@ -505,7 +505,10 @@
             font-size: 14px;
             font-family: inherit;
             resize: none;
-            max-height: 120px;
+            min-height: 44px;
+            max-height: 200px;
+            overflow-y: auto;
+            line-height: 1.5;
         }
 
         .text-input:focus {
@@ -1604,6 +1607,8 @@
             if (message) {
                 addUserMessage(message);
                 input.value = '';
+                // Reset textarea height after sending
+                input.style.height = 'auto';
 
                 // Reset message tracking so the next assistant response will be displayed
                 lastDisplayedMessage = null;
@@ -1894,21 +1899,47 @@
             }
         }
 
-        // Initialize on page load
-        connectWebSocket();
-        // FIX #4: Sync conversionInProgress with backend state
-        fetch(`${API_BASE}/api/status`)
-            .then(res => res.json())
-            .then(data => {
-                const activeStatuses = ['converting', 'validating', 'awaiting_user_input'];
-                if (activeStatuses.includes(data.status)) {
-                    conversionInProgress = true;
-                    monitorConversion();
-                }
-            })
-            .catch(err => console.error('Initial status check failed:', err));
-        checkStatus();
-        refreshLogs(); // Load initial logs
+        // Auto-resize textarea as user types
+        function autoResizeTextarea() {
+            const textarea = document.getElementById('textInput');
+            if (!textarea) return; // Guard against missing element
+
+            // Reset height to auto to get the correct scrollHeight
+            textarea.style.height = 'auto';
+
+            // Set height based on content, up to max-height
+            const newHeight = Math.min(textarea.scrollHeight, 200); // 200px max-height
+            textarea.style.height = newHeight + 'px';
+        }
+
+        // Initialize on page load - wait for DOM to be ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Connect WebSocket
+            connectWebSocket();
+
+            // FIX #4: Sync conversionInProgress with backend state
+            fetch(`${API_BASE}/api/status`)
+                .then(res => res.json())
+                .then(data => {
+                    const activeStatuses = ['converting', 'validating', 'awaiting_user_input'];
+                    if (activeStatuses.includes(data.status)) {
+                        conversionInProgress = true;
+                        monitorConversion();
+                    }
+                })
+                .catch(err => console.error('Initial status check failed:', err));
+
+            checkStatus();
+            refreshLogs(); // Load initial logs
+
+            // Set up auto-resize for textarea
+            const textInput = document.getElementById('textInput');
+            if (textInput) {
+                textInput.addEventListener('input', autoResizeTextarea);
+                // Initial resize in case there's default content
+                autoResizeTextarea();
+            }
+        });
     </script>
 </body>
 </html>

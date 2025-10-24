@@ -436,9 +436,9 @@ async def upload_file(
         conversion_input_path = str(_upload_dir)
 
     # Store the upload information in state WITHOUT starting conversion
-    mcp_server.global_state.input_path = Path(conversion_input_path)
+    mcp_server.global_state.input_path = conversion_input_path  # Keep as string
     mcp_server.global_state.metadata.update(metadata_dict)
-    mcp_server.global_state.pending_conversion_input_path = Path(conversion_input_path)
+    mcp_server.global_state.pending_conversion_input_path = conversion_input_path  # Keep as string
 
     mcp_server.global_state.add_log(
         LogLevel.INFO,
