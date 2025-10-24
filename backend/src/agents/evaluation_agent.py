@@ -1067,18 +1067,23 @@ Focus on the most critical issues first."""
                 if self._llm_service and not llm_analysis:
                     llm_analysis = await self._generate_quality_assessment(validation_result_data)
 
-                # Generate PDF report (detailed with LLM analysis)
+                # Build workflow trace for transparency and reproducibility
+                workflow_trace = self._build_workflow_trace(state)
+
+                # Generate PDF report (detailed with LLM analysis and workflow trace)
                 self._report_service.generate_pdf_report(
                     pdf_report_path,
                     validation_result_data,
-                    llm_analysis
+                    llm_analysis,
+                    workflow_trace
                 )
 
-                # Generate text report (NWB Inspector style with LLM analysis)
+                # Generate text report (NWB Inspector style with LLM analysis and workflow trace)
                 self._report_service.generate_text_report(
                     text_report_path,
                     validation_result_data,
-                    llm_analysis  # Pass LLM analysis to text report too!
+                    llm_analysis,
+                    workflow_trace
                 )
 
                 state.add_log(
@@ -1110,10 +1115,14 @@ Focus on the most critical issues first."""
                 if self._llm_service and not llm_analysis:
                     llm_analysis = await self._generate_correction_guidance(validation_result_data)
 
+                # Build workflow trace for transparency and reproducibility
+                workflow_trace = self._build_workflow_trace(state)
+
                 self._report_service.generate_json_report(
                     report_path,
                     validation_result_data,
-                    llm_analysis
+                    llm_analysis,
+                    workflow_trace
                 )
 
                 state.add_log(
@@ -1143,6 +1152,121 @@ Focus on the most critical issues first."""
                 error_message=error_msg,
                 error_context={"exception": str(e)},
             )
+
+    def _build_workflow_trace(self, state: GlobalState) -> Dict[str, Any]:
+        """
+        Build a comprehensive workflow trace from the state for transparency and reproducibility.
+
+        Args:
+            state: The global state containing logs and workflow information
+
+        Returns:
+            Dictionary containing complete workflow trace
+        """
+        from datetime import datetime, timedelta
+
+        # Calculate duration
+        start_time = None
+        end_time = datetime.now()
+        if state.logs:
+            start_time = state.logs[0].timestamp
+            duration_seconds = (end_time - start_time).total_seconds()
+            duration = f"{duration_seconds:.2f} seconds"
+        else:
+            duration = "N/A"
+
+        # Build summary
+        summary = {
+            'start_time': start_time.isoformat() if start_time else 'N/A',
+            'end_time': end_time.isoformat(),
+            'duration': duration,
+            'input_format': state.metadata.get('detected_format', 'Unknown'),
+        }
+
+        # Technologies used
+        technologies = [
+            "NWB (Neurodata Without Borders) 2.0+ Standard",
+            "NeuroConv - Unified conversion framework",
+            "NWB Inspector - Validation tool",
+            "SpikeInterface - Electrophysiology data processing",
+            "PyNWB - Python NWB API",
+            "HDF5 - Hierarchical data format",
+            "Claude AI (Anthropic) - Metadata assistance and quality assessment",
+            "FastAPI - Backend API framework",
+            "Python 3.14 - Programming language",
+        ]
+
+        # Build workflow steps from logs
+        steps = []
+        step_mapping = {
+            'detecting_format': {
+                'name': 'Format Detection',
+                'description': 'Automatically detected the input data format using intelligent pattern matching',
+            },
+            'awaiting_user_input': {
+                'name': 'Metadata Collection',
+                'description': 'Collected required NWB metadata from user with AI-assisted suggestions',
+            },
+            'converting': {
+                'name': 'Data Conversion',
+                'description': 'Converted electrophysiology data to NWB format using NeuroConv',
+            },
+            'validating': {
+                'name': 'Validation',
+                'description': 'Validated NWB file against standards using NWB Inspector',
+            },
+            'completed': {
+                'name': 'Completion',
+                'description': 'Conversion and validation completed successfully',
+            },
+        }
+
+        # Extract steps from logs
+        seen_statuses = set()
+        for log in state.logs:
+            if log.level == LogLevel.INFO and 'Status changed to' in log.message:
+                status = log.context.get('status', '')
+                if status and status not in seen_statuses:
+                    seen_statuses.add(status)
+                    step_info = step_mapping.get(status, {
+                        'name': status.replace('_', ' ').title(),
+                        'description': f'Pipeline stage: {status}',
+                    })
+                    steps.append({
+                        'name': step_info['name'],
+                        'status': 'completed',
+                        'description': step_info['description'],
+                        'timestamp': log.timestamp.isoformat(),
+                    })
+
+        # Data provenance
+        provenance = {
+            'original_file': state.input_path or 'N/A',
+            'conversion_method': 'NeuroConv with AI-assisted metadata collection',
+            'metadata_sources': [
+                'User-provided metadata',
+                'File header extraction',
+                'AI-assisted inference',
+            ],
+            'agent_versions': 'Multi-agent system: ConversationAgent, ConversionAgent, EvaluationAgent',
+        }
+
+        # User interactions
+        user_interactions = []
+        for log in state.logs:
+            if 'chat' in log.message.lower() or 'user' in log.message.lower():
+                user_interactions.append({
+                    'timestamp': log.timestamp.isoformat(),
+                    'action': log.message,
+                })
+
+        return {
+            'summary': summary,
+            'technologies': technologies,
+            'steps': steps,
+            'provenance': provenance,
+            'user_interactions': user_interactions if user_interactions else None,
+        }
 
     async def _generate_quality_assessment(self, validation_result: Dict[str, Any]) -> Dict[str, Any]:
         """
