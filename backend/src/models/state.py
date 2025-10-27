@@ -191,6 +191,10 @@ class GlobalState(BaseModel):
         default_factory=set,
         description="Fields/metadata that user explicitly declined to provide"
     )
+    already_asked_fields: Set[str] = Field(
+        default_factory=set,
+        description="Fields that have already been requested from user in this session (prevents re-asking)"
+    )
     # WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Use MetadataRequestPolicy enum
     metadata_policy: MetadataRequestPolicy = Field(
         default=MetadataRequestPolicy.NOT_ASKED,

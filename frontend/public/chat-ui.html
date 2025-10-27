@@ -1344,31 +1344,112 @@
             const response = await fetch(`${API_BASE}/api/correction-context`);
             const context = await response.json();
 
-            let issuesHtml = '<div class="issue-list">';
+            // PRIORITY 3 FIX: Enhanced UI with fix preview
+            let issuesHtml = '<div class="fix-approval-container" style="margin: 15px 0;">';
 
             if (context.auto_fixable && context.auto_fixable.length > 0) {
-                issuesHtml += '<h4>✓ Auto-fixable issues:</h4>';
-                context.auto_fixable.forEach(issue => {
-                    issuesHtml += `<div class="issue-item"><strong>${issue.issue}</strong><small>${issue.suggestion}</small></div>`;
+                issuesHtml += '<div class="auto-fixable-section" style="background: #f0f9ff; border-left: 4px solid #3b82f6; padding: 15px; margin-bottom: 15px; border-radius: 6px;">';
+                issuesHtml += '<h4 style="margin: 0 0 10px 0; color: #1e40af;">✓ Auto-fixable Issues (' + context.auto_fixable.length + ')</h4>';
+                issuesHtml += '<div class="fix-preview-list">';
+
+                context.auto_fixable.forEach((issue, index) => {
+                    const checkName = issue.check_name || issue.issue || 'Unknown issue';
+                    const message = issue.message || issue.suggestion || 'No details';
+                    const fieldName = issue.field_name || 'unknown';
+                    const suggestedFix = issue.suggested_fix || issue.suggestion || 'Auto-determined';
+
+                    issuesHtml += `
+                        <div class="fix-item" style="background: white; padding: 12px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #e5e7eb;">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 6px;">
+                                <strong style="color: #374151; font-size: 14px;">${index + 1}. ${checkName}</strong>
+                                <span style="background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">AUTO</span>
+                            </div>
+                            <div style="color: #6b7280; font-size: 13px; margin-bottom: 8px;">${message}</div>
+                            <div style="background: #f9fafb; padding: 8px; border-radius: 4px; border-left: 3px solid #10b981;">
+                                <div style="font-size: 11px; color: #6b7280; margin-bottom: 4px;">WILL APPLY:</div>
+                                <code style="color: #059669; font-size: 12px;"><strong>${fieldName}</strong> = "${suggestedFix}"</code>
+                            </div>
+                        </div>
+                    `;
                 });
+
+                issuesHtml += '</div></div>';
             }
 
             if (context.user_input_required && context.user_input_required.length > 0) {
-                issuesHtml += '<h4>⚠️ Requires your input:</h4>';
-                context.user_input_required.forEach(issue => {
-                    issuesHtml += `<div class="issue-item"><strong>${issue.issue}</strong><small>${issue.suggestion}</small></div>`;
+                issuesHtml += '<div class="user-input-section" style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; border-radius: 6px;">';
+                issuesHtml += '<h4 style="margin: 0 0 10px 0; color: #92400e;">⚠️ Requires Your Input (' + context.user_input_required.length + ')</h4>';
+                issuesHtml += '<div class="input-required-list">';
+
+                context.user_input_required.forEach((issue, index) => {
+                    const checkName = issue.check_name || issue.issue || 'Unknown issue';
+                    const message = issue.message || issue.suggestion || 'No details';
+
+                    issuesHtml += `
+                        <div class="input-item" style="background: white; padding: 12px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #fed7aa;">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 6px;">
+                                <strong style="color: #374151; font-size: 14px;">${index + 1}. ${checkName}</strong>
+                                <span style="background: #fed7aa; color: #92400e; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">MANUAL</span>
+                            </div>
+                            <div style="color: #6b7280; font-size: 13px;">${message}</div>
+                        </div>
+                    `;
                 });
+
+                issuesHtml += '</div></div>';
             }
 
             issuesHtml += '</div>';
 
+            const totalAutoFixes = context.auto_fixable ? context.auto_fixable.length : 0;
+            const totalManualFixes = context.user_input_required ? context.user_input_required.length : 0;
+
+            let summaryMessage = '⚠️ <strong>Validation found some issues.</strong><br><br>';
+            if (totalAutoFixes > 0) {
+                summaryMessage += `✓ I can fix <strong>${totalAutoFixes}</strong> issue${totalAutoFixes > 1 ? 's' : ''} automatically.<br>`;
+            }
+            if (totalManualFixes > 0) {
+                summaryMessage += `⚠️ <strong>${totalManualFixes}</strong> issue${totalManualFixes > 1 ? 's require' : ' requires'} your input.<br>`;
+            }
+            summaryMessage += '<br>Review the fixes below:';
+
             addAssistantMessage(
-                `⚠️ Validation found some issues. I can attempt to fix them automatically. Here's what I found:${issuesHtml}`,
+                summaryMessage + issuesHtml,
                 [
-                    { text: '🔄 Retry with Corrections', onClick: () => approveRetry(), variant: 'primary' },
-                    { text: '❌ Decline', onClick: () => declineRetry(), variant: 'secondary' }
+                    { text: '✓ Apply Fixes', onClick: () => approveRetry(), variant: 'primary' },
+                    { text: 'Show Details', onClick: () => showFixDetails(context), variant: 'secondary' },
+                    { text: '✗ Cancel', onClick: () => declineRetry(), variant: 'secondary' }
                 ]
             );
+        }
+
+        function showFixDetails(context) {
+            let detailsHtml = '<div style="font-family: monospace; font-size: 12px; background: #1f2937; color: #f3f4f6; padding: 15px; border-radius: 6px; max-height: 400px; overflow-y: auto;">';
+            detailsHtml += '<strong style="color: #60a5fa;">🔍 Detailed Fix Information</strong><br><br>';
+
+            if (context.auto_fixable && context.auto_fixable.length > 0) {
+                detailsHtml += '<span style="color: #34d399;">✓ AUTO-FIXABLE (' + context.auto_fixable.length + '):</span><br>';
+                context.auto_fixable.forEach((issue, i) => {
+                    detailsHtml += `<br>${i + 1}. <span style="color: #fbbf24;">${issue.check_name || 'Unknown'}</span><br>`;
+                    detailsHtml += `   Message: ${issue.message || 'N/A'}<br>`;
+                    detailsHtml += `   <span style="color: #10b981;">Fix: ${issue.field_name || 'field'} = "${issue.suggested_fix || issue.suggestion || 'auto'}"</span><br>`;
+                });
+            }
+
+            if (context.user_input_required && context.user_input_required.length > 0) {
+                detailsHtml += '<br><span style="color: #fb923c;">⚠ MANUAL INPUT NEEDED (' + context.user_input_required.length + '):</span><br>';
+                context.user_input_required.forEach((issue, i) => {
+                    detailsHtml += `<br>${i + 1}. <span style="color: #fbbf24;">${issue.check_name || issue.issue || 'Unknown'}</span><br>`;
+                    detailsHtml += `   Message: ${issue.message || issue.suggestion || 'N/A'}<br>`;
+                });
+            }
+
+            detailsHtml += '</div>';
+
+            addAssistantMessage(detailsHtml, [
+                { text: '✓ Apply Fixes', onClick: () => approveRetry(), variant: 'primary' },
+                { text: '✗ Cancel', onClick: () => declineRetry(), variant: 'secondary' }
+            ]);
         }
 
         async function approveRetry() {

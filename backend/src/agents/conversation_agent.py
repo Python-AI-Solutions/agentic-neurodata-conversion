@@ -392,10 +392,15 @@ Please provide these details, or say "skip for now" to proceed with minimal meta
                 "age": metadata.get("age"),
             }
 
-            # Filter out fields the user already declined
+            # Filter out fields the user already declined OR already provided/asked
+            # This prevents re-asking for the same fields in a loop
+            # Track which fields we've already asked about in this session
+            if not hasattr(state, 'already_asked_fields'):
+                state.already_asked_fields = set()
+
             missing_fields = [
                 field for field, value in required_fields.items()
-                if not value and field not in state.user_declined_fields
+                if not value and field not in state.user_declined_fields and field not in state.already_asked_fields
             ]
 
             # WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Use centralized WorkflowStateManager
@@ -441,6 +446,15 @@ Please provide these details, or say "skip for now" to proceed with minimal meta
                 # INFINITE LOOP FIX: Add this assistant message to conversation history
                 # This is critical - without this, the conversation history check at line 148 will always fail
                 state.add_conversation_message(role="assistant", content=message_text)
+
+                # INCREMENTAL METADATA FIX: Mark these fields as already asked
+                # This prevents re-asking for the same fields when user confirms partial metadata
+                state.already_asked_fields.update(missing_fields)
+                state.add_log(
+                    LogLevel.DEBUG,
+                    f"Marked {len(missing_fields)} fields as already asked to prevent re-asking",
+                    {"already_asked_fields": list(state.already_asked_fields)}
+                )
 
                 # Store input_path for later use when resuming conversion after skip
                 state.pending_conversion_input_path = input_path
@@ -2902,6 +2916,16 @@ Return JSON with a 'message' field."""
                     error_message="Cannot find correction context. Please try again.",
                 )
 
+            # PRIORITY 2 FIX: Extract auto-fixable issues and convert to metadata fixes
+            auto_fixable_issues = correction_context.get("auto_fixable_issues", [])
+            auto_fixes = self._extract_fixes_from_issues(auto_fixable_issues, state)
+
+            state.add_log(
+                LogLevel.INFO,
+                f"Extracted {len(auto_fixes)} automatic fixes from {len(auto_fixable_issues)} issues",
+                {"fixes": auto_fixes}
+            )
+
             # Apply corrections and reconvert
             reconvert_msg = MCPMessage(
                 target_agent="conversion",
@@ -2909,6 +2933,7 @@ Return JSON with a 'message' field."""
                 context={
                     "input_path": str(state.input_path),
                     "correction_context": correction_context,
+                    "auto_fixes": auto_fixes,  # Pass extracted fixes
                     "metadata": state.metadata,
                 },
             )
@@ -2917,7 +2942,7 @@ Return JSON with a 'message' field."""
 
             # Update state
             state.llm_message = "Applying automatic corrections and reconverting..."
-            await state.update_status(ConversionStatus.PROCESSING)
+            await state.update_status(ConversionStatus.CONVERTING)
             state.conversation_type = None  # Clear conversation type
 
             return MCPResponse.success_response(
@@ -2925,6 +2950,7 @@ Return JSON with a 'message' field."""
                 result={
                     "status": "reconverting",
                     "message": "Applying automatic corrections and reconverting...",
+                    "fixes_applied": len(auto_fixes),
                 },
             )
 
@@ -3031,6 +3057,88 @@ Return JSON with a 'message' field."""
                 issue_msg = issue_msg[:97] + "..."
             summary += f"{i}. **{issue_name}**: {issue_msg}\n"
         return summary.strip()
+
+    def _extract_fixes_from_issues(
+        self,
+        auto_fixable_issues: List[Dict[str, Any]],
+        state: GlobalState
+    ) -> Dict[str, Any]:
+        """
+        PRIORITY 2 FIX: Extract metadata fixes from auto-fixable issues.
+
+        Converts validation issues into concrete metadata field updates.
+
+        Args:
+            auto_fixable_issues: List of issues that can be automatically fixed
+            state: Global state for logging
+
+        Returns:
+            Dictionary mapping field names to their corrected values
+        """
+        auto_fixes = {}
+
+        for issue in auto_fixable_issues:
+            # Get suggested fix from issue analysis
+            suggested_fix = issue.get('suggested_fix')
+            field_name = issue.get('field_name')
+
+            if suggested_fix and field_name:
+                # Direct field/value mapping available
+                auto_fixes[field_name] = suggested_fix
+                state.add_log(
+                    LogLevel.DEBUG,
+                    f"Extracted fix: {field_name} = {suggested_fix}",
+                    {"issue": issue.get('check_name')}
+                )
+            else:
+                # Try to infer fix from issue message
+                inferred_fix = self._infer_fix_from_issue(issue, state)
+                if inferred_fix:
+                    auto_fixes.update(inferred_fix)
+
+        return auto_fixes
+
+    def _infer_fix_from_issue(
+        self,
+        issue: Dict[str, Any],
+        state: GlobalState
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Infer metadata fix from validation issue message.
+
+        Args:
+            issue: Validation issue dict
+            state: Global state
+
+        Returns:
+            Dictionary with inferred fix, or None if unable to infer
+        """
+        message = issue.get('message', '').lower()
+        check_name = issue.get('check_name', '').lower()
+
+        # Common patterns for missing metadata
+        if 'experimenter' in message or 'experimenter' in check_name:
+            # Use existing metadata if available, otherwise use placeholder
+            return {'experimenter': state.metadata.get('experimenter', 'Unknown')}
+
+        elif 'institution' in message or 'institution' in check_name:
+            return {'institution': state.metadata.get('institution', 'Unknown')}
+
+        elif 'session_description' in message or 'session_description' in check_name:
+            # Generate from experiment_description if available
+            exp_desc = state.metadata.get('experiment_description')
+            return {'session_description': exp_desc if exp_desc else 'Electrophysiology recording session'}
+
+        elif 'subject_id' in message or 'subject_id' in check_name:
+            return {'subject_id': state.metadata.get('subject_id', 'subject_001')}
+
+        # Unable to infer fix
+        state.add_log(
+            LogLevel.DEBUG,
+            f"Could not infer fix for issue: {check_name}",
+            {"message": message[:100]}
+        )
+        return None
 
     def _generate_basic_correction_prompts(self, issues: List[Dict[str, Any]]) -> str:
         """
