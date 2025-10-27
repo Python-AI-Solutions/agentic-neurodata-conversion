@@ -68,6 +68,23 @@ class ParsedField:
             "alternatives": self.alternatives,
         }
 
+    def to_provenance_info(self):
+        """
+        Convert to ProvenanceInfo for metadata provenance tracking.
+
+        Returns ProvenanceInfo with AI_PARSED provenance type.
+        """
+        from models import ProvenanceInfo, MetadataProvenance
+
+        return ProvenanceInfo(
+            value=self.parsed_value,
+            provenance=MetadataProvenance.AI_PARSED,
+            confidence=self.confidence,
+            source=f"Parsed from user input: '{self.raw_input[:100]}'",
+            needs_review=self.needs_review,
+            raw_input=self.raw_input,
+        )
+
 
 class IntelligentMetadataParser:
     """
@@ -407,9 +424,9 @@ Provide:
         Apply metadata using best knowledge when user skips confirmation.
 
         Three-tier approach:
-        - High confidence (≥80%): Apply silently
-        - Medium confidence (50-79%): Apply with note
-        - Low confidence (<50%): Apply with warning flag
+        - High confidence (≥80%): Apply silently (provenance: AI_PARSED)
+        - Medium confidence (50-79%): Apply with note (provenance: AI_INFERRED)
+        - Low confidence (<50%): Apply with warning flag (provenance: AI_INFERRED, needs_review=True)
 
         Args:
             parsed_field: The parsed field
@@ -418,20 +435,35 @@ Provide:
         Returns:
             The value to apply
         """
+        from models import ProvenanceInfo, MetadataProvenance
+        from datetime import datetime
+
         field_name = parsed_field.field_name
         value = parsed_field.parsed_value
         confidence = parsed_field.confidence
 
-        # High confidence: Silent auto-apply
+        # High confidence: Silent auto-apply with AI_PARSED provenance
         if confidence >= 80:
             state.add_log(
                 LogLevel.INFO,
                 f"✓ Auto-applied {field_name} = {self._format_value(value)} "
                 f"(high confidence: {confidence}%)",
             )
+
+            # PROVENANCE TRACKING: High confidence AI parsing
+            state.metadata_provenance[field_name] = ProvenanceInfo(
+                value=value,
+                provenance=MetadataProvenance.AI_PARSED,
+                confidence=confidence,
+                source=f"AI parsed from: '{parsed_field.raw_input[:100]}'",
+                timestamp=datetime.now(),
+                needs_review=False,
+                raw_input=parsed_field.raw_input,
+            )
+
             return value
 
-        # Medium confidence: Apply with note
+        # Medium confidence: Apply with note and AI_INFERRED provenance
         elif confidence >= 50:
             state.add_log(
                 LogLevel.WARNING,
@@ -439,15 +471,38 @@ Provide:
                 f"(medium confidence: {confidence}% - best guess)",
                 {"confidence": confidence, "reasoning": parsed_field.reasoning},
             )
+
+            # PROVENANCE TRACKING: Medium confidence AI inference
+            state.metadata_provenance[field_name] = ProvenanceInfo(
+                value=value,
+                provenance=MetadataProvenance.AI_INFERRED,
+                confidence=confidence,
+                source=f"AI inferred from: '{parsed_field.raw_input[:100]}' | Reasoning: {parsed_field.reasoning[:100]}",
+                timestamp=datetime.now(),
+                needs_review=True,  # Medium confidence should be reviewed
+                raw_input=parsed_field.raw_input,
+            )
+
             return value
 
-        # Low confidence: Apply with warning flag
+        # Low confidence: Apply with warning flag and AI_INFERRED provenance (high review priority)
         else:
             state.add_log(
                 LogLevel.WARNING,
                 f"❓ Auto-applied {field_name} = {self._format_value(value)} "
                 f"(LOW confidence: {confidence}% - NEEDS REVIEW)",
                 {"needs_review": True, "confidence": confidence},
+            )
+
+            # PROVENANCE TRACKING: Low confidence AI inference - definitely needs review
+            state.metadata_provenance[field_name] = ProvenanceInfo(
+                value=value,
+                provenance=MetadataProvenance.AI_INFERRED,
+                confidence=confidence,
+                source=f"AI inferred (LOW CONFIDENCE) from: '{parsed_field.raw_input[:100]}'",
+                timestamp=datetime.now(),
+                needs_review=True,
+                raw_input=parsed_field.raw_input,
             )
 
             # Add to metadata warnings for validation report

@@ -338,6 +338,122 @@ class ReportService:
             dandi_text = "✓ This file is ready for DANDI archive submission" if dandi_ready else "⚠ Additional improvements recommended before DANDI submission"
             story.append(Paragraph(f"<b>DANDI Readiness:</b> {dandi_text}", self.styles['Normal']))
 
+        # Metadata Provenance Section (for scientific transparency)
+        # Pass state through workflow_trace for now
+        if workflow_trace and 'metadata_provenance' in workflow_trace:
+            story.append(PageBreak())
+            story.append(Paragraph("Metadata Provenance Report", self.styles['SectionHeading']))
+            story.append(Paragraph(
+                "<i>This section documents the source, confidence, and reliability of each metadata field "
+                "for scientific transparency and DANDI compliance.</i>",
+                self.styles['Normal']
+            ))
+            story.append(Spacer(1, 0.2 * inch))
+
+            metadata_provenance = workflow_trace['metadata_provenance']
+
+            # Count fields by provenance type
+            provenance_counts = {}
+            needs_review_fields = []
+
+            for field_name, prov_info in metadata_provenance.items():
+                provenance_type = prov_info.get('provenance', 'unknown')
+                provenance_counts[provenance_type] = provenance_counts.get(provenance_type, 0) + 1
+
+                if prov_info.get('needs_review', False):
+                    needs_review_fields.append((field_name, prov_info))
+
+            # Summary stats
+            story.append(Paragraph("<b>Provenance Summary</b>", self.styles['Normal']))
+
+            summary_data = []
+            provenance_labels = {
+                'user-specified': '✓ User Provided',
+                'ai-parsed': '🤖 AI Parsed (High Confidence)',
+                'ai-inferred': '🔮 AI Inferred',
+                'auto-extracted': '📁 Auto-Extracted from Files',
+                'auto-corrected': '🔧 Auto-Corrected',
+                'default': '⚙️ Default Values',
+                'system-generated': '⚡ System Generated'
+            }
+
+            for prov_type, count in sorted(provenance_counts.items()):
+                label = provenance_labels.get(prov_type, prov_type.title())
+                summary_data.append([label, str(count)])
+
+            if summary_data:
+                summary_table = Table(summary_data, colWidths=[3.5 * inch, 1.5 * inch])
+                summary_table.setStyle(TableStyle([
+                    ('FONTNAME', (0, 0), (0, -1), 'Helvetica'),
+                    ('FONTNAME', (1, 0), (1, -1), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, -1), 10),
+                    ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                    ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#e5e5e5')),
+                ]))
+                story.append(summary_table)
+                story.append(Spacer(1, 0.3 * inch))
+
+            # Fields needing review
+            if needs_review_fields:
+                story.append(Paragraph("<b>⚠️ Fields Requiring Review Before DANDI Submission</b>", self.styles['Normal']))
+                story.append(Spacer(1, 0.1 * inch))
+
+                # Sort by confidence (lowest first)
+                needs_review_fields.sort(key=lambda x: x[1].get('confidence', 0))
+
+                review_data = [['Field Name', 'Provenance', 'Confidence', 'Reason']]
+
+                for field_name, prov_info in needs_review_fields:
+                    prov_type = prov_info.get('provenance', 'unknown')
+                    confidence = f"{prov_info.get('confidence', 0):.0f}%"
+                    source = prov_info.get('source', 'N/A')[:50]  # Truncate long sources
+
+                    review_data.append([
+                        field_name,
+                        prov_type.replace('-', ' ').title(),
+                        confidence,
+                        source
+                    ])
+
+                review_table = Table(review_data, colWidths=[1.5 * inch, 1.3 * inch, 0.8 * inch, 2.4 * inch])
+                review_table.setStyle(TableStyle([
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                    ('FONTSIZE', (0, 0), (-1, -1), 9),
+                    ('BACKGROUND', (0, 0), (-1, 0), HexColor('#fff3cd')),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), HexColor('#856404')),
+                    ('ALIGN', (2, 1), (2, -1), 'CENTER'),
+                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                    ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#e5e5e5')),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                    ('TOPPADDING', (0, 0), (-1, -1), 6),
+                ]))
+                story.append(review_table)
+                story.append(Spacer(1, 0.3 * inch))
+
+                story.append(Paragraph(
+                    "<i><b>Recommendation:</b> Review and update low-confidence fields before submitting to DANDI. "
+                    "Fields marked as 'AI-Inferred' or 'Default' should be verified for accuracy.</i>",
+                    self.styles['Normal']
+                ))
+                story.append(Spacer(1, 0.2 * inch))
+            else:
+                story.append(Paragraph(
+                    "<b>✓ All metadata fields are high-confidence!</b> No review required before DANDI submission.",
+                    self.styles['Normal']
+                ))
+                story.append(Spacer(1, 0.2 * inch))
+
+            # Transparency note
+            story.append(Paragraph(
+                "<i><b>About Metadata Provenance:</b> This provenance tracking ensures scientific transparency "
+                "by documenting the origin and reliability of each metadata field. This is essential for "
+                "reproducibility and meets the high standards required by the neuroscience community and DANDI archive.</i>",
+                self.styles['Normal']
+            ))
+            story.append(Spacer(1, 0.2 * inch))
+
         # Workflow Trace Section (for transparency and reproducibility)
         if workflow_trace:
             story.append(PageBreak())
@@ -475,6 +591,27 @@ class ReportService:
         # Add workflow trace for transparency and reproducibility
         if workflow_trace:
             report['workflow_trace'] = workflow_trace
+
+            # Add metadata provenance if available
+            if 'metadata_provenance' in workflow_trace:
+                report['metadata_provenance'] = {
+                    'summary': {
+                        'total_fields': len(workflow_trace['metadata_provenance']),
+                        'needs_review_count': sum(
+                            1 for p in workflow_trace['metadata_provenance'].values()
+                            if p.get('needs_review', False)
+                        ),
+                        'provenance_breakdown': {}
+                    },
+                    'fields': workflow_trace['metadata_provenance']
+                }
+
+                # Calculate provenance breakdown
+                for field_name, prov_info in workflow_trace['metadata_provenance'].items():
+                    prov_type = prov_info.get('provenance', 'unknown')
+                    if prov_type not in report['metadata_provenance']['summary']['provenance_breakdown']:
+                        report['metadata_provenance']['summary']['provenance_breakdown'][prov_type] = 0
+                    report['metadata_provenance']['summary']['provenance_breakdown'][prov_type] += 1
 
         # Write pretty-printed JSON
         with open(output_path, 'w') as f:

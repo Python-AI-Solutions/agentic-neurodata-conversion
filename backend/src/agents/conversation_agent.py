@@ -75,6 +75,156 @@ class ConversationAgent:
         self._workflow_manager = WorkflowStateManager()
         # Conversation history now managed in GlobalState to prevent memory leaks
 
+    def _track_metadata_provenance(
+        self,
+        state: GlobalState,
+        field_name: str,
+        value: Any,
+        provenance_type: str,
+        confidence: float = 100.0,
+        source: str = "",
+        needs_review: bool = False,
+        raw_input: Optional[str] = None,
+    ) -> None:
+        """
+        Track provenance for a metadata field.
+
+        This is a central method for recording the source, confidence, and origin
+        of every metadata field for scientific transparency and DANDI compliance.
+
+        Args:
+            state: Global state
+            field_name: Metadata field name
+            value: The metadata value
+            provenance_type: Type of provenance (user-specified, ai-parsed, etc.)
+            confidence: Confidence score (0-100)
+            source: Human-readable description of source
+            needs_review: Whether this field needs user review
+            raw_input: Original input that led to this value
+        """
+        from models import ProvenanceInfo, MetadataProvenance
+        from datetime import datetime
+
+        # Create provenance info
+        provenance_info = ProvenanceInfo(
+            value=value,
+            provenance=MetadataProvenance(provenance_type),
+            confidence=confidence,
+            source=source,
+            timestamp=datetime.now(),
+            needs_review=needs_review,
+            raw_input=raw_input,
+        )
+
+        # Store in state
+        state.metadata_provenance[field_name] = provenance_info
+
+        state.add_log(
+            LogLevel.DEBUG,
+            f"Tracked provenance for {field_name}: {provenance_type} (confidence: {confidence}%)",
+            {
+                "field": field_name,
+                "provenance": provenance_type,
+                "confidence": confidence,
+                "needs_review": needs_review,
+            },
+        )
+
+    def _track_user_provided_metadata(
+        self,
+        state: GlobalState,
+        field_name: str,
+        value: Any,
+        confidence: float = 100.0,
+        source: str = "User explicitly provided",
+        raw_input: Optional[str] = None,
+    ) -> None:
+        """
+        Track provenance for user-provided metadata.
+
+        Args:
+            state: Global state
+            field_name: Metadata field name
+            value: The metadata value
+            confidence: Confidence score (default 100% for explicit user input)
+            source: Description of how user provided it
+            raw_input: Original user input
+        """
+        self._track_metadata_provenance(
+            state=state,
+            field_name=field_name,
+            value=value,
+            provenance_type="user-specified",
+            confidence=confidence,
+            source=source,
+            needs_review=False,
+            raw_input=raw_input,
+        )
+
+    def _track_ai_parsed_metadata(
+        self,
+        state: GlobalState,
+        field_name: str,
+        value: Any,
+        confidence: float,
+        raw_input: str,
+        reasoning: str = "",
+    ) -> None:
+        """
+        Track provenance for AI-parsed metadata from natural language.
+
+        Args:
+            state: Global state
+            field_name: Metadata field name
+            value: The parsed value
+            confidence: Confidence score from parser
+            raw_input: Original natural language input
+            reasoning: LLM's reasoning for the parsing
+        """
+        needs_review = confidence < 70  # Low confidence needs review
+
+        source = f"AI parsed from: '{raw_input[:100]}'"
+        if reasoning:
+            source += f" | Reasoning: {reasoning[:100]}"
+
+        self._track_metadata_provenance(
+            state=state,
+            field_name=field_name,
+            value=value,
+            provenance_type="ai-parsed",
+            confidence=confidence,
+            source=source,
+            needs_review=needs_review,
+            raw_input=raw_input,
+        )
+
+    def _track_auto_corrected_metadata(
+        self,
+        state: GlobalState,
+        field_name: str,
+        value: Any,
+        source: str,
+    ) -> None:
+        """
+        Track provenance for auto-corrected metadata during error correction.
+
+        Args:
+            state: Global state
+            field_name: Metadata field name
+            value: The corrected value
+            source: Description of the correction
+        """
+        self._track_metadata_provenance(
+            state=state,
+            field_name=field_name,
+            value=value,
+            provenance_type="auto-corrected",
+            confidence=70.0,  # Medium confidence for auto-corrections
+            source=source,
+            needs_review=True,  # Always recommend review for auto-corrections
+            raw_input=None,
+        )
+
     async def _generate_dynamic_metadata_request(
         self,
         missing_fields: List[str],
@@ -355,6 +505,21 @@ Please provide these details, or say "skip for now" to proceed with minimal meta
                             "suggestions": inference_result.get("suggestions", []),
                         }
                     )
+
+                    # PROVENANCE TRACKING: Track auto-extracted metadata from file analysis
+                    from pathlib import Path
+                    for field_name, value in high_confidence_inferences.items():
+                        confidence = confidence_scores.get(field_name, 80.0)
+                        self._track_metadata_provenance(
+                            state=state,
+                            field_name=field_name,
+                            value=value,
+                            provenance_type="auto-extracted",
+                            confidence=confidence,
+                            source=f"Automatically extracted from file analysis of {Path(input_path).name}",
+                            needs_review=confidence < 95,  # High confidence extractions don't need review
+                            raw_input=f"File: {Path(input_path).name}",
+                        )
 
                     # Update combined metadata
                     state.metadata.update(metadata)
@@ -2444,9 +2609,20 @@ The conversion report has been generated with full details."""
                 combined_metadata = {**state.auto_extracted_metadata, **state.user_provided_metadata}
                 state.metadata = combined_metadata
 
+                # PROVENANCE TRACKING: Record that user explicitly provided this metadata
+                for field_name, value in extracted_metadata.items():
+                    self._track_user_provided_metadata(
+                        state=state,
+                        field_name=field_name,
+                        value=value,
+                        confidence=100.0,
+                        source=f"User explicitly provided in conversation",
+                        raw_input=user_message[:200],  # Store original message
+                    )
+
                 state.add_log(
                     LogLevel.INFO,
-                    "User-provided metadata extracted and persisted incrementally",
+                    "User-provided metadata extracted and persisted incrementally (with provenance)",
                     {
                         "user_provided_fields": list(extracted_metadata.keys()),
                         "total_metadata_fields": list(combined_metadata.keys()),
@@ -2925,6 +3101,20 @@ Return JSON with a 'message' field."""
                 f"Extracted {len(auto_fixes)} automatic fixes from {len(auto_fixable_issues)} issues",
                 {"fixes": auto_fixes}
             )
+
+            # PROVENANCE TRACKING: Track auto-corrected metadata
+            for field_name, value in auto_fixes.items():
+                issue_desc = next(
+                    (issue.get('message', '') for issue in auto_fixable_issues
+                     if issue.get('field_name') == field_name or field_name.lower() in issue.get('message', '').lower()),
+                    f"Auto-fix for validation issue"
+                )
+                self._track_auto_corrected_metadata(
+                    state=state,
+                    field_name=field_name,
+                    value=value,
+                    source=f"Automatic correction during error recovery: {issue_desc[:100]}",
+                )
 
             # Apply corrections and reconvert
             reconvert_msg = MCPMessage(

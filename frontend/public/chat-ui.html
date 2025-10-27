@@ -714,6 +714,229 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #a1a1a1;
         }
+
+        /* ========================================
+           METADATA PROVENANCE STYLES
+           ======================================== */
+
+        /* Provenance Badge - Inline next to metadata values */
+        .provenance-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            margin-left: 8px;
+            font-size: 10px;
+            font-weight: 600;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: help;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .provenance-badge:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        /* Badge Colors by Provenance Type */
+        .provenance-badge.user-specified {
+            background: #10b981;
+            color: white;
+        }
+
+        .provenance-badge.ai-parsed {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .provenance-badge.ai-inferred {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .provenance-badge.auto-extracted {
+            background: #8b5cf6;
+            color: white;
+        }
+
+        .provenance-badge.auto-corrected {
+            background: #ef4444;
+            color: white;
+        }
+
+        .provenance-badge.default {
+            background: #6b7280;
+            color: white;
+        }
+
+        .provenance-badge.system-generated {
+            background: #64748b;
+            color: white;
+        }
+
+        /* Needs Review Warning */
+        .provenance-badge.needs-review {
+            animation: pulse-warning 2s infinite;
+        }
+
+        @keyframes pulse-warning {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        /* Provenance Tooltip */
+        .provenance-tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%) translateY(-8px);
+            background: #1f2937;
+            color: #f3f4f6;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            max-width: 400px;
+            white-space: normal;
+        }
+
+        .provenance-badge:hover .provenance-tooltip {
+            opacity: 1;
+        }
+
+        .provenance-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: #1f2937;
+        }
+
+        .provenance-tooltip-header {
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #60a5fa;
+        }
+
+        .provenance-tooltip-item {
+            margin: 4px 0;
+            font-size: 11px;
+        }
+
+        .provenance-tooltip-label {
+            color: #9ca3af;
+            margin-right: 6px;
+        }
+
+        /* Provenance Review Checklist */
+        .provenance-review-checklist {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 16px;
+            margin: 16px 0;
+            border-radius: 6px;
+        }
+
+        .provenance-review-header {
+            font-weight: 600;
+            color: #856404;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .provenance-review-item {
+            padding: 8px;
+            background: white;
+            margin: 6px 0;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .provenance-review-field {
+            font-weight: 500;
+            color: #856404;
+        }
+
+        .provenance-review-confidence {
+            font-size: 12px;
+            color: #6c757d;
+            margin-left: 8px;
+        }
+
+        .provenance-summary-card {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+
+        .provenance-summary-title {
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #495057;
+        }
+
+        .provenance-stats {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .provenance-stat {
+            flex: 1;
+            min-width: 140px;
+            padding: 12px;
+            background: white;
+            border-radius: 6px;
+            border-left: 3px solid #6c757d;
+        }
+
+        .provenance-stat-label {
+            font-size: 11px;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .provenance-stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #212529;
+        }
+
+        .provenance-stat.user-specified {
+            border-left-color: #10b981;
+        }
+
+        .provenance-stat.ai-parsed {
+            border-left-color: #3b82f6;
+        }
+
+        .provenance-stat.ai-inferred {
+            border-left-color: #f59e0b;
+        }
+
+        .provenance-stat.needs-review {
+            border-left-color: #ef4444;
+        }
     </style>
 </head>
 <body>
@@ -2021,6 +2244,237 @@
                 autoResizeTextarea();
             }
         });
+
+        // ========================================
+        // METADATA PROVENANCE FUNCTIONS
+        // ========================================
+
+        /**
+         * Fetch metadata provenance information from backend
+         */
+        async function fetchMetadataProvenance() {
+            try {
+                const response = await fetch(`${API_BASE}/api/metadata-provenance`);
+                if (!response.ok) {
+                    console.warn('Failed to fetch provenance:', response.statusText);
+                    return null;
+                }
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Error fetching provenance:', error);
+                return null;
+            }
+        }
+
+        /**
+         * Create a provenance badge HTML element
+         * @param {Object} provenanceInfo - Provenance information for a field
+         * @returns {string} HTML string for the badge
+         */
+        function createProvenanceBadge(provenanceInfo) {
+            const { provenance, confidence, source, needs_review, timestamp } = provenanceInfo;
+
+            // Get display name for provenance type
+            const displayNames = {
+                'user-specified': 'User',
+                'ai-parsed': 'AI',
+                'ai-inferred': 'Inferred',
+                'auto-extracted': 'Auto',
+                'auto-corrected': 'Fixed',
+                'default': 'Default',
+                'system-generated': 'System'
+            };
+
+            const displayName = displayNames[provenance] || provenance;
+            const needsReviewClass = needs_review ? 'needs-review' : '';
+
+            // Create tooltip content
+            const tooltipHTML = `
+                <div class="provenance-tooltip">
+                    <div class="provenance-tooltip-header">${displayName} Metadata</div>
+                    <div class="provenance-tooltip-item">
+                        <span class="provenance-tooltip-label">Source:</span>${provenance}
+                    </div>
+                    <div class="provenance-tooltip-item">
+                        <span class="provenance-tooltip-label">Confidence:</span>${Math.round(confidence)}%
+                    </div>
+                    <div class="provenance-tooltip-item">
+                        <span class="provenance-tooltip-label">Origin:</span>${source}
+                    </div>
+                    ${needs_review ? '<div class="provenance-tooltip-item" style="color: #fbbf24;">⚠️ Needs Review</div>' : ''}
+                </div>
+            `;
+
+            return `<span class="provenance-badge ${provenance} ${needsReviewClass}">${displayName}${tooltipHTML}</span>`;
+        }
+
+        /**
+         * Show provenance summary card in chat
+         */
+        async function showProvenanceSummary() {
+            const provenanceData = await fetchMetadataProvenance();
+            if (!provenanceData || !provenanceData.provenance) {
+                addAssistantMessage('No provenance data available yet. Metadata provenance will be tracked as you provide metadata.');
+                return;
+            }
+
+            const { provenance, total_fields, needs_review_count } = provenanceData;
+
+            // Count fields by provenance type
+            const counts = {};
+            Object.values(provenance).forEach(p => {
+                counts[p.provenance] = (counts[p.provenance] || 0) + 1;
+            });
+
+            // Create summary HTML
+            let summaryHTML = '<div class="provenance-summary-card">';
+            summaryHTML += '<div class="provenance-summary-title">📊 Metadata Provenance Summary</div>';
+            summaryHTML += '<div class="provenance-stats">';
+
+            // User-specified
+            if (counts['user-specified']) {
+                summaryHTML += `
+                    <div class="provenance-stat user-specified">
+                        <div class="provenance-stat-label">User Provided</div>
+                        <div class="provenance-stat-value">${counts['user-specified']}</div>
+                    </div>
+                `;
+            }
+
+            // AI-parsed
+            if (counts['ai-parsed']) {
+                summaryHTML += `
+                    <div class="provenance-stat ai-parsed">
+                        <div class="provenance-stat-label">AI Parsed</div>
+                        <div class="provenance-stat-value">${counts['ai-parsed']}</div>
+                    </div>
+                `;
+            }
+
+            // AI-inferred
+            if (counts['ai-inferred']) {
+                summaryHTML += `
+                    <div class="provenance-stat ai-inferred">
+                        <div class="provenance-stat-label">AI Inferred</div>
+                        <div class="provenance-stat-value">${counts['ai-inferred']}</div>
+                    </div>
+                `;
+            }
+
+            // Auto-extracted
+            if (counts['auto-extracted']) {
+                summaryHTML += `
+                    <div class="provenance-stat auto-extracted">
+                        <div class="provenance-stat-label">Auto Extracted</div>
+                        <div class="provenance-stat-value">${counts['auto-extracted']}</div>
+                    </div>
+                `;
+            }
+
+            // Needs review
+            if (needs_review_count > 0) {
+                summaryHTML += `
+                    <div class="provenance-stat needs-review">
+                        <div class="provenance-stat-label">⚠️ Needs Review</div>
+                        <div class="provenance-stat-value">${needs_review_count}</div>
+                    </div>
+                `;
+            }
+
+            summaryHTML += '</div></div>';
+
+            addAssistantMessage(summaryHTML);
+        }
+
+        /**
+         * Show review checklist for low-confidence fields
+         */
+        async function showProvenanceReviewChecklist() {
+            const provenanceData = await fetchMetadataProvenance();
+            if (!provenanceData || !provenanceData.provenance) {
+                addAssistantMessage('No provenance data available yet.');
+                return;
+            }
+
+            const { provenance } = provenanceData;
+
+            // Filter fields needing review
+            const needsReview = Object.entries(provenance)
+                .filter(([field, info]) => info.needs_review)
+                .sort((a, b) => a[1].confidence - b[1].confidence); // Sort by confidence (lowest first)
+
+            if (needsReview.length === 0) {
+                addAssistantMessage('✅ All metadata fields are high-confidence! No review needed.');
+                return;
+            }
+
+            // Create checklist HTML
+            let checklistHTML = '<div class="provenance-review-checklist">';
+            checklistHTML += '<div class="provenance-review-header">';
+            checklistHTML += `⚠️ ${needsReview.length} Field${needsReview.length > 1 ? 's' : ''} Need Review Before DANDI Submission`;
+            checklistHTML += '</div>';
+
+            needsReview.forEach(([fieldName, info]) => {
+                checklistHTML += `
+                    <div class="provenance-review-item">
+                        <div>
+                            <span class="provenance-review-field">${fieldName}</span>
+                            <span class="provenance-review-confidence">(${Math.round(info.confidence)}% confidence)</span>
+                        </div>
+                        ${createProvenanceBadge(info)}
+                    </div>
+                `;
+            });
+
+            checklistHTML += '</div>';
+
+            addAssistantMessage(checklistHTML, [
+                { text: '📊 View Full Summary', onClick: () => showProvenanceSummary() },
+                { text: '✓ Acknowledge', onClick: () => addAssistantMessage('Review checklist acknowledged. You can update these fields at any time.') }
+            ]);
+        }
+
+        /**
+         * Add provenance badges to metadata display
+         * Call this after displaying metadata to users
+         */
+        async function enrichMetadataWithProvenance(metadataHTML) {
+            const provenanceData = await fetchMetadataProvenance();
+            if (!provenanceData || !provenanceData.provenance) {
+                return metadataHTML;
+            }
+
+            const { provenance } = provenanceData;
+
+            // For each field in provenance, add badge after the value
+            let enrichedHTML = metadataHTML;
+            Object.entries(provenance).forEach(([fieldName, info]) => {
+                // Try to find the field in HTML and append badge
+                const badge = createProvenanceBadge(info);
+
+                // Pattern: look for field_name = "value" or field_name: value
+                const patterns = [
+                    new RegExp(`(<strong>${fieldName}</strong>.*?)(</div>|<br>)`, 'i'),
+                    new RegExp(`(${fieldName}\\s*[:=]\\s*"[^"]*")`, 'i'),
+                    new RegExp(`(${fieldName}\\s*[:=]\\s*[^<\\n]+)`, 'i')
+                ];
+
+                for (const pattern of patterns) {
+                    if (pattern.test(enrichedHTML)) {
+                        enrichedHTML = enrichedHTML.replace(pattern, `$1 ${badge}$2`);
+                        break;
+                    }
+                }
+            });
+
+            return enrichedHTML;
+        }
+
+        // Add command to show provenance summary
+        window.showProvenanceSummary = showProvenanceSummary;
+        window.showProvenanceReviewChecklist = showProvenanceReviewChecklist;
+
     </script>
 </body>
 </html>

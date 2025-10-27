@@ -25,6 +25,8 @@ from .state import (
     ValidationOutcome,
     ConversationPhase,
     MetadataRequestPolicy,
+    MetadataProvenance,
+    ProvenanceInfo,
 )
 from .validation import (
     CorrectionContext,
@@ -60,6 +62,8 @@ __all__ = [
     "ValidationOutcome",
     "ConversationPhase",
     "MetadataRequestPolicy",
+    "MetadataProvenance",
+    "ProvenanceInfo",
     # Validation models
     "CorrectionContext",
     "ValidationIssue",
