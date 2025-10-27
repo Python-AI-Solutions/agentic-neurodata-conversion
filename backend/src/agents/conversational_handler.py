@@ -12,6 +12,7 @@ from services import LLMService
 from agents.metadata_strategy import MetadataRequestStrategy
 from agents.context_manager import ConversationContextManager
 from agents.nwb_dandi_schema import NWBDANDISchema
+from agents.intelligent_metadata_parser import IntelligentMetadataParser, ParsedField
 
 
 class ConversationalHandler:
@@ -37,6 +38,8 @@ class ConversationalHandler:
         self.metadata_strategy = MetadataRequestStrategy(llm_service=llm_service)
         # Initialize context manager for smart conversation summarization
         self.context_manager = ConversationContextManager(llm_service=llm_service)
+        # Initialize intelligent metadata parser for natural language understanding
+        self.metadata_parser = IntelligentMetadataParser(llm_service=llm_service)
 
     def detect_user_decline(self, user_message: str) -> bool:
         """
@@ -291,6 +294,126 @@ Respond in JSON format as specified."""
             )
             raise
 
+    async def parse_and_confirm_metadata(
+        self,
+        user_message: str,
+        state: GlobalState,
+        mode: str = "batch",  # "batch" or "single"
+        field_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Parse user metadata input and generate confirmation message.
+
+        This implements the three-scenario system:
+        1. User confirms → apply
+        2. User edits → apply correction
+        3. User skips → auto-apply with best knowledge
+
+        Args:
+            user_message: User's natural language input
+            state: Global state
+            mode: "batch" for multiple fields, "single" for one field
+            field_name: Field name if mode="single"
+
+        Returns:
+            Dict with:
+            - parsed_fields: List of ParsedField objects
+            - confirmation_message: Message showing what was understood
+            - needs_confirmation: Whether to wait for user confirmation
+            - auto_applied_fields: Fields auto-applied (if user skipped)
+        """
+        # Parse the input
+        if mode == "batch":
+            parsed_fields = await self.metadata_parser.parse_natural_language_batch(
+                user_message, state
+            )
+        else:
+            if not field_name:
+                raise ValueError("field_name required for single mode")
+            parsed_field = await self.metadata_parser.parse_single_field(
+                field_name, user_message, state
+            )
+            parsed_fields = [parsed_field]
+
+        # Check if this looks like a confirmation response
+        confirmation_keywords = ["yes", "correct", "ok", "confirm", "accept", "✓", "y", "looks good", "perfect"]
+        edit_keywords = ["no", "change", "edit", "wrong", "fix", "incorrect"]
+        skip_keywords = ["skip", "pass", "next", ""]  # Empty means Enter key
+
+        # Auto-apply phrases (user wants system to decide)
+        auto_apply_phrases = [
+            "do it on your own", "do it yourself", "just do it", "apply it",
+            "auto apply", "use your best", "go ahead", "proceed", "continue",
+            "don't ask", "decide for me", "you choose", "up to you", "just apply"
+        ]
+
+        user_lower = user_message.lower().strip()
+
+        # Scenario 3: User skipped or wants auto-apply (pressed Enter, said skip, or wants system to decide)
+        if user_lower in skip_keywords or not user_message.strip() or any(phrase in user_lower for phrase in auto_apply_phrases):
+            state.add_log(
+                LogLevel.INFO,
+                "User skipped confirmation - auto-applying with best knowledge",
+            )
+
+            auto_applied = {}
+            for field in parsed_fields:
+                value = await self.metadata_parser.apply_with_best_knowledge(field, state)
+                auto_applied[field.field_name] = value
+
+            return {
+                "type": "auto_applied",
+                "parsed_fields": [f.to_dict() for f in parsed_fields],
+                "auto_applied_fields": auto_applied,
+                "confirmation_message": "✓ Auto-applied all fields using best interpretation.",
+                "needs_confirmation": False,
+            }
+
+        # Scenario 1: User confirmed
+        if any(keyword in user_lower for keyword in confirmation_keywords):
+            state.add_log(
+                LogLevel.INFO,
+                "User confirmed parsed metadata",
+            )
+
+            confirmed = {}
+            for field in parsed_fields:
+                confirmed[field.field_name] = field.parsed_value
+                state.add_log(
+                    LogLevel.INFO,
+                    f"✓ Confirmed {field.field_name} = {field.parsed_value}",
+                )
+
+            return {
+                "type": "confirmed",
+                "parsed_fields": [f.to_dict() for f in parsed_fields],
+                "confirmed_fields": confirmed,
+                "confirmation_message": "✓ Perfect! Applied all confirmed values.",
+                "needs_confirmation": False,
+            }
+
+        # Scenario 2: User wants to edit
+        if any(keyword in user_lower for keyword in edit_keywords):
+            # User said "no" or "edit" - ask them to provide correction
+            return {
+                "type": "needs_edit",
+                "parsed_fields": [f.to_dict() for f in parsed_fields],
+                "confirmation_message": "No problem! Please provide the correct information. "
+                                       "You can say the field name and value (e.g., 'age: P90D') "
+                                       "or describe it naturally.",
+                "needs_confirmation": True,
+            }
+
+        # Default: Generate confirmation message and wait for response
+        confirmation_msg = self.metadata_parser.generate_confirmation_message(parsed_fields)
+
+        return {
+            "type": "awaiting_confirmation",
+            "parsed_fields": [f.to_dict() for f in parsed_fields],
+            "confirmation_message": confirmation_msg,
+            "needs_confirmation": True,
+        }
+
     async def process_user_response(
         self,
         user_message: str,
@@ -298,7 +421,13 @@ Respond in JSON format as specified."""
         state: GlobalState,
     ) -> Dict[str, Any]:
         """
-        Process user's conversational response using LLM.
+        Process user's conversational response using LLM with intelligent parsing and confirmation.
+
+        NEW: Uses IntelligentMetadataParser for:
+        - Natural language understanding
+        - NWB/DANDI format normalization
+        - Confidence-based auto-application
+        - User confirmation workflow
 
         Args:
             user_message: User's message
@@ -310,9 +439,74 @@ Respond in JSON format as specified."""
         """
         state.add_log(
             LogLevel.INFO,
-            f"Processing user message with LLM: {user_message[:100]}...",
+            f"Processing user message with intelligent parser: {user_message[:100]}...",
         )
 
+        # NEW: Use intelligent metadata parser with confirmation workflow
+        try:
+            parse_result = await self.parse_and_confirm_metadata(
+                user_message=user_message,
+                state=state,
+                mode="batch",  # Parse all fields at once
+            )
+
+            # Handle different result types
+            result_type = parse_result.get("type")
+
+            if result_type == "auto_applied":
+                # User skipped confirmation - fields auto-applied with best knowledge
+                return {
+                    "type": "user_response_processed",
+                    "extracted_metadata": parse_result.get("auto_applied_fields", {}),
+                    "needs_more_info": False,
+                    "follow_up_message": parse_result.get("confirmation_message"),
+                    "ready_to_proceed": True,
+                }
+
+            elif result_type == "confirmed":
+                # User confirmed - apply confirmed values
+                return {
+                    "type": "user_response_processed",
+                    "extracted_metadata": parse_result.get("confirmed_fields", {}),
+                    "needs_more_info": False,
+                    "follow_up_message": parse_result.get("confirmation_message"),
+                    "ready_to_proceed": True,
+                }
+
+            elif result_type == "needs_edit":
+                # User wants to edit - wait for correction
+                return {
+                    "type": "user_response_processed",
+                    "extracted_metadata": {},
+                    "needs_more_info": True,
+                    "follow_up_message": parse_result.get("confirmation_message"),
+                    "ready_to_proceed": False,
+                }
+
+            elif result_type == "awaiting_confirmation":
+                # Show parsed fields and wait for confirmation
+                return {
+                    "type": "user_response_processed",
+                    "extracted_metadata": {},  # Don't apply yet
+                    "needs_more_info": True,
+                    "follow_up_message": parse_result.get("confirmation_message"),
+                    "ready_to_proceed": False,
+                    "parsed_fields": parse_result.get("parsed_fields", []),
+                }
+
+            else:
+                # Unknown type - fallback to original method
+                raise ValueError(f"Unknown parse result type: {result_type}")
+
+        except Exception as e:
+            state.add_log(
+                LogLevel.WARNING,
+                f"Intelligent parser failed, using fallback extraction: {e}",
+            )
+            # Fallback to original LLM extraction method
+            pass
+
+        # FALLBACK: Original extraction method (if parser fails)
         # Generate system prompt dynamically from NWB/DANDI schema
         # This ensures ALL required and recommended fields are covered
         system_prompt = NWBDANDISchema.generate_llm_extraction_prompt()

@@ -93,6 +93,22 @@ class LogLevel(str, Enum):
     CRITICAL = "critical"
 
 
+class MetadataProvenance(str, Enum):
+    """
+    Tracks the source and origin of metadata fields.
+
+    Essential for scientific transparency, DANDI compliance, and user trust.
+    Allows users to understand reliability and review requirements for each field.
+    """
+    USER_SPECIFIED = "user-specified"       # User explicitly provided this value
+    AI_PARSED = "ai-parsed"                 # LLM parsed from natural language input
+    AI_INFERRED = "ai-inferred"             # AI guessed/inferred from context
+    AUTO_EXTRACTED = "auto-extracted"       # Extracted from file metadata (.meta, .json)
+    AUTO_CORRECTED = "auto-corrected"       # Applied during validation error correction
+    DEFAULT = "default"                     # Fallback/placeholder value
+    SYSTEM_GENERATED = "system-generated"   # Auto-generated (UUIDs, timestamps)
+
+
 class LogEntry(BaseModel):
     """Individual log entry in the conversion process."""
 
@@ -100,6 +116,42 @@ class LogEntry(BaseModel):
     level: LogLevel
     message: str
     context: Dict[str, Any] = Field(default_factory=dict)
+
+    # Pydantic V2 configuration
+    model_config = ConfigDict(
+        json_encoders={datetime: lambda v: v.isoformat()}
+    )
+
+
+class ProvenanceInfo(BaseModel):
+    """
+    Tracks the source, confidence, and origin of a metadata field.
+
+    Provides complete audit trail for scientific reproducibility and DANDI compliance.
+    """
+    value: Any = Field(description="The actual metadata value")
+    provenance: MetadataProvenance = Field(description="How this value was obtained")
+    confidence: float = Field(
+        default=100.0,
+        ge=0.0,
+        le=100.0,
+        description="Confidence score (0-100) for AI-parsed/inferred values"
+    )
+    source: str = Field(
+        description="Human-readable description of where this value came from"
+    )
+    timestamp: datetime = Field(
+        default_factory=datetime.now,
+        description="When this provenance was recorded"
+    )
+    needs_review: bool = Field(
+        default=False,
+        description="Flag indicating low-confidence field requiring user review"
+    )
+    raw_input: Optional[str] = Field(
+        default=None,
+        description="Original user input or file content that led to this value"
+    )
 
     # Pydantic V2 configuration
     model_config = ConfigDict(
@@ -163,6 +215,10 @@ class GlobalState(BaseModel):
         default_factory=dict,
         description="Metadata automatically extracted from file analysis (separate from user-provided)"
     )
+    metadata_provenance: Dict[str, ProvenanceInfo] = Field(
+        default_factory=dict,
+        description="Tracks source, confidence, and origin of each metadata field for scientific transparency"
+    )
 
     # Progress tracking
     progress_percent: float = Field(default=0.0, ge=0.0, le=100.0)
@@ -190,6 +246,10 @@ class GlobalState(BaseModel):
     user_declined_fields: Set[str] = Field(
         default_factory=set,
         description="Fields/metadata that user explicitly declined to provide"
+    )
+    already_asked_fields: Set[str] = Field(
+        default_factory=set,
+        description="Fields that have already been requested from user in this session (prevents re-asking)"
     )
     # WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Use MetadataRequestPolicy enum
     metadata_policy: MetadataRequestPolicy = Field(
@@ -373,6 +433,7 @@ class GlobalState(BaseModel):
         self.inference_result = {}
         self.auto_extracted_metadata = {}
         self.user_provided_metadata = {}
+        self.metadata_provenance = {}
         self.logs = []
         self.correction_attempt = 0
         self.checksums = {}

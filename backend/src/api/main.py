@@ -561,6 +561,40 @@ async def get_status():
     )
 
 
+@app.get("/api/metadata-provenance")
+async def get_metadata_provenance():
+    """
+    Get metadata provenance information for all fields.
+
+    Returns complete audit trail showing source, confidence, and reliability
+    of each metadata field for scientific transparency and DANDI compliance.
+
+    Returns:
+        Dictionary of field names to provenance information
+    """
+    mcp_server = get_or_create_mcp_server()
+    state = mcp_server.global_state
+
+    # Convert ProvenanceInfo objects to dict for JSON serialization
+    provenance_data = {}
+    for field_name, prov_info in state.metadata_provenance.items():
+        provenance_data[field_name] = {
+            "value": prov_info.value,
+            "provenance": prov_info.provenance.value,
+            "confidence": prov_info.confidence,
+            "source": prov_info.source,
+            "timestamp": prov_info.timestamp.isoformat(),
+            "needs_review": prov_info.needs_review,
+            "raw_input": prov_info.raw_input,
+        }
+
+    return {
+        "provenance": provenance_data,
+        "total_fields": len(provenance_data),
+        "needs_review_count": sum(1 for p in state.metadata_provenance.values() if p.needs_review),
+    }
+
+
 @app.post("/api/start-conversion")
 async def start_conversion():
     """
