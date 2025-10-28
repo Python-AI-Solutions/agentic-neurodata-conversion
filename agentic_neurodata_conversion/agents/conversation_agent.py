@@ -300,11 +300,11 @@ Return ONLY the JSON object:"""
             await self.http_client.post(
                 f"{self.mcp_server_url}/internal/route_message",
                 json={
-                    "session_id": session_id,
                     "target_agent": "conversion_agent",
                     "message_type": "agent_execute",
                     "payload": {
                         "action": "convert_dataset",
+                        "session_id": session_id,
                     },
                 },
             )
@@ -383,11 +383,11 @@ Return ONLY the JSON object:"""
             await self.http_client.post(
                 f"{self.mcp_server_url}/internal/route_message",
                 json={
-                    "session_id": session_id,
                     "target_agent": "conversion_agent",
                     "message_type": "agent_execute",
                     "payload": {
                         "action": "convert_dataset",
+                        "session_id": session_id,
                     },
                 },
             )

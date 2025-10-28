@@ -18,6 +18,7 @@ from agentic_neurodata_conversion.models import (
     AgentRegistrationRequest,
     RouteMessageRequest,
 )
+from agentic_neurodata_conversion.models.mcp_message import MessageType
 
 router = APIRouter(prefix="/internal", tags=["internal"])
 
@@ -214,11 +215,20 @@ async def route_message(request: RouteMessageRequest, req: Request) -> dict[str,
     # Get message_router from app.state
     message_router = req.app.state.message_router
 
+    # Convert message_type string to MessageType enum
+    try:
+        message_type_enum = MessageType(request.message_type)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid message_type: {request.message_type}",
+        )
+
     # Send message using message_router
     try:
         result: dict[str, Any] = await message_router.send_message(
             target_agent=request.target_agent,
-            message_type=request.message_type,
+            message_type=message_type_enum,
             payload=request.payload,
         )
         return result
