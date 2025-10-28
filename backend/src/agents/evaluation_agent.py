@@ -348,6 +348,10 @@ class EvaluationAgent:
             'description': 'N/A',
             'genotype': 'N/A',
             'strain': 'N/A',
+
+            # Provenance tracking - record source of each metadata field
+            '_provenance': {},
+            '_source_files': {},
         }
 
         def decode_value(value):
@@ -372,88 +376,132 @@ class EvaluationAgent:
             # Try to read NWB metadata using h5py
             try:
                 with h5py.File(nwb_path, 'r') as f:
+                    print(f"DEBUG: Reading NWB file with h5py: {nwb_path}")
+                    print(f"DEBUG: Root level groups: {list(f.keys())}")
+                    print(f"DEBUG: Root level attrs: {list(f.attrs.keys())}")
+
+                    # Helper to set top-level attrs with provenance
+                    def set_attr_with_provenance(attr_name, field_name=None):
+                        """Extract and set a root-level attribute with provenance tracking."""
+                        if field_name is None:
+                            field_name = attr_name
+                        if attr_name in f.attrs:
+                            value = decode_value(f.attrs[attr_name])
+                            file_info[field_name] = value
+                            file_info['_provenance'][field_name] = 'file-extracted'
+                            file_info['_source_files'][field_name] = nwb_path
+
                     # Extract top-level attributes
-                    if 'nwb_version' in f.attrs:
-                        file_info['nwb_version'] = decode_value(f.attrs['nwb_version'])
-
-                    if 'identifier' in f.attrs:
-                        file_info['identifier'] = decode_value(f.attrs['identifier'])
-
-                    if 'session_description' in f.attrs:
-                        file_info['session_description'] = decode_value(f.attrs['session_description'])
-
-                    if 'session_start_time' in f.attrs:
-                        file_info['session_start_time'] = decode_value(f.attrs['session_start_time'])
+                    set_attr_with_provenance('nwb_version')
+                    set_attr_with_provenance('identifier')
+                    set_attr_with_provenance('session_description')
+                    set_attr_with_provenance('session_start_time')
 
                     # Extract general metadata
                     if 'general' in f:
                         general = f['general']
+                        print(f"DEBUG: Found /general group")
+                        print(f"DEBUG: /general attrs: {list(general.attrs.keys())}")
+                        print(f"DEBUG: /general subgroups: {list(general.keys())}")
+
+                        # CRITICAL FIX: Check both attributes AND datasets
+                        # NeuroConv writes metadata as datasets, not attributes!
+                        def get_value(group, key):
+                            """Get value from either attribute or dataset."""
+                            if key in group.attrs:
+                                return group.attrs[key]
+                            elif key in group:
+                                # It's a dataset - read the value
+                                return group[key][()]
+                            return None
+
+                        def set_with_provenance(field_name, value, provenance='file-extracted', source_file=None):
+                            """Set a field value and track its provenance."""
+                            file_info[field_name] = value
+                            file_info['_provenance'][field_name] = provenance
+                            if source_file:
+                                file_info['_source_files'][field_name] = source_file
 
                         # Experimenter (can be string or array)
-                        if 'experimenter' in general.attrs:
-                            exp_value = general.attrs['experimenter']
+                        exp_value = get_value(general, 'experimenter')
+                        if exp_value is not None:
+                            exp_value = exp_value
                             if isinstance(exp_value, bytes):
-                                file_info['experimenter'] = [exp_value.decode('utf-8')]
+                                set_with_provenance('experimenter', [exp_value.decode('utf-8')], 'file-extracted', nwb_path)
                             elif isinstance(exp_value, str):
-                                file_info['experimenter'] = [exp_value]
+                                set_with_provenance('experimenter', [exp_value], 'file-extracted', nwb_path)
                             elif isinstance(exp_value, (list, tuple)):
-                                file_info['experimenter'] = [
+                                set_with_provenance('experimenter', [
                                     e.decode('utf-8') if isinstance(e, bytes) else str(e)
                                     for e in exp_value
-                                ]
+                                ], 'file-extracted', nwb_path)
                             else:
                                 # Handle numpy arrays or other iterable types
                                 try:
-                                    file_info['experimenter'] = [decode_value(e) for e in exp_value]
+                                    set_with_provenance('experimenter', [decode_value(e) for e in exp_value], 'file-extracted', nwb_path)
                                 except TypeError:
-                                    file_info['experimenter'] = [decode_value(exp_value)]
+                                    set_with_provenance('experimenter', [decode_value(exp_value)], 'file-extracted', nwb_path)
 
                         # Institution
-                        if 'institution' in general.attrs:
-                            file_info['institution'] = decode_value(general.attrs['institution'])
+                        inst_value = get_value(general, 'institution')
+                        if inst_value is not None:
+                            set_with_provenance('institution', decode_value(inst_value), 'file-extracted', nwb_path)
 
                         # Lab
-                        if 'lab' in general.attrs:
-                            file_info['lab'] = decode_value(general.attrs['lab'])
+                        lab_value = get_value(general, 'lab')
+                        if lab_value is not None:
+                            set_with_provenance('lab', decode_value(lab_value), 'file-extracted', nwb_path)
 
                         # Experiment description
-                        if 'experiment_description' in general.attrs:
-                            file_info['experiment_description'] = decode_value(general.attrs['experiment_description'])
+                        exp_desc_value = get_value(general, 'experiment_description')
+                        if exp_desc_value is not None:
+                            set_with_provenance('experiment_description', decode_value(exp_desc_value), 'file-extracted', nwb_path)
 
                         # Session ID
-                        if 'session_id' in general.attrs:
-                            file_info['session_id'] = decode_value(general.attrs['session_id'])
+                        session_id_value = get_value(general, 'session_id')
+                        if session_id_value is not None:
+                            set_with_provenance('session_id', decode_value(session_id_value), 'file-extracted', nwb_path)
 
                         # Extract subject metadata
                         if 'subject' in general:
                             subject_group = general['subject']
 
-                            if 'subject_id' in subject_group.attrs:
-                                file_info['subject_id'] = decode_value(subject_group.attrs['subject_id'])
+                            # Check both attrs and datasets for subject fields
+                            subj_id_value = get_value(subject_group, 'subject_id')
+                            if subj_id_value is not None:
+                                set_with_provenance('subject_id', decode_value(subj_id_value), 'file-extracted', nwb_path)
 
-                            if 'species' in subject_group.attrs:
-                                file_info['species'] = decode_value(subject_group.attrs['species'])
+                            species_value = get_value(subject_group, 'species')
+                            if species_value is not None:
+                                set_with_provenance('species', decode_value(species_value), 'file-extracted', nwb_path)
 
-                            if 'sex' in subject_group.attrs:
-                                file_info['sex'] = decode_value(subject_group.attrs['sex'])
+                            sex_value = get_value(subject_group, 'sex')
+                            if sex_value is not None:
+                                set_with_provenance('sex', decode_value(sex_value), 'file-extracted', nwb_path)
 
-                            if 'age' in subject_group.attrs:
-                                file_info['age'] = decode_value(subject_group.attrs['age'])
+                            age_value = get_value(subject_group, 'age')
+                            if age_value is not None:
+                                set_with_provenance('age', decode_value(age_value), 'file-extracted', nwb_path)
 
-                            if 'date_of_birth' in subject_group.attrs:
-                                file_info['date_of_birth'] = decode_value(subject_group.attrs['date_of_birth'])
+                            dob_value = get_value(subject_group, 'date_of_birth')
+                            if dob_value is not None:
+                                set_with_provenance('date_of_birth', decode_value(dob_value), 'file-extracted', nwb_path)
 
-                            if 'description' in subject_group.attrs:
-                                file_info['description'] = decode_value(subject_group.attrs['description'])
+                            desc_value = get_value(subject_group, 'description')
+                            if desc_value is not None:
+                                set_with_provenance('description', decode_value(desc_value), 'file-extracted', nwb_path)
 
-                            if 'genotype' in subject_group.attrs:
-                                file_info['genotype'] = decode_value(subject_group.attrs['genotype'])
+                            geno_value = get_value(subject_group, 'genotype')
+                            if geno_value is not None:
+                                set_with_provenance('genotype', decode_value(geno_value), 'file-extracted', nwb_path)
 
-                            if 'strain' in subject_group.attrs:
-                                file_info['strain'] = decode_value(subject_group.attrs['strain'])
+                            strain_value = get_value(subject_group, 'strain')
+                            if strain_value is not None:
+                                set_with_provenance('strain', decode_value(strain_value), 'file-extracted', nwb_path)
 
             except Exception as e:
                 # If h5py fails, try PyNWB
+                print(f"h5py extraction failed: {e}, trying PyNWB...")
                 try:
                     from pynwb import NWBHDF5IO
                     with NWBHDF5IO(nwb_path, 'r') as io:
@@ -485,9 +533,15 @@ class EvaluationAgent:
                             file_info['description'] = str(getattr(nwbfile.subject, 'description', 'N/A'))
                             file_info['genotype'] = str(getattr(nwbfile.subject, 'genotype', 'N/A'))
                             file_info['strain'] = str(getattr(nwbfile.subject, 'strain', 'N/A'))
+                        else:
+                            print(f"WARNING: NWB file has no subject object!")
+
+                        print(f"PyNWB extraction succeeded: experimenter={file_info['experimenter']}, institution={file_info['institution']}, subject_id={file_info['subject_id']}")
 
                 except Exception as pynwb_error:
-                    print(f"Could not extract file info with PyNWB either: {pynwb_error}")
+                    print(f"CRITICAL: Could not extract file info with PyNWB either: {pynwb_error}")
+                    import traceback
+                    traceback.print_exc()
 
         except Exception as e:
             print(f"Error extracting file info: {e}")

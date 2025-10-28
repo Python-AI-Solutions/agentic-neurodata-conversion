@@ -322,20 +322,8 @@ Respond in JSON format as specified."""
             - needs_confirmation: Whether to wait for user confirmation
             - auto_applied_fields: Fields auto-applied (if user skipped)
         """
-        # Parse the input
-        if mode == "batch":
-            parsed_fields = await self.metadata_parser.parse_natural_language_batch(
-                user_message, state
-            )
-        else:
-            if not field_name:
-                raise ValueError("field_name required for single mode")
-            parsed_field = await self.metadata_parser.parse_single_field(
-                field_name, user_message, state
-            )
-            parsed_fields = [parsed_field]
-
-        # Check if this looks like a confirmation response
+        # CRITICAL FIX: Check if user is confirming/skipping BEFORE parsing
+        # This prevents unnecessary LLM calls and metadata loss
         confirmation_keywords = ["yes", "correct", "ok", "confirm", "accept", "✓", "y", "looks good", "perfect"]
         edit_keywords = ["no", "change", "edit", "wrong", "fix", "incorrect"]
         skip_keywords = ["skip", "pass", "next", ""]  # Empty means Enter key
@@ -349,38 +337,24 @@ Respond in JSON format as specified."""
 
         user_lower = user_message.lower().strip()
 
-        # Scenario 3: User skipped or wants auto-apply (pressed Enter, said skip, or wants system to decide)
-        if user_lower in skip_keywords or not user_message.strip() or any(phrase in user_lower for phrase in auto_apply_phrases):
-            state.add_log(
-                LogLevel.INFO,
-                "User skipped confirmation - auto-applying with best knowledge",
-            )
-
-            auto_applied = {}
-            for field in parsed_fields:
-                value = await self.metadata_parser.apply_with_best_knowledge(field, state)
-                auto_applied[field.field_name] = value
-
-            return {
-                "type": "auto_applied",
-                "parsed_fields": [f.to_dict() for f in parsed_fields],
-                "auto_applied_fields": auto_applied,
-                "confirmation_message": "✓ Auto-applied all fields using best interpretation.",
-                "needs_confirmation": False,
+        state.add_log(
+            LogLevel.DEBUG,
+            f"parse_and_confirm_metadata called with message: '{user_message[:50]}'",
+            {
+                "has_pending_fields": hasattr(state, 'pending_parsed_fields') and bool(state.pending_parsed_fields),
+                "pending_field_count": len(state.pending_parsed_fields) if hasattr(state, 'pending_parsed_fields') and state.pending_parsed_fields else 0,
             }
+        )
 
-        # Scenario 1: User confirmed
+        # Scenario 1: User confirmed - retrieve pending fields WITHOUT parsing
         if any(keyword in user_lower for keyword in confirmation_keywords):
             state.add_log(
                 LogLevel.INFO,
                 "User confirmed parsed metadata",
             )
 
-            confirmed = {}
-
-            # CRITICAL FIX: If parsed_fields is empty (user just said "yes" without new data),
-            # retrieve the pending_parsed_fields that were stored earlier
-            if not parsed_fields and hasattr(state, 'pending_parsed_fields') and state.pending_parsed_fields:
+            # Retrieve the pending_parsed_fields that were stored earlier
+            if hasattr(state, 'pending_parsed_fields') and state.pending_parsed_fields:
                 state.add_log(
                     LogLevel.INFO,
                     f"Retrieving {len(state.pending_parsed_fields)} pending fields from previous parse",
@@ -389,35 +363,39 @@ Respond in JSON format as specified."""
                 confirmed = state.pending_parsed_fields.copy()
                 # Clear pending fields after confirmation
                 state.pending_parsed_fields = {}
+
+                state.add_log(
+                    LogLevel.INFO,
+                    f"User confirmed {len(confirmed)} metadata fields - RETURNING confirmed result",
+                    {"confirmed_fields": list(confirmed.keys())}
+                )
+
+                return {
+                    "type": "confirmed",
+                    "parsed_fields": [],  # No new fields parsed, using confirmed from pending
+                    "confirmed_fields": confirmed,
+                    "confirmation_message": "✓ Perfect! Applied all confirmed values.",
+                    "needs_confirmation": False,
+                }
             else:
-                # Normal flow: parsed_fields has data
-                for field in parsed_fields:
-                    confirmed[field.field_name] = field.parsed_value
-                    state.add_log(
-                        LogLevel.INFO,
-                        f"✓ Confirmed {field.field_name} = {field.parsed_value}",
-                    )
-
-            state.add_log(
-                LogLevel.INFO,
-                f"User confirmed {len(confirmed)} metadata fields",
-                {"confirmed_fields": list(confirmed.keys())}
-            )
-
-            return {
-                "type": "confirmed",
-                "parsed_fields": [f.to_dict() for f in parsed_fields],
-                "confirmed_fields": confirmed,
-                "confirmation_message": "✓ Perfect! Applied all confirmed values.",
-                "needs_confirmation": False,
-            }
+                # No pending fields - user said "yes" but nothing to confirm
+                state.add_log(
+                    LogLevel.WARNING,
+                    "User confirmed but no pending fields found",
+                )
+                return {
+                    "type": "needs_edit",
+                    "parsed_fields": [],
+                    "confirmation_message": "I don't have any pending metadata to confirm. Please provide the metadata values.",
+                    "needs_confirmation": True,
+                }
 
         # Scenario 2: User wants to edit
         if any(keyword in user_lower for keyword in edit_keywords):
             # User said "no" or "edit" - ask them to provide correction
             return {
                 "type": "needs_edit",
-                "parsed_fields": [f.to_dict() for f in parsed_fields],
+                "parsed_fields": [],
                 "confirmation_message": "No problem! Please provide the correct information. "
                                        "You can say the field name and value (e.g., 'age: P90D') "
                                        "or describe it naturally.",
@@ -425,7 +403,7 @@ Respond in JSON format as specified."""
             }
 
         # Scenario 3: User skipped or wants auto-apply
-        if user_lower in skip_keywords or not user_message.strip() or contains_keyword(user_lower, auto_apply_phrases):
+        if user_lower in skip_keywords or not user_message.strip() or any(phrase in user_lower for phrase in auto_apply_phrases):
             # For skip/auto-apply, we need parsed fields, but only if we have pending ones
             if hasattr(state, 'pending_parsed_fields') and state.pending_parsed_fields:
                 # Auto-apply the pending fields
@@ -463,28 +441,9 @@ Respond in JSON format as specified."""
             parsed_fields = [parsed_field]
 
         # Generate confirmation message and wait for response
-        # Pass state to check for missing required fields
-        confirmation_msg = self.metadata_parser.generate_confirmation_message(parsed_fields, state)
+        confirmation_msg = self.metadata_parser.generate_confirmation_message(parsed_fields)
 
         # Store parsed fields in state so they can be retrieved when user confirms
-        if not hasattr(state, 'pending_parsed_fields'):
-            state.pending_parsed_fields = {}
-
-        for field in parsed_fields:
-            state.pending_parsed_fields[field.field_name] = field.parsed_value
-
-            # PROVENANCE FIX: Store provenance immediately so it's preserved when user confirms
-            # This prevents the generic "User provided: 'yes i accept all'" message
-            state.metadata_provenance[field.field_name] = field.to_provenance_info()
-
-        state.add_log(
-            LogLevel.DEBUG,
-            f"Stored {len(parsed_fields)} pending parsed fields awaiting user confirmation (with provenance)",
-            {"fields": list(state.pending_parsed_fields.keys())}
-        )
-
-        # CRITICAL FIX: Store parsed fields in state so they can be retrieved when user confirms
-        # Convert ParsedField objects to dict format for storage
         if not hasattr(state, 'pending_parsed_fields'):
             state.pending_parsed_fields = {}
 
@@ -589,11 +548,43 @@ Respond in JSON format as specified."""
                 raise ValueError(f"Unknown parse result type: {result_type}")
 
         except Exception as e:
+            import traceback
             state.add_log(
-                LogLevel.WARNING,
+                LogLevel.ERROR,
                 f"Intelligent parser failed, using fallback extraction: {e}",
+                {
+                    "exception_type": type(e).__name__,
+                    "exception_message": str(e),
+                    "traceback": traceback.format_exc()
+                }
             )
-            # Fallback to original LLM extraction method
+
+            # CRITICAL FIX: Before falling back, check if user was confirming pending metadata
+            # If so, return that instead of falling back to LLM extraction
+            confirmation_keywords = ["yes", "correct", "ok", "confirm", "accept", "✓", "y", "looks good", "perfect"]
+            user_lower = user_message.lower().strip()
+
+            if (any(keyword in user_lower for keyword in confirmation_keywords) and
+                hasattr(state, 'pending_parsed_fields') and state.pending_parsed_fields):
+
+                state.add_log(
+                    LogLevel.INFO,
+                    f"Parser failed but detected confirmation - using pending fields from state",
+                    {"fields": list(state.pending_parsed_fields.keys())}
+                )
+
+                confirmed_metadata = state.pending_parsed_fields.copy()
+                state.pending_parsed_fields = {}  # Clear after use
+
+                return {
+                    "type": "user_response_processed",
+                    "extracted_metadata": confirmed_metadata,
+                    "needs_more_info": False,
+                    "follow_up_message": "✓ Perfect! Applied all confirmed values.",
+                    "ready_to_proceed": True,
+                }
+
+            # Otherwise, fall back to original LLM extraction method
             pass
 
         # FALLBACK: Original extraction method (if parser fails)

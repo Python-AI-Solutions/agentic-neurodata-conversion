@@ -1405,11 +1405,26 @@
         async function handleConversationalValidation(data) {
             const message = data.message || 'I found some issues with your NWB file. Let me help you fix them.';
 
-            // Display LLM's conversational message
-            addAssistantMessage(message);
+            // BUG #5 FIX: Add DECLINE button for FAILED validation
+            // Users should have option to decline fixing validation errors
+            addAssistantMessage(message, [
+                { text: 'Help Me Fix', onClick: () => enableConversationalInput(), variant: 'primary' },
+                { text: '✗ Decline', onClick: () => declineValidationFix(), variant: 'secondary' }
+            ]);
+        }
 
-            // Enable text input for conversational response
-            enableConversationalInput();
+        async function declineValidationFix() {
+            addUserMessage('❌ Decline to Fix Validation Issues');
+
+            // Call the retry-approval endpoint with 'reject' decision to properly close the workflow
+            await fetch(`${API_BASE}/api/retry-approval`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ decision: 'reject' })
+            });
+
+            addAssistantMessage('Validation fixes declined. The conversion has been cancelled. You can start a new conversion anytime.');
+            conversionInProgress = false;
         }
 
         function updateStatusBadge(status) {
@@ -1637,12 +1652,13 @@
             }
             summaryMessage += '<br>Review the fixes below:';
 
+            // BUG #11 FIX: Align terminology with spec - use "Approve" and "Decline"
             addAssistantMessage(
                 summaryMessage + issuesHtml,
                 [
-                    { text: '✓ Apply Fixes', onClick: () => approveRetry(), variant: 'primary' },
+                    { text: '✓ Approve', onClick: () => approveRetry(), variant: 'primary' },
                     { text: 'Show Details', onClick: () => showFixDetails(context), variant: 'secondary' },
-                    { text: '✗ Cancel', onClick: () => declineRetry(), variant: 'secondary' }
+                    { text: '✗ Decline', onClick: () => declineRetry(), variant: 'secondary' }
                 ]
             );
         }
@@ -1670,9 +1686,10 @@
 
             detailsHtml += '</div>';
 
+            // BUG #11 FIX: Align terminology with spec - use "Approve" and "Decline"
             addAssistantMessage(detailsHtml, [
-                { text: '✓ Apply Fixes', onClick: () => approveRetry(), variant: 'primary' },
-                { text: '✗ Cancel', onClick: () => declineRetry(), variant: 'secondary' }
+                { text: '✓ Approve', onClick: () => approveRetry(), variant: 'primary' },
+                { text: '✗ Decline', onClick: () => declineRetry(), variant: 'secondary' }
             ]);
         }
 
@@ -2037,6 +2054,11 @@
                     if (data.ready_to_proceed === true) {
                         // User confirmed ready - conversion will start automatically
                         addAssistantMessage('Perfect! Starting conversion with your metadata...');
+
+                        // BUG #7 FIX: Show provenance summary before conversion starts
+                        // This displays the metadata provenance badges collected during metadata collection
+                        await showProvenanceSummary();
+
                         monitorConversion();
                     } else if (data.needs_more_info === true || data.status === 'conversation_continues') {
                         // Continue multi-turn conversation - backend needs more info

@@ -10,6 +10,7 @@ Features:
 - Infer likely values using LLM reasoning
 - Provide confidence scores for inferences
 - Pre-fill metadata forms with intelligent defaults
+- Performance Optimization: Cache LLM inferences to reduce cost and latency
 """
 import json
 import logging
@@ -18,6 +19,7 @@ from typing import Any, Dict, List, Optional
 
 from models import GlobalState, LogLevel
 from services import LLMService
+from services.metadata_cache import get_metadata_cache
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +42,8 @@ class MetadataInferenceEngine:
             llm_service: Optional LLM service for intelligent inference
         """
         self.llm_service = llm_service
+        # PERFORMANCE OPTIMIZATION: Add metadata cache for LLM inference results
+        self.cache = get_metadata_cache()
 
     async def infer_metadata(
         self,
@@ -379,7 +383,35 @@ Return detailed JSON with your best inferences."""
             "required": ["inferred_metadata", "confidence_scores", "reasoning"],
         }
 
+        # PERFORMANCE OPTIMIZATION: Check cache first before expensive LLM call
+        # BUG FIX: Use only available variables from method signature
+        cache_context = {
+            "file_meta": file_meta,
+            "heuristic_inferences": heuristic_inferences,
+            "input_path": getattr(state, 'input_path', 'unknown')
+        }
+
+        cache_key = "metadata_inference"
+        cached_result = await self.cache.get(cache_key, cache_context)
+
+        if cached_result:
+            state.add_log(
+                LogLevel.INFO,
+                f"⚡ Cache HIT: Using cached metadata inference (saved ~2-3s and API cost)",
+                {
+                    "cache_age_seconds": cached_result.get("cache_age_seconds"),
+                    "inferred_fields": list(cached_result.get("value", {}).get("inferred_metadata", {}).keys()),
+                }
+            )
+            return cached_result["value"]
+
         try:
+            # Cache MISS - call LLM
+            state.add_log(
+                LogLevel.INFO,
+                "Cache MISS: Calling LLM for metadata inference",
+            )
+
             response = await self.llm_service.generate_structured_output(
                 prompt=user_prompt,
                 output_schema=output_schema,
@@ -393,6 +425,29 @@ Return detailed JSON with your best inferences."""
                     "inferred_fields": list(response.get("inferred_metadata", {}).keys()),
                 }
             )
+
+            # PERFORMANCE OPTIMIZATION: Store result in cache for future use
+            # Calculate average confidence to determine if we should cache
+            confidence_scores = response.get("confidence_scores", {})
+            avg_confidence = (
+                sum(confidence_scores.values()) / len(confidence_scores)
+                if confidence_scores
+                else 0.0
+            )
+
+            cached = await self.cache.set(
+                field_name=cache_key,
+                input_context=cache_context,
+                value=response,
+                confidence=avg_confidence,
+                source="llm_metadata_inference"
+            )
+
+            if cached:
+                state.add_log(
+                    LogLevel.INFO,
+                    f"✓ Cached inference result (confidence: {avg_confidence:.1f}%)",
+                )
 
             return response
 

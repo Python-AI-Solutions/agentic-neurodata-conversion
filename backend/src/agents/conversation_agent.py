@@ -8,6 +8,7 @@ Responsible for:
 - Gathering user input
 """
 import json
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from models import (
@@ -736,7 +737,30 @@ Please provide these details, or say "skip for now" to proceed with minimal meta
                 },
             )
 
-        # Step 3: Run conversion (after all metadata collection is complete)
+        # Step 3: Show metadata review before conversion
+        # Give user one last chance to add/modify metadata
+        if not state.metadata.get('_metadata_review_shown', False):
+            state.metadata['_metadata_review_shown'] = True
+            state.conversation_type = "metadata_review"
+
+            # Generate metadata review message
+            review_message = await self._generate_metadata_review_message(
+                metadata,
+                detected_format,
+                state
+            )
+
+            return MCPResponse.success_response(
+                reply_to=message.message_id,
+                result={
+                    "status": "metadata_review",
+                    "message": review_message,
+                    "conversation_type": "metadata_review",
+                    "metadata": metadata,
+                },
+            )
+
+        # Step 4: Run conversion (after metadata review)
         return await self._run_conversion(
             message.message_id,
             input_path,
@@ -1286,6 +1310,204 @@ Create a friendly, informative message."""
             )
             return fallback_messages.get(status, "Operation completed")
 
+    async def _generate_metadata_review_message(
+        self,
+        metadata: Dict[str, Any],
+        format_name: str,
+        state: GlobalState
+    ) -> str:
+        """
+        Generate a metadata review message before starting conversion.
+
+        Shows all collected metadata and asks if user wants to add anything.
+
+        Args:
+            metadata: Collected metadata
+            format_name: Detected data format
+            state: Global state
+
+        Returns:
+            Formatted review message
+        """
+        # Check for missing fields (but don't block conversion)
+        is_valid, missing_fields = self._validate_required_nwb_metadata(metadata)
+
+        if not self._llm_service:
+            # Fallback message without LLM
+            message = f"""## 📋 Metadata Review
+
+**Format Detected:** {format_name}
+
+**Metadata Collected:**
+"""
+            for key, value in metadata.items():
+                if not key.startswith('_'):  # Skip internal fields
+                    message += f"• **{key.replace('_', ' ').title()}**: {value}\n"
+
+            if missing_fields:
+                message += f"""
+
+**Note:** Some recommended fields are missing: {', '.join(missing_fields)}
+These are not required but would improve DANDI compatibility.
+"""
+
+            message += """
+
+**Would you like to add any additional metadata before conversion?**
+
+Options:
+• Type any additional metadata you want to add
+• Say "add [field]: [value]" to add specific fields
+• Say "proceed" or "no" to start conversion with current metadata
+"""
+            return message
+
+        try:
+            # Use LLM for dynamic review message
+            system_prompt = """You are helping review metadata before NWB conversion.
+Generate a friendly, clear review message that:
+1. Shows what metadata has been collected
+2. Notes any missing recommended fields (without blocking)
+3. Gives the option to add more metadata
+4. Makes it clear they can proceed as-is"""
+
+            # Format metadata for display
+            metadata_summary = {}
+            for key, value in metadata.items():
+                if not key.startswith('_'):  # Skip internal fields
+                    if isinstance(value, (list, dict)):
+                        metadata_summary[key] = json.dumps(value)[:50] + "..."
+                    else:
+                        metadata_summary[key] = str(value)[:100]
+
+            user_prompt = f"""Generate a metadata review message.
+
+Format: {format_name}
+Collected metadata: {json.dumps(metadata_summary, indent=2)}
+Missing recommended fields: {missing_fields if missing_fields else 'None'}
+
+Create a clear, friendly message that:
+1. Shows what we have
+2. Notes missing fields (if any) as optional
+3. Asks if they want to add anything before conversion
+4. Makes it clear they can proceed as-is"""
+
+            output_schema = {
+                "type": "object",
+                "properties": {
+                    "message": {"type": "string"}
+                },
+                "required": ["message"]
+            }
+
+            response = await self._llm_service.generate_structured_output(
+                prompt=user_prompt,
+                output_schema=output_schema,
+                system_prompt=system_prompt
+            )
+
+            return response.get("message", "")
+
+        except Exception as e:
+            state.add_log(LogLevel.WARNING, f"Failed to generate review message: {e}")
+            # Return fallback
+            return self._generate_metadata_review_message(metadata, format_name, state)
+
+    async def _continue_conversion_workflow(
+        self,
+        message_id: str,
+        input_path: str,
+        detected_format: str,
+        metadata: Dict[str, Any],
+        state: GlobalState,
+    ) -> MCPResponse:
+        """
+        Continue the conversion workflow after metadata collection is complete.
+
+        This skips format detection and metadata inference (already done) and proceeds
+        directly to: Step 2 (custom metadata) → Step 3 (metadata review) → Step 4 (conversion)
+
+        Args:
+            message_id: Original message ID
+            input_path: Path to input file
+            detected_format: Already detected format
+            metadata: Collected metadata
+            state: Global state
+
+        Returns:
+            MCP response
+        """
+        state.add_log(
+            LogLevel.INFO,
+            "Continuing conversion workflow after metadata collection",
+            {"format": detected_format, "metadata_fields": list(metadata.keys())}
+        )
+
+        # Step 2: Check for custom metadata
+        is_standard_complete, missing = self._validate_required_nwb_metadata(metadata)
+
+        all_missing_declined = all(
+            field in state.user_declined_fields
+            for field in missing
+        ) if missing else False
+
+        should_ask_custom = (
+            (is_standard_complete or all_missing_declined) and
+            not metadata.get('_custom_metadata_prompted', False) and
+            state.conversation_phase != ConversationPhase.METADATA_COLLECTION and
+            state.metadata_policy != MetadataRequestPolicy.ASK_ALL and
+            not state.user_wants_sequential
+        )
+
+        if should_ask_custom:
+            state.metadata['_custom_metadata_prompted'] = True
+            state.conversation_type = "custom_metadata_collection"
+
+            custom_metadata_prompt = await self._generate_custom_metadata_prompt(
+                detected_format,
+                metadata,
+                state
+            )
+
+            return MCPResponse.success_response(
+                reply_to=message_id,
+                result={
+                    "status": "need_user_input",
+                    "message": custom_metadata_prompt,
+                    "conversation_type": "custom_metadata_collection",
+                },
+            )
+
+        # Step 3: Show metadata review before conversion
+        if not metadata.get('_metadata_review_shown', False):
+            state.metadata['_metadata_review_shown'] = True
+            state.conversation_type = "metadata_review"
+
+            review_message = await self._generate_metadata_review_message(
+                metadata,
+                detected_format,
+                state
+            )
+
+            return MCPResponse.success_response(
+                reply_to=message_id,
+                result={
+                    "status": "metadata_review",
+                    "message": review_message,
+                    "conversation_type": "metadata_review",
+                    "metadata": metadata,
+                },
+            )
+
+        # Step 4: Run conversion
+        return await self._run_conversion(
+            message_id,
+            input_path,
+            detected_format,
+            metadata,
+            state,
+        )
+
     async def _generate_custom_metadata_prompt(
         self,
         format_name: str,
@@ -1578,41 +1800,73 @@ The conversion report has been generated with full details."""
         import tempfile
         from pathlib import Path
 
-        # BUG FIX #2: Validate required metadata BEFORE starting conversion
-        # This prevents mid-conversion failures and provides early feedback
+        # ENHANCED: Make validation non-blocking - warn but proceed
+        # Users can choose to continue with whatever metadata they have
         is_valid, missing_fields = self._validate_required_nwb_metadata(metadata)
 
         if not is_valid:
             state.add_log(
                 LogLevel.WARNING,
-                f"Cannot proceed with conversion - missing required NWB metadata: {missing_fields}",
+                f"Some recommended NWB metadata fields are missing: {missing_fields}",
                 {"missing_fields": missing_fields}
             )
 
-            # Generate user-friendly explanation
-            if self._llm_service:
-                try:
-                    explanation = await self._generate_missing_metadata_message(
-                        missing_fields=missing_fields,
-                        metadata=metadata,
+            # Store missing fields info for potential later use
+            # But DO NOT block conversion - users should have the choice
+            state.metadata['_missing_fields_warning'] = {
+                'fields': missing_fields,
+                'message': f"Note: Some recommended fields are missing ({', '.join(missing_fields)}). The conversion will proceed with available metadata.",
+                'timestamp': datetime.now().isoformat()
+            }
+
+        # ENHANCEMENT: Auto-fill optional fields from inference if not provided by user
+        # This ensures NWB Inspector validation passes for recommended fields
+        inference_result = getattr(state, 'inference_result', {})
+        if inference_result:
+            inferred_metadata = inference_result.get("inferred_metadata", {})
+            confidence_scores = inference_result.get("confidence_scores", {})
+
+            # Fields to auto-fill if missing (NWB Inspector checks these)
+            optional_fields_to_infer = ["keywords", "experiment_description", "session_description"]
+
+            for field_name in optional_fields_to_infer:
+                # Only add if:
+                # 1. Not already in metadata (user didn't provide it)
+                # 2. Was inferred with reasonable confidence (>= 60%)
+                # 3. Inference result has this field
+                if (not metadata.get(field_name) and
+                    field_name in inferred_metadata and
+                    confidence_scores.get(field_name, 0) >= 60):
+
+                    inferred_value = inferred_metadata[field_name]
+                    confidence = confidence_scores.get(field_name, 60)
+
+                    # Add to metadata
+                    metadata[field_name] = inferred_value
+                    state.metadata[field_name] = inferred_value
+
+                    # Track provenance as AI-inferred
+                    self._track_metadata_provenance(
                         state=state,
+                        field_name=field_name,
+                        value=inferred_value,
+                        provenance_type="ai-inferred",
+                        confidence=confidence,
+                        source=f"Inferred from file analysis: {Path(input_path).name}",
+                        needs_review=True,  # AI inferences should be reviewed
+                        raw_input=f"Automatically inferred from: {Path(input_path).name}",
                     )
-                except Exception:
-                    explanation = self._generate_fallback_missing_metadata_message(missing_fields)
-            else:
-                explanation = self._generate_fallback_missing_metadata_message(missing_fields)
 
-            await state.update_status(ConversionStatus.AWAITING_USER_INPUT)
-
-            return MCPResponse.error_response(
-                reply_to=original_message_id,
-                error_code="MISSING_REQUIRED_METADATA",
-                error_message=explanation,
-                error_context={
-                    "missing_fields": missing_fields,
-                    "provided_metadata": list(metadata.keys()),
-                },
-            )
+                    state.add_log(
+                        LogLevel.INFO,
+                        f"Auto-filled {field_name} from AI inference (confidence: {confidence}%)",
+                        {
+                            "field": field_name,
+                            "value": str(inferred_value)[:100],  # Truncate for logging
+                            "confidence": confidence,
+                            "provenance": "ai-inferred"
+                        }
+                    )
 
         # Generate output path
         output_dir = Path(tempfile.gettempdir()) / "nwb_conversions"
@@ -2624,26 +2878,6 @@ The conversion report has been generated with full details."""
                         error_message="Cannot proceed with conversion. File path not found.",
                     )
 
-            # Check if user expresses intent to add but hasn't provided data yet
-            if self._user_expresses_intent_to_add_more(user_message):
-                state.add_log(
-                    LogLevel.INFO,
-                    "User expressed intent to add metadata without providing concrete data"
-                )
-                return MCPResponse.success_response(
-                    reply_to=message.message_id,
-                    result={
-                        "status": "awaiting_metadata_fields",
-                        "message": (
-                            "Great! What would you like to add? You can provide:\n\n"
-                            "• **Specific fields:** 'age: P90D, description: Visual cortex recording'\n"
-                            "• **Natural language:** 'The session lasted 2 hours in the morning'\n"
-                            "• **Or say 'proceed'** to continue with current metadata"
-                        ),
-                        "conversation_type": "metadata_review",  # Stay in same state
-                    },
-                )
-
             # User wants to add more metadata - parse it
             # Try to extract metadata from the message
             additional_metadata = {}
@@ -2672,17 +2906,16 @@ The conversion report has been generated with full details."""
                 # Update metadata
                 state.metadata.update(additional_metadata)
 
-                # Track provenance - but don't overwrite if already set by parser
+                # Track provenance
                 for field, value in additional_metadata.items():
-                    if field not in state.metadata_provenance:
-                        self._track_user_provided_metadata(
-                            state=state,
-                            field_name=field,
-                            value=value,
-                            confidence=100.0,
-                            source="Added during metadata review",
-                            raw_input=user_message[:200]
-                        )
+                    self._track_user_provided_metadata(
+                        state=state,
+                        field_name=field,
+                        value=value,
+                        confidence=100.0,
+                        source="Added during metadata review",
+                        raw_input=user_message[:200]
+                    )
 
                 state.add_log(
                     LogLevel.INFO,
@@ -2691,44 +2924,25 @@ The conversion report has been generated with full details."""
                 )
 
                 confirmation = f"Added {len(additional_metadata)} metadata field(s). Starting conversion..."
-
-                state.conversation_type = None  # Reset for conversion
-
-                # Proceed with conversion with updated metadata
-                if state.input_path:
-                    return await self._run_conversion(
-                        message.message_id,
-                        str(state.input_path),
-                        state.metadata.get("format", "unknown"),
-                        state.metadata,
-                        state,
-                    )
-                else:
-                    return MCPResponse.error_response(
-                        reply_to=message.message_id,
-                        error_code="INVALID_STATE",
-                        error_message="Cannot proceed with conversion. File path not found.",
-                    )
             else:
-                # No metadata detected - ask for clarification instead of converting
-                state.add_log(
-                    LogLevel.INFO,
-                    "No metadata detected in user message - asking for clarification"
+                confirmation = "No additional metadata detected. Starting conversion with current metadata..."
+
+            state.conversation_type = None  # Reset
+
+            # Proceed with conversion with updated metadata
+            if state.input_path:
+                return await self._run_conversion(
+                    message.message_id,
+                    str(state.input_path),
+                    state.metadata.get("format", "unknown"),
+                    state.metadata,
+                    state,
                 )
-                return MCPResponse.success_response(
+            else:
+                return MCPResponse.error_response(
                     reply_to=message.message_id,
-                    result={
-                        "status": "metadata_review",
-                        "message": (
-                            "I didn't detect any metadata fields in your message. "
-                            "Please provide metadata in one of these formats:\n\n"
-                            "• **Field format:** 'age: P90D'\n"
-                            "• **Multiple fields:** 'age: P90D, description: Visual cortex recording'\n"
-                            "• **Natural language:** 'The mouse was 3 months old'\n\n"
-                            "Or say **'proceed'** to continue with your current metadata."
-                        ),
-                        "conversation_type": "metadata_review",  # Stay in state, don't convert
-                    },
+                    error_code="INVALID_STATE",
+                    error_message="Cannot proceed with conversion. File path not found.",
                 )
 
         # Handle custom metadata collection conversation type
@@ -2820,6 +3034,14 @@ The conversion report has been generated with full details."""
             f"User intent detected: {skip_type}",
             {"user_message": user_message[:100], "skip_type": skip_type}
         )
+
+        # NOTE: Removed duplicate graceful error handling code here
+        # The main process_user_response call below (line 3179) already handles:
+        # - Intelligent parsing with IntelligentMetadataParser
+        # - Validation and error detection
+        # - Confirmation workflow
+        # - Graceful error messages
+        # No need to duplicate that logic here!
 
         if skip_type == "global":
             # User wants to skip ALL remaining questions
@@ -3005,6 +3227,19 @@ The conversion report has been generated with full details."""
                 state=state,
             )
 
+            # DEBUG: Log the full response to understand what's being returned
+            state.add_log(
+                LogLevel.INFO,
+                "Response from conversational_handler.process_user_response",
+                {
+                    "response_type": response.get("type"),
+                    "has_extracted_metadata": bool(response.get("extracted_metadata")),
+                    "extracted_metadata_keys": list(response.get("extracted_metadata", {}).keys()) if response.get("extracted_metadata") else [],
+                    "ready_to_proceed": response.get("ready_to_proceed"),
+                    "needs_more_info": response.get("needs_more_info"),
+                }
+            )
+
             # Add assistant response to conversation history
             state.add_conversation_message(
                 role="assistant",
@@ -3023,19 +3258,16 @@ The conversion report has been generated with full details."""
                 combined_metadata = {**state.auto_extracted_metadata, **state.user_provided_metadata}
                 state.metadata = combined_metadata
 
-                # PROVENANCE TRACKING: Record provenance, but don't overwrite if already set by IntelligentMetadataParser
-                # IntelligentMetadataParser already sets correct provenance (AI_PARSED, AI_INFERRED)
-                # Only track as user-specified if provenance wasn't already set by the parser
+                # PROVENANCE TRACKING: Record that user explicitly provided this metadata
                 for field_name, value in extracted_metadata.items():
-                    if field_name not in state.metadata_provenance:
-                        self._track_user_provided_metadata(
-                            state=state,
-                            field_name=field_name,
-                            value=value,
-                            confidence=100.0,
-                            source=f"User explicitly provided in conversation",
-                            raw_input=user_message[:200],  # Store original message
-                        )
+                    self._track_user_provided_metadata(
+                        state=state,
+                        field_name=field_name,
+                        value=value,
+                        confidence=100.0,
+                        source=f"User explicitly provided in conversation",
+                        raw_input=user_message[:200],  # Store original message
+                    )
 
                 state.add_log(
                     LogLevel.INFO,
@@ -3082,17 +3314,19 @@ The conversion report has been generated with full details."""
                         error_message="Cannot proceed with conversion. The file path is not available. Please try uploading the file again.",
                     )
 
-                # Restart conversion with updated metadata (even if none extracted, user said proceed)
-                return await self.handle_start_conversion(
-                    MCPMessage(
-                        target_agent="conversation",
-                        action="start_conversion",
-                        context={
-                            "input_path": str(conversion_path),
-                            "metadata": state.metadata,
-                        },
-                    ),
-                    state,
+                # CRITICAL FIX: Don't restart entire workflow (format detection already done!)
+                # Instead, continue from where we left off: Step 2 (custom metadata) or Step 3 (review) or Step 4 (conversion)
+
+                # Get the detected format (should be in metadata from previous detection)
+                detected_format = state.metadata.get("format", "unknown")
+
+                # Continue with workflow steps without re-running format detection
+                return await self._continue_conversion_workflow(
+                    message_id=message.message_id,
+                    input_path=str(conversion_path),
+                    detected_format=detected_format,
+                    metadata=state.metadata,
+                    state=state,
                 )
 
             # Continue conversation
@@ -3772,6 +4006,121 @@ Return JSON with a 'message' field."""
             {"message": message[:100]}
         )
         return None
+
+    async def _extract_metadata_from_message(
+        self,
+        user_message: str,
+        state: GlobalState
+    ) -> Dict[str, Any]:
+        """
+        Extract metadata from user's message using intelligent parsing.
+
+        Args:
+            user_message: User's message
+            state: Global state
+
+        Returns:
+            Extracted metadata dictionary
+        """
+        extracted_metadata = {}
+
+        if self._conversational_handler:
+            # Use LLM to extract metadata
+            context = {
+                "conversation_history": state.conversation_history[-3:],
+                "expected_fields": [f.name for f in NWBDANDISchema.get_required_fields()]
+            }
+
+            response = await self._conversational_handler.process_user_response(
+                user_message=user_message,
+                context=context,
+                state=state,
+            )
+
+            extracted_metadata = response.get("extracted_metadata", {})
+
+        else:
+            # Fallback to simple pattern matching
+            import re
+            # Pattern for "field: value" format
+            pattern = r'(\w+)\s*[:=]\s*(.+?)(?=\w+\s*[:=]|$)'
+            matches = re.findall(pattern, user_message)
+            for field, value in matches:
+                field = field.lower().replace(' ', '_')
+                extracted_metadata[field] = value.strip()
+
+        return extracted_metadata
+
+    def _validate_metadata_format(
+        self,
+        metadata: Dict[str, Any]
+    ) -> Dict[str, str]:
+        """
+        Validate metadata format and return any errors.
+
+        Args:
+            metadata: Metadata to validate
+
+        Returns:
+            Dictionary of field -> error message
+        """
+        errors = {}
+
+        for field, value in metadata.items():
+            # Get field schema
+            field_schema = NWBDANDISchema.get_field_by_name(field)
+            if not field_schema:
+                continue
+
+            # Validate based on field type
+            if field_schema.field_type.value == "date":
+                # Check if it's a valid date format
+                if not self._is_valid_date_format(value):
+                    errors[field] = (
+                        f"Please provide date in ISO format (YYYY-MM-DDTHH:MM:SS) "
+                        f"or natural language like 'August 15, 2025 at 10am'"
+                    )
+
+            elif field == "sex" and value not in ["M", "F", "U"]:
+                errors[field] = "Please use 'M' for male, 'F' for female, or 'U' for unknown"
+
+            elif field == "experimenter" and "," not in str(value):
+                errors[field] = "Please use format 'LastName, FirstName'"
+
+            elif field == "species" and not any(
+                species in str(value).lower()
+                for species in ["mus musculus", "rattus norvegicus", "homo sapiens", "macaca"]
+            ):
+                errors[field] = (
+                    "Please use scientific name (e.g., 'Mus musculus' for mouse, "
+                    "'Rattus norvegicus' for rat)"
+                )
+
+        return errors
+
+    def _is_valid_date_format(self, value: str) -> bool:
+        """
+        Check if a date string is in valid format.
+
+        Args:
+            value: Date string to check
+
+        Returns:
+            True if valid format
+        """
+        import re
+        # ISO format check
+        iso_pattern = r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}'
+        if re.match(iso_pattern, str(value)):
+            return True
+
+        # Try parsing with dateutil
+        try:
+            from dateutil import parser
+            parser.parse(str(value))
+            return True
+        except:
+            return False
 
     def _generate_basic_correction_prompts(self, issues: List[Dict[str, Any]]) -> str:
         """

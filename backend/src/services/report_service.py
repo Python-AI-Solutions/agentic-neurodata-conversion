@@ -246,57 +246,80 @@ class ReportService:
         age_str = self._format_age(file_info.get('age', 'N/A'))
         age_str = get_with_prov('age', age_str)
 
-        file_data = [
-            # File-level metadata
-            ['NWB Version:', file_info.get('nwb_version', 'N/A')],
-            ['File Size:', self._format_filesize(file_info.get('file_size_bytes', 0))],
-            ['Creation Date:', file_info.get('creation_date', 'N/A')],
-            ['Identifier:', file_info.get('identifier', 'Unknown')],
-            ['Session Description:', get_with_prov('session_description', file_info.get('session_description', 'N/A'))],
-            ['Session Start Time:', file_info.get('session_start_time', 'N/A')],
-            ['', ''],  # Spacer row
-            # Experimenter and institution info
-            ['Experimenter:', experimenter_str],
-            ['Institution:', get_with_prov('institution', file_info.get('institution', 'N/A'))],
-            ['Lab:', get_with_prov('lab', file_info.get('lab', 'N/A'))],
-            ['', ''],  # Spacer row
-            # Subject metadata
-            ['Subject ID:', get_with_prov('subject_id', file_info.get('subject_id', 'N/A'))],
-            ['Species:', species_str],
-            ['Sex:', sex_str],
-            ['Age:', age_str],
-            ['Date of Birth:', get_with_prov('date_of_birth', file_info.get('date_of_birth', 'N/A'))],
-            ['Description:', get_with_prov('description', file_info.get('description', 'N/A')[:100] + ('...' if len(file_info.get('description', 'N/A')) > 100 else ''))],
-        ]
+        # Create table data with Paragraph objects for word wrapping
+        file_data = []
 
-        # Add provenance legend after the table with complete 6-tag system
-        if provenance:
-            story.append(Spacer(1, 0.2 * inch))
-            legend_text = (
-                "<b>Metadata Provenance:</b> "
-                "👤 User-specified | "
-                "📄 File-extracted | "
-                "🧠 AI-parsed | "
-                "🤖 AI-inferred | "
-                "📋 Schema-default | "
-                "⚪ System-default"
-            )
-            story.append(Paragraph(legend_text, self.styles['Normal']))
+        def make_row(label, value):
+            """Create a table row with proper text wrapping."""
+            return [
+                Paragraph(f"<b>{label}</b>", self.styles['Normal']),
+                Paragraph(str(value), self.styles['Normal'])
+            ]
+
+        # File-level metadata
+        file_data.append(make_row('NWB Version:', file_info.get('nwb_version', 'N/A')))
+        file_data.append(make_row('File Size:', self._format_filesize(file_info.get('file_size_bytes', 0))))
+        file_data.append(make_row('Creation Date:', file_info.get('creation_date', 'N/A')))
+        file_data.append(make_row('Identifier:', file_info.get('identifier', 'Unknown')))
+        file_data.append(make_row('Session Description:', get_with_prov('session_description', file_info.get('session_description', 'N/A'))))
+        file_data.append(make_row('Session Start Time:', file_info.get('session_start_time', 'N/A')))
+        file_data.append(['', ''])  # Spacer row
+
+        # Experimenter and institution info
+        file_data.append(make_row('Experimenter:', experimenter_str))
+        file_data.append(make_row('Institution:', get_with_prov('institution', file_info.get('institution', 'N/A'))))
+        file_data.append(make_row('Lab:', get_with_prov('lab', file_info.get('lab', 'N/A'))))
+        file_data.append(['', ''])  # Spacer row
+
+        # Subject metadata
+        file_data.append(make_row('Subject ID:', get_with_prov('subject_id', file_info.get('subject_id', 'N/A'))))
+        file_data.append(make_row('Species:', species_str))
+        file_data.append(make_row('Sex:', sex_str))
+        file_data.append(make_row('Age:', age_str))
+        file_data.append(make_row('Date of Birth:', get_with_prov('date_of_birth', file_info.get('date_of_birth', 'N/A'))))
+
+        # Don't truncate description - let it wrap
+        desc_value = file_info.get('description', 'N/A')
+        file_data.append(make_row('Description:', get_with_prov('description', desc_value)))
 
         file_table = Table(file_data, colWidths=[2 * inch, 4 * inch])
         file_table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('TEXTCOLOR', (0, 0), (0, -1), HexColor('#1a1a1a')),
-            ('TEXTCOLOR', (1, 0), (1, -1), HexColor('#666666')),
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
             ('LEFTPADDING', (0, 0), (-1, -1), 0),
             ('RIGHTPADDING', (0, 0), (-1, -1), 12),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
         ]))
         story.append(file_table)
-        story.append(Spacer(1, 0.3 * inch))
+        story.append(Spacer(1, 0.2 * inch))
+
+        # Add provenance legend showing which sources were actually used
+        if provenance:
+            # Build legend showing only used provenance types
+            provenance_labels = {
+                'user-specified': '👤 User-specified',
+                'file-extracted': '📄 File-extracted',
+                'ai-parsed': '🧠 AI-parsed',
+                'ai-inferred': '🤖 AI-inferred',
+                'schema-default': '📋 Schema-default',
+                'system-default': '⚪ System-default',
+            }
+
+            # Collect unique provenance types actually used
+            used_types = set(provenance.values())
+            legend_parts = []
+            for prov_type in ['user-specified', 'file-extracted', 'ai-parsed', 'ai-inferred', 'schema-default', 'system-default']:
+                if prov_type in used_types:
+                    legend_parts.append(f"<b>{provenance_labels[prov_type]}</b>")
+                else:
+                    # Show in gray if not used
+                    badge_emoji = provenance_labels[prov_type].split()[0]
+                    label = ' '.join(provenance_labels[prov_type].split()[1:])
+                    legend_parts.append(f'<font color="gray">{badge_emoji} {label}</font>')
+
+            legend_text = "<b>Metadata Provenance:</b> " + " | ".join(legend_parts)
+            story.append(Paragraph(legend_text, self.styles['Normal']))
+            story.append(Spacer(1, 0.3 * inch))
 
         # Add custom metadata section if present
         custom_fields = file_info.get('_custom_fields', {})
