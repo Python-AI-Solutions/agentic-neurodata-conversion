@@ -3,6 +3,7 @@ FastAPI application for agentic neurodata conversion.
 
 Main API server with REST endpoints and WebSocket support.
 """
+import logging
 import os
 import tempfile
 from pathlib import Path
@@ -11,6 +12,9 @@ from typing import List, Optional
 # Load environment variables from .env file
 from dotenv import load_dotenv
 load_dotenv()
+
+# BUG #14 FIX: Initialize logger for WebSocket cleanup logging
+logger = logging.getLogger(__name__)
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
