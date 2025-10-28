@@ -205,6 +205,73 @@ async def health_check():
     }
 
 
+def sanitize_filename(filename: str) -> str:
+    """
+    Sanitize a filename to prevent path traversal attacks.
+
+    Args:
+        filename: User-provided filename
+
+    Returns:
+        Safe filename with path components removed
+
+    Raises:
+        HTTPException: If filename is invalid or dangerous
+    """
+    # Remove any directory components (handles ../../../etc/passwd attacks)
+    safe_name = os.path.basename(filename)
+
+    # Remove null bytes and other control characters
+    safe_name = safe_name.replace('\0', '').replace('\n', '').replace('\r', '')
+
+    # Validate filename isn't empty or just dots
+    if not safe_name or safe_name in ('.', '..'):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid filename: {filename}"
+        )
+
+    # Additional check: ensure no path separators remain
+    if '/' in safe_name or '\\' in safe_name:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Filename contains invalid characters: {filename}"
+        )
+
+    return safe_name
+
+
+def validate_safe_path(file_path: Path, base_dir: Path) -> Path:
+    """
+    Validate that a file path is within the base directory (no path traversal).
+
+    Args:
+        file_path: Path to validate
+        base_dir: Base directory that should contain the file
+
+    Returns:
+        Resolved absolute path
+
+    Raises:
+        HTTPException: If path is outside base directory
+    """
+    # Resolve to absolute path (follows symlinks, removes ..)
+    resolved_path = file_path.resolve()
+    resolved_base = base_dir.resolve()
+
+    # Check that resolved path is within base directory
+    try:
+        resolved_path.relative_to(resolved_base)
+    except ValueError:
+        # Path is outside base directory - path traversal attempt!
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file path: attempted path traversal detected"
+        )
+
+    return resolved_path
+
+
 @app.post("/api/upload", response_model=UploadResponse)
 async def upload_file(
     file: UploadFile = File(...),
@@ -295,24 +362,34 @@ async def upload_file(
             detail="Empty file uploaded"
         )
 
-    # Save main file
-    file_path = _upload_dir / file.filename
+    # Save main file - BUG #13 FIX: Sanitize filename to prevent path traversal
+    safe_filename = sanitize_filename(file.filename)
+    file_path = _upload_dir / safe_filename
+    # Validate path is within upload directory (defense in depth)
+    file_path = validate_safe_path(file_path, _upload_dir)
 
     with open(file_path, "wb") as f:
         f.write(content)
 
     # Save additional files (e.g., .meta files, other companion files)
-    uploaded_files = [file.filename]
+    # BUG #13 FIX: Track sanitized filenames
+    uploaded_files = [safe_filename]
     for additional_file in additional_files:
-        add_file_path = _upload_dir / additional_file.filename
+        # BUG #13 FIX: Sanitize additional file names
+        safe_add_filename = sanitize_filename(additional_file.filename)
+        add_file_path = _upload_dir / safe_add_filename
+        # Validate path is within upload directory
+        add_file_path = validate_safe_path(add_file_path, _upload_dir)
+
         add_content = await additional_file.read()
         with open(add_file_path, "wb") as f:
             f.write(add_content)
-        uploaded_files.append(additional_file.filename)
+        uploaded_files.append(safe_add_filename)
 
     # Validate that SpikeGLX files have their required companion .meta files
-    if ".ap.bin" in file.filename or ".lf.bin" in file.filename or ".nidq.bin" in file.filename:
-        meta_filename = file.filename.replace(".bin", ".meta")
+    # BUG #13 FIX: Use sanitized filename for path operations
+    if ".ap.bin" in safe_filename or ".lf.bin" in safe_filename or ".nidq.bin" in safe_filename:
+        meta_filename = safe_filename.replace(".bin", ".meta")
         meta_file_path = _upload_dir / meta_filename
 
         # Check if .meta file was uploaded
@@ -320,13 +397,14 @@ async def upload_file(
             raise HTTPException(
                 status_code=400,
                 detail=f"SpikeGLX .bin files require a matching .meta file. "
-                       f"Please upload both '{file.filename}' and '{meta_filename}' together. "
+                       f"Please upload both '{safe_filename}' and '{meta_filename}' together. "
                        f"The .meta file contains essential recording parameters (sampling rate, "
                        f"channel count, probe configuration) needed for accurate conversion."
             )
 
     # Validate OpenEphys files have required companion files
-    if file.filename == "structure.oebin":
+    # BUG #13 FIX: Use sanitized filename
+    if safe_filename == "structure.oebin":
         # New OpenEphys format - should have accompanying data files
         # We'll validate this more thoroughly during conversion, but warn user
         if len(additional_files) == 0:
@@ -336,7 +414,8 @@ async def upload_file(
                        f"please also upload the accompanying .dat files and other recording files from the same session folder. "
                        f"All files from the recording session are needed for complete data extraction."
             )
-    elif file.filename == "settings.xml":
+    # BUG #13 FIX: Use sanitized filename
+    elif safe_filename == "settings.xml":
         # Old OpenEphys format - should have .continuous files
         continuous_files = [f for f in additional_files if ".continuous" in f.filename]
         if len(continuous_files) == 0:
@@ -445,16 +524,18 @@ async def upload_file(
     # Determine the correct input path for conversion (when user triggers it)
     # For SpikeGLX, use the directory (or specifically the .bin file)
     conversion_input_path = str(file_path)
-    if ".meta" in file.filename:
+    # BUG #13 FIX: Use sanitized filename for string operations
+    if ".meta" in safe_filename:
         # If user uploaded .meta file first, find the corresponding .bin file
-        bin_filename = file.filename.replace(".meta", ".bin")
+        bin_filename = safe_filename.replace(".meta", ".bin")
         bin_path = _upload_dir / bin_filename
         if bin_path.exists():
             conversion_input_path = str(_upload_dir)  # Use directory for SpikeGLX
         else:
             # .bin file doesn't exist yet, use .meta for now
             conversion_input_path = str(file_path)
-    elif ".ap.bin" in file.filename or ".lf.bin" in file.filename:
+    # BUG #13 FIX: Use sanitized filename for string operations
+    elif ".ap.bin" in safe_filename or ".lf.bin" in safe_filename:
         # For .bin files, use the directory path for SpikeGLX detection
         conversion_input_path = str(_upload_dir)
 
@@ -525,13 +606,14 @@ Return JSON with a 'message' field."""
     else:
         welcome_message = f"File '{file.filename}' uploaded successfully! ({file_size_mb:.2f} MB)\n\nReady to convert to NWB format. Start the conversion when you're ready."
 
+    # BUG #13 FIX: Use sanitized filename in response
     return UploadResponse(
         session_id="session-1",  # MVP: single session
         message=welcome_message,
         input_path=str(file_path),
         checksum=checksum,
         status="upload_acknowledged",
-        uploaded_files=[file.filename],
+        uploaded_files=[safe_filename],
         conversation_active=False,
     )
 
