@@ -1241,8 +1241,9 @@ async def websocket_endpoint(websocket: WebSocket):
                 data=event.data,
             )
             await websocket.send_json(message.model_dump())
-        except Exception:
-            pass  # WebSocket may be closed
+        except Exception as e:
+            # WebSocket may be closed - log for debugging
+            logger.debug(f"Failed to send event to WebSocket (connection may be closed): {e}")
 
     mcp_server.subscribe_to_events(event_handler)
 
@@ -1255,7 +1256,12 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.send_json({"status": "received"})
 
     except WebSocketDisconnect:
-        pass
+        logger.info("WebSocket client disconnected")
+        # Clean up subscription
+        try:
+            mcp_server.unsubscribe_from_events(event_handler)
+        except Exception as e:
+            logger.debug(f"Error unsubscribing from events: {e}")
 
 
 if __name__ == "__main__":
