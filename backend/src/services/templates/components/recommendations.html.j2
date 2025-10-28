@@ -1,0 +1,86 @@
+{# Recommendations Component #}
+<section class="section recommendations-section">
+    <h2 class="section-title">
+        <span class="icon">💡</span>
+        Recommendations
+        <span class="recommendation-count">({{ recommendations|length }})</span>
+    </h2>
+
+    <div class="recommendations-list">
+        {% for recommendation in recommendations %}
+            <div class="recommendation-card priority-{{ recommendation.priority | lower }}">
+                <div class="recommendation-header">
+                    <div class="priority-badge priority-{{ recommendation.priority | lower }}">
+                        {% if recommendation.priority == 'HIGH' %}🔴
+                        {% elif recommendation.priority == 'MEDIUM' %}🟡
+                        {% else %}🟢
+                        {% endif %}
+                        {{ recommendation.priority }}
+                    </div>
+                    <h3 class="recommendation-title">{{ recommendation.title }}</h3>
+                </div>
+
+                <div class="recommendation-body">
+                    <p class="recommendation-description">
+                        {{ recommendation.description }}
+                    </p>
+
+                    {% if recommendation.action_items %}
+                    <div class="action-items">
+                        <h4 class="action-items-title">Action Items:</h4>
+                        <ol class="action-items-list">
+                            {% for item in recommendation.action_items %}
+                                <li class="action-item">{{ item }}</li>
+                            {% endfor %}
+                        </ol>
+                    </div>
+                    {% endif %}
+
+                    {% if recommendation.expected_outcome %}
+                    <div class="expected-outcome">
+                        <strong>Expected Outcome:</strong>
+                        <p>{{ recommendation.expected_outcome }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if recommendation.resources %}
+                    <div class="recommendation-resources">
+                        <strong>Resources:</strong>
+                        <ul class="resources-list">
+                            {% for resource in recommendation.resources %}
+                                <li>
+                                    {% if resource.url %}
+                                        <a href="{{ resource.url }}" target="_blank">
+                                            {{ resource.title | default(resource.url) }}
+                                        </a>
+                                    {% else %}
+                                        {{ resource.title | default(resource) }}
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if recommendation.related_issues %}
+                <div class="related-issues">
+                    <strong>Related Issues:</strong>
+                    <div class="related-issues-tags">
+                        {% for issue_id in recommendation.related_issues %}
+                            <span class="related-issue-tag">#{{ issue_id }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+
+    {% if recommendations|length == 0 %}
+    <div class="empty-state">
+        <div class="empty-icon">👍</div>
+        <p>No recommendations at this time. Your conversion process is optimal!</p>
+    </div>
+    {% endif %}
+</section>

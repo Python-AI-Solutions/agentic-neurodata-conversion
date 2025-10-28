@@ -28,6 +28,7 @@ from agents.metadata_inference import MetadataInferenceEngine
 from agents.adaptive_retry import AdaptiveRetryStrategy
 from agents.error_recovery import IntelligentErrorRecovery
 from agents.predictive_metadata import PredictiveMetadataSystem
+from agents.intelligent_metadata_mapper import IntelligentMetadataMapper
 from agents.smart_autocorrect import SmartAutoCorrectionSystem
 from agents.nwb_dandi_schema import NWBDANDISchema
 
@@ -71,6 +72,9 @@ class ConversationAgent:
         )
         self._smart_autocorrect = (
             SmartAutoCorrectionSystem(llm_service) if llm_service else None
+        )
+        self._metadata_mapper = (
+            IntelligentMetadataMapper(llm_service) if llm_service else None
         )
         self._workflow_manager = WorkflowStateManager()
         # Conversation history now managed in GlobalState to prevent memory leaks
@@ -672,7 +676,51 @@ Please provide these details, or say "skip for now" to proceed with minimal meta
                     "predicted_issues": prediction.get("predicted_issues", []),
                 }
 
-        # Step 2: Run conversion
+        # Step 2: ONLY ask about custom metadata AFTER standard metadata is complete
+        # Check if all standard NWB metadata has been collected
+        is_standard_complete, missing = self._validate_required_nwb_metadata(state.metadata)
+
+        # Only proceed to custom metadata if:
+        # 1. Standard metadata is complete OR user has explicitly declined all missing fields
+        # 2. We haven't already asked about custom metadata
+        # 3. We're not in the middle of collecting standard metadata
+        # 4. We're not in ASK_ALL policy (piece by piece mode)
+
+        # Check if user has declined ALL missing fields
+        all_missing_declined = all(
+            field in state.user_declined_fields
+            for field in missing
+        ) if missing else False
+
+        should_ask_custom = (
+            (is_standard_complete or all_missing_declined) and  # Standard complete OR all declined
+            not state.metadata.get('_custom_metadata_prompted', False) and  # Haven't asked yet
+            state.conversation_phase != ConversationPhase.METADATA_COLLECTION and  # Not collecting standard
+            state.metadata_policy != MetadataRequestPolicy.ASK_ALL and  # Not in piece-by-piece mode
+            not state.user_wants_sequential  # Not in sequential questioning mode
+        )
+
+        if should_ask_custom:
+            state.metadata['_custom_metadata_prompted'] = True
+            state.conversation_type = "custom_metadata_collection"
+
+            # Generate friendly message about custom metadata
+            custom_metadata_prompt = await self._generate_custom_metadata_prompt(
+                detected_format,
+                metadata,
+                state
+            )
+
+            return MCPResponse.success_response(
+                reply_to=message.message_id,
+                result={
+                    "status": "need_user_input",
+                    "message": custom_metadata_prompt,
+                    "conversation_type": "custom_metadata_collection",
+                },
+            )
+
+        # Step 3: Run conversion (after all metadata collection is complete)
         return await self._run_conversion(
             message.message_id,
             input_path,
@@ -1213,6 +1261,153 @@ Create a friendly, informative message."""
                 f"Failed to generate LLM status message: {e}",
             )
             return fallback_messages.get(status, "Operation completed")
+
+    async def _generate_custom_metadata_prompt(
+        self,
+        format_name: str,
+        metadata: Dict[str, Any],
+        state: GlobalState
+    ) -> str:
+        """
+        Generate a friendly prompt asking if user wants to add custom metadata.
+
+        Args:
+            format_name: Detected data format
+            metadata: Already collected metadata
+            state: Global state
+
+        Returns:
+            User-friendly prompt message
+        """
+        if not self._llm_service:
+            # Fallback message without LLM
+            return """## 🎯 Ready to Convert!
+
+I have collected the standard NWB metadata. Before we start the conversion:
+
+**Would you like to add any additional metadata?**
+
+You can add ANY custom information that's important for your experiment, such as:
+- Experimental protocols or procedures
+- Equipment settings or parameters
+- Drug treatments or concentrations
+- Behavioral task details
+- Analysis notes or parameters
+- Custom identifiers or tags
+- Anything else relevant to your data!
+
+Just type your additional metadata in a natural way. For example:
+- "The recording was done at room temperature (22°C) with a 30 kHz sampling rate"
+- "We used optogenetic stimulation with blue light at 470nm, 5mW power"
+- "stimulus_duration: 500ms, inter-trial interval: 2 seconds"
+
+**Type your additional metadata, or say "no" to proceed with conversion.**
+"""
+
+        try:
+            # Use LLM to generate personalized prompt
+            system_prompt = "You are helping collect custom metadata for neuroscience data conversion."
+
+            # Get suggestions for metadata based on file type
+            suggestions = []
+            if self._metadata_mapper:
+                suggestions = await self._metadata_mapper.suggest_missing_metadata(
+                    metadata, format_name
+                )
+
+            user_prompt = f"""Generate a friendly message asking if the user wants to add custom metadata.
+
+Format detected: {format_name}
+Already collected: {', '.join(metadata.keys())}
+
+Suggest relevant metadata they might want to add based on the file format.
+Be encouraging about adding custom fields - anything they think is important.
+Make it clear they can add ANY metadata, not just standard fields.
+End with clear instructions on how to provide it or skip."""
+
+            output_schema = {
+                "type": "object",
+                "properties": {
+                    "message": {"type": "string"}
+                }
+            }
+
+            response = await self._llm_service.generate_structured_output(
+                prompt=user_prompt,
+                output_schema=output_schema,
+                system_prompt=system_prompt
+            )
+
+            return response.get("message", self._generate_custom_metadata_prompt.__doc__)
+
+        except Exception as e:
+            state.add_log(LogLevel.WARNING, f"Failed to generate custom prompt: {e}")
+            return self._generate_custom_metadata_prompt.__doc__
+
+    async def _handle_custom_metadata_response(
+        self,
+        user_input: str,
+        state: GlobalState
+    ) -> Dict[str, Any]:
+        """
+        Process user's custom metadata input using intelligent mapping.
+
+        Args:
+            user_input: User's natural language metadata
+            state: Global state
+
+        Returns:
+            Parsed and mapped metadata
+        """
+        if not self._metadata_mapper:
+            state.add_log(LogLevel.WARNING, "Metadata mapper not available")
+            return {}
+
+        try:
+            # Parse custom metadata using LLM
+            parsed_metadata = await self._metadata_mapper.parse_custom_metadata(
+                user_input=user_input,
+                existing_metadata=state.metadata,
+                state=state
+            )
+
+            # Update state metadata with parsed fields
+            if parsed_metadata.get('standard_fields'):
+                state.metadata.update(parsed_metadata['standard_fields'])
+                for field, value in parsed_metadata['standard_fields'].items():
+                    self._track_ai_parsed_metadata(
+                        state=state,
+                        field_name=field,
+                        value=value,
+                        confidence=90,
+                        raw_input=user_input,
+                        reasoning="Parsed from custom metadata input"
+                    )
+
+            # Store custom fields separately for special handling
+            if parsed_metadata.get('custom_fields'):
+                if '_custom_fields' not in state.metadata:
+                    state.metadata['_custom_fields'] = {}
+                state.metadata['_custom_fields'].update(parsed_metadata['custom_fields'])
+
+            # Store mapping report for display
+            if parsed_metadata.get('mapping_report'):
+                state.metadata['_mapping_report'] = parsed_metadata['mapping_report']
+
+            state.add_log(
+                LogLevel.INFO,
+                "Processed custom metadata",
+                {
+                    "standard_fields_count": len(parsed_metadata.get('standard_fields', {})),
+                    "custom_fields_count": len(parsed_metadata.get('custom_fields', {}))
+                }
+            )
+
+            return parsed_metadata
+
+        except Exception as e:
+            state.add_log(LogLevel.ERROR, f"Failed to parse custom metadata: {e}")
+            return {}
 
     async def _finalize_with_minimal_metadata(
         self,
@@ -2382,6 +2577,201 @@ The conversion report has been generated with full details."""
                 state
             )
 
+        # Handle metadata review conversation type
+        if state.conversation_type == "metadata_review":
+            # Check if user wants to proceed or add more metadata
+            if user_message.lower() in ["no", "proceed", "continue", "skip", "start"]:
+                state.add_log(LogLevel.INFO, "User chose to proceed with current metadata")
+                state.conversation_type = None  # Reset conversation type
+
+                # Proceed with conversion
+                if state.input_path:
+                    return await self._run_conversion(
+                        message.message_id,
+                        str(state.input_path),
+                        state.metadata.get("format", "unknown"),
+                        state.metadata,
+                        state,
+                    )
+                else:
+                    return MCPResponse.error_response(
+                        reply_to=message.message_id,
+                        error_code="INVALID_STATE",
+                        error_message="Cannot proceed with conversion. File path not found.",
+                    )
+
+            # Check if user expresses intent to add but hasn't provided data yet
+            if self._user_expresses_intent_to_add_more(user_message):
+                state.add_log(
+                    LogLevel.INFO,
+                    "User expressed intent to add metadata without providing concrete data"
+                )
+                return MCPResponse.success_response(
+                    reply_to=message.message_id,
+                    result={
+                        "status": "awaiting_metadata_fields",
+                        "message": (
+                            "Great! What would you like to add? You can provide:\n\n"
+                            "• **Specific fields:** 'age: P90D, description: Visual cortex recording'\n"
+                            "• **Natural language:** 'The session lasted 2 hours in the morning'\n"
+                            "• **Or say 'proceed'** to continue with current metadata"
+                        ),
+                        "conversation_type": "metadata_review",  # Stay in same state
+                    },
+                )
+
+            # User wants to add more metadata - parse it
+            # Try to extract metadata from the message
+            additional_metadata = {}
+
+            # Simple pattern matching for "field: value" format
+            import re
+            pattern = r'(\w+)\s*[:=]\s*(.+?)(?=\w+\s*[:=]|$)'
+            matches = re.findall(pattern, user_message)
+            for field, value in matches:
+                field = field.lower().replace(' ', '_')
+                additional_metadata[field] = value.strip()
+
+            # If no pattern matches, try to parse with metadata mapper if available
+            if not additional_metadata and self._metadata_mapper:
+                parsed = await self._metadata_mapper.parse_custom_metadata(
+                    user_input=user_message,
+                    existing_metadata=state.metadata,
+                    state=state
+                )
+                if parsed.get('standard_fields'):
+                    additional_metadata.update(parsed['standard_fields'])
+                if parsed.get('custom_fields'):
+                    additional_metadata.update(parsed['custom_fields'])
+
+            if additional_metadata:
+                # Update metadata
+                state.metadata.update(additional_metadata)
+
+                # Track provenance - but don't overwrite if already set by parser
+                for field, value in additional_metadata.items():
+                    if field not in state.metadata_provenance:
+                        self._track_user_provided_metadata(
+                            state=state,
+                            field_name=field,
+                            value=value,
+                            confidence=100.0,
+                            source="Added during metadata review",
+                            raw_input=user_message[:200]
+                        )
+
+                state.add_log(
+                    LogLevel.INFO,
+                    f"Added {len(additional_metadata)} fields during metadata review",
+                    {"fields": list(additional_metadata.keys())}
+                )
+
+                confirmation = f"Added {len(additional_metadata)} metadata field(s). Starting conversion..."
+
+                state.conversation_type = None  # Reset for conversion
+
+                # Proceed with conversion with updated metadata
+                if state.input_path:
+                    return await self._run_conversion(
+                        message.message_id,
+                        str(state.input_path),
+                        state.metadata.get("format", "unknown"),
+                        state.metadata,
+                        state,
+                    )
+                else:
+                    return MCPResponse.error_response(
+                        reply_to=message.message_id,
+                        error_code="INVALID_STATE",
+                        error_message="Cannot proceed with conversion. File path not found.",
+                    )
+            else:
+                # No metadata detected - ask for clarification instead of converting
+                state.add_log(
+                    LogLevel.INFO,
+                    "No metadata detected in user message - asking for clarification"
+                )
+                return MCPResponse.success_response(
+                    reply_to=message.message_id,
+                    result={
+                        "status": "metadata_review",
+                        "message": (
+                            "I didn't detect any metadata fields in your message. "
+                            "Please provide metadata in one of these formats:\n\n"
+                            "• **Field format:** 'age: P90D'\n"
+                            "• **Multiple fields:** 'age: P90D, description: Visual cortex recording'\n"
+                            "• **Natural language:** 'The mouse was 3 months old'\n\n"
+                            "Or say **'proceed'** to continue with your current metadata."
+                        ),
+                        "conversation_type": "metadata_review",  # Stay in state, don't convert
+                    },
+                )
+
+        # Handle custom metadata collection conversation type
+        if state.conversation_type == "custom_metadata_collection":
+            # Check if user wants to skip custom metadata
+            if user_message.lower() in ["no", "skip", "none", "proceed", "continue"]:
+                state.add_log(LogLevel.INFO, "User declined to add custom metadata")
+                state.conversation_type = None  # Reset conversation type
+
+                # Proceed with conversion
+                if state.input_path:
+                    return await self.handle_start_conversion(
+                        MCPMessage(
+                            target_agent="conversation",
+                            action="start_conversion",
+                            context={
+                                "input_path": str(state.input_path),
+                                "metadata": state.metadata,
+                            },
+                        ),
+                        state,
+                    )
+                else:
+                    return MCPResponse.error_response(
+                        reply_to=message.message_id,
+                        error_code="INVALID_STATE",
+                        error_message="Cannot proceed with conversion. File path not found.",
+                    )
+
+            # Process custom metadata
+            parsed_metadata = await self._handle_custom_metadata_response(
+                user_message,
+                state
+            )
+
+            # Generate confirmation message
+            if self._metadata_mapper and parsed_metadata.get('mapping_report'):
+                confirmation = self._metadata_mapper.format_metadata_for_display(
+                    state.metadata,
+                    parsed_metadata.get('mapping_report', [])
+                )
+            else:
+                confirmation = f"Added {len(parsed_metadata.get('standard_fields', {}))} standard fields and {len(parsed_metadata.get('custom_fields', {}))} custom fields."
+
+            state.conversation_type = None  # Reset conversation type
+            state.add_log(LogLevel.INFO, "Custom metadata collected, proceeding with conversion")
+
+            # Proceed with conversion with updated metadata
+            if state.input_path:
+                return await self.handle_start_conversion(
+                    MCPMessage(
+                        target_agent="conversation",
+                        action="start_conversion",
+                        context={
+                            "input_path": str(state.input_path),
+                            "metadata": state.metadata,
+                        },
+                    ),
+                    state,
+                )
+            else:
+                return MCPResponse.error_response(
+                    reply_to=message.message_id,
+                    error_code="INVALID_STATE",
+                    error_message="Cannot proceed with conversion. File path not found.",
+                )
+
         if not self._conversational_handler:
             return MCPResponse.error_response(
                 reply_to=message.message_id,
@@ -2609,16 +2999,19 @@ The conversion report has been generated with full details."""
                 combined_metadata = {**state.auto_extracted_metadata, **state.user_provided_metadata}
                 state.metadata = combined_metadata
 
-                # PROVENANCE TRACKING: Record that user explicitly provided this metadata
+                # PROVENANCE TRACKING: Record provenance, but don't overwrite if already set by IntelligentMetadataParser
+                # IntelligentMetadataParser already sets correct provenance (AI_PARSED, AI_INFERRED)
+                # Only track as user-specified if provenance wasn't already set by the parser
                 for field_name, value in extracted_metadata.items():
-                    self._track_user_provided_metadata(
-                        state=state,
-                        field_name=field_name,
-                        value=value,
-                        confidence=100.0,
-                        source=f"User explicitly provided in conversation",
-                        raw_input=user_message[:200],  # Store original message
-                    )
+                    if field_name not in state.metadata_provenance:
+                        self._track_user_provided_metadata(
+                            state=state,
+                            field_name=field_name,
+                            value=value,
+                            confidence=100.0,
+                            source=f"User explicitly provided in conversation",
+                            raw_input=user_message[:200],  # Store original message
+                        )
 
                 state.add_log(
                     LogLevel.INFO,
@@ -2636,9 +3029,14 @@ The conversion report has been generated with full details."""
                 # Mark true regardless of whether metadata was extracted - user engaged with the system
                 state.user_provided_input_this_attempt = True
 
+                # Reset conversation phase since standard metadata collection is complete
+                if state.conversation_phase == ConversationPhase.METADATA_COLLECTION:
+                    state.conversation_phase = ConversationPhase.IDLE
+                    state.conversation_type = None
+
                 state.add_log(
                     LogLevel.INFO,
-                    "User indicated ready to proceed, starting conversion",
+                    "User indicated ready to proceed, checking next steps",
                     {"has_extracted_metadata": bool(extracted_metadata)},
                 )
 

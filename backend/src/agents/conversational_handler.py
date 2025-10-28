@@ -404,8 +404,64 @@ Respond in JSON format as specified."""
                 "needs_confirmation": True,
             }
 
-        # Default: Generate confirmation message and wait for response
-        confirmation_msg = self.metadata_parser.generate_confirmation_message(parsed_fields)
+        # Scenario 3: User skipped or wants auto-apply
+        if user_lower in skip_keywords or not user_message.strip() or contains_keyword(user_lower, auto_apply_phrases):
+            # For skip/auto-apply, we need parsed fields, but only if we have pending ones
+            if hasattr(state, 'pending_parsed_fields') and state.pending_parsed_fields:
+                # Auto-apply the pending fields
+                state.add_log(
+                    LogLevel.INFO,
+                    "User skipped confirmation - auto-applying pending fields",
+                )
+                auto_applied = state.pending_parsed_fields.copy()
+                state.pending_parsed_fields = {}
+
+                return {
+                    "type": "auto_applied",
+                    "parsed_fields": [],
+                    "auto_applied_fields": auto_applied,
+                    "confirmation_message": "✓ Auto-applied all fields using best interpretation.",
+                    "needs_confirmation": False,
+                }
+
+        # If we reach here, user is providing NEW metadata - NOW we parse
+        state.add_log(
+            LogLevel.INFO,
+            "User is providing NEW metadata (not confirming/editing/skipping) - calling parser",
+        )
+
+        if mode == "batch":
+            parsed_fields = await self.metadata_parser.parse_natural_language_batch(
+                user_message, state
+            )
+        else:
+            if not field_name:
+                raise ValueError("field_name required for single mode")
+            parsed_field = await self.metadata_parser.parse_single_field(
+                field_name, user_message, state
+            )
+            parsed_fields = [parsed_field]
+
+        # Generate confirmation message and wait for response
+        # Pass state to check for missing required fields
+        confirmation_msg = self.metadata_parser.generate_confirmation_message(parsed_fields, state)
+
+        # Store parsed fields in state so they can be retrieved when user confirms
+        if not hasattr(state, 'pending_parsed_fields'):
+            state.pending_parsed_fields = {}
+
+        for field in parsed_fields:
+            state.pending_parsed_fields[field.field_name] = field.parsed_value
+
+            # PROVENANCE FIX: Store provenance immediately so it's preserved when user confirms
+            # This prevents the generic "User provided: 'yes i accept all'" message
+            state.metadata_provenance[field.field_name] = field.to_provenance_info()
+
+        state.add_log(
+            LogLevel.DEBUG,
+            f"Stored {len(parsed_fields)} pending parsed fields awaiting user confirmation (with provenance)",
+            {"fields": list(state.pending_parsed_fields.keys())}
+        )
 
         return {
             "type": "awaiting_confirmation",

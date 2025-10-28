@@ -6,6 +6,8 @@ Responsible for:
 - Quality assessment
 - Correction analysis (using LLM if available)
 """
+import asyncio
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -158,6 +160,17 @@ class EvaluationAgent:
             validation_result_dict = validation_result.model_dump()
             # Serialize enum to string value for JSON response
             validation_result_dict["overall_status"] = overall_status.value
+
+            # Fix issue counts mapping for report generation
+            # Map lowercase severity keys to uppercase for report compatibility
+            if validation_result.summary:
+                validation_result_dict["issue_counts"] = {
+                    "CRITICAL": validation_result.summary.get("critical", 0),
+                    "ERROR": validation_result.summary.get("error", 0),
+                    "WARNING": validation_result.summary.get("warning", 0),
+                    "INFO": validation_result.summary.get("info", 0),
+                    "BEST_PRACTICE": validation_result.summary.get("best_practice", 0),
+                }
 
             # Use LLM to prioritize and explain issues if available
             if self._llm_service and validation_result.issues:
@@ -1058,10 +1071,29 @@ Focus on the most critical issues first."""
                 pdf_report_path = output_dir / f"{report_base}_evaluation_report.pdf"
                 text_report_path = output_dir / f"{report_base}_inspection_report.txt"
 
-                # Extract file info from NWB file if not in validation result
-                if 'file_info' not in validation_result_data and nwb_path:
+                # CRITICAL FIX: Always extract file info directly from NWB file
+                # This ensures we get the actual metadata that was written during conversion
+                if nwb_path:
+                    state.add_log(
+                        LogLevel.INFO,
+                        f"Extracting metadata from NWB file for report: {nwb_path}",
+                    )
                     file_info = self._extract_file_info(nwb_path)
-                    validation_result_data['file_info'] = file_info
+
+                    # Add provenance information for each metadata field
+                    # Track source: user-provided, file-extracted, ai-inferred, or default
+                    file_info_with_provenance = self._add_metadata_provenance(
+                        file_info=file_info,
+                        state=state,
+                    )
+
+                    validation_result_data['file_info'] = file_info_with_provenance
+                    state.add_log(
+                        LogLevel.DEBUG,
+                        f"Extracted file metadata: experimenter={file_info.get('experimenter')}, "
+                        f"institution={file_info.get('institution')}, "
+                        f"subject_id={file_info.get('subject_id')}",
+                    )
 
                 # If LLM service available and no analysis provided, generate it
                 if self._llm_service and not llm_analysis:
@@ -1069,6 +1101,15 @@ Focus on the most critical issues first."""
 
                 # Build workflow trace for transparency and reproducibility
                 workflow_trace = self._build_workflow_trace(state)
+
+                # Generate HTML report (interactive with embedded CSS/JS)
+                html_report_path = output_dir / f"{report_base}_evaluation_report.html"
+                self._report_service.generate_html_report(
+                    html_report_path,
+                    validation_result_data,
+                    llm_analysis,
+                    workflow_trace
+                )
 
                 # Generate PDF report (detailed with LLM analysis and workflow trace)
                 self._report_service.generate_pdf_report(
@@ -1088,8 +1129,9 @@ Focus on the most critical issues first."""
 
                 state.add_log(
                     LogLevel.INFO,
-                    f"Generated evaluation reports: PDF and text",
+                    f"Generated evaluation reports: HTML, PDF, and text",
                     {
+                        "html_report": str(html_report_path),
                         "pdf_report": str(pdf_report_path),
                         "text_report": str(text_report_path),
                         "status": overall_status
@@ -1099,10 +1141,61 @@ Focus on the most critical issues first."""
                 return MCPResponse.success_response(
                     reply_to=message.message_id,
                     result={
-                        "report_path": str(pdf_report_path),  # Primary report (for backwards compatibility)
+                        "report_path": str(html_report_path),  # Primary report (HTML for interactivity)
+                        "html_report_path": str(html_report_path),
                         "pdf_report_path": str(pdf_report_path),
                         "text_report_path": str(text_report_path),
-                        "report_type": "pdf_and_text",
+                        "report_type": "html_pdf_and_text",
+                    },
+                )
+
+            elif overall_status == 'PASSED_WITH_ISSUES':
+                # BUG #4 FIX: For PASSED_WITH_ISSUES, don't generate final reports yet
+                # Wait for user decision (improve or accept) before generating final reports
+                # Generate a temporary JSON summary for user to review
+                output_dir = Path(state.output_path).parent if state.output_path else Path("outputs")
+                preview_report_path = output_dir / f"{report_base}_preview.json"
+
+                # CRITICAL FIX: Always extract file info directly from NWB file
+                # This ensures we get the actual metadata that was written during conversion
+                if nwb_path:
+                    state.add_log(
+                        LogLevel.INFO,
+                        f"Extracting metadata from NWB file for preview report: {nwb_path}",
+                    )
+                    file_info = self._extract_file_info(nwb_path)
+
+                    # Add provenance information for transparency
+                    file_info_with_provenance = self._add_metadata_provenance(
+                        file_info=file_info,
+                        state=state,
+                    )
+
+                    validation_result_data['file_info'] = file_info_with_provenance
+
+                # Build workflow trace
+                workflow_trace = self._build_workflow_trace(state)
+
+                # Generate preview JSON report (not final)
+                self._report_service.generate_json_report(
+                    preview_report_path,
+                    validation_result_data,
+                    llm_analysis,
+                    workflow_trace
+                )
+
+                state.add_log(
+                    LogLevel.INFO,
+                    f"Generated preview report for PASSED_WITH_ISSUES (final reports deferred until user accepts)",
+                    {"preview_report": str(preview_report_path), "status": overall_status},
+                )
+
+                return MCPResponse.success_response(
+                    reply_to=message.message_id,
+                    result={
+                        "report_path": str(preview_report_path),
+                        "report_type": "preview_json",
+                        "awaiting_user_decision": True,  # Flag to indicate final reports not yet generated
                     },
                 )
 
@@ -1110,6 +1203,23 @@ Focus on the most critical issues first."""
                 # Generate JSON report
                 output_dir = Path(state.output_path).parent if state.output_path else Path("outputs")
                 report_path = output_dir / f"{report_base}_correction_context.json"
+
+                # CRITICAL FIX: Always extract file info directly from NWB file
+                # Even for FAILED files, we want to show what metadata IS present
+                if nwb_path:
+                    state.add_log(
+                        LogLevel.INFO,
+                        f"Extracting metadata from NWB file for correction report: {nwb_path}",
+                    )
+                    file_info = self._extract_file_info(nwb_path)
+
+                    # Add provenance information even for failed conversions
+                    file_info_with_provenance = self._add_metadata_provenance(
+                        file_info=file_info,
+                        state=state,
+                    )
+
+                    validation_result_data['file_info'] = file_info_with_provenance
 
                 # If LLM service available and no analysis provided, generate it
                 if self._llm_service and not llm_analysis:
@@ -1260,13 +1370,142 @@ Focus on the most critical issues first."""
                     'action': log.message,
                 })
 
+        # Include metadata_provenance from state for HTML report
+        # This preserves original provenance (AI-parsed, user-specified, etc.)
+        # without storing it in the NWB file (which would violate DANDI compliance)
+        metadata_provenance_dict = {}
+        if state.metadata_provenance:
+            for field_name, prov_info in state.metadata_provenance.items():
+                metadata_provenance_dict[field_name] = {
+                    'provenance': prov_info.provenance.value,
+                    'confidence': prov_info.confidence,
+                    'source': prov_info.source,
+                    'timestamp': prov_info.timestamp.isoformat(),
+                }
+
         return {
             'summary': summary,
             'technologies': technologies,
             'steps': steps,
             'provenance': provenance,
             'user_interactions': user_interactions if user_interactions else None,
+            'metadata_provenance': metadata_provenance_dict,
         }
+
+    def _add_metadata_provenance(
+        self,
+        file_info: Dict[str, Any],
+        state: GlobalState
+    ) -> Dict[str, Any]:
+        """
+        Add provenance information to metadata fields for transparency and reproducibility.
+
+        Tracks the source of each metadata value with 6 provenance types:
+        - user-specified: User directly provided value
+        - file-extracted: Automatically extracted from file headers (includes source filename)
+        - ai-parsed: AI parsed from unstructured text with high confidence
+        - ai-inferred: AI inferred from available context
+        - schema-default: NWB schema default value
+        - system-default: System fallback value (N/A or Unknown)
+
+        Args:
+            file_info: Dictionary of metadata extracted from NWB file
+            state: Global state containing metadata provenance tracking
+
+        Returns:
+            Dictionary with provenance information added for each field
+        """
+        # Get provenance tracking from state metadata (if available)
+        metadata_provenance = state.metadata.get('_provenance', {})
+
+        # Get source file information from state
+        source_files = state.metadata.get('_source_files', {})
+        primary_source_file = state.metadata.get('primary_data_file', '')
+
+        # Create a copy with provenance information
+        file_info_with_prov = dict(file_info)
+
+        # Define which fields to track provenance for
+        tracked_fields = [
+            'experimenter', 'institution', 'lab', 'session_description',
+            'experiment_description', 'session_id', 'subject_id', 'species',
+            'sex', 'age', 'description', 'genotype', 'strain', 'date_of_birth',
+            'weight', 'keywords', 'pharmacology', 'protocol',
+            'surgery', 'virus', 'stimulus_notes', 'data_collection'
+        ]
+
+        # Add provenance dict if not exists
+        if '_provenance' not in file_info_with_prov:
+            file_info_with_prov['_provenance'] = {}
+
+        if '_source_files' not in file_info_with_prov:
+            file_info_with_prov['_source_files'] = {}
+
+        for field in tracked_fields:
+            value = file_info.get(field)
+            provenance_info = {}
+
+            # Determine provenance source using complete 6-tag system
+            if field in metadata_provenance:
+                # Use tracked provenance from metadata collection
+                prov_type = metadata_provenance[field]
+
+                # Map old provenance types to new system
+                if prov_type == 'user-provided':
+                    provenance_info['type'] = 'user-specified'
+                elif prov_type == 'ai-parsed':
+                    provenance_info['type'] = 'ai-parsed'
+                elif prov_type == 'ai-inferred':
+                    provenance_info['type'] = 'ai-inferred'
+                elif prov_type == 'file-extracted':
+                    provenance_info['type'] = 'file-extracted'
+                    # Add source filename if available
+                    if field in source_files:
+                        provenance_info['source_file'] = source_files[field]
+                    elif primary_source_file:
+                        provenance_info['source_file'] = os.path.basename(primary_source_file)
+                elif prov_type == 'default':
+                    # Distinguish between schema defaults and system defaults
+                    if value in ['N/A', 'Unknown', 'Not specified', '']:
+                        provenance_info['type'] = 'system-default'
+                    else:
+                        provenance_info['type'] = 'schema-default'
+                else:
+                    provenance_info['type'] = prov_type
+
+            elif value and value not in ['N/A', 'Unknown', 'Not specified', [], '', None]:
+                # Has a real value but no tracking
+                # Check if it matches NWB schema defaults
+                nwb_defaults = {
+                    'species': 'Mus musculus',
+                    'genotype': 'Wild-type',
+                    'strain': 'C57BL/6J'
+                }
+
+                if field in nwb_defaults and value == nwb_defaults[field]:
+                    provenance_info['type'] = 'schema-default'
+                else:
+                    # Assume file-extracted with primary source file
+                    provenance_info['type'] = 'file-extracted'
+                    if primary_source_file:
+                        provenance_info['source_file'] = os.path.basename(primary_source_file)
+            else:
+                # System default value
+                provenance_info['type'] = 'system-default'
+
+            # Store provenance information
+            file_info_with_prov['_provenance'][field] = provenance_info['type']
+
+            # Store source file information if available
+            if 'source_file' in provenance_info:
+                file_info_with_prov['_source_files'][field] = provenance_info['source_file']
+
+        state.add_log(
+            LogLevel.DEBUG,
+            f"Added metadata provenance for {len(file_info_with_prov['_provenance'])} fields with 6-tag system",
+        )
+
+        return file_info_with_prov
 
     async def _generate_quality_assessment(self, validation_result: Dict[str, Any]) -> Dict[str, Any]:
         """

@@ -200,6 +200,10 @@ class GlobalState(BaseModel):
         default=None,
         description="Stores original input_path when metadata conversation starts, used to resume conversion after skip"
     )
+    detected_format: Optional[str] = Field(
+        default=None,
+        description="Auto-detected data format (e.g., SpikeGLX, OpenEphys)"
+    )
 
     # Metadata
     metadata: Dict[str, Any] = Field(default_factory=dict)

@@ -1039,6 +1039,7 @@ Provide a brief, friendly update about what's happening now."""
                 metadata=interface_metadata,
                 overwrite=True,
             )
+
         except Exception as e:
             # Bug #16: Clean up partial/corrupt file on conversion error
             if Path(output_path).exists():
@@ -1107,7 +1108,12 @@ Provide a brief, friendly update about what's happening now."""
 
         nested = {}
 
+        # Process standard fields
         for key, value in flat_metadata.items():
+            # Skip internal metadata fields
+            if key.startswith('_'):
+                continue
+
             if key in NWBFILE_FIELDS:
                 if "NWBFile" not in nested:
                     nested["NWBFile"] = {}
@@ -1134,6 +1140,43 @@ Provide a brief, friendly update about what's happening now."""
                 if "NWBFile" not in nested:
                     nested["NWBFile"] = {}
                 nested["NWBFile"][key] = value
+
+        # Process custom fields if present
+        if '_custom_fields' in flat_metadata:
+            custom_fields = flat_metadata['_custom_fields']
+
+            # Create a custom namespace for user-defined fields
+            if custom_fields:
+                if "NWBFile" not in nested:
+                    nested["NWBFile"] = {}
+
+                # Store custom fields in notes or as separate entries
+                # NWB allows arbitrary fields in the file
+                for custom_key, custom_value in custom_fields.items():
+                    # Clean the key name to be NWB-compliant
+                    clean_key = custom_key.replace(' ', '_').lower()
+
+                    # Try to intelligently place custom fields
+                    if any(term in clean_key for term in ['subject', 'animal', 'mouse', 'rat']):
+                        # Subject-related custom field
+                        if "Subject" not in nested:
+                            nested["Subject"] = {}
+                        nested["Subject"][clean_key] = custom_value
+                    else:
+                        # General custom field - add to NWBFile
+                        nested["NWBFile"][clean_key] = custom_value
+
+                # Also store a summary of custom fields in notes for documentation
+                if custom_fields:
+                    custom_summary = "Custom metadata fields:\n"
+                    for k, v in custom_fields.items():
+                        custom_summary += f"  - {k}: {v}\n"
+
+                    existing_notes = nested["NWBFile"].get("notes", "")
+                    if existing_notes:
+                        nested["NWBFile"]["notes"] = f"{existing_notes}\n\n{custom_summary}"
+                    else:
+                        nested["NWBFile"]["notes"] = custom_summary
 
         return nested
 

@@ -229,9 +229,10 @@ async def upload_file(
 
     # WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Phase 2 - Use WorkflowStateManager
     if not _workflow_manager.can_accept_upload(mcp_server.global_state):
+        status_str = mcp_server.global_state.status.value if mcp_server.global_state.status else "unknown"
         raise HTTPException(
             status_code=409,
-            detail=f"Cannot upload while {mcp_server.global_state.status.value}. Please wait or reset.",
+            detail=f"Cannot upload while {status_str}. Please wait or reset.",
         )
 
     # EDGE CASE FIX #2: Validate file count and types (prevent multiple separate datasets)
@@ -364,6 +365,9 @@ async def upload_file(
         mcp_server.global_state.validation_status = None  # Bug #17: Reset validation status
         mcp_server.global_state.overall_status = None  # Bug #9: Reset overall_status
         mcp_server.global_state.conversation_history = []  # Clear old conversations
+        # Reset custom metadata flag to ensure proper workflow
+        if '_custom_metadata_prompted' in mcp_server.global_state.metadata:
+            del mcp_server.global_state.metadata['_custom_metadata_prompted']
     else:
         # Preserve conversation state but update file paths
         mcp_server.global_state.add_log(
@@ -618,9 +622,10 @@ async def start_conversion():
                 detail="No file uploaded. Please upload a file first.",
             )
         else:
+            status_str = mcp_server.global_state.status.value if mcp_server.global_state.status else "unknown"
             raise HTTPException(
                 status_code=409,
-                detail=f"Conversion already in progress: {mcp_server.global_state.status.value}",
+                detail=f"Conversion already in progress: {status_str}",
             )
 
     # Send message to Conversation Agent to start conversion workflow
@@ -643,7 +648,7 @@ async def start_conversion():
 
     return {
         "message": "Conversion workflow started",
-        "status": mcp_server.global_state.status.value,
+        "status": mcp_server.global_state.status.value if mcp_server.global_state.status else "unknown",
     }
 
 
@@ -688,7 +693,7 @@ async def improvement_decision(decision: str = Form(...)):
     return {
         "accepted": True,
         "message": response.result.get("message", "Decision accepted"),
-        "status": mcp_server.global_state.status.value,
+        "status": mcp_server.global_state.status.value if mcp_server.global_state.status else "unknown",
     }
 
 
@@ -726,7 +731,8 @@ async def retry_approval(request: RetryApprovalRequest):
         "analyzing_corrections": ConversionStatus.CONVERTING,
         "awaiting_corrections": ConversionStatus.AWAITING_USER_INPUT,
     }
-    new_status = status_map.get(new_status_str, ConversionStatus.IDLE)
+    # If unknown status, preserve current status rather than resetting to IDLE
+    new_status = status_map.get(new_status_str, mcp_server.global_state.status or ConversionStatus.AWAITING_RETRY_APPROVAL)
 
     return RetryApprovalResponse(
         accepted=True,
@@ -907,7 +913,7 @@ async def chat_message(message: str = Form(...)):
         conv_agent = register_conversation_agent(mcp_server)
 
         # Get format from state or detect it
-        format_name = state.detected_format if hasattr(state, 'detected_format') and state.detected_format else "unknown"
+        format_name = state.detected_format if state.detected_format else "unknown"
 
         # If format is unknown, we need to detect it first
         if format_name == "unknown":
@@ -1162,10 +1168,94 @@ async def download_nwb():
     )
 
 
+@app.get("/api/reports/view")
+async def view_html_report():
+    """
+    View the HTML evaluation report in browser.
+
+    Returns:
+        HTML report content for display in browser
+    """
+    from fastapi.responses import HTMLResponse
+
+    mcp_server = get_or_create_mcp_server()
+
+    if not mcp_server.global_state.output_path:
+        raise HTTPException(
+            status_code=404,
+            detail="No conversion output available",
+        )
+
+    output_path_str = str(mcp_server.global_state.output_path).strip()
+    if not output_path_str:
+        raise HTTPException(
+            status_code=404,
+            detail="Output path is empty",
+        )
+
+    # Find the HTML report file
+    output_dir = Path(output_path_str).parent
+    output_stem = Path(output_path_str).stem
+    html_report = output_dir / f"{output_stem}_evaluation_report.html"
+
+    if html_report.exists():
+        # Check if we need to regenerate the report with workflow_trace
+        if workflow_trace_path.exists():
+            # Load workflow_trace
+            with open(workflow_trace_path, 'r') as f:
+                workflow_trace = json.load(f)
+
+            # Check if the workflow_trace has metadata_provenance
+            if 'metadata_provenance' in workflow_trace:
+                # Regenerate the HTML report with the correct workflow_trace
+                from services.report_service import ReportService
+                from agents.evaluation_agent import EvaluationAgent
+
+                # Extract file info from NWB file
+                nwb_path = mcp_server.global_state.output_path
+                eval_agent = EvaluationAgent()
+                file_info = eval_agent._extract_file_info(nwb_path)
+
+                # MERGE BACK the original provenance from workflow_trace
+                # This preserves the detailed AI-parsed provenance instead of generic "file-extracted"
+                if 'metadata_provenance' in workflow_trace:
+                    file_info['_workflow_provenance'] = workflow_trace['metadata_provenance']
+
+                # Create validation result with file info
+                validation_result = {
+                    'overall_status': mcp_server.global_state.overall_status.value if mcp_server.global_state.overall_status else 'UNKNOWN',
+                    'nwb_file_path': str(nwb_path),
+                    'file_info': file_info,
+                    'issues': [],
+                    'issue_counts': {},
+                }
+
+                # Regenerate HTML report with workflow_trace
+                report_service = ReportService()
+                report_service.generate_html_report(
+                    html_report,
+                    validation_result,
+                    None,  # llm_analysis
+                    workflow_trace
+                )
+
+                logger.info(f"Regenerated HTML report with workflow_trace from {workflow_trace_path}")
+
+        # Read and return HTML content directly for browser display
+        with open(html_report, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+        return HTMLResponse(content=html_content)
+
+    raise HTTPException(
+        status_code=404,
+        detail="No HTML report available. Report may not have been generated yet.",
+    )
+
+
 @app.get("/api/download/report")
 async def download_report():
     """
-    Download the evaluation report (PDF or JSON).
+    Download the evaluation report (HTML, PDF, or JSON).
 
     Returns:
         Report file as download
@@ -1178,11 +1268,27 @@ async def download_report():
             detail="No conversion output available",
         )
 
-    # Find the report file
-    output_dir = Path(mcp_server.global_state.output_path).parent
-    output_stem = Path(mcp_server.global_state.output_path).stem
+    output_path_str = str(mcp_server.global_state.output_path).strip()
+    if not output_path_str:
+        raise HTTPException(
+            status_code=404,
+            detail="Output path is empty",
+        )
 
-    # Try PDF first
+    # Find the report file
+    output_dir = Path(output_path_str).parent
+    output_stem = Path(output_path_str).stem
+
+    # Try HTML first (primary format)
+    html_report = output_dir / f"{output_stem}_evaluation_report.html"
+    if html_report.exists():
+        return FileResponse(
+            path=str(html_report),
+            media_type="text/html",
+            filename=html_report.name,
+        )
+
+    # Try PDF
     pdf_report = output_dir / f"{output_stem}_evaluation_report.pdf"
     if pdf_report.exists():
         return FileResponse(

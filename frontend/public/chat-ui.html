@@ -1386,7 +1386,8 @@
                         data.message || '✅ File accepted! Ready for download.',
                         [
                             { text: '⬇️ Download NWB File', onClick: () => downloadNWB(), variant: 'success' },
-                            { text: '📄 Download Report', onClick: () => downloadReport(), variant: 'primary' }
+                            { text: '👁️ View Report', onClick: () => viewReport(), variant: 'primary' },
+                            { text: '📥 Download Report', onClick: () => downloadReport(), variant: 'secondary' }
                         ]
                     );
                     conversionInProgress = false;
@@ -1768,7 +1769,8 @@
                     '🎉 Conversion completed successfully! Your NWB file passed all validation checks.',
                     [
                         { text: '⬇️ Download NWB File', onClick: () => downloadNWB(), variant: 'success' },
-                        { text: '📄 Download Report', onClick: () => downloadReport(), variant: 'primary' },
+                        { text: '👁️ View Report', onClick: () => viewReport(), variant: 'primary' },
+                        { text: '📥 Download Report', onClick: () => downloadReport(), variant: 'secondary' },
                         { text: '🔄 New Conversion', onClick: () => resetConversation(), variant: 'secondary' }
                     ]
                 );
@@ -1777,7 +1779,8 @@
                     '✅ Conversion completed! Your NWB file is ready.',
                     [
                         { text: '⬇️ Download NWB File', onClick: () => downloadNWB(), variant: 'success' },
-                        { text: '📄 Download Report', onClick: () => downloadReport(), variant: 'primary' }
+                        { text: '👁️ View Report', onClick: () => viewReport(), variant: 'primary' },
+                        { text: '📥 Download Report', onClick: () => downloadReport(), variant: 'secondary' }
                     ]
                 );
             }
@@ -1876,6 +1879,18 @@
         async function downloadNWB() {
             window.location.href = `${API_BASE}/api/download/nwb`;
             addUserMessage('⬇️ Downloading NWB file...');
+        }
+
+        async function viewReport() {
+            try {
+                // Open HTML report in new tab
+                const reportUrl = `${API_BASE}/api/reports/view`;
+                window.open(reportUrl, '_blank');
+                addUserMessage('👁️ Opening evaluation report in new tab...');
+            } catch (error) {
+                console.error('Error viewing report:', error);
+                addAssistantMessage('❌ Failed to open report');
+            }
         }
 
         async function downloadReport() {
