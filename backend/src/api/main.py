@@ -205,6 +205,73 @@ async def health_check():
     }
 
 
+def sanitize_filename(filename: str) -> str:
+    """
+    Sanitize a filename to prevent path traversal attacks.
+
+    Args:
+        filename: User-provided filename
+
+    Returns:
+        Safe filename with path components removed
+
+    Raises:
+        HTTPException: If filename is invalid or dangerous
+    """
+    # Remove any directory components (handles ../../../etc/passwd attacks)
+    safe_name = os.path.basename(filename)
+
+    # Remove null bytes and other control characters
+    safe_name = safe_name.replace('\0', '').replace('\n', '').replace('\r', '')
+
+    # Validate filename isn't empty or just dots
+    if not safe_name or safe_name in ('.', '..'):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid filename: {filename}"
+        )
+
+    # Additional check: ensure no path separators remain
+    if '/' in safe_name or '\\' in safe_name:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Filename contains invalid characters: {filename}"
+        )
+
+    return safe_name
+
+
+def validate_safe_path(file_path: Path, base_dir: Path) -> Path:
+    """
+    Validate that a file path is within the base directory (no path traversal).
+
+    Args:
+        file_path: Path to validate
+        base_dir: Base directory that should contain the file
+
+    Returns:
+        Resolved absolute path
+
+    Raises:
+        HTTPException: If path is outside base directory
+    """
+    # Resolve to absolute path (follows symlinks, removes ..)
+    resolved_path = file_path.resolve()
+    resolved_base = base_dir.resolve()
+
+    # Check that resolved path is within base directory
+    try:
+        resolved_path.relative_to(resolved_base)
+    except ValueError:
+        # Path is outside base directory - path traversal attempt!
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file path: attempted path traversal detected"
+        )
+
+    return resolved_path
+
+
 @app.post("/api/upload", response_model=UploadResponse)
 async def upload_file(
     file: UploadFile = File(...),
@@ -296,24 +363,34 @@ async def upload_file(
             detail="Empty file uploaded"
         )
 
-    # Save main file
-    file_path = _upload_dir / file.filename
+    # Save main file - BUG #13 FIX: Sanitize filename to prevent path traversal
+    safe_filename = sanitize_filename(file.filename)
+    file_path = _upload_dir / safe_filename
+    # Validate path is within upload directory (defense in depth)
+    file_path = validate_safe_path(file_path, _upload_dir)
 
     with open(file_path, "wb") as f:
         f.write(content)
 
     # Save additional files (e.g., .meta files, other companion files)
-    uploaded_files = [file.filename]
+    # BUG #13 FIX: Track sanitized filenames
+    uploaded_files = [safe_filename]
     for additional_file in additional_files:
-        add_file_path = _upload_dir / additional_file.filename
+        # BUG #13 FIX: Sanitize additional file names
+        safe_add_filename = sanitize_filename(additional_file.filename)
+        add_file_path = _upload_dir / safe_add_filename
+        # Validate path is within upload directory
+        add_file_path = validate_safe_path(add_file_path, _upload_dir)
+
         add_content = await additional_file.read()
         with open(add_file_path, "wb") as f:
             f.write(add_content)
-        uploaded_files.append(additional_file.filename)
+        uploaded_files.append(safe_add_filename)
 
     # Validate that SpikeGLX files have their required companion .meta files
-    if ".ap.bin" in file.filename or ".lf.bin" in file.filename or ".nidq.bin" in file.filename:
-        meta_filename = file.filename.replace(".bin", ".meta")
+    # BUG #13 FIX: Use sanitized filename for path operations
+    if ".ap.bin" in safe_filename or ".lf.bin" in safe_filename or ".nidq.bin" in safe_filename:
+        meta_filename = safe_filename.replace(".bin", ".meta")
         meta_file_path = _upload_dir / meta_filename
 
         # Check if .meta file was uploaded
@@ -321,13 +398,14 @@ async def upload_file(
             raise HTTPException(
                 status_code=400,
                 detail=f"SpikeGLX .bin files require a matching .meta file. "
-                       f"Please upload both '{file.filename}' and '{meta_filename}' together. "
+                       f"Please upload both '{safe_filename}' and '{meta_filename}' together. "
                        f"The .meta file contains essential recording parameters (sampling rate, "
                        f"channel count, probe configuration) needed for accurate conversion."
             )
 
     # Validate OpenEphys files have required companion files
-    if file.filename == "structure.oebin":
+    # BUG #13 FIX: Use sanitized filename
+    if safe_filename == "structure.oebin":
         # New OpenEphys format - should have accompanying data files
         # We'll validate this more thoroughly during conversion, but warn user
         if len(additional_files) == 0:
@@ -337,7 +415,8 @@ async def upload_file(
                        f"please also upload the accompanying .dat files and other recording files from the same session folder. "
                        f"All files from the recording session are needed for complete data extraction."
             )
-    elif file.filename == "settings.xml":
+    # BUG #13 FIX: Use sanitized filename
+    elif safe_filename == "settings.xml":
         # Old OpenEphys format - should have .continuous files
         continuous_files = [f for f in additional_files if ".continuous" in f.filename]
         if len(continuous_files) == 0:
@@ -449,16 +528,18 @@ async def upload_file(
     # Determine the correct input path for conversion (when user triggers it)
     # For SpikeGLX, use the directory (or specifically the .bin file)
     conversion_input_path = str(file_path)
-    if ".meta" in file.filename:
+    # BUG #13 FIX: Use sanitized filename for string operations
+    if ".meta" in safe_filename:
         # If user uploaded .meta file first, find the corresponding .bin file
-        bin_filename = file.filename.replace(".meta", ".bin")
+        bin_filename = safe_filename.replace(".meta", ".bin")
         bin_path = _upload_dir / bin_filename
         if bin_path.exists():
             conversion_input_path = str(_upload_dir)  # Use directory for SpikeGLX
         else:
             # .bin file doesn't exist yet, use .meta for now
             conversion_input_path = str(file_path)
-    elif ".ap.bin" in file.filename or ".lf.bin" in file.filename:
+    # BUG #13 FIX: Use sanitized filename for string operations
+    elif ".ap.bin" in safe_filename or ".lf.bin" in safe_filename:
         # For .bin files, use the directory path for SpikeGLX detection
         conversion_input_path = str(_upload_dir)
 
@@ -529,13 +610,14 @@ Return JSON with a 'message' field."""
     else:
         welcome_message = f"File '{file.filename}' uploaded successfully! ({file_size_mb:.2f} MB)\n\nReady to convert to NWB format. Start the conversion when you're ready."
 
+    # BUG #13 FIX: Use sanitized filename in response
     return UploadResponse(
         session_id="session-1",  # MVP: single session
         message=welcome_message,
         input_path=str(file_path),
         checksum=checksum,
         status="upload_acknowledged",
-        uploaded_files=[file.filename],
+        uploaded_files=[safe_filename],
         conversation_active=False,
     )
 
@@ -641,9 +723,19 @@ async def start_conversion():
     response = await mcp_server.send_message(start_msg)
 
     if not response.success:
+        # BUG #12 FIX: Include validation/error context in response
+        error_detail = {
+            "message": response.error.get("message", "Failed to start conversion"),
+            "error_code": response.error.get("error_code", "UNKNOWN_ERROR"),
+        }
+
+        # Add validation context if available
+        if "error_context" in response.error:
+            error_detail["context"] = response.error["error_context"]
+
         raise HTTPException(
             status_code=500,
-            detail=response.error.get("message", "Failed to start conversion"),
+            detail=error_detail,
         )
 
     return {
@@ -685,9 +777,33 @@ async def improvement_decision(decision: str = Form(...)):
     response = await mcp_server.send_message(improvement_msg)
 
     if not response.success:
+        # BUG #12 FIX: Include validation issues in error response for PASSED_WITH_ISSUES decisions
+        error_detail = {
+            "message": response.error.get("message", "Failed to process decision"),
+            "error_code": response.error.get("error_code", "DECISION_FAILED"),
+        }
+
+        # Include validation warnings/issues that user was deciding about
+        if mcp_server.global_state.metadata.get("last_validation_result"):
+            validation_result = mcp_server.global_state.metadata["last_validation_result"]
+            error_detail["validation_summary"] = validation_result.get("summary", {})
+
+            # Include warning/info issues (not critical, since this is PASSED_WITH_ISSUES)
+            issues = validation_result.get("issues", [])
+            warning_issues = [
+                issue for issue in issues[:10]  # Top 10 warnings
+                if issue.get("severity") in ["WARNING", "BEST_PRACTICE", "INFO"]
+            ]
+            if warning_issues:
+                error_detail["warning_issues"] = warning_issues
+
+        # Add any additional error context
+        if "error_context" in response.error:
+            error_detail["context"] = response.error["error_context"]
+
         raise HTTPException(
             status_code=500,
-            detail=response.error.get("message", "Failed to process decision"),
+            detail=error_detail,
         )
 
     return {
@@ -719,9 +835,33 @@ async def retry_approval(request: RetryApprovalRequest):
     response = await mcp_server.send_message(retry_msg)
 
     if not response.success:
+        # BUG #12 FIX: Include validation issues and context in error response
+        error_detail = {
+            "message": response.error.get("message", "Retry decision failed"),
+            "error_code": response.error.get("error_code", "RETRY_FAILED"),
+        }
+
+        # Include validation issues from state if available
+        if mcp_server.global_state.metadata.get("last_validation_result"):
+            validation_result = mcp_server.global_state.metadata["last_validation_result"]
+            error_detail["validation_summary"] = validation_result.get("summary", {})
+
+            # Include top critical issues
+            issues = validation_result.get("issues", [])
+            critical_issues = [
+                issue for issue in issues[:5]  # Top 5 issues
+                if issue.get("severity") in ["CRITICAL", "ERROR"]
+            ]
+            if critical_issues:
+                error_detail["critical_issues"] = critical_issues
+
+        # Add any additional error context
+        if "error_context" in response.error:
+            error_detail["context"] = response.error["error_context"]
+
         raise HTTPException(
             status_code=400,
-            detail=response.error["message"],
+            detail=error_detail,
         )
 
     new_status_str = response.result.get("status", "unknown")
@@ -1347,8 +1487,9 @@ async def websocket_endpoint(websocket: WebSocket):
                 data=event.data,
             )
             await websocket.send_json(message.model_dump())
-        except Exception:
-            pass  # WebSocket may be closed
+        except Exception as e:
+            # WebSocket may be closed - log for debugging
+            logger.debug(f"Failed to send event to WebSocket (connection may be closed): {e}")
 
     mcp_server.subscribe_to_events(event_handler)
 
@@ -1361,7 +1502,12 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.send_json({"status": "received"})
 
     except WebSocketDisconnect:
-        pass
+        logger.info("WebSocket client disconnected")
+        # Clean up subscription
+        try:
+            mcp_server.unsubscribe_from_events(event_handler)
+        except Exception as e:
+            logger.debug(f"Error unsubscribing from events: {e}")
 
 
 if __name__ == "__main__":

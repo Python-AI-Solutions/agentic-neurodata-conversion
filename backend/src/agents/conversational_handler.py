@@ -377,12 +377,32 @@ Respond in JSON format as specified."""
             )
 
             confirmed = {}
-            for field in parsed_fields:
-                confirmed[field.field_name] = field.parsed_value
+
+            # CRITICAL FIX: If parsed_fields is empty (user just said "yes" without new data),
+            # retrieve the pending_parsed_fields that were stored earlier
+            if not parsed_fields and hasattr(state, 'pending_parsed_fields') and state.pending_parsed_fields:
                 state.add_log(
                     LogLevel.INFO,
-                    f"✓ Confirmed {field.field_name} = {field.parsed_value}",
+                    f"Retrieving {len(state.pending_parsed_fields)} pending fields from previous parse",
+                    {"fields": list(state.pending_parsed_fields.keys())}
                 )
+                confirmed = state.pending_parsed_fields.copy()
+                # Clear pending fields after confirmation
+                state.pending_parsed_fields = {}
+            else:
+                # Normal flow: parsed_fields has data
+                for field in parsed_fields:
+                    confirmed[field.field_name] = field.parsed_value
+                    state.add_log(
+                        LogLevel.INFO,
+                        f"✓ Confirmed {field.field_name} = {field.parsed_value}",
+                    )
+
+            state.add_log(
+                LogLevel.INFO,
+                f"User confirmed {len(confirmed)} metadata fields",
+                {"confirmed_fields": list(confirmed.keys())}
+            )
 
             return {
                 "type": "confirmed",
@@ -460,6 +480,20 @@ Respond in JSON format as specified."""
         state.add_log(
             LogLevel.DEBUG,
             f"Stored {len(parsed_fields)} pending parsed fields awaiting user confirmation (with provenance)",
+            {"fields": list(state.pending_parsed_fields.keys())}
+        )
+
+        # CRITICAL FIX: Store parsed fields in state so they can be retrieved when user confirms
+        # Convert ParsedField objects to dict format for storage
+        if not hasattr(state, 'pending_parsed_fields'):
+            state.pending_parsed_fields = {}
+
+        for field in parsed_fields:
+            state.pending_parsed_fields[field.field_name] = field.parsed_value
+
+        state.add_log(
+            LogLevel.DEBUG,
+            f"Stored {len(parsed_fields)} pending parsed fields awaiting user confirmation",
             {"fields": list(state.pending_parsed_fields.keys())}
         )
 
@@ -593,16 +627,28 @@ Respond in JSON format as specified."""
                 for msg in previous_messages[-5:]  # Last 5 messages for context
             ])
 
+        # Build context about already-provided metadata to help LLM understand state
+        already_provided = []
+        if state.user_provided_metadata:
+            already_provided.append("\n**Already provided by user in previous messages:**")
+            for field, value in state.user_provided_metadata.items():
+                already_provided.append(f"  - {field}: {value}")
+
+        already_provided_str = "\n".join(already_provided) if already_provided else ""
+
         user_prompt = f"""Previous conversation:
 {conversation_history}
 
 Missing metadata issues:
 {json.dumps(context.get('issues', []), indent=2)}
+{already_provided_str}
 
 User's response:
 {user_message}
 
-Please extract the metadata from the user's response and determine next steps."""
+Please extract the metadata from the user's response and determine next steps.
+IMPORTANT: If the user is confirming/accepting (saying "yes", "ok", "accept", "proceed"),
+and metadata was already provided in previous messages (shown above), set ready_to_proceed=true."""
 
         try:
             # Use generate_structured_output for JSON responses

@@ -1047,6 +1047,7 @@ Focus on the most critical issues first."""
         validation_result_data = message.context.get("validation_result")
         llm_analysis = message.context.get("llm_analysis")
         nwb_path = message.context.get("nwb_path")
+        final_accepted = message.context.get("final_accepted", False)  # BUG #4 FIX
 
         if not validation_result_data:
             return MCPResponse.error_response(
@@ -1059,14 +1060,25 @@ Focus on the most critical issues first."""
             # Determine report type based on validation status
             overall_status = validation_result_data.get('overall_status', 'UNKNOWN')
 
+            # BUG #4 FIX: If user accepted PASSED_WITH_ISSUES, treat as PASSED for final report generation
+            if final_accepted and overall_status == 'PASSED_WITH_ISSUES':
+                overall_status = 'PASSED'
+                state.add_log(
+                    LogLevel.INFO,
+                    "Generating final reports for PASSED_WITH_ISSUES after user acceptance (treating as PASSED)",
+                    {"original_status": "PASSED_WITH_ISSUES", "final_status": "PASSED"},
+                )
+
             if nwb_path:
                 nwb_path_obj = Path(nwb_path)
                 report_base = nwb_path_obj.stem
             else:
                 report_base = "evaluation_report"
 
-            if overall_status in ['PASSED', 'PASSED_WITH_ISSUES']:
-                # Generate both PDF and text reports
+            # BUG #4 FIX: Only generate final reports for clean PASSED
+            # For PASSED_WITH_ISSUES, wait for user decision before generating final reports
+            if overall_status == 'PASSED':
+                # Generate both PDF and text reports (clean pass)
                 output_dir = Path(state.output_path).parent if state.output_path else Path("outputs")
                 pdf_report_path = output_dir / f"{report_base}_evaluation_report.pdf"
                 text_report_path = output_dir / f"{report_base}_inspection_report.txt"
@@ -1172,6 +1184,39 @@ Focus on the most critical issues first."""
                     )
 
                     validation_result_data['file_info'] = file_info_with_provenance
+
+                # Build workflow trace
+                workflow_trace = self._build_workflow_trace(state)
+
+                # Generate preview JSON report (not final)
+                self._report_service.generate_json_report(
+                    preview_report_path,
+                    validation_result_data,
+                    llm_analysis,
+                    workflow_trace
+                )
+
+                state.add_log(
+                    LogLevel.INFO,
+                    f"Generated preview report for PASSED_WITH_ISSUES (final reports deferred until user accepts)",
+                    {"preview_report": str(preview_report_path), "status": overall_status},
+                )
+
+                return MCPResponse.success_response(
+                    reply_to=message.message_id,
+                    result={
+                        "report_path": str(preview_report_path),
+                        "report_type": "preview_json",
+                        "awaiting_user_decision": True,  # Flag to indicate final reports not yet generated
+                    },
+                )
+
+            elif overall_status == 'PASSED_WITH_ISSUES':
+                # BUG #4 FIX: For PASSED_WITH_ISSUES, don't generate final reports yet
+                # Wait for user decision (improve or accept) before generating final reports
+                # Generate a temporary JSON summary for user to review
+                output_dir = Path(state.output_path).parent if state.output_path else Path("outputs")
+                preview_report_path = output_dir / f"{report_base}_preview.json"
 
                 # Build workflow trace
                 workflow_trace = self._build_workflow_trace(state)

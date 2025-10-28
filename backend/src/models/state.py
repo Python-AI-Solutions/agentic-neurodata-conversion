@@ -274,6 +274,10 @@ class GlobalState(BaseModel):
         default=False,
         description="User has requested sequential (one-by-one) questions instead of batch"
     )
+    pending_parsed_fields: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Temporarily stores parsed metadata fields awaiting user confirmation"
+    )
 
     # Logs and history
     logs: List[LogEntry] = Field(default_factory=list)
