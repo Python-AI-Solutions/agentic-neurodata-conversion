@@ -2903,6 +2903,27 @@ Respond in JSON format."""
                 {"validation_status": "passed_accepted"},
             )
 
+            # BUG #4 FIX: Generate final PDF and text reports NOW that user has accepted
+            # Previously these were generated prematurely before user decision
+            eval_msg = MCPMessage(
+                target_agent="evaluation",
+                action="generate_report",
+                context={
+                    "validation_result": state.metadata.get("last_validation_result", {}),
+                    "nwb_path": state.output_path,
+                    "final_accepted": True,  # Flag to indicate this is post-acceptance
+                },
+            )
+
+            eval_response = await self._mcp_server.send_message(eval_msg)
+
+            if not eval_response.success:
+                state.add_log(
+                    LogLevel.WARNING,
+                    "Failed to generate final reports after acceptance",
+                    {"error": eval_response.error},
+                )
+
             # Set final validation status
             await state.update_validation_status(ValidationStatus.PASSED_ACCEPTED)
             await state.update_status(ConversionStatus.COMPLETED)
