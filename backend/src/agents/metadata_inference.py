@@ -186,12 +186,8 @@ class MetadataInferenceEngine:
                                 meta["channel_count"] = int(value)
                             elif key == "fileTimeSecs":
                                 meta["duration_seconds"] = float(value)
-            except Exception as e:
-                # Log metadata extraction failure but continue - this is non-critical
-                self._state.add_log(
-                    LogLevel.WARNING,
-                    f"Failed to extract SpikeGLX metadata from .meta file: {e}"
-                )
+            except Exception:
+                pass
 
         return meta
 
@@ -388,11 +384,10 @@ Return detailed JSON with your best inferences."""
         }
 
         # PERFORMANCE OPTIMIZATION: Check cache first before expensive LLM call
-        # BUG FIX: Use only available variables from method signature
         cache_context = {
-            "file_meta": file_meta,
-            "heuristic_inferences": heuristic_inferences,
-            "input_path": getattr(state, 'input_path', 'unknown')
+            "filename": filename,
+            "file_info": file_info,
+            "file_meta": file_meta
         }
 
         cache_key = "metadata_inference"
