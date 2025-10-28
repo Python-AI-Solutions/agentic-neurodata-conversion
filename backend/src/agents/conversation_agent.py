@@ -542,19 +542,20 @@ Please provide these details, or say "skip for now" to proceed with minimal meta
         # Users can skip any fields they don't want to provide
         # This ensures comprehensive metadata collection while respecting user choice
         if self._conversational_handler:
-            # Check for ALL 7 essential DANDI fields (session + subject metadata)
-            # These are recommended for DANDI archive compatibility
+            # Check for ALL 8 REQUIRED NWB/DANDI fields per nwb_dandi_schema.py
+            # These are REQUIRED for NWB compliance (not just recommended)
             required_fields = {
-                # Session-level metadata (critical for DANDI)
+                # Session-level metadata (REQUIRED by NWB spec)
                 "experimenter": metadata.get("experimenter"),
                 "institution": metadata.get("institution"),
-                "experiment_description": metadata.get("experiment_description") or metadata.get("session_description"),
+                "experiment_description": metadata.get("experiment_description"),
+                "session_description": metadata.get("session_description"),
+                "session_start_time": metadata.get("session_start_time"),
 
-                # Subject-level metadata (highly recommended for DANDI)
+                # Subject-level metadata (REQUIRED by NWB spec)
                 "subject_id": metadata.get("subject_id"),
                 "species": metadata.get("species"),
                 "sex": metadata.get("sex"),
-                "age": metadata.get("age"),
             }
 
             # Filter out fields the user already declined OR already provided/asked
@@ -563,10 +564,25 @@ Please provide these details, or say "skip for now" to proceed with minimal meta
             if not hasattr(state, 'already_asked_fields'):
                 state.already_asked_fields = set()
 
-            missing_fields = [
-                field for field, value in required_fields.items()
-                if not value and field not in state.user_declined_fields and field not in state.already_asked_fields
-            ]
+            # CRITICAL FIX: Check BOTH state.metadata AND user_provided_metadata for field presence
+            # After user provides metadata, it's stored in user_provided_metadata before being merged
+            # We should NOT re-ask for fields that exist in EITHER location
+            missing_fields = []
+            for field, value in required_fields.items():
+                # Skip if field has value in metadata
+                if value:
+                    continue
+                # Skip if field is in user_provided_metadata (just provided but not yet merged)
+                if field in state.user_provided_metadata and state.user_provided_metadata[field]:
+                    continue
+                # Skip if user declined this field
+                if field in state.user_declined_fields:
+                    continue
+                # Skip if we already asked for this field
+                if field in state.already_asked_fields:
+                    continue
+                # This field is truly missing - add to list
+                missing_fields.append(field)
 
             # WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Use centralized WorkflowStateManager
             # Replaces complex 4-condition check with single source of truth
@@ -852,10 +868,18 @@ Be warm, specific, and actionable. Keep it concise (2-3 sentences)."""
             Basic message explaining what's needed
         """
         field_descriptions = {
+            # Session-level metadata
+            "experimenter": "experimenter name(s) in DANDI format: 'LastName, FirstName'",
+            "institution": "institution where experiment was performed",
+            "experiment_description": "brief description of the experiment purpose and methods",
+            "session_description": "brief description of this specific recording session",
+            "session_start_time": "when the recording session started (ISO 8601 format: YYYY-MM-DDTHH:MM:SS±HH:MM)",
+
+            # Subject-level metadata
+            "subject_id": "unique identifier for the experimental subject",
+            "species": "species of the subject (use scientific name, e.g., 'Mus musculus' for mouse)",
             "sex": "subject's sex (M/F/U)",
             "subject.sex": "subject's sex in subject metadata (M/F/U)",
-            "session_start_time": "when the recording session started (ISO 8601 format)",
-            "session_description": "brief description of this recording session",
         }
 
         explanations = []

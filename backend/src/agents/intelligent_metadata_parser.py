@@ -369,13 +369,13 @@ Provide:
         parsed_fields: List[ParsedField],
     ) -> str:
         """
-        Generate user-friendly confirmation message showing parsed results.
+        Generate user-friendly confirmation message showing parsed results with provenance badges.
 
         Args:
             parsed_fields: List of parsed fields
 
         Returns:
-            Formatted confirmation message
+            Formatted confirmation message with HTML provenance badges
         """
         lines = ["I understood the following from your input:\n"]
 
@@ -388,9 +388,30 @@ Provide:
             else:
                 indicator = "❓"
 
-            # Format the field
+            # Determine provenance type based on confidence
+            if field.confidence >= 80:
+                provenance_type = "ai-parsed"
+                provenance_label = "AI"
+            elif field.confidence >= 50:
+                provenance_type = "ai-inferred"
+                provenance_label = "Inferred"
+            else:
+                provenance_type = "ai-inferred"
+                provenance_label = "Inferred"
+
+            # Create provenance badge HTML
+            needs_review = field.confidence < 80
+            needs_review_class = "needs-review" if needs_review else ""
+
+            # Escape quotes in source text for HTML attribute
+            source_escaped = field.reasoning.replace('"', '&quot;').replace("'", '&#39;') if field.reasoning else ""
+            raw_input_escaped = field.raw_input.replace('"', '&quot;').replace("'", '&#39;') if field.raw_input else ""
+
+            provenance_badge = f'''<span class="provenance-badge {provenance_type} {needs_review_class}" title="Source: {provenance_type} | Confidence: {field.confidence}% | From: {raw_input_escaped}">{provenance_label}<div class="provenance-tooltip"><div class="provenance-tooltip-header">{provenance_label} Metadata</div><div class="provenance-tooltip-item"><span class="provenance-tooltip-label">Source:</span>{provenance_type}</div><div class="provenance-tooltip-item"><span class="provenance-tooltip-label">Confidence:</span>{field.confidence}%</div><div class="provenance-tooltip-item"><span class="provenance-tooltip-label">Origin:</span>AI parsed from: '{raw_input_escaped[:100]}'</div>{f'<div class="provenance-tooltip-item" style="color: #fbbf24;">⚠️ Needs Review</div>' if needs_review else ''}</div></span>'''
+
+            # Format the field with provenance badge
             lines.append(
-                f"{indicator} **{field.field_name}** = {self._format_value(field.parsed_value)}"
+                f"{indicator} **{field.field_name}** = {self._format_value(field.parsed_value)} {provenance_badge}"
             )
 
             # Show original if different

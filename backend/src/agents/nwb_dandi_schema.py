@@ -600,15 +600,22 @@ Set `ready_to_proceed: true` when ANY of these conditions are met:
    (shows readiness to proceed with available data)
 4. **User provides metadata AND expresses readiness**: "here's the info, let's go" or
    "Dr. Smith MIT, ready to proceed"
+5. **User confirms with positive affirmation**: "yes", "ok", "correct", "accept", "proceed", "go ahead", "looks good"
+   EVEN if the current message contains no new metadata - the confirmation indicates they've already provided info
 
-Set `ready_to_proceed: false` when:
-- **User expresses readiness WITHOUT providing metadata**: "I am ready", "let's start", "proceed"
-  (Respond: "Great! To proceed, I need some metadata. Could you provide: experimenter name, institution...")
-- User is still providing metadata incrementally AND critical required fields are missing
-- User asks clarifying questions: "what do you need?", "which fields?"
+Set `ready_to_proceed: false` ONLY when:
+- User asks clarifying questions: "what do you need?", "which fields?", "what does that mean?"
+- User explicitly wants to edit: "let me change that", "wait, that's wrong", "I need to fix something"
+- User explicitly declines: "skip", "don't have that", "I'll do this later"
 
-**IMPORTANT**: If user says "ready" or "start" but provides NO actual metadata in their message,
-set ready_to_proceed=false and ask for the specific missing fields. Don't proceed without data!
+**CRITICAL USER INTENT UNDERSTANDING**:
+- If user says "yes", "ok", "correct", "proceed", "accept", "looks good" etc. → set ready_to_proceed=TRUE
+- These affirmations mean "I'm satisfied with what I've already provided, let's continue"
+- DO NOT interpret confirmation as "user hasn't provided data yet"
+- The confirmation IS the signal to proceed, even if no NEW metadata is in the current message
+
+**IMPORTANT**: If user says "ready" or "start" but provides NO actual metadata AND this is the FIRST interaction,
+then ask for metadata. But if they're responding to a confirmation request, assume they've already provided data earlier.
 
 Extract as much as possible from the user's message!
 """
