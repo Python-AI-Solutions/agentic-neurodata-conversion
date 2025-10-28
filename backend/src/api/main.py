@@ -447,6 +447,9 @@ async def upload_file(
         mcp_server.global_state.validation_status = None  # Bug #17: Reset validation status
         mcp_server.global_state.overall_status = None  # Bug #9: Reset overall_status
         mcp_server.global_state.conversation_history = []  # Clear old conversations
+        # Reset custom metadata flag to ensure proper workflow
+        if '_custom_metadata_prompted' in mcp_server.global_state.metadata:
+            del mcp_server.global_state.metadata['_custom_metadata_prompted']
     else:
         # Preserve conversation state but update file paths
         mcp_server.global_state.add_log(

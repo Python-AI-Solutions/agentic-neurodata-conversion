@@ -143,6 +143,30 @@ class ReportService:
                 return f"{iso_age} ({readable})"
         return iso_age
 
+    def _format_with_provenance(self, value: str, provenance: str, source_file: str = None) -> str:
+        """Format a value with its provenance badge for display in reports."""
+        # Complete 6-tag provenance system with emoji badges
+        provenance_badges = {
+            'user-specified': '👤',    # User directly provided
+            'file-extracted': '📄',    # From source file
+            'ai-parsed': '🧠',         # AI parsed from unstructured text
+            'ai-inferred': '🤖',       # AI inferred from context
+            'schema-default': '📋',    # NWB schema default
+            'system-default': '⚪',    # System fallback
+            # Legacy mappings for backwards compatibility
+            'user-provided': '👤',
+            'default': '⚪',
+        }
+
+        badge = provenance_badges.get(provenance, '')
+        if badge:
+            result = f"{value} {badge}"
+            # Add source file for file-extracted provenance
+            if provenance == 'file-extracted' and source_file:
+                result += f" (from: {source_file})"
+            return result
+        return value
+
     def generate_pdf_report(
         self,
         output_path: Path,
@@ -193,20 +217,34 @@ class ReportService:
 
         # File information section
         file_info = validation_result.get('file_info', {})
+        provenance = file_info.get('_provenance', {})
+        source_files = file_info.get('_source_files', {})
+
         story.append(Paragraph("File Information", self.styles['SectionHeading']))
+
+        # Helper to get value with provenance badge and source file
+        def get_with_prov(field_name, value):
+            if field_name in provenance:
+                source_file = source_files.get(field_name)
+                return self._format_with_provenance(value, provenance[field_name], source_file)
+            return value
 
         # Format experimenter list
         experimenters = file_info.get('experimenter', [])
         experimenter_str = ', '.join(experimenters) if experimenters else 'N/A'
+        experimenter_str = get_with_prov('experimenter', experimenter_str)
 
         # Format species with common name
         species_str = self._format_species(file_info.get('species', 'N/A'))
+        species_str = get_with_prov('species', species_str)
 
         # Format sex
         sex_str = self._format_sex(file_info.get('sex', 'N/A'))
+        sex_str = get_with_prov('sex', sex_str)
 
         # Format age
         age_str = self._format_age(file_info.get('age', 'N/A'))
+        age_str = get_with_prov('age', age_str)
 
         file_data = [
             # File-level metadata
@@ -214,22 +252,36 @@ class ReportService:
             ['File Size:', self._format_filesize(file_info.get('file_size_bytes', 0))],
             ['Creation Date:', file_info.get('creation_date', 'N/A')],
             ['Identifier:', file_info.get('identifier', 'Unknown')],
-            ['Session Description:', file_info.get('session_description', 'N/A')],
+            ['Session Description:', get_with_prov('session_description', file_info.get('session_description', 'N/A'))],
             ['Session Start Time:', file_info.get('session_start_time', 'N/A')],
             ['', ''],  # Spacer row
             # Experimenter and institution info
             ['Experimenter:', experimenter_str],
-            ['Institution:', file_info.get('institution', 'N/A')],
-            ['Lab:', file_info.get('lab', 'N/A')],
+            ['Institution:', get_with_prov('institution', file_info.get('institution', 'N/A'))],
+            ['Lab:', get_with_prov('lab', file_info.get('lab', 'N/A'))],
             ['', ''],  # Spacer row
             # Subject metadata
-            ['Subject ID:', file_info.get('subject_id', 'N/A')],
+            ['Subject ID:', get_with_prov('subject_id', file_info.get('subject_id', 'N/A'))],
             ['Species:', species_str],
             ['Sex:', sex_str],
             ['Age:', age_str],
-            ['Date of Birth:', file_info.get('date_of_birth', 'N/A')],
-            ['Description:', file_info.get('description', 'N/A')[:100] + ('...' if len(file_info.get('description', 'N/A')) > 100 else '')],  # Truncate long descriptions
+            ['Date of Birth:', get_with_prov('date_of_birth', file_info.get('date_of_birth', 'N/A'))],
+            ['Description:', get_with_prov('description', file_info.get('description', 'N/A')[:100] + ('...' if len(file_info.get('description', 'N/A')) > 100 else ''))],
         ]
+
+        # Add provenance legend after the table with complete 6-tag system
+        if provenance:
+            story.append(Spacer(1, 0.2 * inch))
+            legend_text = (
+                "<b>Metadata Provenance:</b> "
+                "👤 User-specified | "
+                "📄 File-extracted | "
+                "🧠 AI-parsed | "
+                "🤖 AI-inferred | "
+                "📋 Schema-default | "
+                "⚪ System-default"
+            )
+            story.append(Paragraph(legend_text, self.styles['Normal']))
 
         file_table = Table(file_data, colWidths=[2 * inch, 4 * inch])
         file_table.setStyle(TableStyle([
@@ -246,29 +298,204 @@ class ReportService:
         story.append(file_table)
         story.append(Spacer(1, 0.3 * inch))
 
-        # Validation results section
+        # Add custom metadata section if present
+        custom_fields = file_info.get('_custom_fields', {})
+        if custom_fields:
+            story.append(Paragraph("Custom Metadata Fields", self.styles['SectionHeading']))
+
+            custom_data = []
+            for field_name, field_value in custom_fields.items():
+                # Format field name nicely
+                display_name = field_name.replace('_', ' ').title()
+
+                # Truncate long values
+                display_value = str(field_value)
+                if len(display_value) > 100:
+                    display_value = display_value[:97] + '...'
+
+                # Add provenance if available (custom fields are user-custom by default)
+                display_value = self._format_with_provenance(display_value, 'user-custom', None)
+
+                custom_data.append([f"{display_name}:", display_value])
+
+            # Add note about custom fields
+            custom_data.append(['', ''])  # Spacer row
+            custom_data.append(['Note:', 'These are user-defined custom metadata fields'])
+
+            custom_table = Table(custom_data, colWidths=[2 * inch, 4 * inch])
+            custom_table.setStyle(TableStyle([
+                ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+                ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ('TEXTCOLOR', (0, 0), (0, -1), HexColor('#0066cc')),  # Blue for custom fields
+                ('TEXTCOLOR', (1, 0), (1, -1), HexColor('#666666')),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                ('FONTNAME', (0, -1), (0, -1), 'Helvetica-Oblique'),  # Italic for note
+                ('FONTSIZE', (0, -1), (-1, -1), 9),
+            ]))
+            story.append(custom_table)
+            story.append(Spacer(1, 0.3 * inch))
+
+        # Validation results section with enhanced display
         story.append(Paragraph("Validation Results", self.styles['SectionHeading']))
 
         issue_counts = validation_result.get('issue_counts', {})
+
+        # Add total count and status indicators
+        total_issues = sum(issue_counts.values())
+
         validation_data = [
-            ['Issue Severity', 'Count'],
-            ['CRITICAL', str(issue_counts.get('CRITICAL', 0))],
-            ['ERROR', str(issue_counts.get('ERROR', 0))],
-            ['WARNING', str(issue_counts.get('WARNING', 0))],
-            ['BEST_PRACTICE', str(issue_counts.get('BEST_PRACTICE', 0))],
+            ['Issue Severity', 'Count', 'Status'],
+            ['🔴 CRITICAL', str(issue_counts.get('CRITICAL', 0)), '✅' if issue_counts.get('CRITICAL', 0) == 0 else '⚠️'],
+            ['🟠 ERROR', str(issue_counts.get('ERROR', 0)), '✅' if issue_counts.get('ERROR', 0) == 0 else '⚠️'],
+            ['🟡 WARNING', str(issue_counts.get('WARNING', 0)), '✅' if issue_counts.get('WARNING', 0) == 0 else '⚠️'],
+            ['ℹ️ INFO', str(issue_counts.get('INFO', 0)), '-'],
+            ['💡 BEST_PRACTICE', str(issue_counts.get('BEST_PRACTICE', 0)), '-'],
+            ['', '', ''],  # Separator row
+            ['TOTAL', str(total_issues), '✅' if total_issues == 0 else '-'],
         ]
 
-        validation_table = Table(validation_data, colWidths=[3 * inch, 1.5 * inch])
+        validation_table = Table(validation_data, colWidths=[2.5 * inch, 1.5 * inch, 1 * inch])
         validation_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), HexColor('#f3f4f6')),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
             ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('ALIGN', (1, 0), (1, -1), 'CENTER'),
+            ('ALIGN', (1, 0), (2, -1), 'CENTER'),
             ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#e5e7eb')),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [HexColor('#ffffff'), HexColor('#f9fafb')]),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -2), [HexColor('#ffffff'), HexColor('#f9fafb')]),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('BACKGROUND', (0, -1), (-1, -1), HexColor('#e5e7eb')),
         ]))
         story.append(validation_table)
+        story.append(Spacer(1, 0.3 * inch))
+
+        # Data Quality Metrics Section (NEW)
+        story.append(Paragraph("Data Quality Metrics", self.styles['SectionHeading']))
+
+        # Calculate quality metrics
+        file_info = validation_result.get('file_info', {})
+
+        # Metadata completeness score
+        metadata_fields = ['experimenter', 'institution', 'lab', 'session_description',
+                         'subject_id', 'species', 'sex', 'age']
+        filled_fields = sum(1 for field in metadata_fields
+                          if file_info.get(field) and file_info.get(field) not in ['N/A', 'Unknown', ''])
+        metadata_completeness = (filled_fields / len(metadata_fields)) * 100
+
+        # Compliance scores
+        nwb_compliance = 100 if issue_counts.get('CRITICAL', 0) == 0 and issue_counts.get('ERROR', 0) == 0 else 80
+        if issue_counts.get('WARNING', 0) > 0:
+            nwb_compliance -= 5
+
+        dandi_ready = nwb_compliance >= 95 and metadata_completeness >= 80
+        best_practices_score = max(0, 100 - (issue_counts.get('BEST_PRACTICE', 0) * 10))
+
+        quality_data = [
+            ['Metric', 'Value', 'Rating'],
+            ['', '', ''],  # Header separator
+            ['📊 Metadata Completeness', f'{metadata_completeness:.0f}%',
+             '✅ Excellent' if metadata_completeness >= 90 else '⚠️ Good' if metadata_completeness >= 70 else '❌ Needs Improvement'],
+            ['📈 NWB Standard Compliance', f'{nwb_compliance}/100',
+             '✅ Compliant' if nwb_compliance >= 95 else '⚠️ Mostly Compliant' if nwb_compliance >= 80 else '❌ Non-Compliant'],
+            ['🗄️ DANDI Archive Ready', 'Yes' if dandi_ready else 'No',
+             '✅' if dandi_ready else '❌'],
+            ['💡 Best Practices Score', f'{best_practices_score}/100',
+             '✅ Excellent' if best_practices_score >= 90 else '⚠️ Good' if best_practices_score >= 70 else '❌ Needs Improvement'],
+            ['', '', ''],  # Separator
+            ['📁 File Size', self._format_filesize(file_info.get('file_size_bytes', 0)), '-'],
+            ['🔢 Data Completeness', '100%', '✅'],
+        ]
+
+        quality_table = Table(quality_data, colWidths=[2.5 * inch, 1.5 * inch, 2 * inch])
+        quality_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), HexColor('#e0f2fe')),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('ALIGN', (1, 0), (2, -1), 'CENTER'),
+            ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#cbd5e1')),
+            ('ROWBACKGROUNDS', (0, 2), (-1, -1), [HexColor('#ffffff'), HexColor('#f0f9ff')]),
+        ]))
+        story.append(quality_table)
+        story.append(Spacer(1, 0.3 * inch))
+
+        # Recommendations Section (NEW)
+        story.append(Paragraph("Recommendations", self.styles['SectionHeading']))
+
+        # Generate recommendations based on issues and quality metrics
+        recommendations = []
+
+        # Based on metadata completeness
+        if metadata_completeness < 70:
+            recommendations.append({
+                'priority': '🔴 High',
+                'action': 'Complete Missing Metadata',
+                'details': 'Add experimenter, institution, and subject information for better documentation.'
+            })
+
+        # Based on validation issues
+        if issue_counts.get('CRITICAL', 0) > 0 or issue_counts.get('ERROR', 0) > 0:
+            recommendations.append({
+                'priority': '🔴 High',
+                'action': 'Fix Critical/Error Issues',
+                'details': 'Resolve validation errors before sharing or archiving the file.'
+            })
+
+        if issue_counts.get('WARNING', 0) > 0:
+            recommendations.append({
+                'priority': '🟡 Medium',
+                'action': 'Address Warning Issues',
+                'details': 'Review warnings to improve data quality and compatibility.'
+            })
+
+        if issue_counts.get('INFO', 0) > 0:
+            recommendations.append({
+                'priority': '🔵 Low',
+                'action': 'Review Informational Issues',
+                'details': 'Consider addressing INFO-level issues for best practices compliance.'
+            })
+
+        # Based on DANDI readiness
+        if not dandi_ready:
+            recommendations.append({
+                'priority': '🟡 Medium',
+                'action': 'Prepare for DANDI Archive',
+                'details': 'Complete metadata and fix validation issues to meet DANDI requirements.'
+            })
+
+        # If no issues, provide positive feedback
+        if not recommendations:
+            recommendations.append({
+                'priority': '✅ None',
+                'action': 'Your file is excellent!',
+                'details': 'The NWB file passes all checks and is ready for use and sharing.'
+            })
+
+        # Create recommendations table
+        rec_data = [['Priority', 'Action', 'Details']]
+        for rec in recommendations[:5]:  # Limit to top 5 recommendations
+            rec_data.append([
+                rec['priority'],
+                rec['action'],
+                rec['details'][:60] + ('...' if len(rec['details']) > 60 else '')
+            ])
+
+        rec_table = Table(rec_data, colWidths=[1.2 * inch, 2 * inch, 2.8 * inch])
+        rec_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), HexColor('#fef3c7')),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+            ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#fbbf24')),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [HexColor('#fffbeb'), HexColor('#fef3c7')]),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        story.append(rec_table)
         story.append(Spacer(1, 0.3 * inch))
 
         # Issues detail (if any)
