@@ -71,8 +71,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # 3. Initialize AgentRegistry
     agent_registry = AgentRegistry()
 
-    # 4. Initialize MessageRouter
-    message_router = MessageRouter(agent_registry=agent_registry)
+    # 4. Initialize MessageRouter with 5-minute timeout for long LLM calls
+    message_router = MessageRouter(agent_registry=agent_registry, timeout=300)
 
     # 5. Store in app.state for dependency injection
     app.state.context_manager = context_manager
