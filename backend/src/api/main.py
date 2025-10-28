@@ -718,9 +718,19 @@ async def start_conversion():
     response = await mcp_server.send_message(start_msg)
 
     if not response.success:
+        # BUG #12 FIX: Include validation/error context in response
+        error_detail = {
+            "message": response.error.get("message", "Failed to start conversion"),
+            "error_code": response.error.get("error_code", "UNKNOWN_ERROR"),
+        }
+
+        # Add validation context if available
+        if "error_context" in response.error:
+            error_detail["context"] = response.error["error_context"]
+
         raise HTTPException(
             status_code=500,
-            detail=response.error.get("message", "Failed to start conversion"),
+            detail=error_detail,
         )
 
     return {
@@ -762,9 +772,33 @@ async def improvement_decision(decision: str = Form(...)):
     response = await mcp_server.send_message(improvement_msg)
 
     if not response.success:
+        # BUG #12 FIX: Include validation issues in error response for PASSED_WITH_ISSUES decisions
+        error_detail = {
+            "message": response.error.get("message", "Failed to process decision"),
+            "error_code": response.error.get("error_code", "DECISION_FAILED"),
+        }
+
+        # Include validation warnings/issues that user was deciding about
+        if mcp_server.global_state.metadata.get("last_validation_result"):
+            validation_result = mcp_server.global_state.metadata["last_validation_result"]
+            error_detail["validation_summary"] = validation_result.get("summary", {})
+
+            # Include warning/info issues (not critical, since this is PASSED_WITH_ISSUES)
+            issues = validation_result.get("issues", [])
+            warning_issues = [
+                issue for issue in issues[:10]  # Top 10 warnings
+                if issue.get("severity") in ["WARNING", "BEST_PRACTICE", "INFO"]
+            ]
+            if warning_issues:
+                error_detail["warning_issues"] = warning_issues
+
+        # Add any additional error context
+        if "error_context" in response.error:
+            error_detail["context"] = response.error["error_context"]
+
         raise HTTPException(
             status_code=500,
-            detail=response.error.get("message", "Failed to process decision"),
+            detail=error_detail,
         )
 
     return {
@@ -796,9 +830,33 @@ async def retry_approval(request: RetryApprovalRequest):
     response = await mcp_server.send_message(retry_msg)
 
     if not response.success:
+        # BUG #12 FIX: Include validation issues and context in error response
+        error_detail = {
+            "message": response.error.get("message", "Retry decision failed"),
+            "error_code": response.error.get("error_code", "RETRY_FAILED"),
+        }
+
+        # Include validation issues from state if available
+        if mcp_server.global_state.metadata.get("last_validation_result"):
+            validation_result = mcp_server.global_state.metadata["last_validation_result"]
+            error_detail["validation_summary"] = validation_result.get("summary", {})
+
+            # Include top critical issues
+            issues = validation_result.get("issues", [])
+            critical_issues = [
+                issue for issue in issues[:5]  # Top 5 issues
+                if issue.get("severity") in ["CRITICAL", "ERROR"]
+            ]
+            if critical_issues:
+                error_detail["critical_issues"] = critical_issues
+
+        # Add any additional error context
+        if "error_context" in response.error:
+            error_detail["context"] = response.error["error_context"]
+
         raise HTTPException(
             status_code=400,
-            detail=response.error["message"],
+            detail=error_detail,
         )
 
     new_status_str = response.result.get("status", "unknown")
