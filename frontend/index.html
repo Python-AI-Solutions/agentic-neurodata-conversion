@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NWB Conversion Pipeline - Chat Interface</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>🧠 Multi-Agent NWB Conversion Pipeline</h1>
+                <div class="status-indicator">
+                    <div class="status-dot" id="statusDot"></div>
+                    <span id="statusText">Connecting...</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="sidebar-section">
+                    <h3>System Status</h3>
+                    <div class="stat-item">
+                        <span class="stat-label">MCP Server:</span>
+                        <span class="stat-value" id="mcpStatus">-</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Redis:</span>
+                        <span class="stat-value" id="redisStatus">-</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Agents:</span>
+                        <span class="stat-value" id="agentsStatus">-</span>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3>Active Sessions</h3>
+                    <div id="sessionsList" class="sessions-list">
+                        <p class="empty-state">No active sessions</p>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3>Quick Actions</h3>
+                    <button class="btn btn-secondary" onclick="checkHealth()">
+                        🔍 Check Health
+                    </button>
+                    <button class="btn btn-secondary" onclick="refreshSessions()">
+                        🔄 Refresh Sessions
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Chat Area -->
+            <main class="chat-container">
+                <div class="chat-header">
+                    <h2>Conversation</h2>
+                    <p class="chat-subtitle">Interact with the NWB conversion pipeline</p>
+                </div>
+
+                <div class="chat-messages" id="chatMessages">
+                    <div class="welcome-message">
+                        <h3>👋 Welcome to the NWB Conversion Pipeline!</h3>
+                        <p>I can help you convert neuroscience datasets to NWB format.</p>
+                        <div class="quick-starts">
+                            <p><strong>Try these commands:</strong></p>
+                            <ul>
+                                <li><code>start conversion ./tests/data/synthetic_openephys</code> - Start a conversion</li>
+                                <li><code>check status &lt;session-id&gt;</code> - Check session status</li>
+                                <li><code>list sessions</code> - View all sessions</li>
+                                <li><code>help</code> - Show all commands</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-input-container">
+                    <div class="input-wrapper">
+                        <input
+                            type="text"
+                            id="chatInput"
+                            class="chat-input"
+                            placeholder="Type a command or message..."
+                            autocomplete="off"
+                        >
+                        <button class="send-button" id="sendButton" onclick="sendMessage()">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M2 10L18 2L10 18L8 11L2 10Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="input-hint">
+                        Press Enter to send • Type <code>help</code> for commands
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

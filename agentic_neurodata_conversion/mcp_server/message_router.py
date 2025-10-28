@@ -57,9 +57,12 @@ class MessageRouter:
         """
         self.agent_registry = agent_registry
         self.timeout = timeout
-        # Use httpx.Timeout for proper timeout configuration
-        self.http_client = httpx.AsyncClient(timeout=httpx.Timeout(timeout, connect=10.0))
-        logger.info(f"MessageRouter initialized with timeout={timeout}s")
+        # Use httpx.Timeout with explicit read/write/connect parameters
+        # read=timeout allows long LLM API calls, connect=10.0 for fast connection detection
+        self.http_client = httpx.AsyncClient(
+            timeout=httpx.Timeout(read=timeout, write=timeout, connect=10.0, pool=10.0)
+        )
+        logger.info(f"MessageRouter initialized with timeout={timeout}s (read/write={timeout}s, connect/pool=10.0s)")
 
     async def send_message(
         self,
