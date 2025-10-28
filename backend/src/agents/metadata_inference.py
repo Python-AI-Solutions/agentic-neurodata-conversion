@@ -384,10 +384,11 @@ Return detailed JSON with your best inferences."""
         }
 
         # PERFORMANCE OPTIMIZATION: Check cache first before expensive LLM call
+        # BUG FIX: Use only available variables from method signature
         cache_context = {
-            "filename": filename,
-            "file_info": file_info,
-            "file_meta": file_meta
+            "file_meta": file_meta,
+            "heuristic_inferences": heuristic_inferences,
+            "input_path": getattr(state, 'input_path', 'unknown')
         }
 
         cache_key = "metadata_inference"
