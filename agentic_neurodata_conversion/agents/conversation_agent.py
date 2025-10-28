@@ -1,7 +1,9 @@
 """ConversationAgent implementation for Phase 4."""
 
 import json
+import logging
 from pathlib import Path
+import time
 from typing import Any, Optional
 
 from agentic_neurodata_conversion.agents.base_agent import BaseAgent
@@ -11,6 +13,8 @@ from agentic_neurodata_conversion.models.session_context import (
     MetadataExtractionResult,
     WorkflowStage,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class ConversationAgent(BaseAgent):
@@ -175,7 +179,10 @@ Return ONLY the JSON object:"""
         system_message = "You are a metadata extraction assistant. Return ONLY valid JSON with no additional formatting or text."
 
         # Call LLM
+        logger.info(f"[conversation_agent] Calling LLM for metadata extraction (prompt length: {len(prompt)} chars)...")
+        start_time = time.time()
         llm_response = await self.call_llm(prompt, system_message)
+        logger.info(f"[conversation_agent] LLM call completed in {time.time() - start_time:.2f}s (response length: {len(llm_response)} chars)")
 
         # Try to parse JSON response
         try:
@@ -241,12 +248,19 @@ Return ONLY the JSON object:"""
         Returns:
             Result dictionary with status and extracted information
         """
+        logger.info(f"[conversation_agent] Starting _initialize_session for session_id={session_id}, dataset_path={dataset_path}")
         try:
             # 1. Get session context
+            logger.info(f"[conversation_agent] Fetching session context for {session_id}...")
+            start_time = time.time()
             await self.get_session_context(session_id)
+            logger.info(f"[conversation_agent] Session context fetched in {time.time() - start_time:.2f}s")
 
             # 2. Detect format
+            logger.info(f"[conversation_agent] Detecting dataset format...")
+            start_time = time.time()
             detected_format = self._detect_format(dataset_path)
+            logger.info(f"[conversation_agent] Format detected as '{detected_format}' in {time.time() - start_time:.2f}s")
 
             # Check if format is supported
             if detected_format == "unknown":
@@ -257,14 +271,22 @@ Return ONLY the JSON object:"""
                 }
 
             # 3. Validate structure
+            logger.info(f"[conversation_agent] Validating OpenEphys structure...")
+            start_time = time.time()
             dataset_info = self._validate_openephys_structure(dataset_path)
+            logger.info(f"[conversation_agent] Structure validated in {time.time() - start_time:.2f}s")
 
             # 4. Extract metadata
+            logger.info(f"[conversation_agent] Extracting metadata from {len(dataset_info.metadata_files)} .md files...")
+            start_time = time.time()
             metadata_result = await self._extract_metadata_from_md_files(
                 dataset_path, dataset_info.metadata_files
             )
+            logger.info(f"[conversation_agent] Metadata extraction completed in {time.time() - start_time:.2f}s")
 
             # 5. Update session context
+            logger.info(f"[conversation_agent] Updating session context...")
+            start_time = time.time()
             updates = {
                 "workflow_stage": WorkflowStage.COLLECTING_METADATA,
                 "dataset_info": dataset_info.model_dump(),
@@ -272,6 +294,7 @@ Return ONLY the JSON object:"""
                 "current_agent": self.agent_name,
             }
             await self.update_session_context(session_id, updates)
+            logger.info(f"[conversation_agent] Session context updated in {time.time() - start_time:.2f}s")
 
             # 6. Trigger conversion agent
             await self.http_client.post(

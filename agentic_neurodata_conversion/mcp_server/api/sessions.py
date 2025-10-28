@@ -10,7 +10,9 @@ This module provides endpoints for:
 All endpoints follow REST conventions and provide proper error handling.
 """
 
+import logging
 from pathlib import Path
+import time
 from typing import Any
 import uuid
 
@@ -28,6 +30,7 @@ from agentic_neurodata_conversion.models import (
     WorkflowStage,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["sessions"])
 
 
@@ -133,21 +136,30 @@ async def initialize_session(
     message_router = req.app.state.message_router
 
     # 1. Validate dataset path
+    logger.info(f"[initialize_session] Validating dataset path: {request_body.dataset_path}")
+    start_time = time.time()
     dataset_path = _validate_dataset_path(request_body.dataset_path)
+    logger.info(f"[initialize_session] Dataset path validated in {time.time() - start_time:.2f}s")
 
     # 2. Generate unique session ID
     session_id = str(uuid.uuid4())
+    logger.info(f"[initialize_session] Generated session_id: {session_id}")
 
     # 3. Collect dataset information
+    logger.info(f"[initialize_session] Collecting dataset information...")
+    start_time = time.time()
     try:
         dataset_info = _collect_dataset_info(dataset_path)
+        logger.info(f"[initialize_session] Dataset info collected in {time.time() - start_time:.2f}s")
     except Exception as e:
+        logger.error(f"[initialize_session] Failed to collect dataset info: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to collect dataset information: {str(e)}",
         ) from e
 
     # 4. Create session context
+    logger.info(f"[initialize_session] Creating session context...")
     session_context = SessionContext(
         session_id=session_id,
         workflow_stage=WorkflowStage.INITIALIZED,
@@ -155,23 +167,32 @@ async def initialize_session(
     )
 
     # 5. Save to context manager
+    logger.info(f"[initialize_session] Saving session context to Redis...")
+    start_time = time.time()
     try:
         await context_manager.create_session(session_context)
+        logger.info(f"[initialize_session] Session context saved in {time.time() - start_time:.2f}s")
     except Exception as e:
+        logger.error(f"[initialize_session] Failed to save session context: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to create session context: {str(e)}",
         ) from e
 
     # 6. Verify conversation agent is registered
+    logger.info(f"[initialize_session] Verifying conversation_agent is registered...")
     conversation_agent = agent_registry.get_agent("conversation_agent")
     if conversation_agent is None:
+        logger.error(f"[initialize_session] conversation_agent not registered!")
         raise HTTPException(
             status_code=500,
             detail="conversation_agent is not registered in the system",
         )
+    logger.info(f"[initialize_session] conversation_agent found: {conversation_agent}")
 
     # 7. Send message to conversation agent
+    logger.info(f"[initialize_session] Sending initialize_session task to conversation_agent...")
+    start_time = time.time()
     try:
         await message_router.execute_agent_task(
             target_agent="conversation_agent",
@@ -179,13 +200,20 @@ async def initialize_session(
             session_id=session_id,
             parameters={"dataset_path": str(dataset_path.absolute())},
         )
+        elapsed = time.time() - start_time
+        logger.info(f"[initialize_session] conversation_agent task completed in {elapsed:.2f}s")
     except Exception as e:
+        elapsed = time.time() - start_time
+        # Better error logging - include exception type and repr if str is empty
+        error_msg = str(e) if str(e) else f"{type(e).__name__}: {repr(e)}"
+        logger.error(f"[initialize_session] Failed to send message after {elapsed:.2f}s: {error_msg}")
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to send message to conversation agent: {str(e)}",
+            detail=f"Failed to send message to conversation agent: {error_msg}",
         ) from e
 
     # 8. Return response
+    logger.info(f"[initialize_session] Session {session_id} initialized successfully")
     return SessionInitializeResponse(
         session_id=session_id,
         workflow_stage=WorkflowStage.INITIALIZED,

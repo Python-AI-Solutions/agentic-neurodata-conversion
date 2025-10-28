@@ -9,6 +9,8 @@ Critical path component requiring ≥90% test coverage.
 """
 
 from datetime import datetime
+import logging
+import time
 from typing import Any, cast
 import uuid
 
@@ -16,6 +18,8 @@ import httpx
 
 from agentic_neurodata_conversion.mcp_server.agent_registry import AgentRegistry
 from agentic_neurodata_conversion.models.mcp_message import MCPMessage, MessageType
+
+logger = logging.getLogger(__name__)
 
 
 class MessageRouter:
@@ -53,7 +57,9 @@ class MessageRouter:
         """
         self.agent_registry = agent_registry
         self.timeout = timeout
-        self.http_client = httpx.AsyncClient(timeout=timeout)
+        # Use httpx.Timeout for proper timeout configuration
+        self.http_client = httpx.AsyncClient(timeout=httpx.Timeout(timeout, connect=10.0))
+        logger.info(f"MessageRouter initialized with timeout={timeout}s")
 
     async def send_message(
         self,
@@ -103,10 +109,20 @@ class MessageRouter:
 
         # 4. Send HTTP POST to agent endpoint
         url = f"{agent_info['base_url']}/mcp/message"
-        response = await self.http_client.post(
-            url,
-            json=message.model_dump(mode="json"),
-        )
+        logger.info(f"Sending {message_type.value} to {target_agent} at {url}, timeout={self.timeout}s, session_id={session_id}")
+        start_time = time.time()
+
+        try:
+            response = await self.http_client.post(
+                url,
+                json=message.model_dump(mode="json"),
+            )
+            elapsed = time.time() - start_time
+            logger.info(f"Received response from {target_agent} in {elapsed:.2f}s, status={response.status_code}")
+        except Exception as e:
+            elapsed = time.time() - start_time
+            logger.error(f"Failed to send message to {target_agent} after {elapsed:.2f}s: {type(e).__name__}: {e}")
+            raise
 
         # 5. Raise exception for HTTP errors (4xx, 5xx)
         response.raise_for_status()

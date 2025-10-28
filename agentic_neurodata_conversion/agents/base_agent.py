@@ -2,6 +2,8 @@
 
 from abc import ABC, abstractmethod
 import asyncio
+import logging
+import time
 from typing import Any, Optional
 
 from anthropic import APIError as AnthropicAPIError
@@ -17,6 +19,8 @@ from openai import RateLimitError as OpenAIRateLimitError
 from agentic_neurodata_conversion.config import AgentConfig
 from agentic_neurodata_conversion.models.mcp_message import MCPMessage
 from agentic_neurodata_conversion.models.session_context import SessionContext
+
+logger = logging.getLogger(__name__)
 
 
 class BaseAgent(ABC):
@@ -172,6 +176,8 @@ class BaseAgent(ABC):
         for attempt in range(max_retries):
             try:
                 if self.config.llm_provider == "anthropic":
+                    logger.info(f"[{self.agent_name}] Calling Anthropic LLM (attempt {attempt + 1}/{max_retries})...")
+                    call_start = time.time()
                     # Wrap with asyncio.wait_for for absolute timeout (3 minutes)
                     response = await asyncio.wait_for(
                         self.llm_client.messages.create(
@@ -183,10 +189,14 @@ class BaseAgent(ABC):
                         ),
                         timeout=180.0
                     )
+                    call_elapsed = time.time() - call_start
                     text: str = response.content[0].text
+                    logger.info(f"[{self.agent_name}] Anthropic LLM call successful in {call_elapsed:.2f}s (response: {len(text)} chars)")
                     return text
 
                 elif self.config.llm_provider == "openai":
+                    logger.info(f"[{self.agent_name}] Calling OpenAI LLM (attempt {attempt + 1}/{max_retries})...")
+                    call_start = time.time()
                     messages = []
                     if system_message:
                         messages.append({"role": "system", "content": system_message})
@@ -202,28 +212,36 @@ class BaseAgent(ABC):
                         ),
                         timeout=180.0
                     )
+                    call_elapsed = time.time() - call_start
                     content: Optional[str] = response.choices[0].message.content
+                    logger.info(f"[{self.agent_name}] OpenAI LLM call successful in {call_elapsed:.2f}s (response: {len(content or '')} chars)")
                     return content or ""
 
             except asyncio.TimeoutError as e:
                 # Timeout after 180s - treat as temporary failure and retry
+                logger.warning(f"[{self.agent_name}] LLM call timed out after 180s (attempt {attempt + 1}/{max_retries})")
                 if attempt == max_retries - 1:
                     raise RuntimeError(f"LLM call timed out after {max_retries} attempts (180s each)") from e
                 wait_time = 2 + attempt  # 2s, 3s, 4s, 5s, 6s
+                logger.info(f"[{self.agent_name}] Retrying in {wait_time}s...")
                 await asyncio.sleep(wait_time)
 
-            except (AnthropicRateLimitError, OpenAIRateLimitError):
+            except (AnthropicRateLimitError, OpenAIRateLimitError) as e:
                 # Exponential backoff for rate limits: 2^attempt
+                logger.warning(f"[{self.agent_name}] Rate limit error (attempt {attempt + 1}/{max_retries}): {e}")
                 if attempt == max_retries - 1:
                     raise
                 wait_time = 2**attempt  # 1s, 2s, 4s, 8s, 16s
+                logger.info(f"[{self.agent_name}] Retrying in {wait_time}s...")
                 await asyncio.sleep(wait_time)
 
-            except (AnthropicAPIError, OpenAIAPIError):
+            except (AnthropicAPIError, OpenAIAPIError) as e:
                 # Linear backoff for API errors: 1 + attempt
+                logger.warning(f"[{self.agent_name}] API error (attempt {attempt + 1}/{max_retries}): {e}")
                 if attempt == max_retries - 1:
                     raise
                 wait_time = 1 + attempt  # 1s, 2s, 3s, 4s, 5s
+                logger.info(f"[{self.agent_name}] Retrying in {wait_time}s...")
                 await asyncio.sleep(wait_time)
 
         # This should never be reached due to raises above, but for type safety
@@ -256,7 +274,11 @@ class BaseAgent(ABC):
             Returns:
                 Processing result dictionary
             """
+            logger.info(f"[{self.agent_name}] Received MCP message: type={message.message_type.value}, session_id={message.session_id}, message_id={message.message_id}")
+            start_time = time.time()
             result = await self.handle_message(message)
+            elapsed = time.time() - start_time
+            logger.info(f"[{self.agent_name}] Message processed in {elapsed:.2f}s, result_status={result.get('status')}")
             return result
 
         @app.get("/health")
