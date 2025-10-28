@@ -5,7 +5,9 @@ Responsible for:
 - NWB file validation using NWB Inspector
 - Quality assessment
 - Correction analysis (using LLM if available)
+- Performance Optimization: Batch parallel LLM calls for quality assessment
 """
+import asyncio
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
