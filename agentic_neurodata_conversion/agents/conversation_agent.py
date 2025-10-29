@@ -7,6 +7,7 @@ import time
 from typing import Any, Optional
 
 from agentic_neurodata_conversion.agents.base_agent import BaseAgent
+from agentic_neurodata_conversion.config import settings
 from agentic_neurodata_conversion.models.mcp_message import MCPMessage
 from agentic_neurodata_conversion.models.session_context import (
     DatasetInfo,
@@ -363,6 +364,82 @@ Return ONLY the JSON object:"""
                 llm_extraction_log=llm_response,
             )
 
+    def _process_metadata_for_conversion(
+        self, metadata_result: MetadataExtractionResult
+    ) -> tuple[MetadataExtractionResult, bool, Optional[str]]:
+        """
+        Process extracted metadata based on test_mode setting.
+
+        In TEST MODE (settings.test_mode=True):
+        - Automatically fill in missing required fields with defaults
+        - Proceed with conversion immediately
+
+        In PRODUCTION MODE (settings.test_mode=False):
+        - Check for missing required fields
+        - If any required fields are missing, request clarification from user
+        - Return clarification prompt instead of auto-filling
+
+        Args:
+            metadata_result: Extracted metadata from files/LLM
+
+        Returns:
+            Tuple of (processed_metadata, requires_clarification, clarification_prompt)
+        """
+        # Define required fields for NWB conversion
+        required_fields = {
+            "subject_id": "unknown_subject",
+            "species": "Homo sapiens",
+            "sex": "U",  # U = Unknown
+            "experimenter": "Unknown",
+        }
+
+        # Check which required fields are missing or None
+        missing_fields = []
+        metadata_dict = metadata_result.model_dump()
+
+        for field, default_value in required_fields.items():
+            if metadata_dict.get(field) is None or metadata_dict.get(field) == "":
+                missing_fields.append(field)
+
+        # If all required fields are present, return as-is
+        if not missing_fields:
+            logger.info("[conversation_agent] All required metadata fields are present")
+            return metadata_result, False, None
+
+        # TEST MODE: Auto-fill missing fields with defaults
+        if settings.test_mode:
+            logger.info(f"[conversation_agent] TEST MODE: Auto-filling {len(missing_fields)} missing fields with defaults")
+            for field in missing_fields:
+                setattr(metadata_result, field, required_fields[field])
+            return metadata_result, False, None
+
+        # PRODUCTION MODE: Request clarification from user
+        logger.info(f"[conversation_agent] PRODUCTION MODE: Requesting user clarification for {len(missing_fields)} missing fields")
+
+        clarification_prompt = f"""## Missing Required Metadata
+
+The following required fields are missing or empty and need to be provided:
+
+"""
+        for field in missing_fields:
+            if field == "subject_id":
+                clarification_prompt += f"- **subject_id**: Identifier for the experimental subject (e.g., 'mouse_001', 'subject_A')\n"
+            elif field == "species":
+                clarification_prompt += f"- **species**: Scientific species name (e.g., 'Mus musculus' for mouse, 'Rattus norvegicus' for rat, 'Homo sapiens' for human)\n"
+            elif field == "sex":
+                clarification_prompt += f"- **sex**: Sex of the subject - must be one of: 'M' (Male), 'F' (Female), 'U' (Unknown), 'O' (Other)\n"
+            elif field == "experimenter":
+                clarification_prompt += f"- **experimenter**: Name(s) of the experimenter(s) who conducted the session\n"
+
+        clarification_prompt += f"""
+Please provide values for these fields to continue with the conversion. You can update them through the API at:
+`POST /api/v1/sessions/{{session_id}}/clarify`
+
+Or set TEST_MODE=true in your environment to automatically use default values for testing.
+"""
+
+        return metadata_result, True, clarification_prompt
+
     async def _initialize_session(
         self, session_id: str, dataset_path: str
     ) -> dict[str, Any]:
@@ -442,17 +519,40 @@ Return ONLY the JSON object:"""
             )
             logger.info(f"[conversation_agent] Metadata extraction completed in {time.time() - start_time:.2f}s")
 
+            # 4.5. Process metadata for conversion (test mode vs production)
+            logger.info("[conversation_agent] Processing metadata (checking for missing required fields)...")
+            processed_metadata, requires_clarification, clarification_prompt = self._process_metadata_for_conversion(
+                metadata_result
+            )
+
             # 5. Update session context
             logger.info("[conversation_agent] Updating session context...")
             start_time = time.time()
             updates = {
                 "workflow_stage": WorkflowStage.COLLECTING_METADATA,
                 "dataset_info": dataset_info.model_dump(),
-                "metadata": metadata_result.model_dump(),
+                "metadata": processed_metadata.model_dump(),
                 "current_agent": self.agent_name,
+                "requires_user_clarification": requires_clarification,
             }
+
+            # Add clarification prompt if needed
+            if requires_clarification and clarification_prompt:
+                updates["clarification_prompt"] = clarification_prompt
+                logger.info(f"[conversation_agent] PRODUCTION MODE: Requesting user clarification for missing metadata fields")
+
             await self.update_session_context(session_id, updates)
             logger.info(f"[conversation_agent] Session context updated in {time.time() - start_time:.2f}s")
+
+            # 6. Trigger conversion agent (only if no clarification needed)
+            if requires_clarification:
+                logger.info(f"[conversation_agent] Skipping conversion agent - waiting for user clarification")
+                return {
+                    "status": "clarification_required",
+                    "message": "Please provide missing metadata fields",
+                    "session_id": session_id,
+                    "clarification_prompt": clarification_prompt,
+                }
 
             # 6. Trigger conversion agent
             logger.info(f"[conversation_agent] Triggering conversion agent for session {session_id}")

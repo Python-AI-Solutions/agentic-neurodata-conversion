@@ -34,6 +34,13 @@ class Settings(BaseSettings):
     conversion_agent_port: int = 3002
     evaluation_agent_port: int = 3003
 
+    # Test mode settings
+    test_mode: bool = Field(
+        default=False,
+        description="Enable test mode to auto-fill missing metadata with defaults. "
+        "When False (production), agent will request clarification from users."
+    )
+
     @field_validator("redis_url")
     @classmethod
     def validate_redis_url(cls, v: str) -> str:
