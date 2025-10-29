@@ -1413,6 +1413,101 @@ Create a clear, friendly message that:
             # Return fallback
             return self._generate_metadata_review_message(metadata, format_name, state)
 
+    async def _continue_conversion_workflow(
+        self,
+        message_id: str,
+        input_path: str,
+        detected_format: str,
+        metadata: Dict[str, Any],
+        state: GlobalState,
+    ) -> MCPResponse:
+        """
+        Continue the conversion workflow after metadata collection is complete.
+
+        This skips format detection and metadata inference (already done) and proceeds
+        directly to: Step 2 (custom metadata) → Step 3 (metadata review) → Step 4 (conversion)
+
+        Args:
+            message_id: Original message ID
+            input_path: Path to input file
+            detected_format: Already detected format
+            metadata: Collected metadata
+            state: Global state
+
+        Returns:
+            MCP response
+        """
+        state.add_log(
+            LogLevel.INFO,
+            "Continuing conversion workflow after metadata collection",
+            {"format": detected_format, "metadata_fields": list(metadata.keys())}
+        )
+
+        # Step 2: Check for custom metadata
+        is_standard_complete, missing = self._validate_required_nwb_metadata(metadata)
+
+        all_missing_declined = all(
+            field in state.user_declined_fields
+            for field in missing
+        ) if missing else False
+
+        should_ask_custom = (
+            (is_standard_complete or all_missing_declined) and
+            not metadata.get('_custom_metadata_prompted', False) and
+            state.conversation_phase != ConversationPhase.METADATA_COLLECTION and
+            state.metadata_policy != MetadataRequestPolicy.ASK_ALL and
+            not state.user_wants_sequential
+        )
+
+        if should_ask_custom:
+            state.metadata['_custom_metadata_prompted'] = True
+            state.conversation_type = "custom_metadata_collection"
+
+            custom_metadata_prompt = await self._generate_custom_metadata_prompt(
+                detected_format,
+                metadata,
+                state
+            )
+
+            return MCPResponse.success_response(
+                reply_to=message_id,
+                result={
+                    "status": "need_user_input",
+                    "message": custom_metadata_prompt,
+                    "conversation_type": "custom_metadata_collection",
+                },
+            )
+
+        # Step 3: Show metadata review before conversion
+        if not metadata.get('_metadata_review_shown', False):
+            state.metadata['_metadata_review_shown'] = True
+            state.conversation_type = "metadata_review"
+
+            review_message = await self._generate_metadata_review_message(
+                metadata,
+                detected_format,
+                state
+            )
+
+            return MCPResponse.success_response(
+                reply_to=message_id,
+                result={
+                    "status": "metadata_review",
+                    "message": review_message,
+                    "conversation_type": "metadata_review",
+                    "metadata": metadata,
+                },
+            )
+
+        # Step 4: Run conversion
+        return await self._run_conversion(
+            message_id,
+            input_path,
+            detected_format,
+            metadata,
+            state,
+        )
+
     async def _generate_custom_metadata_prompt(
         self,
         format_name: str,
@@ -3219,17 +3314,19 @@ The conversion report has been generated with full details."""
                         error_message="Cannot proceed with conversion. The file path is not available. Please try uploading the file again.",
                     )
 
-                # Restart conversion with updated metadata (even if none extracted, user said proceed)
-                return await self.handle_start_conversion(
-                    MCPMessage(
-                        target_agent="conversation",
-                        action="start_conversion",
-                        context={
-                            "input_path": str(conversion_path),
-                            "metadata": state.metadata,
-                        },
-                    ),
-                    state,
+                # CRITICAL FIX: Don't restart entire workflow (format detection already done!)
+                # Instead, continue from where we left off: Step 2 (custom metadata) or Step 3 (review) or Step 4 (conversion)
+
+                # Get the detected format (should be in metadata from previous detection)
+                detected_format = state.metadata.get("format", "unknown")
+
+                # Continue with workflow steps without re-running format detection
+                return await self._continue_conversion_workflow(
+                    message_id=message.message_id,
+                    input_path=str(conversion_path),
+                    detected_format=detected_format,
+                    metadata=state.metadata,
+                    state=state,
                 )
 
             # Continue conversation
