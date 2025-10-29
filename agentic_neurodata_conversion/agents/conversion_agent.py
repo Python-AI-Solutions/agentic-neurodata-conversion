@@ -127,31 +127,39 @@ class ConversionAgent(BaseAgent):
         """
         nwb_metadata: dict[str, Any] = {}
 
-        # Subject metadata
-        if any(
-            key in session_metadata
-            for key in ["subject_id", "species", "age", "sex", "subject_description"]
-        ):
-            subject_metadata = {}
+        # Subject metadata (always create with required fields)
+        # NWB requires: subject_id, sex, and species as non-None strings
+        subject_metadata = {}
 
-            if "subject_id" in session_metadata:
-                subject_metadata["subject_id"] = session_metadata["subject_id"]
+        # Provide default subject_id if missing or None
+        subject_id = session_metadata.get("subject_id")
+        if subject_id is None or subject_id == "":
+            subject_metadata["subject_id"] = "unknown_subject"
+        else:
+            subject_metadata["subject_id"] = subject_id
 
-            if "species" in session_metadata:
-                subject_metadata["species"] = session_metadata["species"]
+        # Provide default species if missing or None (required by NWB)
+        species = session_metadata.get("species")
+        if species is None or species == "":
+            subject_metadata["species"] = "Homo sapiens"  # Default to human
+        else:
+            subject_metadata["species"] = species
 
-            if "age" in session_metadata:
-                subject_metadata["age"] = session_metadata["age"]
+        # Provide default sex if missing or None (required by NWB)
+        sex = session_metadata.get("sex")
+        if sex is None or sex == "":
+            subject_metadata["sex"] = "U"  # U = Unknown
+        else:
+            subject_metadata["sex"] = sex
 
-            if "sex" in session_metadata:
-                subject_metadata["sex"] = session_metadata["sex"]
+        # Add optional subject fields if present
+        if "age" in session_metadata and session_metadata["age"]:
+            subject_metadata["age"] = session_metadata["age"]
 
-            if "subject_description" in session_metadata:
-                subject_metadata["description"] = session_metadata[
-                    "subject_description"
-                ]
+        if "subject_description" in session_metadata and session_metadata["subject_description"]:
+            subject_metadata["description"] = session_metadata["subject_description"]
 
-            nwb_metadata["Subject"] = subject_metadata
+        nwb_metadata["Subject"] = subject_metadata
 
         # NWBFile metadata
         nwbfile_metadata = {}
