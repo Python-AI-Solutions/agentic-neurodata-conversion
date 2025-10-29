@@ -512,7 +512,7 @@ async def upload_file(
         mcp_server.global_state.add_log(
             LogLevel.INFO,
             "Upload during active conversation - skipping duplicate acknowledgment",
-            {"status": str(current_status), "conversation_type": mcp_server.global_state.conversation_type}
+            {"status": str(mcp_server.global_state.status), "conversation_type": mcp_server.global_state.conversation_type}
         )
 
         # Return the current conversation state

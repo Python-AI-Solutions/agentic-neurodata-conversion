@@ -1614,6 +1614,55 @@ The conversion report has been generated with full details."""
                 },
             )
 
+        # ENHANCEMENT: Auto-fill optional fields from inference if not provided by user
+        # This ensures NWB Inspector validation passes for recommended fields
+        inference_result = getattr(state, 'inference_result', {})
+        if inference_result:
+            inferred_metadata = inference_result.get("inferred_metadata", {})
+            confidence_scores = inference_result.get("confidence_scores", {})
+
+            # Fields to auto-fill if missing (NWB Inspector checks these)
+            optional_fields_to_infer = ["keywords", "experiment_description", "session_description"]
+
+            for field_name in optional_fields_to_infer:
+                # Only add if:
+                # 1. Not already in metadata (user didn't provide it)
+                # 2. Was inferred with reasonable confidence (>= 60%)
+                # 3. Inference result has this field
+                if (not metadata.get(field_name) and
+                    field_name in inferred_metadata and
+                    confidence_scores.get(field_name, 0) >= 60):
+
+                    inferred_value = inferred_metadata[field_name]
+                    confidence = confidence_scores.get(field_name, 60)
+
+                    # Add to metadata
+                    metadata[field_name] = inferred_value
+                    state.metadata[field_name] = inferred_value
+
+                    # Track provenance as AI-inferred
+                    self._track_metadata_provenance(
+                        state=state,
+                        field_name=field_name,
+                        value=inferred_value,
+                        provenance_type="ai-inferred",
+                        confidence=confidence,
+                        source=f"Inferred from file analysis: {Path(input_path).name}",
+                        needs_review=True,  # AI inferences should be reviewed
+                        raw_input=f"Automatically inferred from: {Path(input_path).name}",
+                    )
+
+                    state.add_log(
+                        LogLevel.INFO,
+                        f"Auto-filled {field_name} from AI inference (confidence: {confidence}%)",
+                        {
+                            "field": field_name,
+                            "value": str(inferred_value)[:100],  # Truncate for logging
+                            "confidence": confidence,
+                            "provenance": "ai-inferred"
+                        }
+                    )
+
         # Generate output path
         output_dir = Path(tempfile.gettempdir()) / "nwb_conversions"
         output_dir.mkdir(exist_ok=True)
