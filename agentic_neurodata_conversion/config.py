@@ -76,7 +76,7 @@ def get_conversation_agent_config() -> AgentConfig:
     if anthropic_key:
         provider: Literal["anthropic", "openai"] = "anthropic"
         api_key: str = anthropic_key
-        default_model = "claude-3-5-sonnet-20241022"
+        default_model = "claude-sonnet-4-5-20250929"
     else:
         provider = "openai"
         api_key = openai_key  # type: ignore[assignment]
@@ -110,7 +110,7 @@ def get_conversion_agent_config() -> AgentConfig:
     if anthropic_key:
         provider: Literal["anthropic", "openai"] = "anthropic"
         api_key: str = anthropic_key
-        default_model = "claude-3-5-sonnet-20241022"
+        default_model = "claude-sonnet-4-5-20250929"
     else:
         provider = "openai"
         api_key = openai_key  # type: ignore[assignment]
@@ -144,7 +144,7 @@ def get_evaluation_agent_config() -> AgentConfig:
     if anthropic_key:
         provider: Literal["anthropic", "openai"] = "anthropic"
         api_key: str = anthropic_key
-        default_model = "claude-3-5-sonnet-20241022"
+        default_model = "claude-sonnet-4-5-20250929"
     else:
         provider = "openai"
         api_key = openai_key  # type: ignore[assignment]
