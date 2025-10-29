@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from enum import Enum
 from datetime import datetime
 import re
+from dateutil import parser as date_parser
 
 from models import GlobalState, LogLevel
 from services import LLMService
@@ -154,6 +155,9 @@ Important normalization rules:
 - Age: ISO 8601 duration format (e.g., "P56D" for 8 weeks, "P90D" for 90 days)
 - Sex: Single letter code ("M", "F", "U" for unknown)
 - Species: Scientific name (e.g., "Mus musculus" for mouse, "Rattus norvegicus" for rat)
+- Session Start Time: ISO 8601 datetime format (e.g., "2025-08-15T10:00:00" for "August 15th, 2025 at 10:00 AM")
+  IMPORTANT: For dates like "15th august 2025 around 10 am", convert to "2025-08-15T10:00:00"
+  For dates without time, use 00:00:00 (e.g., "2025-08-15T00:00:00")
 
 Be conservative with confidence:
 - High (80-100): Explicitly stated, clear format
@@ -215,10 +219,17 @@ For each field found, provide:
 
             parsed_fields = []
             for field_data in response.get("fields", []):
+                # Post-process date fields to ensure ISO format
+                normalized_value = self._post_process_date_field(
+                    field_data["field_name"],
+                    field_data["normalized_value"],
+                    state
+                )
+
                 parsed_field = ParsedField(
                     field_name=field_data["field_name"],
                     raw_input=field_data["raw_value"],
-                    parsed_value=field_data["normalized_value"],
+                    parsed_value=normalized_value,  # Use post-processed value
                     confidence=field_data["confidence"],
                     reasoning=field_data["reasoning"],
                     nwb_compliant=True,  # LLM should provide compliant values
@@ -292,6 +303,9 @@ Example: {field_schema.example}
 Normalization rules:
 {self._get_normalization_rules(field_schema)}
 
+{"CRITICAL: This is a datetime field. You MUST convert ANY date/time input to ISO 8601 format (YYYY-MM-DDTHH:MM:SS)." if field_schema.field_type.value == "date" else ""}
+{"Examples: '15th august 2025 around 10 am' → '2025-08-15T10:00:00', 'January 1, 2024 3pm' → '2024-01-01T15:00:00'" if field_schema.field_type.value == "date" else ""}
+
 Provide a confidence score (0-100) based on:
 - High (80-100): Clear, unambiguous input matching expected format
 - Medium (50-79): Requires interpretation or minor assumptions
@@ -338,10 +352,17 @@ Provide:
                 system_prompt=system_prompt,
             )
 
+            # Post-process date fields to ensure ISO format
+            normalized_value = self._post_process_date_field(
+                field_name,
+                response["normalized_value"],
+                state
+            )
+
             parsed_field = ParsedField(
                 field_name=field_name,
                 raw_input=user_input,
-                parsed_value=response["normalized_value"],
+                parsed_value=normalized_value,  # Use post-processed value
                 confidence=response["confidence"],
                 reasoning=response["reasoning"],
                 nwb_compliant=True,
@@ -570,6 +591,56 @@ Provide:
         if isinstance(value, list):
             return f"[{', '.join(repr(v) for v in value)}]"
         return repr(value)
+
+    def _post_process_date_field(self, field_name: str, value: Any, state: GlobalState) -> Any:
+        """
+        Post-process date fields to ensure they are in ISO 8601 format.
+
+        Handles cases where the LLM might not have properly formatted the date.
+        """
+        # Check if this is a date field
+        field_schema = self.field_schemas.get(field_name)
+        if not field_schema or field_schema.field_type.value != "date":
+            return value
+
+        # If already in ISO format, return as is
+        if isinstance(value, str) and re.match(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}', value):
+            return value
+
+        try:
+            # Try to parse the date string
+            parsed_date = None
+
+            # Handle various date formats
+            if isinstance(value, str):
+                # Clean up common phrases
+                clean_value = value.lower()
+                clean_value = clean_value.replace("around ", "")
+                clean_value = clean_value.replace("approximately ", "")
+                clean_value = clean_value.replace("about ", "")
+
+                # Parse the date
+                parsed_date = date_parser.parse(clean_value, fuzzy=True)
+
+                # Convert to ISO 8601 format
+                iso_format = parsed_date.strftime("%Y-%m-%dT%H:%M:%S")
+
+                state.add_log(
+                    LogLevel.INFO,
+                    f"Converted date '{value}' to ISO format: {iso_format}"
+                )
+
+                return iso_format
+
+        except Exception as e:
+            state.add_log(
+                LogLevel.WARNING,
+                f"Failed to parse date '{value}' for field {field_name}: {e}"
+            )
+            # Return original value if parsing fails
+            return value
+
+        return value
 
     def _fallback_parse_batch(
         self,
