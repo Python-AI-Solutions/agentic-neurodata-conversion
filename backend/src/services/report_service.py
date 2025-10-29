@@ -102,6 +102,25 @@ class ReportService:
             fontName='Helvetica-Bold',
         ))
 
+        # Table cell style with word wrapping
+        self.styles.add(ParagraphStyle(
+            name='TableCell',
+            parent=self.styles['Normal'],
+            fontSize=9,
+            wordWrap='CJK',  # Enable word wrapping
+            leading=11,  # Line spacing
+        ))
+
+        # Small text style for long paths
+        self.styles.add(ParagraphStyle(
+            name='SmallText',
+            parent=self.styles['Normal'],
+            fontSize=7,
+            wordWrap='CJK',
+            leading=9,
+            textColor=HexColor('#666666'),
+        ))
+
     def _format_species(self, species: str) -> str:
         """Format species with common name if known."""
         if species == 'N/A' or not species:
@@ -143,8 +162,17 @@ class ReportService:
                 return f"{iso_age} ({readable})"
         return iso_age
 
-    def _format_with_provenance(self, value: str, provenance: str, source_file: str = None) -> str:
-        """Format a value with its provenance badge for display in reports."""
+    def _format_with_provenance(self, value: str, provenance: str, source_file: str = None,
+                                confidence: float = None, source_description: str = None) -> str:
+        """Format a value with its provenance badge for display in reports.
+
+        Args:
+            value: The field value
+            provenance: Provenance type (user-specified, ai-parsed, etc.)
+            source_file: Source file path for file-extracted provenance
+            confidence: Confidence score (0-100) for AI operations
+            source_description: Description of where the value came from
+        """
         # Complete 6-tag provenance system with emoji badges
         provenance_badges = {
             'user-specified': '👤',    # User directly provided
@@ -160,10 +188,49 @@ class ReportService:
 
         badge = provenance_badges.get(provenance, '')
         if badge:
-            result = f"{value} {badge}"
+            result = f"{value} <b>{badge}</b>"
+
+            # Build detailed provenance info similar to frontend
+            details = []
+
+            # Add provenance label
+            provenance_labels = {
+                'user-specified': 'USER SPECIFIED',
+                'file-extracted': 'FILE EXTRACTED',
+                'ai-parsed': 'AI PARSED',
+                'ai-inferred': 'AI INFERRED',
+                'schema-default': 'SCHEMA DEFAULT',
+                'system-default': 'SYSTEM DEFAULT',
+                'user-provided': 'USER SPECIFIED',
+                'default': 'SYSTEM DEFAULT',
+            }
+            prov_label = provenance_labels.get(provenance, provenance.upper())
+            details.append(prov_label)
+
+            # Add confidence for AI operations
+            if confidence is not None and provenance in ['ai-parsed', 'ai-inferred']:
+                details.append(f"confidence: {confidence:.0f}%")
+
+            # Add source description (e.g., "AI parsed from: 'MIT'")
+            if source_description:
+                # Truncate long source descriptions
+                if len(source_description) > 50:
+                    source_description = source_description[:47] + '...'
+                details.append(source_description)
+
             # Add source file for file-extracted provenance
-            if provenance == 'file-extracted' and source_file:
-                result += f" (from: {source_file})"
+            elif provenance == 'file-extracted' and source_file:
+                # Truncate very long paths
+                if len(source_file) > 60:
+                    import os
+                    source_file = f".../{os.path.basename(source_file)}"
+                details.append(f"from: {source_file}")
+
+            # Format details with smaller gray font
+            if details:
+                details_str = ' | '.join(details)
+                result += f' <font size="7" color="#666666">({details_str})</font>'
+
             return result
         return value
 
@@ -220,13 +287,30 @@ class ReportService:
         provenance = file_info.get('_provenance', {})
         source_files = file_info.get('_source_files', {})
 
+        # Try to get full provenance metadata if available (for confidence and source info)
+        full_provenance = {}
+        if workflow_trace and 'metadata_provenance' in workflow_trace:
+            full_provenance = workflow_trace['metadata_provenance']
+
         story.append(Paragraph("File Information", self.styles['SectionHeading']))
 
-        # Helper to get value with provenance badge and source file
+        # Helper to get value with provenance badge and full details
         def get_with_prov(field_name, value):
             if field_name in provenance:
+                prov_type = provenance[field_name]
                 source_file = source_files.get(field_name)
-                return self._format_with_provenance(value, provenance[field_name], source_file)
+
+                # Extract confidence and source from full provenance if available
+                confidence = None
+                source_desc = None
+                if field_name in full_provenance:
+                    prov_info = full_provenance[field_name]
+                    confidence = prov_info.get('confidence')
+                    source_desc = prov_info.get('source')
+
+                return self._format_with_provenance(
+                    value, prov_type, source_file, confidence, source_desc
+                )
             return value
 
         # Format experimenter list
@@ -498,25 +582,32 @@ class ReportService:
                 'details': 'The NWB file passes all checks and is ready for use and sharing.'
             })
 
-        # Create recommendations table
-        rec_data = [['Priority', 'Action', 'Details']]
+        # Create recommendations table with proper text wrapping
+        rec_data = [[
+            Paragraph('<b>Priority</b>', self.styles['Normal']),
+            Paragraph('<b>Action</b>', self.styles['Normal']),
+            Paragraph('<b>Details</b>', self.styles['Normal'])
+        ]]
         for rec in recommendations[:5]:  # Limit to top 5 recommendations
             rec_data.append([
-                rec['priority'],
-                rec['action'],
-                rec['details'][:60] + ('...' if len(rec['details']) > 60 else '')
+                Paragraph(rec['priority'], self.styles['TableCell']),
+                Paragraph(rec['action'], self.styles['TableCell']),
+                Paragraph(rec['details'], self.styles['TableCell'])  # Don't truncate, let it wrap
             ])
 
-        rec_table = Table(rec_data, colWidths=[1.2 * inch, 2 * inch, 2.8 * inch])
+        rec_table = Table(rec_data, colWidths=[1 * inch, 1.8 * inch, 3.2 * inch])
         rec_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), HexColor('#fef3c7')),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
             ('ALIGN', (0, 0), (0, -1), 'CENTER'),
             ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#fbbf24')),
             ('ROWBACKGROUNDS', (0, 1), (-1, -1), [HexColor('#fffbeb'), HexColor('#fef3c7')]),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 4),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
         ]))
         story.append(rec_table)
         story.append(Spacer(1, 0.3 * inch))
@@ -556,22 +647,33 @@ class ReportService:
 
                 qa_data = []
                 if 'completeness_score' in quality_assessment:
-                    qa_data.append(['Completeness Score:', quality_assessment['completeness_score']])
+                    qa_data.append([
+                        Paragraph('<b>Completeness Score:</b>', self.styles['Normal']),
+                        Paragraph(str(quality_assessment['completeness_score']), self.styles['Normal'])
+                    ])
                 if 'metadata_quality' in quality_assessment:
-                    qa_data.append(['Metadata Quality:', quality_assessment['metadata_quality']])
+                    qa_data.append([
+                        Paragraph('<b>Metadata Quality:</b>', self.styles['Normal']),
+                        Paragraph(str(quality_assessment['metadata_quality']), self.styles['Normal'])
+                    ])
                 if 'data_integrity' in quality_assessment:
-                    qa_data.append(['Data Integrity:', quality_assessment['data_integrity']])
+                    qa_data.append([
+                        Paragraph('<b>Data Integrity:</b>', self.styles['Normal']),
+                        Paragraph(str(quality_assessment['data_integrity']), self.styles['Normal'])
+                    ])
                 if 'scientific_value' in quality_assessment:
-                    qa_data.append(['Scientific Value:', quality_assessment['scientific_value']])
+                    qa_data.append([
+                        Paragraph('<b>Scientific Value:</b>', self.styles['Normal']),
+                        Paragraph(str(quality_assessment['scientific_value']), self.styles['Normal'])
+                    ])
 
                 if qa_data:
                     qa_table = Table(qa_data, colWidths=[2 * inch, 4 * inch])
                     qa_table.setStyle(TableStyle([
-                        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-                        ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
                         ('FONTSIZE', (0, 0), (-1, -1), 10),
                         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                         ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                        ('TOPPADDING', (0, 0), (-1, -1), 4),
                     ]))
                     story.append(qa_table)
                     story.append(Spacer(1, 0.2 * inch))
