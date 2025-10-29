@@ -1,9 +1,12 @@
 """ConversionAgent for NWB file generation (Phase 5 implementation)."""
 
 from datetime import datetime
+import logging
 from pathlib import Path
 import time
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from neuroconv.datainterfaces import OpenEphysRecordingInterface, SpikeGLXRecordingInterface
 
@@ -470,20 +473,31 @@ Format:
             }
 
         except Exception as e:
+            # Log the actual error first before calling LLM
+            import traceback
+            error_traceback = traceback.format_exc()
+            logger.error(f"[conversion_agent] Conversion failed with {type(e).__name__}: {e}")
+            logger.error(f"[conversion_agent] Full traceback:\n{error_traceback}")
+
             # On error: Generate user-friendly error message
-            error_message = await self._generate_error_message(
-                error=e,
-                dataset_path=(
-                    session_context.dataset_info.dataset_path
-                    if session_context and session_context.dataset_info
-                    else "unknown"
-                ),
-                metadata=(
-                    session_context.metadata.model_dump()
-                    if session_context and session_context.metadata
-                    else {}
-                ),
-            )
+            try:
+                error_message = await self._generate_error_message(
+                    error=e,
+                    dataset_path=(
+                        session_context.dataset_info.dataset_path
+                        if session_context and session_context.dataset_info
+                        else "unknown"
+                    ),
+                    metadata=(
+                        session_context.metadata.model_dump()
+                        if session_context and session_context.metadata
+                        else {}
+                    ),
+                )
+            except Exception as llm_error:
+                # If LLM error message generation fails, use a simple fallback
+                logger.error(f"[conversion_agent] Failed to generate LLM error message: {llm_error}")
+                error_message = f"**Error**: Conversion failed with {type(e).__name__}: {str(e)}\n\nPlease check the conversion agent logs for details."
 
             # Set requires_clarification flag and workflow_stage to FAILED
             await self.update_session_context(
