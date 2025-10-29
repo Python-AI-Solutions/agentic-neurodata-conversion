@@ -62,6 +62,11 @@ class IntelligentFormatDetector:
                 "extensions": [".ncs", ".nse", ".ntt", ".nvt", ".nev"],
                 "patterns": ["CSC", "Events"],
             },
+            "Axon": {
+                "extensions": [".abf"],
+                "patterns": ["abf", "pclamp", "axon"],
+                "description": "Axon Instruments pCLAMP format",
+            },
         }
 
     async def detect_format(

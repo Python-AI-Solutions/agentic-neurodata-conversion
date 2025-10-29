@@ -58,15 +58,38 @@ class ConversionAgent:
             summaries = get_format_summaries()
             return [fmt["format"] for fmt in summaries]
         except Exception:
-            # Fallback to known common formats
+            # Fallback to all supported formats (84 total)
             return [
-                "SpikeGLX",
-                "Neuropixels",
-                "OpenEphys",
-                "Blackrock",
-                "Axona",
-                "Neuralynx",
-                "Plexon",
+                # Electrophysiology Recording
+                "AlphaOmegaRecording", "Axon", "AxonRecording", "AxonaRecording", "AxonaUnitRecording",
+                "BiocamRecording", "BlackrockRecording", "CellExplorerRecording", "EDFRecording",
+                "IntanRecording", "MCSRawRecording", "MEArecRecording", "MaxOneRecording",
+                "NeuralynxRecording", "Neuropixels", "NeuroScopeRecording", "OpenEphys",
+                "OpenEphysBinary", "OpenEphysLegacyRecording", "Plexon2Recording", "PlexonRecording",
+                "Spike2Recording", "SpikeGLX", "SpikeGadgetsRecording", "TdtRecording",
+                "WhiteMatterRecording",
+                # Spike Sorting
+                "BlackrockSorting", "CellExplorerSorting", "KiloSortSorting", "NeuralynxSorting",
+                "NeuroScopeSorting", "OpenEphysSorting", "PhySorting", "PlexonSorting",
+                # Imaging
+                "BrukerTiffMultiPlaneImaging", "BrukerTiffSinglePlaneImaging", "FemtonicsImaging",
+                "Hdf5Imaging", "InscopixImaging", "MicroManagerTiffImaging", "MiniscopeImaging",
+                "SbxImaging", "ScanImageImaging", "ScanImageLegacyImaging", "ScanImageMultiFileImaging",
+                "ThorImaging", "TiffImaging",
+                # Segmentation
+                "CaimanSegmentation", "CnmfeSegmentation", "ExtractSegmentation",
+                "InscopixSegmentation", "MinianSegmentation", "SimaSegmentation",
+                "Suite2pSegmentation",
+                # Behavior/Video
+                "AxonaPositionData", "DeepLabCut", "ExternalVideo", "FicTracData", "InternalVideo",
+                "LightningPoseData", "MiniscopeBehavior", "NeuralynxNvt", "SLEAP", "Video",
+                # LFP/Analog/Other
+                "Audio", "AxonaLFPData", "CellExplorerLFP", "CsvTimeIntervals", "EDFAnalog",
+                "ExcelTimeIntervals", "Image", "IntanAnalog", "MedPC", "NeuroScopeLFP",
+                "OpenEphysBinaryAnalog", "PlexonLFP", "SpikeGLXNIDQ", "TDTFiberPhotometry",
+                # Converters
+                "BrukerTiffMultiPlane", "BrukerTiffSinglePlane", "LightningPose", "Miniscope",
+                "SortedRecording", "SortedSpikeGLX", "SpikeGLXConverter",
             ]
 
     async def handle_detect_format(
@@ -907,27 +930,126 @@ Provide a brief, friendly update about what's happening now."""
             Exception: If conversion fails
         """
         from neuroconv import NWBConverter
-        from neuroconv.datainterfaces import (
-            SpikeGLXRecordingInterface,
-            OpenEphysRecordingInterface,
-            OpenEphysBinaryRecordingInterface,
-        )
 
-        # Map format names to interface classes
-        format_map = {
-            "SpikeGLX": SpikeGLXRecordingInterface,
-            "OpenEphys": OpenEphysRecordingInterface,
-            "OpenEphysBinary": OpenEphysBinaryRecordingInterface,
-            "Neuropixels": SpikeGLXRecordingInterface,  # Neuropixels data uses SpikeGLX format
+        # Comprehensive format-to-interface mapping for all 84 NeuroConv interfaces
+        # Using dynamic imports to avoid loading all interfaces at startup
+        format_to_interface_map = {
+            # Electrophysiology Recording (24 formats)
+            "AlphaOmegaRecording": "AlphaOmegaRecordingInterface",
+            "Axon": "AbfInterface",  # .abf files - Axon Instruments pCLAMP
+            "AxonRecording": "AxonRecordingInterface",
+            "AxonaRecording": "AxonaRecordingInterface",
+            "AxonaUnitRecording": "AxonaUnitRecordingInterface",
+            "BiocamRecording": "BiocamRecordingInterface",
+            "BlackrockRecording": "BlackrockRecordingInterface",
+            "CellExplorerRecording": "CellExplorerRecordingInterface",
+            "EDFRecording": "EDFRecordingInterface",
+            "IntanRecording": "IntanRecordingInterface",
+            "MCSRawRecording": "MCSRawRecordingInterface",
+            "MEArecRecording": "MEArecRecordingInterface",
+            "MaxOneRecording": "MaxOneRecordingInterface",
+            "NeuralynxRecording": "NeuralynxRecordingInterface",
+            "Neuropixels": "SpikeGLXRecordingInterface",  # Alias for SpikeGLX
+            "NeuroScopeRecording": "NeuroScopeRecordingInterface",
+            "OpenEphys": "OpenEphysRecordingInterface",
+            "OpenEphysBinary": "OpenEphysBinaryRecordingInterface",
+            "OpenEphysLegacyRecording": "OpenEphysLegacyRecordingInterface",
+            "Plexon2Recording": "Plexon2RecordingInterface",
+            "PlexonRecording": "PlexonRecordingInterface",
+            "Spike2Recording": "Spike2RecordingInterface",
+            "SpikeGLX": "SpikeGLXRecordingInterface",
+            "SpikeGadgetsRecording": "SpikeGadgetsRecordingInterface",
+            "TdtRecording": "TdtRecordingInterface",
+            "WhiteMatterRecording": "WhiteMatterRecordingInterface",
+
+            # Spike Sorting (8 formats)
+            "BlackrockSorting": "BlackrockSortingInterface",
+            "CellExplorerSorting": "CellExplorerSortingInterface",
+            "KiloSortSorting": "KiloSortSortingInterface",
+            "NeuralynxSorting": "NeuralynxSortingInterface",
+            "NeuroScopeSorting": "NeuroScopeSortingInterface",
+            "OpenEphysSorting": "OpenEphysSortingInterface",
+            "PhySorting": "PhySortingInterface",
+            "PlexonSorting": "PlexonSortingInterface",
+
+            # Imaging (13 formats)
+            "BrukerTiffMultiPlaneImaging": "BrukerTiffMultiPlaneImagingInterface",
+            "BrukerTiffSinglePlaneImaging": "BrukerTiffSinglePlaneImagingInterface",
+            "FemtonicsImaging": "FemtonicsImagingInterface",
+            "Hdf5Imaging": "Hdf5ImagingInterface",
+            "InscopixImaging": "InscopixImagingInterface",
+            "MicroManagerTiffImaging": "MicroManagerTiffImagingInterface",
+            "MiniscopeImaging": "MiniscopeImagingInterface",
+            "SbxImaging": "SbxImagingInterface",
+            "ScanImageImaging": "ScanImageImagingInterface",
+            "ScanImageLegacyImaging": "ScanImageLegacyImagingInterface",
+            "ScanImageMultiFileImaging": "ScanImageMultiFileImagingInterface",
+            "ThorImaging": "ThorImagingInterface",
+            "TiffImaging": "TiffImagingInterface",
+
+            # Segmentation (7 formats)
+            "CaimanSegmentation": "CaimanSegmentationInterface",
+            "CnmfeSegmentation": "CnmfeSegmentationInterface",
+            "ExtractSegmentation": "ExtractSegmentationInterface",
+            "InscopixSegmentation": "InscopixSegmentationInterface",
+            "MinianSegmentation": "MinianSegmentationInterface",
+            "SimaSegmentation": "SimaSegmentationInterface",
+            "Suite2pSegmentation": "Suite2pSegmentationInterface",
+
+            # Behavior/Video (11 formats)
+            "AxonaPositionData": "AxonaPositionDataInterface",
+            "DeepLabCut": "DeepLabCutInterface",
+            "ExternalVideo": "ExternalVideoInterface",
+            "FicTracData": "FicTracDataInterface",
+            "InternalVideo": "InternalVideoInterface",
+            "LightningPoseData": "LightningPoseDataInterface",
+            "MiniscopeBehavior": "MiniscopeBehaviorInterface",
+            "NeuralynxNvt": "NeuralynxNvtInterface",
+            "SLEAP": "SLEAPInterface",
+            "Video": "VideoInterface",
+
+            # LFP/Analog/Other (15 formats)
+            "Audio": "AudioInterface",
+            "AxonaLFPData": "AxonaLFPDataInterface",
+            "CellExplorerLFP": "CellExplorerLFPInterface",
+            "CsvTimeIntervals": "CsvTimeIntervalsInterface",
+            "EDFAnalog": "EDFAnalogInterface",
+            "ExcelTimeIntervals": "ExcelTimeIntervalsInterface",
+            "Image": "ImageInterface",
+            "IntanAnalog": "IntanAnalogInterface",
+            "MedPC": "MedPCInterface",
+            "NeuroScopeLFP": "NeuroScopeLFPInterface",
+            "OpenEphysBinaryAnalog": "OpenEphysBinaryAnalogInterface",
+            "PlexonLFP": "PlexonLFPInterface",
+            "SpikeGLXNIDQ": "SpikeGLXNIDQInterface",
+            "TDTFiberPhotometry": "TDTFiberPhotometryInterface",
+
+            # Converters (6 formats)
+            "BrukerTiffMultiPlane": "BrukerTiffMultiPlaneConverter",
+            "BrukerTiffSinglePlane": "BrukerTiffSinglePlaneConverter",
+            "LightningPose": "LightningPoseConverter",
+            "Miniscope": "MiniscopeConverter",
+            "SortedRecording": "SortedRecordingConverter",
+            "SortedSpikeGLX": "SortedSpikeGLXConverter",
+            "SpikeGLXConverter": "SpikeGLXConverterPipe",
         }
 
-        if format_name not in format_map:
+        if format_name not in format_to_interface_map:
             raise ValueError(
                 f"Unsupported format: {format_name}. "
-                f"Supported formats: {', '.join(sorted(format_map.keys()))}"
+                f"Supported formats: {', '.join(sorted(format_to_interface_map.keys()))}"
             )
 
-        interface_class = format_map[format_name]
+        # Dynamically import the required interface
+        interface_class_name = format_to_interface_map[format_name]
+        try:
+            from neuroconv import datainterfaces
+            interface_class = getattr(datainterfaces, interface_class_name)
+        except (ImportError, AttributeError) as e:
+            raise ValueError(
+                f"Failed to import interface '{interface_class_name}' for format '{format_name}'. "
+                f"Error: {str(e)}"
+            ) from e
 
         # Create interface with source data
         from pathlib import Path
