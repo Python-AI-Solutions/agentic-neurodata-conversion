@@ -174,14 +174,13 @@ class ConversionAgent(BaseAgent):
             "identifier", session_metadata.get("session_id", "UNSPECIFIED")
         )
 
-        # Session start time (with default)
-        if "session_start_time" in session_metadata:
-            nwbfile_metadata["session_start_time"] = session_metadata[
-                "session_start_time"
-            ]
-        else:
+        # Session start time (required by NWB, must not be None)
+        session_start_time = session_metadata.get("session_start_time")
+        if session_start_time is None or session_start_time == "":
             # Default to current time in ISO format
             nwbfile_metadata["session_start_time"] = datetime.utcnow().isoformat() + "Z"
+        else:
+            nwbfile_metadata["session_start_time"] = session_start_time
 
         # Experimenter (convert to list if string)
         if "experimenter" in session_metadata:
