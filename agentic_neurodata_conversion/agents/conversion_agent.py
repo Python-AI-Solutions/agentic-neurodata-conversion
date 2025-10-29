@@ -88,12 +88,11 @@ class ConversionAgent(BaseAgent):
             output_dir.mkdir(parents=True, exist_ok=True)
             nwb_file_path = output_dir / f"{session_id}.nwb"
 
-            # Run conversion with gzip compression
+            # Run conversion
             interface.run_conversion(
                 nwbfile_path=str(nwb_file_path),
                 metadata=nwb_metadata,
                 overwrite=True,
-                compression="gzip",
             )
 
             # Calculate duration
@@ -232,7 +231,9 @@ class ConversionAgent(BaseAgent):
         Returns:
             Merged metadata dictionary
         """
-        result = base.copy()
+        # Convert to regular dict if it's a DeepDict (from neuroconv)
+        # DeepDict.copy() has a different signature that causes TypeError
+        result = dict(base)
 
         for key, value in override.items():
             if key in result and isinstance(result[key], dict) and isinstance(value, dict):
@@ -262,7 +263,8 @@ class ConversionAgent(BaseAgent):
         Returns:
             Merged Ecephys metadata
         """
-        result = base.copy()
+        # Convert to regular dict to avoid DeepDict copy() issues
+        result = dict(base)
 
         for key, value in override.items():
             if key in ("Device", "ElectrodeGroup"):
