@@ -5,7 +5,7 @@ from pathlib import Path
 import time
 from typing import Any
 
-from neuroconv.datainterfaces import OpenEphysRecordingInterface
+from neuroconv.datainterfaces import OpenEphysRecordingInterface, SpikeGLXRecordingInterface
 
 from agentic_neurodata_conversion.agents.base_agent import BaseAgent
 from agentic_neurodata_conversion.models.mcp_message import MCPMessage
@@ -28,33 +28,60 @@ class ConversionAgent(BaseAgent):
         return ["convert_to_nwb", "validate_conversion"]
 
     async def _convert_to_nwb(
-        self, session_id: str, dataset_path: str, metadata: dict
+        self, session_id: str, dataset_path: str, dataset_format: str, metadata: dict
     ) -> ConversionResults:
         """
-        Convert OpenEphys dataset to NWB format using NeuroConv.
+        Convert electrophysiology dataset to NWB format using NeuroConv.
 
-        Uses OpenEphysRecordingInterface from neuroconv to convert the dataset,
-        applies metadata, and runs conversion with gzip compression.
+        Supports multiple formats:
+        - OpenEphys: Uses OpenEphysRecordingInterface
+        - SpikeGLX: Uses SpikeGLXRecordingInterface
 
         Args:
             session_id: Session identifier for output naming
-            dataset_path: Path to OpenEphys dataset directory
+            dataset_path: Path to dataset directory
+            dataset_format: Format of the dataset (e.g., "openephys", "spikeglx")
             metadata: Metadata dictionary for NWB file
 
         Returns:
             ConversionResults with file path and conversion metrics
 
         Raises:
+            ValueError: If dataset format is not supported
             Exception: If conversion fails (corrupt data, missing files, etc.)
         """
         start_time = time.time()
 
         try:
-            # Create OpenEphys interface
-            interface = OpenEphysRecordingInterface(folder_path=dataset_path)
+            # Create appropriate interface based on format
+            if dataset_format == "openephys":
+                interface = OpenEphysRecordingInterface(folder_path=dataset_path)
+            elif dataset_format == "spikeglx":
+                # SpikeGLX interface needs the path to the .bin or .meta file
+                # Find the .ap.bin file (action potential band)
+                path = Path(dataset_path)
+                ap_bin_files = list(path.glob("*.ap.bin"))
 
-            # Prepare metadata for NWB
-            nwb_metadata = self._prepare_metadata(metadata)
+                if not ap_bin_files:
+                    raise ValueError(f"No .ap.bin file found in SpikeGLX dataset: {dataset_path}")
+
+                # Use the first .ap.bin file found
+                file_path = str(ap_bin_files[0])
+                interface = SpikeGLXRecordingInterface(file_path=file_path)
+            else:
+                raise ValueError(
+                    f"Unsupported dataset format: {dataset_format}. "
+                    f"Supported formats: openephys, spikeglx"
+                )
+
+            # Get default metadata from interface (includes ElectrodeGroups, Device, etc.)
+            interface_metadata = interface.get_metadata()
+
+            # Prepare user metadata for NWB
+            user_metadata = self._prepare_metadata(metadata)
+
+            # Deep merge: user metadata overrides interface defaults
+            nwb_metadata = self._deep_merge_metadata(interface_metadata, user_metadata)
 
             # Set output path
             output_dir = Path.cwd() / "output" / "nwb_files"
@@ -79,7 +106,7 @@ class ConversionAgent(BaseAgent):
                 conversion_duration_seconds=duration,
                 conversion_warnings=[],
                 conversion_errors=[],
-                conversion_log=f"Conversion completed successfully in {duration:.2f}s",
+                conversion_log=f"Conversion of {dataset_format} dataset completed successfully in {duration:.2f}s",
             )
 
         except Exception:
@@ -189,6 +216,64 @@ class ConversionAgent(BaseAgent):
             nwb_metadata["Ecephys"] = {"Device": [device_metadata]}
 
         return nwb_metadata
+
+    def _deep_merge_metadata(self, base: dict, override: dict) -> dict:
+        """
+        Deep merge two metadata dictionaries.
+
+        User metadata (override) takes precedence over interface defaults (base).
+        For nested dictionaries, merges recursively. For "Ecephys" specifically,
+        preserves electrode groups and devices from both sources.
+
+        Args:
+            base: Base metadata (from interface.get_metadata())
+            override: Override metadata (from user/LLM)
+
+        Returns:
+            Merged metadata dictionary
+        """
+        result = base.copy()
+
+        for key, value in override.items():
+            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+                # Special handling for Ecephys to preserve electrode groups
+                if key == "Ecephys":
+                    result[key] = self._merge_ecephys_metadata(result[key], value)
+                else:
+                    # Recursive merge for other nested dicts
+                    result[key] = self._deep_merge_metadata(result[key], value)
+            else:
+                # Override for all other types
+                result[key] = value
+
+        return result
+
+    def _merge_ecephys_metadata(self, base: dict, override: dict) -> dict:
+        """
+        Merge Ecephys metadata, preserving electrode groups and devices from interface.
+
+        The interface provides complete Device and ElectrodeGroup lists. User metadata
+        (if any) should complement, not replace these.
+
+        Args:
+            base: Base Ecephys metadata (from interface)
+            override: Override Ecephys metadata (from user)
+
+        Returns:
+            Merged Ecephys metadata
+        """
+        result = base.copy()
+
+        for key, value in override.items():
+            if key in ("Device", "ElectrodeGroup"):
+                # Keep interface defaults for Device and ElectrodeGroup
+                # These are auto-populated from the recording data
+                continue
+            else:
+                # Override other fields (ElectricalSeries settings, etc.)
+                result[key] = value
+
+        return result
 
     async def _generate_error_message(
         self, error: Exception, dataset_path: str, metadata: dict
@@ -338,6 +423,7 @@ Format:
             conversion_results = await self._convert_to_nwb(
                 session_id=session_id,
                 dataset_path=session_context.dataset_info.dataset_path,
+                dataset_format=session_context.dataset_info.format,
                 metadata=metadata_dict,
             )
 
