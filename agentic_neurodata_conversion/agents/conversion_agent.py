@@ -182,13 +182,15 @@ class ConversionAgent(BaseAgent):
         else:
             nwbfile_metadata["session_start_time"] = session_start_time
 
-        # Experimenter (convert to list if string)
-        if "experimenter" in session_metadata:
-            experimenter = session_metadata["experimenter"]
-            if isinstance(experimenter, str):
-                nwbfile_metadata["experimenter"] = [experimenter]
-            else:
-                nwbfile_metadata["experimenter"] = experimenter
+        # Experimenter (convert to list if string, provide default if None)
+        experimenter = session_metadata.get("experimenter")
+        if experimenter is None or experimenter == "":
+            # NWB requires experimenter to be a list, never None
+            nwbfile_metadata["experimenter"] = ["Unknown"]
+        elif isinstance(experimenter, str):
+            nwbfile_metadata["experimenter"] = [experimenter]
+        else:
+            nwbfile_metadata["experimenter"] = experimenter
 
         # Lab and institution
         if "lab" in session_metadata:
