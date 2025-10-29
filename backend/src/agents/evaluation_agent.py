@@ -7,9 +7,12 @@ Responsible for:
 - Correction analysis (using LLM if available)
 """
 import asyncio
+import logging
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 from models import (
     ConversionStatus,
@@ -376,9 +379,10 @@ class EvaluationAgent:
             # Try to read NWB metadata using h5py
             try:
                 with h5py.File(nwb_path, 'r') as f:
-                    print(f"DEBUG: Reading NWB file with h5py: {nwb_path}")
-                    print(f"DEBUG: Root level groups: {list(f.keys())}")
-                    print(f"DEBUG: Root level attrs: {list(f.attrs.keys())}")
+                    # Debug logging (use state.add_log instead of print)
+                    self._state.add_log(LogLevel.DEBUG, f"Reading NWB file with h5py: {nwb_path}")
+                    self._state.add_log(LogLevel.DEBUG, f"Root level groups: {list(f.keys())}")
+                    self._state.add_log(LogLevel.DEBUG, f"Root level attrs: {list(f.attrs.keys())}")
 
                     # Helper to set top-level attrs with provenance
                     def set_attr_with_provenance(attr_name, field_name=None):
@@ -400,9 +404,9 @@ class EvaluationAgent:
                     # Extract general metadata
                     if 'general' in f:
                         general = f['general']
-                        print(f"DEBUG: Found /general group")
-                        print(f"DEBUG: /general attrs: {list(general.attrs.keys())}")
-                        print(f"DEBUG: /general subgroups: {list(general.keys())}")
+                        self._state.add_log(LogLevel.DEBUG, f"Found /general group")
+                        self._state.add_log(LogLevel.DEBUG, f"/general attrs: {list(general.attrs.keys())}")
+                        self._state.add_log(LogLevel.DEBUG, f"/general subgroups: {list(general.keys())}")
 
                         # CRITICAL FIX: Check both attributes AND datasets
                         # NeuroConv writes metadata as datasets, not attributes!
@@ -501,7 +505,7 @@ class EvaluationAgent:
 
             except Exception as e:
                 # If h5py fails, try PyNWB
-                print(f"h5py extraction failed: {e}, trying PyNWB...")
+                logger.debug(f"h5py extraction failed: {e}, trying PyNWB...")
                 try:
                     from pynwb import NWBHDF5IO
                     with NWBHDF5IO(nwb_path, 'r') as io:
@@ -534,17 +538,17 @@ class EvaluationAgent:
                             file_info['genotype'] = str(getattr(nwbfile.subject, 'genotype', 'N/A'))
                             file_info['strain'] = str(getattr(nwbfile.subject, 'strain', 'N/A'))
                         else:
-                            print(f"WARNING: NWB file has no subject object!")
+                            logger.warning(f"NWB file has no subject object!")
 
-                        print(f"PyNWB extraction succeeded: experimenter={file_info['experimenter']}, institution={file_info['institution']}, subject_id={file_info['subject_id']}")
+                        logger.debug(f"PyNWB extraction succeeded: experimenter={file_info['experimenter']}, institution={file_info['institution']}, subject_id={file_info['subject_id']}")
 
                 except Exception as pynwb_error:
-                    print(f"CRITICAL: Could not extract file info with PyNWB either: {pynwb_error}")
+                    logger.error(f"Could not extract file info with PyNWB either: {pynwb_error}")
                     import traceback
                     traceback.print_exc()
 
         except Exception as e:
-            print(f"Error extracting file info: {e}")
+            logger.error(f"Error extracting file info: {e}")
 
         return file_info
 

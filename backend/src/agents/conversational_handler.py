@@ -346,8 +346,25 @@ Respond in JSON format as specified."""
             }
         )
 
+        # BUG FIX: Use word boundary matching to prevent false positives
+        # e.g., "y" should not match "by" or "laboratory"
+        import re
+        def contains_keyword(text: str, keywords: list) -> bool:
+            """Check if text contains any keyword using word boundaries."""
+            for keyword in keywords:
+                # Use word boundaries for single-word keywords, substring for phrases
+                if ' ' in keyword:
+                    # Multi-word phrase - use substring matching
+                    if keyword in text:
+                        return True
+                else:
+                    # Single word - use word boundary matching
+                    if re.search(r'\b' + re.escape(keyword) + r'\b', text):
+                        return True
+            return False
+
         # Scenario 1: User confirmed - retrieve pending fields WITHOUT parsing
-        if any(keyword in user_lower for keyword in confirmation_keywords):
+        if contains_keyword(user_lower, confirmation_keywords):
             state.add_log(
                 LogLevel.INFO,
                 "User confirmed parsed metadata",
@@ -391,7 +408,7 @@ Respond in JSON format as specified."""
                 }
 
         # Scenario 2: User wants to edit
-        if any(keyword in user_lower for keyword in edit_keywords):
+        if contains_keyword(user_lower, edit_keywords):
             # User said "no" or "edit" - ask them to provide correction
             return {
                 "type": "needs_edit",
@@ -403,7 +420,7 @@ Respond in JSON format as specified."""
             }
 
         # Scenario 3: User skipped or wants auto-apply
-        if user_lower in skip_keywords or not user_message.strip() or any(phrase in user_lower for phrase in auto_apply_phrases):
+        if user_lower in skip_keywords or not user_message.strip() or contains_keyword(user_lower, auto_apply_phrases):
             # For skip/auto-apply, we need parsed fields, but only if we have pending ones
             if hasattr(state, 'pending_parsed_fields') and state.pending_parsed_fields:
                 # Auto-apply the pending fields
@@ -441,7 +458,8 @@ Respond in JSON format as specified."""
             parsed_fields = [parsed_field]
 
         # Generate confirmation message and wait for response
-        confirmation_msg = self.metadata_parser.generate_confirmation_message(parsed_fields)
+        # Pass state to check for missing required fields
+        confirmation_msg = self.metadata_parser.generate_confirmation_message(parsed_fields, state)
 
         # Store parsed fields in state so they can be retrieved when user confirms
         if not hasattr(state, 'pending_parsed_fields'):
@@ -564,7 +582,20 @@ Respond in JSON format as specified."""
             confirmation_keywords = ["yes", "correct", "ok", "confirm", "accept", "✓", "y", "looks good", "perfect"]
             user_lower = user_message.lower().strip()
 
-            if (any(keyword in user_lower for keyword in confirmation_keywords) and
+            # BUG FIX: Use word boundary matching to prevent false positives
+            import re
+            def contains_keyword_fallback(text: str, keywords: list) -> bool:
+                """Check if text contains any keyword using word boundaries."""
+                for keyword in keywords:
+                    if ' ' in keyword:
+                        if keyword in text:
+                            return True
+                    else:
+                        if re.search(r'\b' + re.escape(keyword) + r'\b', text):
+                            return True
+                return False
+
+            if (contains_keyword_fallback(user_lower, confirmation_keywords) and
                 hasattr(state, 'pending_parsed_fields') and state.pending_parsed_fields):
 
                 state.add_log(

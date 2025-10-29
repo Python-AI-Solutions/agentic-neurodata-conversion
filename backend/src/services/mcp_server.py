@@ -67,6 +67,24 @@ class MCPServer:
         """
         self._event_subscribers.append(subscriber)
 
+    def unsubscribe_from_events(self, subscriber: Callable[[MCPEvent], None]) -> None:
+        """
+        Unsubscribe from MCP events.
+
+        Args:
+            subscriber: Async callable to remove from subscribers
+
+        Note:
+            If subscriber is not in the list, this is a no-op (silently fails).
+            This prevents errors during cleanup when subscriber may already be removed.
+        """
+        try:
+            self._event_subscribers.remove(subscriber)
+        except ValueError:
+            # Subscriber not in list - already removed or never added
+            # This is expected during cleanup, so we don't raise an error
+            pass
+
     async def send_message(self, message: MCPMessage) -> MCPResponse:
         """
         Send a message to the target agent and wait for response.
@@ -205,6 +223,8 @@ def get_mcp_server() -> MCPServer:
     global _mcp_server
     if _mcp_server is None:
         _mcp_server = MCPServer()
+        # Set MCP server reference in global state for WebSocket event broadcasting
+        _mcp_server.global_state.set_mcp_server(_mcp_server)
     return _mcp_server
 
 

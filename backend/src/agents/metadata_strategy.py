@@ -7,10 +7,13 @@ This module implements intelligent, priority-based metadata collection that:
 3. Offers OPTIONAL fields as a batch
 4. Respects user's "skip" preferences at field and global levels
 """
+import logging
 from typing import Any, Dict, List, Optional, Set
 from enum import Enum
 
 from models import GlobalState, LogLevel
+
+logger = logging.getLogger(__name__)
 
 
 class FieldPriority(str, Enum):
@@ -204,6 +207,10 @@ class MetadataRequestStrategy:
         state: GlobalState,
     ) -> Dict[str, Any]:
         """Request critical fields (batch or sequential based on user preference)."""
+        # Defensive check: ensure critical_fields is not empty
+        if not critical_fields:
+            return {"action": "proceed", "message": None}
+
         # If user wants sequential mode, ask one at a time
         if state.user_wants_sequential:
             next_field_name = critical_fields[0]
@@ -267,6 +274,10 @@ To create a DANDI-compatible NWB file, I need {len(critical_fields)} essential f
         state: GlobalState,
     ) -> Dict[str, Any]:
         """Request the next recommended field sequentially."""
+        # Defensive check: ensure recommended_fields is not empty
+        if not recommended_fields:
+            return {"action": "proceed", "message": None}
+
         next_field_name = recommended_fields[0]
         field = METADATA_FIELDS[next_field_name]
 
@@ -470,7 +481,7 @@ What is the user's intent? Respond with exactly one word: global, field, sequent
             reasoning = response.get("reasoning", "")
 
             # Log the LLM's decision for debugging
-            print(f"LLM skip detection: intent={intent}, confidence={confidence}%, reasoning={reasoning}")
+            logger.debug(f"LLM skip detection: intent={intent}, confidence={confidence}%, reasoning={reasoning}")
 
             # DETAILED DEBUG LOGGING to state logs
             if self.state:
@@ -489,7 +500,7 @@ What is the user's intent? Respond with exactly one word: global, field, sequent
             # If confidence is low, fall back to keyword matching
             if confidence < 60:
                 fallback = self.detect_skip_type(user_message)
-                print(f"Low confidence ({confidence}%), using keyword fallback: {fallback}")
+                logger.debug(f"Low confidence ({confidence}%), using keyword fallback: {fallback}")
                 if self.state:
                     self.state.add_log(
                         LogLevel.INFO,
@@ -501,7 +512,7 @@ What is the user's intent? Respond with exactly one word: global, field, sequent
             return intent
 
         except Exception as e:
-            print(f"LLM skip detection failed: {e}, falling back to keywords")
+            logger.warning(f"LLM skip detection failed: {e}, falling back to keywords")
             return self.detect_skip_type(user_message)
 
     def detect_skip_type(self, user_message: str) -> str:

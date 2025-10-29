@@ -5,11 +5,20 @@ This module defines the GlobalState model that tracks the entire conversion
 lifecycle, from upload through validation to final output.
 """
 import asyncio
+import threading
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Set
 
 from pydantic import BaseModel, Field, ConfigDict
+
+# Import MCPEvent for WebSocket progress events
+# Safe to import here - no circular dependency (mcp.py doesn't import state.py)
+try:
+    from models.mcp import MCPEvent
+except ImportError:
+    # If MCPEvent is not available, WebSocket events will be disabled
+    MCPEvent = None
 
 
 class ConversionStatus(str, Enum):
@@ -160,6 +169,7 @@ class ProvenanceInfo(BaseModel):
 
 
 # WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Add retry limit (Recommendation 6.5, Breaking Point #7)
+# Maximum conversion retry attempts (not LLM correction attempts)
 MAX_RETRY_ATTEMPTS = 5
 
 
@@ -186,6 +196,7 @@ class GlobalState(BaseModel):
     _status_lock: Optional[asyncio.Lock] = None
     _conversation_lock: Optional[asyncio.Lock] = None
     _llm_lock: Optional[asyncio.Lock] = None
+    _mcp_server: Optional[Any] = None  # Reference to MCP server for event broadcasting
 
     # LLM processing state
     llm_processing: bool = Field(
@@ -320,10 +331,21 @@ class GlobalState(BaseModel):
     def __init__(self, **data):
         """Initialize GlobalState with async locks."""
         super().__init__(**data)
-        # Use object.__setattr__ for private fields in Pydantic V2
-        object.__setattr__(self, '_status_lock', asyncio.Lock())
-        object.__setattr__(self, '_conversation_lock', asyncio.Lock())
-        object.__setattr__(self, '_llm_lock', asyncio.Lock())
+        # Initialize locks as None - will be created lazily when needed in async context
+        # This avoids "no event loop" errors when GlobalState is created outside async context
+        object.__setattr__(self, '_status_lock', None)
+        object.__setattr__(self, '_conversation_lock', None)
+        object.__setattr__(self, '_llm_lock', None)
+        object.__setattr__(self, '_lock_init_lock', threading.Lock())  # Thread-safe lock initialization
+
+    def set_mcp_server(self, mcp_server: Any) -> None:
+        """
+        Set MCP server reference for event broadcasting.
+
+        Args:
+            mcp_server: MCP server instance
+        """
+        object.__setattr__(self, '_mcp_server', mcp_server)
 
     def add_log(self, level: LogLevel, message: str, context: Optional[Dict[str, Any]] = None) -> None:
         """
@@ -472,7 +494,7 @@ class GlobalState(BaseModel):
         stage: Optional[str] = None
     ) -> None:
         """
-        Update conversion progress.
+        Update conversion progress and emit WebSocket event.
 
         Args:
             percent: Progress percentage (0-100)
@@ -494,6 +516,38 @@ class GlobalState(BaseModel):
                 "stage": stage,
             },
         )
+
+        # Emit WebSocket event for real-time progress updates
+        if self._mcp_server and MCPEvent:
+            try:
+                event = MCPEvent(
+                    event_type="progress_update",
+                    data={
+                        "progress": self.progress_percent,
+                        "progress_message": self.progress_message,
+                        "current_stage": self.current_stage,
+                        "status": self.status.value if self.status else None,
+                    },
+                )
+
+                # Broadcast event safely from any thread context
+                try:
+                    # Try to get running event loop (works from async context)
+                    loop = asyncio.get_running_loop()
+                    # Schedule coroutine in the event loop from another thread
+                    asyncio.run_coroutine_threadsafe(
+                        self._mcp_server.broadcast_event(event), loop
+                    )
+                except RuntimeError:
+                    # No event loop running (e.g., called from background thread)
+                    # Skip WebSocket broadcast - progress still tracked via polling
+                    pass
+            except Exception as e:
+                # Log error but don't fail the progress update
+                self.add_log(
+                    LogLevel.WARNING,
+                    f"Failed to broadcast progress event via WebSocket: {e}",
+                )
 
     # Bug #14 fix: Removed can_retry() - unlimited retries with user permission
     # No programmatic limit on retry attempts (Story 8.7 line 933, Story 8.8 line 953)
@@ -549,8 +603,12 @@ class GlobalState(BaseModel):
         Args:
             status: New status
         """
+        # Thread-safe lazy initialization of async lock
         if self._status_lock is None:
-            self._status_lock = asyncio.Lock()
+            with self._lock_init_lock:
+                # Double-check pattern to prevent race condition
+                if self._status_lock is None:
+                    object.__setattr__(self, '_status_lock', asyncio.Lock())
 
         async with self._status_lock:
             self.status = status
@@ -584,8 +642,12 @@ class GlobalState(BaseModel):
         Args:
             validation_status: New validation status
         """
+        # Thread-safe lazy initialization of async lock
         if self._status_lock is None:
-            self._status_lock = asyncio.Lock()
+            with self._lock_init_lock:
+                # Double-check pattern to prevent race condition
+                if self._status_lock is None:
+                    object.__setattr__(self, '_status_lock', asyncio.Lock())
 
         async with self._status_lock:
             self.validation_status = validation_status
@@ -608,8 +670,12 @@ class GlobalState(BaseModel):
             conversion_status: New conversion status
             validation_status: New validation status
         """
+        # Thread-safe lazy initialization of async lock
         if self._status_lock is None:
-            self._status_lock = asyncio.Lock()
+            with self._lock_init_lock:
+                # Double-check pattern to prevent race condition
+                if self._status_lock is None:
+                    object.__setattr__(self, '_status_lock', asyncio.Lock())
 
         async with self._status_lock:
             self.status = conversion_status
@@ -640,8 +706,12 @@ class GlobalState(BaseModel):
             requires_user_decision: Whether user needs to make a decision
             conversation_phase: Optional conversation phase to set
         """
+        # Thread-safe lazy initialization of async lock
         if self._status_lock is None:
-            self._status_lock = asyncio.Lock()
+            with self._lock_init_lock:
+                # Double-check pattern to prevent race condition
+                if self._status_lock is None:
+                    object.__setattr__(self, '_status_lock', asyncio.Lock())
 
         async with self._status_lock:
             self.overall_status = overall_status

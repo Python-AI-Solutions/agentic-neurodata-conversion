@@ -186,8 +186,12 @@ class MetadataInferenceEngine:
                                 meta["channel_count"] = int(value)
                             elif key == "fileTimeSecs":
                                 meta["duration_seconds"] = float(value)
-            except Exception:
-                pass
+            except Exception as e:
+                # Log metadata extraction failure but continue - this is non-critical
+                self._state.add_log(
+                    LogLevel.WARNING,
+                    f"Failed to extract SpikeGLX metadata from .meta file: {e}"
+                )
 
         return meta
 

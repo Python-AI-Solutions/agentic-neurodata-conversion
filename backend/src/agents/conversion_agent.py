@@ -7,10 +7,15 @@ Responsible for:
 - Pure technical conversion logic (no user interaction)
 """
 import hashlib
+import logging
+import threading
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import neuroconv
+
+logger = logging.getLogger(__name__)
 from pynwb import NWBHDF5IO
 
 from models import (
@@ -57,16 +62,40 @@ class ConversionAgent:
 
             summaries = get_format_summaries()
             return [fmt["format"] for fmt in summaries]
-        except Exception:
-            # Fallback to known common formats
+        except Exception as e:
+            # Fallback to all supported formats (84 total)
+            logger.warning(f"Failed to get format summaries dynamically, using fallback list: {e}")
             return [
-                "SpikeGLX",
-                "Neuropixels",
-                "OpenEphys",
-                "Blackrock",
-                "Axona",
-                "Neuralynx",
-                "Plexon",
+                # Electrophysiology Recording
+                "AlphaOmegaRecording", "Axon", "AxonRecording", "AxonaRecording", "AxonaUnitRecording",
+                "BiocamRecording", "BlackrockRecording", "CellExplorerRecording", "EDFRecording",
+                "IntanRecording", "MCSRawRecording", "MEArecRecording", "MaxOneRecording",
+                "NeuralynxRecording", "Neuropixels", "NeuroScopeRecording", "OpenEphys",
+                "OpenEphysBinary", "OpenEphysLegacyRecording", "Plexon2Recording", "PlexonRecording",
+                "Spike2Recording", "SpikeGLX", "SpikeGadgetsRecording", "TdtRecording",
+                "WhiteMatterRecording",
+                # Spike Sorting
+                "BlackrockSorting", "CellExplorerSorting", "KiloSortSorting", "NeuralynxSorting",
+                "NeuroScopeSorting", "OpenEphysSorting", "PhySorting", "PlexonSorting",
+                # Imaging
+                "BrukerTiffMultiPlaneImaging", "BrukerTiffSinglePlaneImaging", "FemtonicsImaging",
+                "Hdf5Imaging", "InscopixImaging", "MicroManagerTiffImaging", "MiniscopeImaging",
+                "SbxImaging", "ScanImageImaging", "ScanImageLegacyImaging", "ScanImageMultiFileImaging",
+                "ThorImaging", "TiffImaging",
+                # Segmentation
+                "CaimanSegmentation", "CnmfeSegmentation", "ExtractSegmentation",
+                "InscopixSegmentation", "MinianSegmentation", "SimaSegmentation",
+                "Suite2pSegmentation",
+                # Behavior/Video
+                "AxonaPositionData", "DeepLabCut", "ExternalVideo", "FicTracData", "InternalVideo",
+                "LightningPoseData", "MiniscopeBehavior", "NeuralynxNvt", "SLEAP", "Video",
+                # LFP/Analog/Other
+                "Audio", "AxonaLFPData", "CellExplorerLFP", "CsvTimeIntervals", "EDFAnalog",
+                "ExcelTimeIntervals", "Image", "IntanAnalog", "MedPC", "NeuroScopeLFP",
+                "OpenEphysBinaryAnalog", "PlexonLFP", "SpikeGLXNIDQ", "TDTFiberPhotometry",
+                # Converters
+                "BrukerTiffMultiPlane", "BrukerTiffSinglePlane", "LightningPose", "Miniscope",
+                "SortedRecording", "SortedSpikeGLX", "SpikeGLXConverter",
             ]
 
     async def handle_detect_format(
@@ -181,11 +210,23 @@ class ConversionAgent:
             if llm_result and llm_result.get("confidence", 0) > 70:
                 detected_format = llm_result.get("format")
                 confidence = llm_result.get("confidence")
-                state.add_log(
-                    LogLevel.INFO,
-                    f"LLM detected format: {detected_format} (confidence: {confidence}%)",
-                )
-                return detected_format
+
+                # BUG FIX: Validate that LLM returned a valid NeuroConv format name
+                # This prevents hallucinated format names like "AxonRawBinaryFormat"
+                supported_formats = self._get_supported_formats()
+                if detected_format not in supported_formats:
+                    state.add_log(
+                        LogLevel.WARNING,
+                        f"LLM returned invalid format '{detected_format}' (not in NeuroConv). "
+                        f"This may be a hallucination. Falling back to pattern matching.",
+                        {"invalid_format": detected_format, "alternatives": llm_result.get("alternatives", [])}
+                    )
+                else:
+                    state.add_log(
+                        LogLevel.INFO,
+                        f"LLM detected format: {detected_format} (confidence: {confidence}%)",
+                    )
+                    return detected_format
 
             confidence = llm_result.get("confidence", 0) if llm_result else 0
             state.add_log(
@@ -222,6 +263,14 @@ class ConversionAgent:
                 "Format detected via pattern matching: Neuropixels",
             )
             return "Neuropixels"
+
+        # BUG FIX: Check for Axon/ABF files as fallback
+        if path.is_file() and path.suffix.lower() == ".abf":
+            state.add_log(
+                LogLevel.INFO,
+                "Format detected via pattern matching: Axon (.abf file)",
+            )
+            return "Axon"
 
         # Still ambiguous
         return None
@@ -379,19 +428,47 @@ class ConversionAgent:
 
 Your job is to analyze file structure and naming patterns to identify the recording format.
 
-Common formats:
-- **SpikeGLX**: Files like "*.ap.bin", "*.ap.meta", "*.lf.bin", "*.lf.meta"
-- **OpenEphys**: Directories with "structure.oebin", "settings.xml", or "continuous/" folders
-- **Neuropixels**: Files with ".nidq." in the name, or specific probe naming
-- **Intan**: ".rhd" or ".rhs" files
-- **Neuralynx**: ".ncs", ".nev", ".ntt" files
-- **Plexon**: ".plx" files
-- **TDT**: Tank/Block directory structure
-- **Imaging (ScanImage)**: ".tif" with specific metadata
-- **Miniscope**: ".avi" with timestamp files
-- **Calcium Imaging**: Various formats with ROI data
+IMPORTANT: You MUST use the exact format names recognized by NeuroConv. Do not invent or modify format names.
 
-Analyze the file structure carefully and make an educated guess."""
+Common electrophysiology formats:
+- **SpikeGLX** or **Neuropixels**: Files like "*.ap.bin", "*.ap.meta", "*.lf.bin", "*.lf.meta", or ".nidq." files
+- **OpenEphys** or **OpenEphysBinary**: Directories with "structure.oebin", "settings.xml", or "continuous/" folders
+- **Axon** or **AxonRecording**: ".abf" files (Axon Instruments pCLAMP/ABF format)
+- **IntanRecording**: ".rhd" or ".rhs" files (Intan Technologies)
+- **BlackrockRecording**: ".ns1", ".ns2", ".ns3", ".ns4", ".ns5", ".ns6", ".nev" files
+- **NeuralynxRecording**: ".ncs", ".nev", ".ntt", ".nvt" files
+- **PlexonRecording** or **Plexon2Recording**: ".plx" or ".pl2" files
+- **TdtRecording**: Tank/Block directory structure (Tucker-Davis Technologies)
+- **SpikeGadgetsRecording**: ".rec" files with companion metadata
+- **Spike2Recording**: ".smr" or ".smrx" files (CED Spike2)
+- **EDFRecording**: ".edf" files (European Data Format)
+- **AlphaOmegaRecording**: Alpha Omega recordings
+- **AxonaRecording**: ".bin", ".set", ".eeg" (Axona/Dacq systems)
+- **BiocamRecording**: 3Brain Biocam recordings
+- **CellExplorerRecording**: CellExplorer format
+- **MCSRawRecording**: Multi Channel Systems raw recordings
+- **MaxOneRecording**: MaxWell Biosystems MaxOne recordings
+- **NeuroScopeRecording**: NeuroScope format
+- **WhiteMatterRecording**: White Matter recordings
+
+Common imaging formats:
+- **ScanImageImaging**: ".tif" with ScanImage metadata
+- **MiniscopeImaging**: ".avi" with timestamp files (Miniscope recordings)
+- **BrukerTiffSinglePlaneImaging** or **BrukerTiffMultiPlaneImaging**: Bruker TIF files
+- **InscopixImaging**: Inscopix recordings
+- **TiffImaging**: Generic TIFF imaging
+- **ThorImaging**: ThorLabs imaging
+- **Hdf5Imaging**: HDF5-based imaging
+- **SbxImaging**: Scanbox imaging
+- **MicroManagerTiffImaging**: Micro-Manager TIFF files
+- **FemtonicsImaging**: Femtonics imaging
+
+Behavior/tracking formats:
+- **DeepLabCut**: DeepLabCut pose estimation files
+- **SLEAP**: SLEAP pose tracking files
+- **Video**: Generic video files
+
+Analyze the file structure carefully and return ONLY format names from the list above. Do not invent new format names."""
 
         user_prompt = f"""I have neuroscience recording data that I need to identify:
 
@@ -486,7 +563,35 @@ Be specific about the format name used by NeuroConv."""
         input_path = message.context.get("input_path")
         output_path = message.context.get("output_path")
         format_name = message.context.get("format")
-        metadata = message.context.get("metadata", {})
+        metadata_raw = message.context.get("metadata", {})
+
+        # BUG FIX: Use whitelist approach to only pass valid NWB metadata fields
+        # Based on official PyNWB 2.8.3+ documentation
+        # This is safer than blacklist - only documented NWB fields can pass through
+
+        # NWBFile metadata fields (from PyNWB NWBFile class)
+        NWB_FILE_FIELDS = {
+            # Required fields
+            "session_description", "identifier", "session_start_time",
+            # Optional NWBFile metadata fields
+            "experimenter", "experiment_description", "session_id", "institution",
+            "keywords", "notes", "pharmacology", "protocol", "related_publications",
+            "slices", "source_script", "source_script_file_name", "surgery", "virus",
+            "stimulus_notes", "lab", "data_collection",
+        }
+
+        # Subject fields (from PyNWB Subject class)
+        # These may be passed flat and will be structured into a Subject object by NeuroConv
+        SUBJECT_FIELDS = {
+            "subject_id", "species", "sex", "age", "strain",
+            "date_of_birth", "genotype", "weight", "description"
+        }
+
+        # Filter to only allowed NWB fields - prevents internal tracking fields from leaking
+        metadata = {
+            k: v for k, v in metadata_raw.items()
+            if k in NWB_FILE_FIELDS or k in SUBJECT_FIELDS
+        }
 
         if not all([input_path, output_path, format_name]):
             state.add_log(
@@ -501,20 +606,45 @@ Be specific about the format name used by NeuroConv."""
 
         await state.update_status(ConversionStatus.CONVERTING)
         state.update_progress(0, "Initializing conversion...", "initialization")
+
+        # Track conversion timing
+        import time
+        from datetime import datetime
+        conversion_start_time = time.time()
+        conversion_start_timestamp = datetime.now()
+
+        # Get detailed file information
+        from pathlib import Path
+        file_path = Path(input_path)
+        file_size_bytes = file_path.stat().st_size if file_path.exists() else 0
+        file_size_mb = file_size_bytes / (1024 * 1024)
+        file_size_gb = file_size_bytes / (1024 * 1024 * 1024)
+
+        # Format file size for display
+        if file_size_gb >= 1.0:
+            file_size_display = f"{file_size_gb:.2f} GB"
+        elif file_size_mb >= 1.0:
+            file_size_display = f"{file_size_mb:.1f} MB"
+        else:
+            file_size_display = f"{file_size_bytes / 1024:.1f} KB"
+
         state.add_log(
             LogLevel.INFO,
-            f"Starting NWB conversion: {format_name}",
+            f"Starting NWB conversion: {format_name} ({file_size_display})",
             {
+                "format": format_name,
+                "input_file": file_path.name,
                 "input_path": input_path,
                 "output_path": output_path,
-                "format": format_name,
+                "file_size_bytes": file_size_bytes,
+                "file_size_mb": round(file_size_mb, 2),
+                "file_size_display": file_size_display,
+                "start_timestamp": conversion_start_timestamp.isoformat(),
             },
         )
 
         try:
             # 🎯 PRIORITY 5: Narrate conversion start
-            from pathlib import Path
-            file_size_mb = Path(input_path).stat().st_size / (1024 * 1024) if Path(input_path).exists() else 0
 
             state.update_progress(10, f"Analyzing {format_name} data ({file_size_mb:.1f} MB)...", "analysis")
 
@@ -576,12 +706,62 @@ Be specific about the format name used by NeuroConv."""
 
             state.output_path = output_path
             state.update_progress(100, "Conversion completed successfully!", "complete")
+
+            # Calculate conversion metrics
+            conversion_end_time = time.time()
+            conversion_end_timestamp = datetime.now()
+            duration_seconds = conversion_end_time - conversion_start_time
+            duration_minutes = duration_seconds / 60
+
+            # Get output file size
+            output_file_path = Path(output_path)
+            output_size_bytes = output_file_path.stat().st_size if output_file_path.exists() else 0
+            output_size_mb = output_size_bytes / (1024 * 1024)
+            output_size_gb = output_size_bytes / (1024 * 1024 * 1024)
+
+            # Format output file size
+            if output_size_gb >= 1.0:
+                output_size_display = f"{output_size_gb:.2f} GB"
+            elif output_size_mb >= 1.0:
+                output_size_display = f"{output_size_mb:.1f} MB"
+            else:
+                output_size_display = f"{output_size_bytes / 1024:.1f} KB"
+
+            # Calculate compression ratio and speed
+            if file_size_bytes > 0:
+                compression_ratio = ((file_size_bytes - output_size_bytes) / file_size_bytes) * 100
+                compression_sign = "smaller" if compression_ratio > 0 else "larger"
+                compression_ratio_abs = abs(compression_ratio)
+            else:
+                compression_ratio = 0
+                compression_sign = "same"
+                compression_ratio_abs = 0
+
+            # Calculate conversion speed (MB/s)
+            conversion_speed_mbps = file_size_mb / duration_seconds if duration_seconds > 0 else 0
+
+            # Format duration for display
+            if duration_minutes >= 1.0:
+                duration_display = f"{int(duration_minutes // 60)}h {int(duration_minutes % 60)}m {int(duration_seconds % 60)}s" if duration_minutes >= 60 else f"{int(duration_minutes)}m {int(duration_seconds % 60)}s"
+            else:
+                duration_display = f"{duration_seconds:.1f}s"
+
             state.add_log(
                 LogLevel.INFO,
-                "Conversion completed successfully",
+                f"Conversion completed successfully in {duration_display} ({output_size_display}, {compression_ratio_abs:.1f}% {compression_sign})",
                 {
                     "output_path": output_path,
+                    "output_file": output_file_path.name,
                     "checksum": checksum,
+                    "duration_seconds": round(duration_seconds, 2),
+                    "duration_display": duration_display,
+                    "output_size_bytes": output_size_bytes,
+                    "output_size_mb": round(output_size_mb, 2),
+                    "output_size_display": output_size_display,
+                    "compression_ratio_percent": round(compression_ratio, 2),
+                    "compression_sign": compression_sign,
+                    "conversion_speed_mbps": round(conversion_speed_mbps, 2),
+                    "end_timestamp": conversion_end_timestamp.isoformat(),
                 },
             )
 
@@ -673,8 +853,9 @@ Be specific about the format name used by NeuroConv."""
                     file_context["name"] = path.name
                     files = [f.name for f in path.iterdir() if f.is_file()][:20]
                     file_context["files"] = files
-        except Exception:
-            pass
+        except Exception as e:
+            # Non-critical - file context is optional for format detection
+            logger.debug(f"Failed to gather file context for format detection: {e}")
 
         system_prompt = """You are a helpful neuroscience data conversion assistant.
 
@@ -907,27 +1088,126 @@ Provide a brief, friendly update about what's happening now."""
             Exception: If conversion fails
         """
         from neuroconv import NWBConverter
-        from neuroconv.datainterfaces import (
-            SpikeGLXRecordingInterface,
-            OpenEphysRecordingInterface,
-            OpenEphysBinaryRecordingInterface,
-        )
 
-        # Map format names to interface classes
-        format_map = {
-            "SpikeGLX": SpikeGLXRecordingInterface,
-            "OpenEphys": OpenEphysRecordingInterface,
-            "OpenEphysBinary": OpenEphysBinaryRecordingInterface,
-            "Neuropixels": SpikeGLXRecordingInterface,  # Neuropixels data uses SpikeGLX format
+        # Comprehensive format-to-interface mapping for all 84 NeuroConv interfaces
+        # Using dynamic imports to avoid loading all interfaces at startup
+        format_to_interface_map = {
+            # Electrophysiology Recording (24 formats)
+            "AlphaOmegaRecording": "AlphaOmegaRecordingInterface",
+            "Axon": "AbfInterface",  # .abf files - Axon Instruments pCLAMP
+            "AxonRecording": "AxonRecordingInterface",
+            "AxonaRecording": "AxonaRecordingInterface",
+            "AxonaUnitRecording": "AxonaUnitRecordingInterface",
+            "BiocamRecording": "BiocamRecordingInterface",
+            "BlackrockRecording": "BlackrockRecordingInterface",
+            "CellExplorerRecording": "CellExplorerRecordingInterface",
+            "EDFRecording": "EDFRecordingInterface",
+            "IntanRecording": "IntanRecordingInterface",
+            "MCSRawRecording": "MCSRawRecordingInterface",
+            "MEArecRecording": "MEArecRecordingInterface",
+            "MaxOneRecording": "MaxOneRecordingInterface",
+            "NeuralynxRecording": "NeuralynxRecordingInterface",
+            "Neuropixels": "SpikeGLXRecordingInterface",  # Alias for SpikeGLX
+            "NeuroScopeRecording": "NeuroScopeRecordingInterface",
+            "OpenEphys": "OpenEphysRecordingInterface",
+            "OpenEphysBinary": "OpenEphysBinaryRecordingInterface",
+            "OpenEphysLegacyRecording": "OpenEphysLegacyRecordingInterface",
+            "Plexon2Recording": "Plexon2RecordingInterface",
+            "PlexonRecording": "PlexonRecordingInterface",
+            "Spike2Recording": "Spike2RecordingInterface",
+            "SpikeGLX": "SpikeGLXRecordingInterface",
+            "SpikeGadgetsRecording": "SpikeGadgetsRecordingInterface",
+            "TdtRecording": "TdtRecordingInterface",
+            "WhiteMatterRecording": "WhiteMatterRecordingInterface",
+
+            # Spike Sorting (8 formats)
+            "BlackrockSorting": "BlackrockSortingInterface",
+            "CellExplorerSorting": "CellExplorerSortingInterface",
+            "KiloSortSorting": "KiloSortSortingInterface",
+            "NeuralynxSorting": "NeuralynxSortingInterface",
+            "NeuroScopeSorting": "NeuroScopeSortingInterface",
+            "OpenEphysSorting": "OpenEphysSortingInterface",
+            "PhySorting": "PhySortingInterface",
+            "PlexonSorting": "PlexonSortingInterface",
+
+            # Imaging (13 formats)
+            "BrukerTiffMultiPlaneImaging": "BrukerTiffMultiPlaneImagingInterface",
+            "BrukerTiffSinglePlaneImaging": "BrukerTiffSinglePlaneImagingInterface",
+            "FemtonicsImaging": "FemtonicsImagingInterface",
+            "Hdf5Imaging": "Hdf5ImagingInterface",
+            "InscopixImaging": "InscopixImagingInterface",
+            "MicroManagerTiffImaging": "MicroManagerTiffImagingInterface",
+            "MiniscopeImaging": "MiniscopeImagingInterface",
+            "SbxImaging": "SbxImagingInterface",
+            "ScanImageImaging": "ScanImageImagingInterface",
+            "ScanImageLegacyImaging": "ScanImageLegacyImagingInterface",
+            "ScanImageMultiFileImaging": "ScanImageMultiFileImagingInterface",
+            "ThorImaging": "ThorImagingInterface",
+            "TiffImaging": "TiffImagingInterface",
+
+            # Segmentation (7 formats)
+            "CaimanSegmentation": "CaimanSegmentationInterface",
+            "CnmfeSegmentation": "CnmfeSegmentationInterface",
+            "ExtractSegmentation": "ExtractSegmentationInterface",
+            "InscopixSegmentation": "InscopixSegmentationInterface",
+            "MinianSegmentation": "MinianSegmentationInterface",
+            "SimaSegmentation": "SimaSegmentationInterface",
+            "Suite2pSegmentation": "Suite2pSegmentationInterface",
+
+            # Behavior/Video (11 formats)
+            "AxonaPositionData": "AxonaPositionDataInterface",
+            "DeepLabCut": "DeepLabCutInterface",
+            "ExternalVideo": "ExternalVideoInterface",
+            "FicTracData": "FicTracDataInterface",
+            "InternalVideo": "InternalVideoInterface",
+            "LightningPoseData": "LightningPoseDataInterface",
+            "MiniscopeBehavior": "MiniscopeBehaviorInterface",
+            "NeuralynxNvt": "NeuralynxNvtInterface",
+            "SLEAP": "SLEAPInterface",
+            "Video": "VideoInterface",
+
+            # LFP/Analog/Other (15 formats)
+            "Audio": "AudioInterface",
+            "AxonaLFPData": "AxonaLFPDataInterface",
+            "CellExplorerLFP": "CellExplorerLFPInterface",
+            "CsvTimeIntervals": "CsvTimeIntervalsInterface",
+            "EDFAnalog": "EDFAnalogInterface",
+            "ExcelTimeIntervals": "ExcelTimeIntervalsInterface",
+            "Image": "ImageInterface",
+            "IntanAnalog": "IntanAnalogInterface",
+            "MedPC": "MedPCInterface",
+            "NeuroScopeLFP": "NeuroScopeLFPInterface",
+            "OpenEphysBinaryAnalog": "OpenEphysBinaryAnalogInterface",
+            "PlexonLFP": "PlexonLFPInterface",
+            "SpikeGLXNIDQ": "SpikeGLXNIDQInterface",
+            "TDTFiberPhotometry": "TDTFiberPhotometryInterface",
+
+            # Converters (6 formats)
+            "BrukerTiffMultiPlane": "BrukerTiffMultiPlaneConverter",
+            "BrukerTiffSinglePlane": "BrukerTiffSinglePlaneConverter",
+            "LightningPose": "LightningPoseConverter",
+            "Miniscope": "MiniscopeConverter",
+            "SortedRecording": "SortedRecordingConverter",
+            "SortedSpikeGLX": "SortedSpikeGLXConverter",
+            "SpikeGLXConverter": "SpikeGLXConverterPipe",
         }
 
-        if format_name not in format_map:
+        if format_name not in format_to_interface_map:
             raise ValueError(
                 f"Unsupported format: {format_name}. "
-                f"Supported formats: {', '.join(sorted(format_map.keys()))}"
+                f"Supported formats: {', '.join(sorted(format_to_interface_map.keys()))}"
             )
 
-        interface_class = format_map[format_name]
+        # Dynamically import the required interface
+        interface_class_name = format_to_interface_map[format_name]
+        try:
+            from neuroconv import datainterfaces
+            interface_class = getattr(datainterfaces, interface_class_name)
+        except (ImportError, AttributeError) as e:
+            raise ValueError(
+                f"Failed to import interface '{interface_class_name}' for format '{format_name}'. "
+                f"Error: {str(e)}"
+            ) from e
 
         # Create interface with source data
         from pathlib import Path
@@ -994,11 +1274,73 @@ Provide a brief, friendly update about what's happening now."""
                 ) from e
 
         else:
-            # Generic format handling
-            if input_file.is_file():
-                data_interface = interface_class(file_path=input_path)
-            else:
-                data_interface = interface_class(folder_path=input_path)
+            # Generic format handling for all other formats (Axon, Intan, Blackrock, etc.)
+            try:
+                if input_file.is_file():
+                    state.add_log(
+                        LogLevel.INFO,
+                        f"Initializing {format_name} interface with file: {input_file.name}",
+                    )
+
+                    # BUG FIX: Some interfaces (like AbfInterface) use file_paths (plural, as list)
+                    # instead of file_path (singular, as string)
+                    if format_name in ["Axon", "AxonRecording"]:
+                        # AbfInterface expects file_paths as a list
+                        state.add_log(
+                            LogLevel.INFO,
+                            f"Using file_paths parameter (list) for {format_name}",
+                        )
+                        data_interface = interface_class(file_paths=[input_path])
+                    else:
+                        # Most other interfaces use file_path as a string
+                        data_interface = interface_class(file_path=input_path)
+                else:
+                    state.add_log(
+                        LogLevel.INFO,
+                        f"Initializing {format_name} interface with folder: {input_file.name}",
+                    )
+                    data_interface = interface_class(folder_path=input_path)
+            except Exception as e:
+                # BUG FIX: Add detailed error logging for generic format initialization failures
+                error_msg = f"Failed to initialize {format_name} interface for {input_path}."
+                error_details = []
+
+                # Add format-specific hints based on common errors
+                error_str = str(e).lower()
+                if "no such file" in error_str or "does not exist" in error_str:
+                    error_details.append("File or directory not found")
+                elif "permission" in error_str:
+                    error_details.append("Permission denied - check file permissions")
+                elif "corrupt" in error_str or "invalid" in error_str:
+                    error_details.append("File may be corrupted or invalid format")
+                elif "metadata" in error_str:
+                    error_details.append("Missing or invalid metadata in file")
+                elif "compression" in error_str:
+                    error_details.append("Compression format not supported")
+                else:
+                    error_details.append(f"Error: {str(e)}")
+
+                # Log detailed error information
+                state.add_log(
+                    LogLevel.ERROR,
+                    f"{error_msg} {' | '.join(error_details)}",
+                    {
+                        "format": format_name,
+                        "input_path": input_path,
+                        "interface_class": interface_class_name,
+                        "error_type": type(e).__name__,
+                        "error_message": str(e),
+                    }
+                )
+
+                # Re-raise with context
+                raise ValueError(
+                    f"{error_msg}\n"
+                    f"Format: {format_name}\n"
+                    f"Interface: {interface_class_name}\n"
+                    f"Error: {str(e)}\n"
+                    f"Hint: Make sure the file is a valid {format_name} format and is not corrupted."
+                ) from e
 
         # For single-interface conversions, just use the interface directly
         # Get metadata from interface
@@ -1033,7 +1375,40 @@ Provide a brief, friendly update about what's happening now."""
 
         # Run conversion directly from interface
         state.update_progress(80, "Writing NWB file to disk...", "writing")
+
+        # Calculate input file size for progress estimation
         try:
+            input_file_path = Path(input_path)
+            if input_file_path.is_file():
+                input_size_bytes = input_file_path.stat().st_size
+            else:
+                # If it's a folder, estimate from first .bin file
+                bin_files = list(input_file_path.glob("*.bin"))
+                if bin_files:
+                    input_size_bytes = bin_files[0].stat().st_size
+                    # Handle zero-size files
+                    if input_size_bytes == 0:
+                        logger.warning(f"First .bin file has zero size: {bin_files[0]}")
+                        input_size_bytes = 100 * 1024 * 1024  # Default 100MB
+                else:
+                    input_size_bytes = 100 * 1024 * 1024  # Default 100MB
+            input_size_mb = max(1.0, input_size_bytes / (1024 * 1024))  # Ensure at least 1MB to avoid division by zero
+        except Exception as e:
+            logger.warning(f"Could not determine input file size: {e}")
+            input_size_mb = 100.0  # Default estimate
+
+        # Start background file size monitoring thread
+        stop_monitoring = threading.Event()
+        monitor_thread = None  # Initialize to None for safe cleanup
+
+        try:
+            monitor_thread = threading.Thread(
+                target=self._monitor_file_size_progress,
+                args=(output_path, input_size_mb, state, stop_monitoring, 80.0, 95.0),
+                daemon=True,
+            )
+            monitor_thread.start()
+
             data_interface.run_conversion(
                 nwbfile_path=output_path,
                 metadata=interface_metadata,
@@ -1041,6 +1416,11 @@ Provide a brief, friendly update about what's happening now."""
             )
 
         except Exception as e:
+            # Stop monitoring thread if it was started
+            if monitor_thread and monitor_thread.is_alive():
+                stop_monitoring.set()
+                monitor_thread.join(timeout=2.0)
+
             # Bug #16: Clean up partial/corrupt file on conversion error
             if Path(output_path).exists():
                 try:
@@ -1049,8 +1429,125 @@ Provide a brief, friendly update about what's happening now."""
                 except Exception as cleanup_error:
                     logger.warning(f"Failed to clean up partial file: {cleanup_error}")
             raise  # Re-raise original exception
+        finally:
+            # Stop monitoring thread if it exists and is running
+            if monitor_thread and monitor_thread.is_alive():
+                stop_monitoring.set()
+                monitor_thread.join(timeout=2.0)
 
         state.update_progress(95, "Verifying NWB file integrity...", "verification")
+
+    def _monitor_file_size_progress(
+        self,
+        output_path: str,
+        input_size_mb: float,
+        state: GlobalState,
+        stop_event: threading.Event,
+        base_progress: float = 50.0,
+        max_progress: float = 90.0,
+    ) -> None:
+        """
+        Monitor output file size growth during conversion and update progress.
+
+        Runs in background thread. Updates progress from base_progress to max_progress
+        based on estimated output file size.
+
+        Args:
+            output_path: Path to output NWB file being written
+            input_size_mb: Input file size in MB for estimation
+            state: Global state for progress updates
+            stop_event: Threading event to signal when to stop monitoring
+            base_progress: Starting progress percentage (default 50%)
+            max_progress: Maximum progress percentage (default 90%)
+        """
+        # Bug #37: Top-level exception handler to prevent silent thread failures
+        try:
+            output_file = Path(output_path)
+
+            # Estimate output size (typically 60-120% of input size for NWB compression)
+            # Use conservative estimate of 100% (same size as input)
+            estimated_output_mb = input_size_mb * 1.0
+
+            last_size_mb = 0.0
+            last_update_time = time.time()
+            stall_count = 0
+
+            state.add_log(
+                LogLevel.INFO,
+                f"Starting file size monitoring (estimated output: {estimated_output_mb:.1f} MB)",
+                {"estimated_output_mb": estimated_output_mb},
+            )
+
+            while not stop_event.is_set():
+                try:
+                    if output_file.exists():
+                        current_size_bytes = output_file.stat().st_size
+                        current_size_mb = current_size_bytes / (1024 * 1024)
+
+                        # Calculate progress based on file size
+                        if estimated_output_mb > 0:
+                            size_progress = min(1.0, current_size_mb / estimated_output_mb)
+                            progress = base_progress + (size_progress * (max_progress - base_progress))
+                        else:
+                            # If we can't estimate, just increment slowly
+                            progress = min(max_progress, base_progress + (time.time() - last_update_time) * 0.5)
+
+                        # Update progress if file grew significantly (>5 MB or >10%)
+                        size_delta_mb = current_size_mb - last_size_mb
+                        if size_delta_mb > 5.0 or (last_size_mb > 0 and size_delta_mb / last_size_mb > 0.1):
+                            # Calculate write speed
+                            time_delta = time.time() - last_update_time
+                            if time_delta > 0:
+                                speed_mbps = size_delta_mb / time_delta
+                                state.update_progress(
+                                    progress,
+                                    f"Writing data... ({current_size_mb:.1f} MB written, {speed_mbps:.2f} MB/s)",
+                                    "data_writing",
+                                )
+                            else:
+                                state.update_progress(
+                                    progress,
+                                    f"Writing data... ({current_size_mb:.1f} MB written)",
+                                    "data_writing",
+                                )
+
+                            last_size_mb = current_size_mb
+                            last_update_time = time.time()
+                            stall_count = 0
+
+                        # Detect stalls (no size change for 30 seconds)
+                        elif time.time() - last_update_time > 30:
+                            stall_count += 1
+                            if stall_count == 1:
+                                state.add_log(
+                                    LogLevel.WARNING,
+                                    f"File size hasn't changed in 30 seconds ({current_size_mb:.1f} MB)",
+                                    {"current_size_mb": current_size_mb},
+                                )
+
+                except Exception as e:
+                    state.add_log(
+                        LogLevel.WARNING,
+                        f"Error monitoring file size: {e}",
+                    )
+
+                # Bug #36: Use event-based waiting instead of blocking sleep for faster shutdown
+                if stop_event.wait(5.0):
+                    break  # Exit immediately if stop requested
+
+            state.add_log(
+                LogLevel.INFO,
+                f"File size monitoring stopped (final size: {last_size_mb:.1f} MB)",
+                {"final_size_mb": last_size_mb},
+            )
+        except Exception as e:
+            # Bug #37: Catch any unhandled exceptions to prevent silent thread failure
+            logger.error(f"File size monitoring thread crashed: {e}", exc_info=True)
+            state.add_log(
+                LogLevel.ERROR,
+                f"File size monitoring failed: {str(e)}",
+                {"error_type": type(e).__name__},
+            )
 
     def _map_flat_to_nested_metadata(self, flat_metadata: Dict[str, Any]) -> Dict[str, Any]:
         """
