@@ -6,18 +6,20 @@
 }
 
 :root {
-    --primary-color: #4F46E5;
-    --primary-dark: #4338CA;
+    /* Dark Mode Colors */
+    --primary-color: #6366F1;
+    --primary-dark: #4F46E5;
     --success-color: #10B981;
     --warning-color: #F59E0B;
     --error-color: #EF4444;
-    --bg-color: #F9FAFB;
-    --bg-secondary: #FFFFFF;
-    --text-primary: #111827;
-    --text-secondary: #6B7280;
-    --border-color: #E5E7EB;
-    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --bg-color: #0F172A;
+    --bg-secondary: #1E293B;
+    --bg-tertiary: #334155;
+    --text-primary: #F1F5F9;
+    --text-secondary: #94A3B8;
+    --border-color: #334155;
+    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
 }
 
 body {
@@ -512,7 +514,7 @@ body {
 /* Clarification Form Styles */
 .clarification-form {
     background: var(--bg-secondary);
-    border: 2px solid var(--primary);
+    border: 2px solid var(--primary-color);
     border-radius: 8px;
     padding: 1.5rem;
     margin: 1rem 0;
@@ -520,7 +522,7 @@ body {
 
 .clarification-form h3 {
     margin-top: 0;
-    color: var(--primary);
+    color: var(--primary-color);
 }
 
 .form-group {
@@ -538,9 +540,9 @@ body {
 .form-group select {
     width: 100%;
     padding: 0.75rem;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     border-radius: 4px;
-    background: var(--bg-primary);
+    background: var(--bg-color);
     color: var(--text-primary);
     font-size: 1rem;
 }
@@ -548,7 +550,7 @@ body {
 .form-group input:focus,
 .form-group select:focus {
     outline: none;
-    border-color: var(--primary);
+    border-color: var(--primary-color);
 }
 
 .form-group small {
@@ -559,7 +561,7 @@ body {
 }
 
 .btn-primary {
-    background: var(--primary);
+    background: var(--primary-color);
     color: white;
     border: none;
     padding: 0.75rem 1.5rem;
@@ -576,8 +578,8 @@ body {
 
 /* Completion Files Styles */
 .completion-files {
-    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-    border: 2px solid #4caf50;
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a7b 100%);
+    border: 2px solid var(--success-color);
     border-radius: 8px;
     padding: 1.5rem;
     margin: 1rem 0;
@@ -585,7 +587,7 @@ body {
 
 .completion-files h3 {
     margin-top: 0;
-    color: #2e7d32;
+    color: var(--success-color);
 }
 
 .file-links {
@@ -599,10 +601,10 @@ body {
     display: flex;
     align-items: center;
     gap: 1rem;
-    background: white;
+    background: var(--bg-secondary);
     padding: 1rem;
     border-radius: 6px;
-    border: 1px solid #e0e0e0;
+    border: 1px solid var(--border-color);
 }
 
 .file-icon {
