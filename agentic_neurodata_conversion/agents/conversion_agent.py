@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 from neuroconv.datainterfaces import OpenEphysRecordingInterface, SpikeGLXRecordingInterface
 
 from agentic_neurodata_conversion.agents.base_agent import BaseAgent
+from agentic_neurodata_conversion.config import settings
 from agentic_neurodata_conversion.models.mcp_message import MCPMessage
 from agentic_neurodata_conversion.models.session_context import (
     ConversionResults,
@@ -86,8 +87,8 @@ class ConversionAgent(BaseAgent):
             # Deep merge: user metadata overrides interface defaults
             nwb_metadata = self._deep_merge_metadata(interface_metadata, user_metadata)
 
-            # Set output path
-            output_dir = Path.cwd() / "output" / "nwb_files"
+            # Set output path using configured base path
+            output_dir = Path(settings.filesystem_output_base_path) / "nwb_files"
             output_dir.mkdir(parents=True, exist_ok=True)
             nwb_file_path = output_dir / f"{session_id}.nwb"
 
