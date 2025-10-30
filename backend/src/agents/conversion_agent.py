@@ -7,6 +7,8 @@ Responsible for:
 - Pure technical conversion logic (no user interaction)
 """
 import hashlib
+import threading
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -57,8 +59,9 @@ class ConversionAgent:
 
             summaries = get_format_summaries()
             return [fmt["format"] for fmt in summaries]
-        except Exception:
+        except Exception as e:
             # Fallback to all supported formats (84 total)
+            logger.warning(f"Failed to get format summaries dynamically, using fallback list: {e}")
             return [
                 # Electrophysiology Recording
                 "AlphaOmegaRecording", "Axon", "AxonRecording", "AxonaRecording", "AxonaUnitRecording",
@@ -524,20 +527,45 @@ Be specific about the format name used by NeuroConv."""
 
         await state.update_status(ConversionStatus.CONVERTING)
         state.update_progress(0, "Initializing conversion...", "initialization")
+
+        # Track conversion timing
+        import time
+        from datetime import datetime
+        conversion_start_time = time.time()
+        conversion_start_timestamp = datetime.now()
+
+        # Get detailed file information
+        from pathlib import Path
+        file_path = Path(input_path)
+        file_size_bytes = file_path.stat().st_size if file_path.exists() else 0
+        file_size_mb = file_size_bytes / (1024 * 1024)
+        file_size_gb = file_size_bytes / (1024 * 1024 * 1024)
+
+        # Format file size for display
+        if file_size_gb >= 1.0:
+            file_size_display = f"{file_size_gb:.2f} GB"
+        elif file_size_mb >= 1.0:
+            file_size_display = f"{file_size_mb:.1f} MB"
+        else:
+            file_size_display = f"{file_size_bytes / 1024:.1f} KB"
+
         state.add_log(
             LogLevel.INFO,
-            f"Starting NWB conversion: {format_name}",
+            f"Starting NWB conversion: {format_name} ({file_size_display})",
             {
+                "format": format_name,
+                "input_file": file_path.name,
                 "input_path": input_path,
                 "output_path": output_path,
-                "format": format_name,
+                "file_size_bytes": file_size_bytes,
+                "file_size_mb": round(file_size_mb, 2),
+                "file_size_display": file_size_display,
+                "start_timestamp": conversion_start_timestamp.isoformat(),
             },
         )
 
         try:
             # 🎯 PRIORITY 5: Narrate conversion start
-            from pathlib import Path
-            file_size_mb = Path(input_path).stat().st_size / (1024 * 1024) if Path(input_path).exists() else 0
 
             state.update_progress(10, f"Analyzing {format_name} data ({file_size_mb:.1f} MB)...", "analysis")
 
@@ -599,12 +627,62 @@ Be specific about the format name used by NeuroConv."""
 
             state.output_path = output_path
             state.update_progress(100, "Conversion completed successfully!", "complete")
+
+            # Calculate conversion metrics
+            conversion_end_time = time.time()
+            conversion_end_timestamp = datetime.now()
+            duration_seconds = conversion_end_time - conversion_start_time
+            duration_minutes = duration_seconds / 60
+
+            # Get output file size
+            output_file_path = Path(output_path)
+            output_size_bytes = output_file_path.stat().st_size if output_file_path.exists() else 0
+            output_size_mb = output_size_bytes / (1024 * 1024)
+            output_size_gb = output_size_bytes / (1024 * 1024 * 1024)
+
+            # Format output file size
+            if output_size_gb >= 1.0:
+                output_size_display = f"{output_size_gb:.2f} GB"
+            elif output_size_mb >= 1.0:
+                output_size_display = f"{output_size_mb:.1f} MB"
+            else:
+                output_size_display = f"{output_size_bytes / 1024:.1f} KB"
+
+            # Calculate compression ratio and speed
+            if file_size_bytes > 0:
+                compression_ratio = ((file_size_bytes - output_size_bytes) / file_size_bytes) * 100
+                compression_sign = "smaller" if compression_ratio > 0 else "larger"
+                compression_ratio_abs = abs(compression_ratio)
+            else:
+                compression_ratio = 0
+                compression_sign = "same"
+                compression_ratio_abs = 0
+
+            # Calculate conversion speed (MB/s)
+            conversion_speed_mbps = file_size_mb / duration_seconds if duration_seconds > 0 else 0
+
+            # Format duration for display
+            if duration_minutes >= 1.0:
+                duration_display = f"{int(duration_minutes // 60)}h {int(duration_minutes % 60)}m {int(duration_seconds % 60)}s" if duration_minutes >= 60 else f"{int(duration_minutes)}m {int(duration_seconds % 60)}s"
+            else:
+                duration_display = f"{duration_seconds:.1f}s"
+
             state.add_log(
                 LogLevel.INFO,
-                "Conversion completed successfully",
+                f"Conversion completed successfully in {duration_display} ({output_size_display}, {compression_ratio_abs:.1f}% {compression_sign})",
                 {
                     "output_path": output_path,
+                    "output_file": output_file_path.name,
                     "checksum": checksum,
+                    "duration_seconds": round(duration_seconds, 2),
+                    "duration_display": duration_display,
+                    "output_size_bytes": output_size_bytes,
+                    "output_size_mb": round(output_size_mb, 2),
+                    "output_size_display": output_size_display,
+                    "compression_ratio_percent": round(compression_ratio, 2),
+                    "compression_sign": compression_sign,
+                    "conversion_speed_mbps": round(conversion_speed_mbps, 2),
+                    "end_timestamp": conversion_end_timestamp.isoformat(),
                 },
             )
 
@@ -696,8 +774,9 @@ Be specific about the format name used by NeuroConv."""
                     file_context["name"] = path.name
                     files = [f.name for f in path.iterdir() if f.is_file()][:20]
                     file_context["files"] = files
-        except Exception:
-            pass
+        except Exception as e:
+            # Non-critical - file context is optional for format detection
+            logger.debug(f"Failed to gather file context for format detection: {e}")
 
         system_prompt = """You are a helpful neuroscience data conversion assistant.
 
@@ -1155,13 +1234,51 @@ Provide a brief, friendly update about what's happening now."""
 
         # Run conversion directly from interface
         state.update_progress(80, "Writing NWB file to disk...", "writing")
+
+        # Calculate input file size for progress estimation
         try:
+            input_file_path = Path(input_path)
+            if input_file_path.is_file():
+                input_size_bytes = input_file_path.stat().st_size
+            else:
+                # If it's a folder, estimate from first .bin file
+                bin_files = list(input_file_path.glob("*.bin"))
+                if bin_files:
+                    input_size_bytes = bin_files[0].stat().st_size
+                    # Handle zero-size files
+                    if input_size_bytes == 0:
+                        logger.warning(f"First .bin file has zero size: {bin_files[0]}")
+                        input_size_bytes = 100 * 1024 * 1024  # Default 100MB
+                else:
+                    input_size_bytes = 100 * 1024 * 1024  # Default 100MB
+            input_size_mb = max(1.0, input_size_bytes / (1024 * 1024))  # Ensure at least 1MB to avoid division by zero
+        except Exception as e:
+            logger.warning(f"Could not determine input file size: {e}")
+            input_size_mb = 100.0  # Default estimate
+
+        # Start background file size monitoring thread
+        stop_monitoring = threading.Event()
+        monitor_thread = None  # Initialize to None for safe cleanup
+
+        try:
+            monitor_thread = threading.Thread(
+                target=self._monitor_file_size_progress,
+                args=(output_path, input_size_mb, state, stop_monitoring, 80.0, 95.0),
+                daemon=True,
+            )
+            monitor_thread.start()
+
             data_interface.run_conversion(
                 nwbfile_path=output_path,
                 metadata=interface_metadata,
                 overwrite=True,
             )
         except Exception as e:
+            # Stop monitoring thread if it was started
+            if monitor_thread and monitor_thread.is_alive():
+                stop_monitoring.set()
+                monitor_thread.join(timeout=2.0)
+
             # Bug #16: Clean up partial/corrupt file on conversion error
             if Path(output_path).exists():
                 try:
@@ -1170,8 +1287,114 @@ Provide a brief, friendly update about what's happening now."""
                 except Exception as cleanup_error:
                     logger.warning(f"Failed to clean up partial file: {cleanup_error}")
             raise  # Re-raise original exception
+        finally:
+            # Stop monitoring thread if it exists and is running
+            if monitor_thread and monitor_thread.is_alive():
+                stop_monitoring.set()
+                monitor_thread.join(timeout=2.0)
 
         state.update_progress(95, "Verifying NWB file integrity...", "verification")
+
+    def _monitor_file_size_progress(
+        self,
+        output_path: str,
+        input_size_mb: float,
+        state: GlobalState,
+        stop_event: threading.Event,
+        base_progress: float = 50.0,
+        max_progress: float = 90.0,
+    ) -> None:
+        """
+        Monitor output file size growth during conversion and update progress.
+
+        Runs in background thread. Updates progress from base_progress to max_progress
+        based on estimated output file size.
+
+        Args:
+            output_path: Path to output NWB file being written
+            input_size_mb: Input file size in MB for estimation
+            state: Global state for progress updates
+            stop_event: Threading event to signal when to stop monitoring
+            base_progress: Starting progress percentage (default 50%)
+            max_progress: Maximum progress percentage (default 90%)
+        """
+        output_file = Path(output_path)
+
+        # Estimate output size (typically 60-120% of input size for NWB compression)
+        # Use conservative estimate of 100% (same size as input)
+        estimated_output_mb = input_size_mb * 1.0
+
+        last_size_mb = 0.0
+        last_update_time = time.time()
+        stall_count = 0
+
+        state.add_log(
+            LogLevel.INFO,
+            f"Starting file size monitoring (estimated output: {estimated_output_mb:.1f} MB)",
+            {"estimated_output_mb": estimated_output_mb},
+        )
+
+        while not stop_event.is_set():
+            try:
+                if output_file.exists():
+                    current_size_bytes = output_file.stat().st_size
+                    current_size_mb = current_size_bytes / (1024 * 1024)
+
+                    # Calculate progress based on file size
+                    if estimated_output_mb > 0:
+                        size_progress = min(1.0, current_size_mb / estimated_output_mb)
+                        progress = base_progress + (size_progress * (max_progress - base_progress))
+                    else:
+                        # If we can't estimate, just increment slowly
+                        progress = min(max_progress, base_progress + (time.time() - last_update_time) * 0.5)
+
+                    # Update progress if file grew significantly (>5 MB or >10%)
+                    size_delta_mb = current_size_mb - last_size_mb
+                    if size_delta_mb > 5.0 or (last_size_mb > 0 and size_delta_mb / last_size_mb > 0.1):
+                        # Calculate write speed
+                        time_delta = time.time() - last_update_time
+                        if time_delta > 0:
+                            speed_mbps = size_delta_mb / time_delta
+                            state.update_progress(
+                                progress,
+                                f"Writing data... ({current_size_mb:.1f} MB written, {speed_mbps:.2f} MB/s)",
+                                "data_writing",
+                            )
+                        else:
+                            state.update_progress(
+                                progress,
+                                f"Writing data... ({current_size_mb:.1f} MB written)",
+                                "data_writing",
+                            )
+
+                        last_size_mb = current_size_mb
+                        last_update_time = time.time()
+                        stall_count = 0
+
+                    # Detect stalls (no size change for 30 seconds)
+                    elif time.time() - last_update_time > 30:
+                        stall_count += 1
+                        if stall_count == 1:
+                            state.add_log(
+                                LogLevel.WARNING,
+                                f"File size hasn't changed in 30 seconds ({current_size_mb:.1f} MB)",
+                                {"current_size_mb": current_size_mb},
+                            )
+
+            except Exception as e:
+                state.add_log(
+                    LogLevel.WARNING,
+                    f"Error monitoring file size: {e}",
+                )
+
+            # Check every 5 seconds
+            time.sleep(5.0)
+
+        state.add_log(
+            LogLevel.INFO,
+            f"File size monitoring stopped (final size: {last_size_mb:.1f} MB)",
+            {"final_size_mb": last_size_mb},
+        )
 
     def _map_flat_to_nested_metadata(self, flat_metadata: Dict[str, Any]) -> Dict[str, Any]:
         """

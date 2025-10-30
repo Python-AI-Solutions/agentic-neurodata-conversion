@@ -34,6 +34,11 @@ from agents.smart_autocorrect import SmartAutoCorrectionSystem
 from agents.nwb_dandi_schema import NWBDANDISchema
 
 
+# Maximum number of correction attempts allowed
+# Maximum attempts for LLM to generate correction prompts (not conversion retries)
+MAX_CORRECTION_ATTEMPTS = 3
+
+
 class ConversationAgent:
     """
     Conversation agent for user interaction and workflow orchestration.
@@ -923,7 +928,11 @@ Be warm, specific, and actionable. Keep it concise (2-3 sentences)."""
                 system_prompt=system_prompt,
             )
             return response
-        except Exception:
+        except Exception as e:
+            self._state.add_log(
+                LogLevel.WARNING,
+                f"Failed to generate LLM metadata message, using fallback: {e}"
+            )
             return self._generate_fallback_missing_metadata_message(missing_fields)
 
     def _generate_fallback_missing_metadata_message(
@@ -1412,6 +1421,40 @@ Create a clear, friendly message that:
             state.add_log(LogLevel.WARNING, f"Failed to generate review message: {e}")
             # Return fallback
             return self._generate_metadata_review_message(metadata, format_name, state)
+
+    def _user_expresses_intent_to_add_more(self, user_message: str) -> bool:
+        """
+        Detect if user wants to add metadata but hasn't provided concrete data yet.
+
+        This distinguishes between:
+        - "I want to add some more" (intent only, no data) → Returns True
+        - "age: P90D" (concrete data) → Returns False
+        - "proceed" (wants to continue) → Returns False
+
+        Args:
+            user_message: User's message
+
+        Returns:
+            True if message expresses intent to add without providing concrete data
+        """
+        intent_phrases = [
+            "want to add", "like to add", "add more", "add some",
+            "yes", "sure", "i'll add", "let me add", "can i add"
+        ]
+
+        msg_lower = user_message.lower().strip()
+
+        # Check if message expresses intent
+        has_intent = any(phrase in msg_lower for phrase in intent_phrases)
+
+        # Check if message contains concrete data (field: value format)
+        has_concrete_data = ":" in user_message or "=" in user_message
+
+        # Check if message is short (likely just expressing intent, not providing data)
+        is_short_message = len(user_message.split()) < 10
+
+        # Return True only if: has intent AND no concrete data AND short message
+        return has_intent and not has_concrete_data and is_short_message
 
     async def _continue_conversion_workflow(
         self,
@@ -2564,13 +2607,31 @@ The conversion report has been generated with full details."""
                         )
 
                         if validation_response.success:
+                            validation_result = validation_response.result.get("validation_result", {})
+                            overall_status = validation_result.get("overall_status")
+                            issues = validation_result.get("issues", [])
+
+                            # Update state with new validation results
+                            state.overall_status = overall_status
+                            state.metadata["last_validation_result"] = validation_result
+
+                            # Track improvement progress
+                            old_issue_count = len(state.metadata.get("previous_validation_result", {}).get("issues", []))
+                            new_issue_count = len(issues)
+
+                            state.add_log(
+                                LogLevel.INFO,
+                                f"Re-validation completed: {overall_status}, issues: {old_issue_count} → {new_issue_count}",
+                                {"overall_status": overall_status, "issue_count": new_issue_count},
+                            )
+
                             # Generate report after validation
                             report_response = await self._mcp_server.send_message(
                                 MCPMessage(
                                     target_agent="evaluation",
                                     action="generate_report",
                                     context={
-                                        "validation_result": validation_response.result.get("validation_result"),
+                                        "validation_result": validation_result,
                                         "nwb_path": state.output_path,
                                     },
                                 )
@@ -2582,6 +2643,94 @@ The conversion report has been generated with full details."""
                                     f"Report generated: {report_response.result.get('report_path')}",
                                 )
 
+                            # Clear stale state variables
+                            state.llm_message = None
+                            state.correction_context = None
+
+                            # Handle different validation outcomes
+                            if overall_status == "PASSED_WITH_ISSUES":
+                                # Still has issues - offer improvement again
+                                state.add_log(
+                                    LogLevel.INFO,
+                                    "Corrections applied but issues remain - offering improvement again",
+                                )
+
+                                # Warn if corrections made things worse
+                                if new_issue_count > old_issue_count:
+                                    state.add_log(
+                                        LogLevel.WARNING,
+                                        f"Corrections resulted in MORE issues: {old_issue_count} → {new_issue_count}",
+                                    )
+
+                                await state.update_validation_status(ValidationStatus.PASSED_WITH_ISSUES)
+                                await state.update_status(ConversionStatus.AWAITING_USER_INPUT)
+                                state.conversation_type = "improvement_decision"
+
+                                improvement_msg = (
+                                    f"✅ Corrections applied! The file is improved but still has {new_issue_count} issue(s).\n\n"
+                                )
+
+                                if new_issue_count > old_issue_count:
+                                    improvement_msg += (
+                                        f"⚠️ Note: The issue count increased from {old_issue_count} to {new_issue_count}. "
+                                        f"This can happen when corrections reveal additional issues.\n\n"
+                                    )
+
+                                improvement_msg += "Would you like to improve the file further, or accept it as-is?"
+
+                                return MCPResponse.success_response(
+                                    reply_to=message.message_id,
+                                    result={
+                                        "status": "passed_with_issues",
+                                        "message": improvement_msg,
+                                        "overall_status": overall_status,
+                                        "issue_count": new_issue_count,
+                                        "correction_attempt": state.correction_attempt,
+                                    },
+                                )
+
+                            elif overall_status == "PASSED":
+                                # All issues fixed!
+                                state.add_log(
+                                    LogLevel.INFO,
+                                    "All issues fixed after corrections - marking as completed",
+                                )
+                                await state.update_validation_status(ValidationStatus.PASSED)
+                                await state.update_status(ConversionStatus.COMPLETED)
+                                state.conversation_type = None
+
+                                return MCPResponse.success_response(
+                                    reply_to=message.message_id,
+                                    result={
+                                        "status": "completed",
+                                        "message": f"✅ Success! All issues have been fixed. Your NWB file is ready for download.",
+                                        "overall_status": overall_status,
+                                        "output_path": state.output_path,
+                                        "correction_attempt": state.correction_attempt,
+                                    },
+                                )
+
+                            elif overall_status == "FAILED":
+                                # Corrections caused failures
+                                state.add_log(
+                                    LogLevel.ERROR,
+                                    "Corrections caused validation failure",
+                                )
+                                await state.update_validation_status(ValidationStatus.FAILED)
+                                await state.update_status(ConversionStatus.AWAITING_RETRY_APPROVAL)
+                                state.conversation_type = "validation_analysis"
+
+                                return MCPResponse.success_response(
+                                    reply_to=message.message_id,
+                                    result={
+                                        "status": "failed",
+                                        "message": f"❌ After applying corrections, the file now has critical errors. Would you like to retry with different metadata?",
+                                        "overall_status": overall_status,
+                                        "issue_count": new_issue_count,
+                                    },
+                                )
+
+                        # If validation failed
                         return MCPResponse.success_response(
                             reply_to=message.message_id,
                             result={
@@ -2878,6 +3027,26 @@ The conversion report has been generated with full details."""
                         error_message="Cannot proceed with conversion. File path not found.",
                     )
 
+            # Check if user expresses intent to add but hasn't provided data yet
+            if self._user_expresses_intent_to_add_more(user_message):
+                state.add_log(
+                    LogLevel.INFO,
+                    "User expressed intent to add metadata without providing concrete data"
+                )
+                return MCPResponse.success_response(
+                    reply_to=message.message_id,
+                    result={
+                        "status": "awaiting_metadata_fields",
+                        "message": (
+                            "Great! What would you like to add? You can provide:\n\n"
+                            "• **Specific fields:** 'age: P90D, description: Visual cortex recording'\n"
+                            "• **Natural language:** 'The session lasted 2 hours in the morning'\n"
+                            "• **Or say 'proceed'** to continue with current metadata"
+                        ),
+                        "conversation_type": "metadata_review",  # Stay in same state
+                    },
+                )
+
             # User wants to add more metadata - parse it
             # Try to extract metadata from the message
             additional_metadata = {}
@@ -2924,25 +3093,44 @@ The conversion report has been generated with full details."""
                 )
 
                 confirmation = f"Added {len(additional_metadata)} metadata field(s). Starting conversion..."
+
+                state.conversation_type = None  # Reset for conversion
+
+                # Proceed with conversion with updated metadata
+                if state.input_path:
+                    return await self._run_conversion(
+                        message.message_id,
+                        str(state.input_path),
+                        state.metadata.get("format", "unknown"),
+                        state.metadata,
+                        state,
+                    )
+                else:
+                    return MCPResponse.error_response(
+                        reply_to=message.message_id,
+                        error_code="INVALID_STATE",
+                        error_message="Cannot proceed with conversion. File path not found.",
+                    )
             else:
-                confirmation = "No additional metadata detected. Starting conversion with current metadata..."
-
-            state.conversation_type = None  # Reset
-
-            # Proceed with conversion with updated metadata
-            if state.input_path:
-                return await self._run_conversion(
-                    message.message_id,
-                    str(state.input_path),
-                    state.metadata.get("format", "unknown"),
-                    state.metadata,
-                    state,
+                # No metadata detected - ask for clarification instead of converting
+                state.add_log(
+                    LogLevel.INFO,
+                    "No metadata detected in user message - asking for clarification"
                 )
-            else:
-                return MCPResponse.error_response(
+                return MCPResponse.success_response(
                     reply_to=message.message_id,
-                    error_code="INVALID_STATE",
-                    error_message="Cannot proceed with conversion. File path not found.",
+                    result={
+                        "status": "metadata_review",
+                        "message": (
+                            "I didn't detect any metadata fields in your message. "
+                            "Please provide metadata in one of these formats:\n\n"
+                            "• **Field format:** 'age: P90D'\n"
+                            "• **Multiple fields:** 'age: P90D, description: Visual cortex recording'\n"
+                            "• **Natural language:** 'The mouse was 3 months old'\n\n"
+                            "Or say **'proceed'** to continue with your current metadata."
+                        ),
+                        "conversation_type": "metadata_review",  # Stay in state, don't convert
+                    },
                 )
 
         # Handle custom metadata collection conversation type
@@ -3561,17 +3749,20 @@ Respond in JSON format."""
             await state.update_status(ConversionStatus.COMPLETED)
 
             # Generate final message
-            state.llm_message = (
+            final_message = (
                 "✅ File accepted as-is with warnings. "
                 "Your NWB file is ready for download. "
                 "You can view the warnings in the validation report."
             )
 
+            # Clear llm_message to prevent duplicate display in status polling
+            state.llm_message = None
+
             return MCPResponse.success_response(
                 reply_to=message.message_id,
                 result={
                     "status": "completed",
-                    "message": state.llm_message,
+                    "message": final_message,
                     "validation_status": "passed_accepted",
                 },
             )
@@ -3583,6 +3774,36 @@ Respond in JSON format."""
                 "User chose to improve warnings (PASSED_WITH_ISSUES)",
                 {"entering_correction_loop": True},
             )
+
+            # Check if maximum correction attempts exceeded
+            if state.correction_attempt >= MAX_CORRECTION_ATTEMPTS:
+                state.add_log(
+                    LogLevel.WARNING,
+                    f"Maximum correction attempts ({MAX_CORRECTION_ATTEMPTS}) reached",
+                    {"current_attempt": state.correction_attempt},
+                )
+
+                # Clear stale state
+                state.llm_message = None
+                state.correction_context = None
+
+                return MCPResponse.error_response(
+                    reply_to=message.message_id,
+                    error_code="MAX_CORRECTIONS_EXCEEDED",
+                    error_message=(
+                        f"⚠️ Maximum correction attempts ({MAX_CORRECTION_ATTEMPTS}) reached. "
+                        f"Your file is technically valid but has {len(state.metadata.get('last_validation_result', {}).get('issues', []))} remaining issue(s). "
+                        f"You can:\n\n"
+                        f"• **Accept the file as-is** - Click 'Accept As-Is' button\n"
+                        f"• **Start fresh** - Upload the file again with different metadata\n"
+                        f"• **Download and manually edit** - Fix issues in a local NWB editor"
+                    ),
+                    error_context={
+                        "correction_attempt": state.correction_attempt,
+                        "max_attempts": MAX_CORRECTION_ATTEMPTS,
+                        "remaining_issues": len(state.metadata.get("last_validation_result", {}).get("issues", [])),
+                    },
+                )
 
             # Increment correction attempt
             state.increment_correction_attempt()
@@ -3601,10 +3822,16 @@ Respond in JSON format."""
             eval_response = await self._mcp_server.send_message(eval_msg)
 
             if not eval_response.success:
+                # Clear stale state on error
+                state.llm_message = None
+                state.correction_context = None
+                state.conversation_type = None
+
                 return MCPResponse.error_response(
                     reply_to=message.message_id,
                     error_code="CORRECTION_ANALYSIS_FAILED",
                     error_message="Failed to analyze corrections",
+                    error_context=eval_response.error,  # Include original error
                 )
 
             correction_context = eval_response.result.get("correction_context", {})
@@ -3700,6 +3927,14 @@ Respond in JSON format."""
         Returns:
             Formatted prompt message
         """
+        # If LLM is already processing, fall back to basic prompts
+        if state.llm_processing:
+            state.add_log(
+                LogLevel.WARNING,
+                "LLM already processing, using basic correction prompts",
+            )
+            return self._generate_basic_correction_prompts(issues)
+
         # Use LLM to generate contextual prompts with examples
         system_prompt = """You are helping a user fix validation warnings in their NWB file.
 Generate clear, specific prompts for each issue with helpful examples."""
@@ -3725,13 +3960,24 @@ Return JSON with a 'message' field."""
         }
 
         try:
-            response = await self._llm_service.generate_structured_output(
-                prompt=user_prompt,
-                output_schema=output_schema,
-                system_prompt=system_prompt,
+            # Acquire LLM lock to prevent concurrent requests
+            async with state._llm_lock:
+                state.llm_processing = True
+                try:
+                    response = await self._llm_service.generate_structured_output(
+                        prompt=user_prompt,
+                        output_schema=output_schema,
+                        system_prompt=system_prompt,
+                    )
+                    return response.get("message", self._generate_basic_correction_prompts(issues))
+                finally:
+                    state.llm_processing = False
+        except Exception as e:
+            state.add_log(
+                LogLevel.WARNING,
+                f"LLM correction prompt generation failed: {e}",
+                {"fallback": "using_basic_prompts"},
             )
-            return response.get("message", self._generate_basic_correction_prompts(issues))
-        except Exception:
             return self._generate_basic_correction_prompts(issues)
 
     async def _handle_auto_fix_approval_response(
@@ -3763,6 +4009,10 @@ Return JSON with a 'message' field."""
             # Get stored correction context
             correction_context = state.correction_context
             if not correction_context:
+                # Clear stale state
+                state.llm_message = None
+                state.conversation_type = None
+
                 return MCPResponse.error_response(
                     reply_to=reply_to,
                     error_code="NO_CORRECTION_CONTEXT",
@@ -3871,11 +4121,14 @@ Return JSON with a 'message' field."""
             await state.update_validation_status(ValidationStatus.PASSED_ACCEPTED)
             await state.update_status(ConversionStatus.COMPLETED)
 
+            # Clear all correction state
+            state.correction_context = None
+            state.conversation_type = None
+
             state.llm_message = (
                 "Understood! I'll keep the file as-is. "
                 "Your NWB file is ready for download with the existing warnings."
             )
-            state.conversation_type = None  # Clear conversation type
 
             return MCPResponse.success_response(
                 reply_to=reply_to,
@@ -4119,7 +4372,12 @@ Return JSON with a 'message' field."""
             from dateutil import parser
             parser.parse(str(value))
             return True
-        except:
+        except (ValueError, TypeError, AttributeError, ImportError) as e:
+            # ValueError: Invalid date format
+            # TypeError: value is None or wrong type
+            # AttributeError: parser module issue
+            # ImportError: dateutil not installed
+            # Silently return False as this is a validation check
             return False
 
     def _generate_basic_correction_prompts(self, issues: List[Dict[str, Any]]) -> str:

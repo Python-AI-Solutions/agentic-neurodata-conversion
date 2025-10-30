@@ -11,9 +11,13 @@ Performance Optimization Implementation
 import asyncio
 import hashlib
 import json
+import logging
+import threading
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 from dataclasses import dataclass, asdict
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -56,7 +60,8 @@ class MetadataCache:
         self._ttl = timedelta(seconds=ttl_seconds)
         self._min_confidence = min_confidence
         self._max_entries = max_entries
-        self._lock = asyncio.Lock()
+        self._locks: Dict[int, asyncio.Lock] = {}  # Event loop ID -> Lock mapping
+        self._lock_init_lock = threading.Lock()  # Thread-safe lock initialization
 
         # Statistics
         self._stats = {
@@ -65,6 +70,33 @@ class MetadataCache:
             "evictions": 0,
             "inserts": 0,
         }
+
+    def _get_lock(self) -> asyncio.Lock:
+        """
+        Get or create asyncio.Lock for the current event loop.
+
+        This ensures locks are properly bound to their event loop,
+        preventing issues when the cache is used across multiple loops.
+
+        Returns:
+            asyncio.Lock for the current event loop
+        """
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # No running loop - create one for this thread
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        loop_id = id(loop)
+
+        # Thread-safe lock creation
+        if loop_id not in self._locks:
+            with self._lock_init_lock:
+                if loop_id not in self._locks:
+                    self._locks[loop_id] = asyncio.Lock()
+
+        return self._locks[loop_id]
 
     def _generate_cache_key(
         self,
@@ -106,7 +138,7 @@ class MetadataCache:
         """
         cache_key = self._generate_cache_key(field_name, input_context)
 
-        async with self._lock:
+        async with self._get_lock():
             entry = self._cache.get(cache_key)
 
             if entry is None:
@@ -159,7 +191,7 @@ class MetadataCache:
 
         cache_key = self._generate_cache_key(field_name, input_context)
 
-        async with self._lock:
+        async with self._get_lock():
             # Check if cache is full
             if len(self._cache) >= self._max_entries and cache_key not in self._cache:
                 # Evict oldest entry
@@ -199,7 +231,7 @@ class MetadataCache:
         Returns:
             Number of entries invalidated
         """
-        async with self._lock:
+        async with self._get_lock():
             if field_name is None:
                 # Clear entire cache
                 count = len(self._cache)
@@ -245,7 +277,7 @@ class MetadataCache:
         Returns:
             Number of entries removed
         """
-        async with self._lock:
+        async with self._get_lock():
             now = datetime.now()
             expired_keys = [
                 key for key, entry in self._cache.items()
@@ -261,22 +293,28 @@ class MetadataCache:
 
 # Global cache instance
 _global_cache: Optional[MetadataCache] = None
+_global_cache_lock = threading.Lock()
 
 
 def get_metadata_cache() -> MetadataCache:
     """
-    Get or create global metadata cache instance.
+    Get or create global metadata cache instance (thread-safe).
 
     Returns:
         Global MetadataCache instance
     """
     global _global_cache
+
+    # Double-checked locking pattern for thread-safe singleton
     if _global_cache is None:
-        _global_cache = MetadataCache(
-            ttl_seconds=3600,  # 1 hour
-            min_confidence=70.0,  # Only cache 70%+ confidence
-            max_entries=1000
-        )
+        with _global_cache_lock:
+            # Check again inside lock to prevent race condition
+            if _global_cache is None:
+                _global_cache = MetadataCache(
+                    ttl_seconds=3600,  # 1 hour
+                    min_confidence=70.0,  # Only cache 70%+ confidence
+                    max_entries=1000
+                )
     return _global_cache
 
 
@@ -291,4 +329,4 @@ async def start_cache_cleanup_task():
         await asyncio.sleep(300)  # Every 5 minutes
         removed = await cache.cleanup_expired()
         if removed > 0:
-            print(f"Cache cleanup: removed {removed} expired entries")
+            logger.info(f"Cache cleanup: removed {removed} expired entries")
