@@ -451,30 +451,69 @@ Provide:
 
             lines.append("")
 
-        # Check for missing required fields if state is provided
+        # Check for missing fields if state is provided
+        missing_required = []
+        missing_optional = []
         if state:
-            # Get all parsed field names
-            parsed_field_names = {field.field_name for field in parsed_fields}
+            try:
+                # Get all parsed field names from THIS parsing round
+                parsed_field_names = {field.field_name for field in parsed_fields}
 
-            # Get existing metadata from state
-            existing_metadata = getattr(state, 'metadata', {}) or {}
-            all_fields = set(existing_metadata.keys()) | parsed_field_names
+                # Get existing CONFIRMED metadata from state
+                existing_metadata = getattr(state, 'metadata', {}) or {}
 
-            # Import NWBDANDISchema to check required fields
-            from agents.nwb_dandi_schema import NWBDANDISchema
+                # CRITICAL: Also include PENDING fields from previous parsing rounds
+                pending_fields = getattr(state, 'pending_parsed_fields', {}) or {}
+                pending_field_names = set(pending_fields.keys())
 
-            # Get missing required fields
-            missing_fields = []
-            for field in NWBDANDISchema.get_required_fields():
-                if field.name not in all_fields:
-                    missing_fields.append(field)
+                # Combine all three sources: confirmed + pending + current
+                all_fields = set(existing_metadata.keys()) | pending_field_names | parsed_field_names
 
-            # Display missing fields if any
-            if missing_fields:
-                lines.append("\n**⚠️ Still missing DANDI-required metadata:**")
-                for field in missing_fields:
-                    lines.append(f"- **{field.name}**: {field.description}")
-                lines.append("")
+                # Import NWBDANDISchema to check all fields
+                from agents.nwb_dandi_schema import NWBDANDISchema, FieldRequirementLevel
+
+                # Get all NWB fields
+                all_nwb_fields = NWBDANDISchema.get_all_fields()
+
+                # Log for debugging
+                print(f"DEBUG: Checking {len(all_nwb_fields)} total NWB fields")
+                print(f"DEBUG: Confirmed metadata fields: {set(existing_metadata.keys())}")
+                print(f"DEBUG: Pending fields from previous rounds: {pending_field_names}")
+                print(f"DEBUG: Current parsed fields: {parsed_field_names}")
+                print(f"DEBUG: ALL fields combined: {all_fields}")
+
+                # Categorize missing fields by requirement level
+                for field in all_nwb_fields:
+                    if field.name not in all_fields:
+                        if field.requirement_level == FieldRequirementLevel.REQUIRED:
+                            missing_required.append(field)
+                            print(f"DEBUG: Missing REQUIRED field: {field.name}")
+                        else:
+                            missing_optional.append(field)
+                            print(f"DEBUG: Missing optional field: {field.name}")
+
+                # Display missing required fields first
+                if missing_required:
+                    print(f"DEBUG: Found {len(missing_required)} missing REQUIRED fields")
+                    lines.append("\n**⚠️ Still missing DANDI-required metadata:**")
+                    for field in missing_required:
+                        lines.append(f"- **{field.name}** (REQUIRED): {field.description}")
+                    lines.append("")
+
+                # Display missing optional fields
+                if missing_optional:
+                    print(f"DEBUG: Found {len(missing_optional)} missing optional fields")
+                    lines.append("\n**📋 Optional metadata you can add:**")
+                    for field in missing_optional:
+                        lines.append(f"- **{field.name}**: {field.description}")
+                    lines.append("")
+
+                if not missing_required and not missing_optional:
+                    print("DEBUG: No missing fields found - all NWB fields are complete!")
+            except Exception as e:
+                print(f"ERROR: Failed to check missing fields: {e}")
+                import traceback
+                traceback.print_exc()
 
         # Add instructions
         lines.append("\n**What would you like to do?**")
@@ -483,8 +522,10 @@ Provide:
         lines.append("- Say 'edit' to review each field individually")
 
         # Add instruction for missing fields if any were found
-        if state and missing_fields:
+        if missing_required:
             lines.append("- Provide the missing required fields listed above")
+        elif missing_optional:
+            lines.append("- Optionally add any of the fields listed above")
 
         return "\n".join(lines)
 
