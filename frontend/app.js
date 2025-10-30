@@ -191,6 +191,11 @@ The conversion is now in progress. Type \`status ${data.session_id}\` to check p
 
         // Refresh sessions list
         await refreshSessions();
+
+        // Check for clarification after a short delay
+        setTimeout(async () => {
+            await checkForClarification(data.session_id);
+        }, 2000);
     } catch (error) {
         addAssistantMessage(`❌ Failed to start conversion: ${error.message}`);
     }
@@ -380,4 +385,98 @@ function formatMarkdown(text) {
     formatted = formatted.replace(/\n/g, '<br>');
 
     return formatted;
+}
+
+// Check for clarification requirement
+async function checkForClarification(sessionId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/sessions/${sessionId}/status`);
+        if (!response.ok) return;
+
+        const data = await response.json();
+
+        if (data.requires_clarification) {
+            showClarificationForm(sessionId, data.clarification_prompt);
+        }
+    } catch (error) {
+        console.error('Failed to check clarification:', error);
+    }
+}
+
+// Show clarification form
+function showClarificationForm(sessionId, prompt) {
+    const formHtml = `
+<div class="clarification-form">
+    <h3>⚠️ Missing Required Metadata</h3>
+    <p>Please provide the following required information to continue with the conversion:</p>
+    <form id="clarificationForm" onsubmit="submitClarification(event, '${sessionId}')">
+        <div class="form-group">
+            <label for="subject_id">Subject ID *</label>
+            <input type="text" id="subject_id" name="subject_id" required placeholder="e.g., mouse_001, subject_A">
+            <small>Identifier for the experimental subject</small>
+        </div>
+        <div class="form-group">
+            <label for="species">Species *</label>
+            <input type="text" id="species" name="species" required placeholder="e.g., Mus musculus, Homo sapiens">
+            <small>Scientific species name</small>
+        </div>
+        <div class="form-group">
+            <label for="sex">Sex *</label>
+            <select id="sex" name="sex" required>
+                <option value="">Select...</option>
+                <option value="M">Male (M)</option>
+                <option value="F">Female (F)</option>
+                <option value="U">Unknown (U)</option>
+                <option value="O">Other (O)</option>
+            </select>
+            <small>Sex of the subject</small>
+        </div>
+        <div class="form-group">
+            <label for="experimenter">Experimenter *</label>
+            <input type="text" id="experimenter" name="experimenter" required placeholder="e.g., Smith, John">
+            <small>Name(s) of the experimenter(s)</small>
+        </div>
+        <button type="submit" class="btn-primary">Submit & Continue Conversion</button>
+    </form>
+</div>`;
+
+    addAssistantMessage(formHtml);
+}
+
+// Submit clarification
+async function submitClarification(event, sessionId) {
+    event.preventDefault();
+
+    const form = event.target;
+    const formData = new FormData(form);
+    const metadata = {};
+
+    for (const [key, value] of formData.entries()) {
+        metadata[key] = value;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/sessions/${sessionId}/clarify`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ updated_metadata: metadata }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Server error: ${response.status}`);
+        }
+
+        addAssistantMessage('✅ Metadata submitted! Conversion will now continue...');
+        form.remove();
+
+        // Check status after a delay
+        setTimeout(async () => {
+            await checkSessionStatus(sessionId);
+        }, 3000);
+
+    } catch (error) {
+        addAssistantMessage(`❌ Failed to submit metadata: ${error.message}`);
+    }
 }
