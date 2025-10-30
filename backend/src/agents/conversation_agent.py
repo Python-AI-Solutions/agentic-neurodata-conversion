@@ -3861,7 +3861,7 @@ Respond in JSON format."""
                     error_context=eval_response.error,  # Include original error
                 )
 
-            correction_context = eval_response.result.get("correction_context", {})
+            correction_context = eval_response.result.get("corrections", {})
 
             # Categorize issues
             auto_fixable = correction_context.get("auto_fixable_issues", [])

@@ -458,7 +458,8 @@ Respond in JSON format as specified."""
             parsed_fields = [parsed_field]
 
         # Generate confirmation message and wait for response
-        confirmation_msg = self.metadata_parser.generate_confirmation_message(parsed_fields)
+        # Pass state to check for missing required fields
+        confirmation_msg = self.metadata_parser.generate_confirmation_message(parsed_fields, state)
 
         # Store parsed fields in state so they can be retrieved when user confirms
         if not hasattr(state, 'pending_parsed_fields'):

@@ -388,12 +388,14 @@ Provide:
     def generate_confirmation_message(
         self,
         parsed_fields: List[ParsedField],
+        state=None,  # Add state parameter to check missing fields
     ) -> str:
         """
         Generate user-friendly confirmation message showing parsed results with provenance badges.
 
         Args:
             parsed_fields: List of parsed fields
+            state: GlobalState object to check for missing required fields
 
         Returns:
             Formatted confirmation message with HTML provenance badges
@@ -449,11 +451,40 @@ Provide:
 
             lines.append("")
 
+        # Check for missing required fields if state is provided
+        if state:
+            # Get all parsed field names
+            parsed_field_names = {field.field_name for field in parsed_fields}
+
+            # Get existing metadata from state
+            existing_metadata = getattr(state, 'metadata', {}) or {}
+            all_fields = set(existing_metadata.keys()) | parsed_field_names
+
+            # Import NWBDANDISchema to check required fields
+            from agents.nwb_dandi_schema import NWBDANDISchema
+
+            # Get missing required fields
+            missing_fields = []
+            for field in NWBDANDISchema.get_required_fields():
+                if field.name not in all_fields:
+                    missing_fields.append(field)
+
+            # Display missing fields if any
+            if missing_fields:
+                lines.append("\n**⚠️ Still missing DANDI-required metadata:**")
+                for field in missing_fields:
+                    lines.append(f"- **{field.name}**: {field.description}")
+                lines.append("")
+
         # Add instructions
         lines.append("\n**What would you like to do?**")
         lines.append("- Press Enter or say 'yes' to accept all")
         lines.append("- Type the field name and new value to correct (e.g., 'age: P90D')")
         lines.append("- Say 'edit' to review each field individually")
+
+        # Add instruction for missing fields if any were found
+        if state and missing_fields:
+            lines.append("- Provide the missing required fields listed above")
 
         return "\n".join(lines)
 
