@@ -454,11 +454,11 @@ Format:
             await self.http_client.post(
                 f"{self.mcp_server_url}/internal/route_message",
                 json={
-                    "session_id": session_id,
                     "target_agent": "evaluation_agent",
                     "message_type": "agent_execute",
                     "payload": {
                         "action": "validate_nwb",
+                        "session_id": session_id,
                     },
                 },
             )
