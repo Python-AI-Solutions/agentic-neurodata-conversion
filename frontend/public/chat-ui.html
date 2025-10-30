@@ -1400,8 +1400,8 @@
                 updateWorkflowState({ stage: 'uploaded', canStartConversion: true, canAddMetadata: true });
 
                 addAssistantMessage('Great! I can see you\'ve selected ' + (fileCount === 1 ? 'a file' : 'multiple files') + '. The system will automatically use the necessary files for conversion. Would you like to start now?', [
-                    { text: '🚀 Start Conversion', onClick: () => startConversion(), variant: 'primary' },
-                    { text: '✏️ Add Metadata First', onClick: () => requestMetadata(), variant: 'secondary' }
+                    { text: '🚀 Start Conversion', onClick: () => startConversion(), variant: 'primary' }
+                    // { text: '✏️ Add Metadata First', onClick: () => requestMetadata(), variant: 'secondary' }
                 ]);
             }
         };
@@ -2459,6 +2459,17 @@
                     // Display LLM's response
                     if (data.message) {
                         addAssistantMessage(data.message);
+
+                        // BUG FIX: Update lastDisplayedMessage to prevent duplicate display
+                        // when status polling calls handleUserInputRequest() with the same message
+                        // Construct a hash that matches the format used in handleUserInputRequest
+                        const statusResponse = await fetch(`${API_BASE}/api/status`);
+                        const statusData = await statusResponse.json();
+                        const messageHash = statusData.message ?
+                            `${statusData.status}_${statusData.conversation_type}_${statusData.conversation_phase}_${statusData.message}` :
+                            `${statusData.status}_${statusData.conversation_type}`;
+                        lastDisplayedMessage = messageHash;
+                        lastDisplayedStatus = statusData.status;
                     }
 
                     // ✅ FIX: Check ready_to_proceed field explicitly (PRIMARY SIGNAL)

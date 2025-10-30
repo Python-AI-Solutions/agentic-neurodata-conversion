@@ -455,6 +455,13 @@ Please provide these details, or say "skip for now" to proceed with minimal meta
         detected_format = detect_response.result.get("format")
         confidence = detect_response.result.get("confidence")
 
+        # BUG FIX: Store detected format in BOTH metadata and auto_extracted_metadata
+        # It must be in auto_extracted_metadata because metadata gets reconstructed
+        # from auto_extracted_metadata + user_provided_metadata later (line 3459)
+        if detected_format:
+            state.metadata["format"] = detected_format
+            state.auto_extracted_metadata["format"] = detected_format
+
         # Handle ambiguous format detection
         if confidence == "ambiguous" or not detected_format:
             await state.update_status(ConversionStatus.AWAITING_USER_INPUT)
@@ -501,10 +508,12 @@ Please provide these details, or say "skip for now" to proceed with minimal meta
                     # This allows us to track provenance and avoid asking users for auto-detectable info
                     state.auto_extracted_metadata.update(high_confidence_inferences)
 
-                    # Merge: auto-extracted + user-provided (user takes priority)
-                    for key, value in high_confidence_inferences.items():
-                        if not metadata.get(key):  # Only fill if not already provided by user
-                            metadata[key] = value
+                    # BUG FIX: Don't auto-fill required fields - always ask user first
+                    # Only auto-fill after user has been given a chance to provide metadata
+                    # Commenting out auto-fill to ensure user is prompted for required fields
+                    # for key, value in high_confidence_inferences.items():
+                    #     if not metadata.get(key):  # Only fill if not already provided by user
+                    #         metadata[key] = value
 
                     state.add_log(
                         LogLevel.INFO,
@@ -655,6 +664,9 @@ Please provide these details, or say "skip for now" to proceed with minimal meta
                     {"input_path": input_path}
                 )
 
+                # BUG FIX: Set llm_message so the frontend can display it via /api/status
+                state.llm_message = message_text
+
                 return MCPResponse.success_response(
                     reply_to=message.message_id,
                     result={
@@ -718,13 +730,13 @@ Please provide these details, or say "skip for now" to proceed with minimal meta
             (is_standard_complete or all_missing_declined) and  # Standard complete OR all declined
             not state.metadata.get('_custom_metadata_prompted', False) and  # Haven't asked yet
             state.conversation_phase != ConversationPhase.METADATA_COLLECTION and  # Not collecting standard
-            state.metadata_policy != MetadataRequestPolicy.ASK_ALL and  # Not in piece-by-piece mode
             not state.user_wants_sequential  # Not in sequential questioning mode
         )
 
         if should_ask_custom:
             state.metadata['_custom_metadata_prompted'] = True
             state.conversation_type = "custom_metadata_collection"
+            await state.update_status(ConversionStatus.AWAITING_USER_INPUT)
 
             # Generate friendly message about custom metadata
             custom_metadata_prompt = await self._generate_custom_metadata_prompt(
@@ -747,6 +759,7 @@ Please provide these details, or say "skip for now" to proceed with minimal meta
         if not state.metadata.get('_metadata_review_shown', False):
             state.metadata['_metadata_review_shown'] = True
             state.conversation_type = "metadata_review"
+            await state.update_status(ConversionStatus.AWAITING_USER_INPUT)
 
             # Generate metadata review message
             review_message = await self._generate_metadata_review_message(
@@ -1498,13 +1511,13 @@ Create a clear, friendly message that:
             (is_standard_complete or all_missing_declined) and
             not metadata.get('_custom_metadata_prompted', False) and
             state.conversation_phase != ConversationPhase.METADATA_COLLECTION and
-            state.metadata_policy != MetadataRequestPolicy.ASK_ALL and
             not state.user_wants_sequential
         )
 
         if should_ask_custom:
             state.metadata['_custom_metadata_prompted'] = True
             state.conversation_type = "custom_metadata_collection"
+            await state.update_status(ConversionStatus.AWAITING_USER_INPUT)
 
             custom_metadata_prompt = await self._generate_custom_metadata_prompt(
                 detected_format,
@@ -1525,6 +1538,7 @@ Create a clear, friendly message that:
         if not metadata.get('_metadata_review_shown', False):
             state.metadata['_metadata_review_shown'] = True
             state.conversation_type = "metadata_review"
+            await state.update_status(ConversionStatus.AWAITING_USER_INPUT)
 
             review_message = await self._generate_metadata_review_message(
                 metadata,
@@ -2971,6 +2985,10 @@ The conversion report has been generated with full details."""
         # Add user message to conversation history
         state.add_conversation_message(role="user", content=user_message)
 
+        # BUG FIX: Clear the old llm_message to prevent it from repeating in the UI
+        # The user has responded, so the previous question/message is no longer relevant
+        state.llm_message = None
+
         state.add_log(
             LogLevel.INFO,
             f"Processing conversational response from user",
@@ -3518,11 +3536,16 @@ The conversion report has been generated with full details."""
                 )
 
             # Continue conversation
+            # BUG FIX: Update llm_message so the frontend can display the follow-up question
+            follow_up_message = response.get("follow_up_message")
+            if follow_up_message:
+                state.llm_message = follow_up_message
+
             return MCPResponse.success_response(
                 reply_to=message.message_id,
                 result={
                     "status": "conversation_continues",
-                    "message": response.get("follow_up_message"),
+                    "message": follow_up_message,
                     "needs_more_info": response.get("needs_more_info", True),
                     "extracted_metadata": response.get("extracted_metadata", {}),
                 },

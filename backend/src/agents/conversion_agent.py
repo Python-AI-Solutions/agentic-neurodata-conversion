@@ -7,12 +7,15 @@ Responsible for:
 - Pure technical conversion logic (no user interaction)
 """
 import hashlib
+import logging
 import threading
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import neuroconv
+
+logger = logging.getLogger(__name__)
 from pynwb import NWBHDF5IO
 
 from models import (

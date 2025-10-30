@@ -46,6 +46,14 @@ class StatusResponse(BaseModel):
         le=100.0,
         description="Progress percentage (0-100)",
     )
+    progress_message: Optional[str] = Field(
+        default=None,
+        description="Detailed progress message (e.g., 'Writing data chunks...')",
+    )
+    current_stage: Optional[str] = Field(
+        default=None,
+        description="Current conversion stage name",
+    )
     message: Optional[str] = Field(
         default=None,
         description="Current status message",
@@ -186,6 +194,49 @@ class WebSocketMessage(BaseModel):
     )
 
     # Pydantic V2 configuration
+    model_config = ConfigDict(
+        json_encoders={datetime: lambda v: v.isoformat()}
+    )
+
+
+class StartConversionResponse(BaseModel):
+    """Response for start conversion endpoint."""
+
+    status: str = Field(description="Conversion initiation status")
+    message: str = Field(description="Status message")
+    session_id: Optional[str] = Field(default=None, description="Session identifier")
+
+
+class ImprovementDecisionResponse(BaseModel):
+    """Response for improvement decision endpoint."""
+
+    status: str = Field(description="Decision processing status")
+    message: str = Field(description="Response message")
+    next_step: Optional[str] = Field(default=None, description="Next workflow step")
+
+
+class ChatResponse(BaseModel):
+    """Response for chat endpoints."""
+
+    response: str = Field(description="Chat response message")
+    status: Optional[str] = Field(default=None, description="Conversation status")
+    conversation_type: Optional[str] = Field(default=None, description="Type of conversation")
+
+
+class ResetResponse(BaseModel):
+    """Response for reset endpoint."""
+
+    status: str = Field(description="Reset status")
+    message: str = Field(description="Confirmation message")
+
+
+class HealthResponse(BaseModel):
+    """Response for health check endpoint."""
+
+    status: str = Field(description="Service health status", default="healthy")
+    version: str = Field(description="API version")
+    timestamp: datetime = Field(default_factory=datetime.now, description="Check timestamp")
+
     model_config = ConfigDict(
         json_encoders={datetime: lambda v: v.isoformat()}
     )

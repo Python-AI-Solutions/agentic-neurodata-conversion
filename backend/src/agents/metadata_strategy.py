@@ -207,6 +207,10 @@ class MetadataRequestStrategy:
         state: GlobalState,
     ) -> Dict[str, Any]:
         """Request critical fields (batch or sequential based on user preference)."""
+        # Defensive check: ensure critical_fields is not empty
+        if not critical_fields:
+            return {"action": "proceed", "message": None}
+
         # If user wants sequential mode, ask one at a time
         if state.user_wants_sequential:
             next_field_name = critical_fields[0]
@@ -270,6 +274,10 @@ To create a DANDI-compatible NWB file, I need {len(critical_fields)} essential f
         state: GlobalState,
     ) -> Dict[str, Any]:
         """Request the next recommended field sequentially."""
+        # Defensive check: ensure recommended_fields is not empty
+        if not recommended_fields:
+            return {"action": "proceed", "message": None}
+
         next_field_name = recommended_fields[0]
         field = METADATA_FIELDS[next_field_name]
 

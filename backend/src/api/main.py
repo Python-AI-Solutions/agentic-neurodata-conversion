@@ -32,6 +32,7 @@ from agents import (
 from models import (
     ConversionStatus,
     ErrorResponse,
+    HealthResponse,
     LogLevel,
     LogsResponse,
     MCPMessage,
@@ -522,8 +523,8 @@ async def upload_file(
 
     # Validate file type
     ALLOWED_EXTENSIONS = {
-        '.bin', '.dat', '.continuous', '.nwb', '.meta', '.json',
-        '.rhd', '.rhs', '.ncs', '.nev', '.ntt', '.plx', '.tif', '.avi'
+        '.abf', '.avi', '.bin', '.continuous', '.dat', '.json', '.meta',
+        '.ncs', '.nev', '.ntt', '.nwb', '.plx', '.rhd', '.rhs', '.tif'
     }
     file_ext = Path(file.filename).suffix.lower()
     if file_ext not in ALLOWED_EXTENSIONS:
@@ -1146,6 +1147,15 @@ async def chat_message(message: str = Form(...), _: None = Depends(rate_limit_ll
             "extracted_metadata": {},
         }
 
+    # Initialize LLM lock if not already initialized (lazy initialization)
+    if state._llm_lock is None:
+        # Thread-safe initialization using the lock init lock
+        with state._lock_init_lock:
+            # Double-check pattern to prevent race condition
+            if state._llm_lock is None:
+                import asyncio
+                object.__setattr__(state, '_llm_lock', asyncio.Lock())
+
     # Acquire LLM lock to prevent concurrent processing
     async with state._llm_lock:
         state.llm_processing = True
@@ -1351,16 +1361,49 @@ async def smart_chat(message: str = Form(...), _: None = Depends(rate_limit_llm)
             "actions": [],
         }
 
+    # Initialize LLM lock if not already initialized (lazy initialization)
+    if state._llm_lock is None:
+        # Thread-safe initialization using the lock init lock
+        with state._lock_init_lock:
+            # Double-check pattern to prevent race condition
+            if state._llm_lock is None:
+                import asyncio
+                object.__setattr__(state, '_llm_lock', asyncio.Lock())
+
     # Acquire LLM lock to prevent concurrent processing
     async with state._llm_lock:
         state.llm_processing = True
         try:
-            # Route to general query handler
-            query_msg = MCPMessage(
-                target_agent="conversation",
-                action="general_query",
-                context={"query": message},
+            # BUG FIX: Route intelligently based on conversation state
+            # If we're in an active conversation (metadata collection, custom metadata, metadata review),
+            # route to conversational_response instead of general_query
+            active_conversation_types = {
+                "metadata_collection",
+                "custom_metadata_collection",
+                "metadata_review",
+                "validation_correction",
+            }
+
+            # Check if we're in an active conversation requiring conversational handling
+            in_active_conversation = (
+                state.conversation_type in active_conversation_types or
+                state.conversation_phase == ConversationPhase.METADATA_COLLECTION
             )
+
+            if in_active_conversation:
+                # Route to conversational response handler
+                query_msg = MCPMessage(
+                    target_agent="conversation",
+                    action="conversational_response",
+                    context={"message": message},
+                )
+            else:
+                # Route to general query handler
+                query_msg = MCPMessage(
+                    target_agent="conversation",
+                    action="general_query",
+                    context={"query": message},
+                )
 
             response = await mcp_server.send_message(query_msg)
         finally:

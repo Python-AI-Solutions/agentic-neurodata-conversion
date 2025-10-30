@@ -2,11 +2,16 @@
 Pydantic models for the agentic neurodata conversion system.
 """
 from .api import (
+    ChatResponse,
     DownloadInfo,
     ErrorResponse,
+    HealthResponse,
+    ImprovementDecisionResponse,
     LogsResponse,
+    ResetResponse,
     RetryApprovalRequest,
     RetryApprovalResponse,
+    StartConversionResponse,
     StatusResponse,
     UploadResponse,
     UserDecision,
@@ -37,11 +42,16 @@ from .validation import (
 
 __all__ = [
     # API models
+    "ChatResponse",
     "DownloadInfo",
     "ErrorResponse",
+    "HealthResponse",
+    "ImprovementDecisionResponse",
     "LogsResponse",
+    "ResetResponse",
     "RetryApprovalRequest",
     "RetryApprovalResponse",
+    "StartConversionResponse",
     "StatusResponse",
     "UploadResponse",
     "UserDecision",
