@@ -304,14 +304,17 @@ function addUserMessage(text) {
     scrollToBottom();
 }
 
-function addAssistantMessage(text) {
+function addAssistantMessage(text, allowHtml = false) {
     const messagesContainer = document.getElementById('chatMessages');
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message assistant';
+
+    const content = allowHtml ? text : formatMarkdown(text);
+
     messageDiv.innerHTML = `
         <div class="message-avatar">🤖</div>
         <div>
-            <div class="message-content">${formatMarkdown(text)}</div>
+            <div class="message-content">${content}</div>
             <div class="message-time">${new Date().toLocaleTimeString()}</div>
         </div>
     `;
@@ -440,7 +443,7 @@ function showClarificationForm(sessionId, prompt) {
     </form>
 </div>`;
 
-    addAssistantMessage(formHtml);
+    addAssistantMessage(formHtml, true); // Allow HTML for form rendering
 }
 
 // Submit clarification
