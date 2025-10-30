@@ -6,8 +6,12 @@ Main API server with REST endpoints and WebSocket support.
 import logging
 import os
 import tempfile
+import threading
+import time
+from collections import defaultdict
+from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
@@ -16,9 +20,9 @@ load_dotenv()
 # BUG #14 FIX: Initialize logger for WebSocket cleanup logging
 logger = logging.getLogger(__name__)
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from agents import (
     register_conversation_agent,
@@ -55,17 +59,125 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# CORS middleware
+# Configuration constants
+MAX_UPLOAD_SIZE_GB = 5
+MAX_UPLOAD_SIZE_BYTES = MAX_UPLOAD_SIZE_GB * 1024 * 1024 * 1024
+CORS_CACHE_MAX_AGE_SECONDS = 3600  # 1 hour
+RECONNECT_MAX_ATTEMPTS = 10
+STATUS_POLL_INTERVAL_MS = 1000  # Frontend polling interval
+
+# Rate limiting configuration
+RATE_LIMIT_REQUESTS = 60  # requests
+RATE_LIMIT_WINDOW = 60  # seconds (60 requests per minute)
+RATE_LIMIT_LLM_REQUESTS = 10  # LLM-heavy endpoints
+RATE_LIMIT_LLM_WINDOW = 60  # seconds (10 LLM calls per minute)
+
+
+class SimpleRateLimiter:
+    """Simple in-memory rate limiter for MVP."""
+
+    def __init__(self):
+        self._requests: Dict[str, List[float]] = defaultdict(list)
+        self._lock = threading.Lock()
+
+    def is_allowed(self, client_id: str, max_requests: int, window_seconds: int) -> bool:
+        """
+        Check if request is allowed under rate limit.
+
+        Args:
+            client_id: Unique identifier for client (IP address)
+            max_requests: Maximum requests allowed in window
+            window_seconds: Time window in seconds
+
+        Returns:
+            True if request is allowed, False if rate limit exceeded
+        """
+        now = time.time()
+        cutoff = now - window_seconds
+
+        with self._lock:
+            # Remove old requests outside the window
+            self._requests[client_id] = [
+                req_time for req_time in self._requests[client_id]
+                if req_time > cutoff
+            ]
+
+            # Check if under limit
+            if len(self._requests[client_id]) < max_requests:
+                self._requests[client_id].append(now)
+                return True
+
+            return False
+
+    def get_retry_after(self, client_id: str, window_seconds: int) -> int:
+        """Get seconds until rate limit resets."""
+        with self._lock:
+            if not self._requests[client_id]:
+                return 0
+            oldest_request = min(self._requests[client_id])
+            return max(0, int(window_seconds - (time.time() - oldest_request)))
+
+
+# Global rate limiter instance
+_rate_limiter = SimpleRateLimiter()
+
+
+def check_rate_limit(request: Request, max_requests: int = RATE_LIMIT_REQUESTS, window: int = RATE_LIMIT_WINDOW):
+    """
+    Check rate limit for incoming request.
+
+    Raises HTTPException 429 if rate limit exceeded.
+    """
+    # Use client IP as identifier (with X-Forwarded-For support for proxies)
+    client_ip = request.client.host if request.client else "unknown"
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        client_ip = forwarded.split(",")[0].strip()
+
+    if not _rate_limiter.is_allowed(client_ip, max_requests, window):
+        retry_after = _rate_limiter.get_retry_after(client_ip, window)
+        logger.warning(f"Rate limit exceeded for {client_ip}. Retry after {retry_after}s")
+        raise HTTPException(
+            status_code=429,
+            detail=f"Rate limit exceeded. Try again in {retry_after} seconds.",
+            headers={"Retry-After": str(retry_after)}
+        )
+
+
+async def rate_limit_llm(request: Request):
+    """Rate limiting dependency for LLM-heavy endpoints (stricter limits)."""
+    check_rate_limit(request, RATE_LIMIT_LLM_REQUESTS, RATE_LIMIT_LLM_WINDOW)
+
+
+# CORS middleware - configurable for different environments
+# In production, set CORS_ORIGINS environment variable to restrict access
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
+
+# Convert "*" string to list for CORSMiddleware
+if CORS_ORIGINS == ["*"]:
+    logger.warning("⚠️  CORS is configured to allow ALL origins (*)")
+    logger.warning("⚠️  Disabling credentials to prevent CSRF attacks")
+    logger.warning("⚠️  Set CORS_ORIGINS environment variable in production!")
+    allow_origins = ["*"]
+    allow_credentials = False  # SECURITY: Never allow credentials with wildcard origins
+else:
+    allow_origins = [origin.strip() for origin in CORS_ORIGINS]
+    allow_credentials = True  # Safe to allow credentials with specific origins
+    logger.info(f"✓ CORS configured for specific origins: {allow_origins}")
+    logger.info(f"✓ Credentials allowed: {allow_credentials}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For MVP - restrict in production
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=allow_origins,
+    allow_credentials=allow_credentials,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "Accept"],
+    max_age=CORS_CACHE_MAX_AGE_SECONDS,
 )
 
 # Global state
 _mcp_server: Optional[MCPServer] = None
+_mcp_server_lock = threading.Lock()  # Thread-safe MCP server initialization
 _upload_dir: Path = Path(tempfile.gettempdir()) / "nwb_uploads"
 _upload_dir.mkdir(exist_ok=True)
 
@@ -73,26 +185,79 @@ _upload_dir.mkdir(exist_ok=True)
 _workflow_manager = WorkflowStateManager()
 
 
+# Global exception handlers for consistent error responses
+@app.exception_handler(ValidationError)
+async def validation_exception_handler(request: Request, exc: ValidationError):
+    """
+    Handle Pydantic validation errors with user-friendly messages.
+
+    Returns a structured error response with field-level details.
+    """
+    logger.warning(f"Validation error in {request.method} {request.url.path}: {exc}")
+
+    # Build user-friendly error messages
+    errors = []
+    for error in exc.errors():
+        field = " → ".join(str(loc) for loc in error["loc"])
+        message = error["msg"]
+        errors.append({"field": field, "message": message})
+
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": "Validation failed",
+            "errors": errors,
+            "error_type": "ValidationError",
+            "path": str(request.url.path)
+        }
+    )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """
+    Catch-all exception handler to ensure consistent error responses.
+
+    Logs the error and returns a standardized JSON error response.
+    """
+    logger.error(f"Unhandled exception in {request.method} {request.url.path}: {exc}", exc_info=True)
+
+    # Don't expose internal error details in production
+    error_detail = str(exc) if os.getenv("DEBUG", "false").lower() == "true" else "An internal server error occurred"
+
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": error_detail,
+            "error_type": type(exc).__name__,
+            "path": str(request.url.path)
+        }
+    )
+
+
 def get_or_create_mcp_server() -> MCPServer:
     """Get or create the MCP server with all agents registered."""
     global _mcp_server
 
     if _mcp_server is None:
-        _mcp_server = get_mcp_server()
+        with _mcp_server_lock:
+            # Double-check pattern to prevent race condition
+            if _mcp_server is None:
+                _mcp_server = get_mcp_server()
 
-        # Initialize LLM service if API key is available
-        llm_service = None
-        api_key = os.getenv("ANTHROPIC_API_KEY")
-        if api_key:
-            llm_service = create_llm_service(
-                provider="anthropic",
-                api_key=api_key,
-            )
+                # Initialize LLM service if API key is available
+                llm_service = None
+                api_key = os.getenv("ANTHROPIC_API_KEY")
+                if api_key:
+                    llm_service = create_llm_service(
+                        provider="anthropic",
+                        api_key=api_key,
+                    )
 
-        # Register agents
-        register_conversion_agent(_mcp_server, llm_service=llm_service)
-        register_evaluation_agent(_mcp_server, llm_service=llm_service)
-        register_conversation_agent(_mcp_server, llm_service=llm_service)
+                # Register agents
+                register_conversion_agent(_mcp_server, llm_service=llm_service)
+                register_evaluation_agent(_mcp_server, llm_service=llm_service)
+                register_conversation_agent(_mcp_server, llm_service=llm_service)
 
     return _mcp_server
 
@@ -173,7 +338,9 @@ Generate a welcoming message that shows you understand their file."""
                 "data_type": response.get("data_type"),
             },
         }
-    except Exception:
+    except Exception as e:
+        # Log the error but don't fail the upload - LLM detection is optional
+        logger.warning(f"LLM detection failed, using defaults: {e}", exc_info=True)
         return {
             "message": "File uploaded successfully, conversion started",
             "detected_info": {},
@@ -182,7 +349,23 @@ Generate a welcoming message that shows you understand their file."""
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize the MCP server on startup."""
+    """Initialize the MCP server and validate configuration on startup."""
+    # Validate required environment variables
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        logger.error("ANTHROPIC_API_KEY environment variable is not set!")
+        logger.error("Please set ANTHROPIC_API_KEY to use LLM features")
+        raise ValueError("ANTHROPIC_API_KEY environment variable is required")
+
+    # Validate API key format (basic check)
+    if not api_key.startswith("sk-ant-"):
+        logger.warning(f"ANTHROPIC_API_KEY has unexpected format: {api_key[:10]}...")
+        logger.warning("Expected format: sk-ant-...")
+
+    logger.info("Configuration validated successfully")
+    logger.info(f"API Key: {api_key[:15]}...{api_key[-4:]}")
+
+    # Initialize MCP server
     get_or_create_mcp_server()
 
 
@@ -196,17 +379,13 @@ async def root():
     }
 
 
-@app.get("/api/health")
+@app.get("/api/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint."""
-    mcp_server = get_or_create_mcp_server()
-    handlers = mcp_server.get_handlers_info()
-
-    return {
-        "status": "healthy",
-        "agents": list(handlers.keys()),
-        "handlers": handlers,
-    }
+    return HealthResponse(
+        status="healthy",
+        version="0.1.0"
+    )
 
 
 def sanitize_filename(filename: str) -> str:
@@ -222,8 +401,12 @@ def sanitize_filename(filename: str) -> str:
     Raises:
         HTTPException: If filename is invalid or dangerous
     """
+    # SECURITY: Decode URL-encoded sequences first to prevent bypasses like %2e%2e%2f
+    from urllib.parse import unquote
+    decoded_name = unquote(filename, errors='strict')
+
     # Remove any directory components (handles ../../../etc/passwd attacks)
-    safe_name = os.path.basename(filename)
+    safe_name = os.path.basename(decoded_name)
 
     # Remove null bytes and other control characters
     safe_name = safe_name.replace('\0', '').replace('\n', '').replace('\r', '')
@@ -349,15 +532,21 @@ async def upload_file(
             detail=f"Unsupported file type: {file_ext}. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}"
         )
 
-    # Validate file size (max 5GB for now)
-    MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024  # 5GB in bytes
+    # Validate file size
     content = await file.read()
     await file.close()  # Bug #13: Explicitly close file handle after reading
 
-    if len(content) > MAX_FILE_SIZE:
+    # Validate content was successfully read
+    if content is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Failed to read file content"
+        )
+
+    if len(content) > MAX_UPLOAD_SIZE_BYTES:
         raise HTTPException(
             status_code=413,
-            detail=f"File too large: {len(content) / (1024**3):.2f}GB. Maximum: 5GB"
+            detail=f"File too large: {len(content) / (1024**3):.2f}GB. Maximum: {MAX_UPLOAD_SIZE_GB}GB"
         )
 
     if len(content) == 0:
@@ -481,8 +670,11 @@ async def upload_file(
                 # Allow partial metadata by making fields optional during upload
                 # Full validation happens before conversion in conversation_agent
                 validated_metadata = NWBMetadata(**metadata_raw)
-                # Convert validated model back to dict
-                metadata_dict = validated_metadata.model_dump(exclude_none=True)
+                # Convert validated model back to dict, preserving validation state
+                # Keep all fields including None to track what was provided vs omitted
+                metadata_dict = validated_metadata.model_dump(exclude_unset=True)
+                # Also store which fields were explicitly set by user for validation tracking
+                metadata_dict['_user_provided_fields'] = set(metadata_raw.keys())
             except ValidationError as e:
                 # Build user-friendly error messages
                 errors = []
@@ -640,7 +832,9 @@ async def get_status():
         status=state.status,
         validation_status=state.validation_status,
         overall_status=state.overall_status,  # Bug #12: Include overall_status
-        progress=None,  # MVP: no progress tracking
+        progress=state.progress_percent,  # ✅ FIXED: Expose actual progress tracking
+        progress_message=state.progress_message,  # ✅ NEW: Progress description
+        current_stage=state.current_stage,  # ✅ NEW: Current conversion stage
         message=state.llm_message,  # Include LLM conversational message
         input_path=state.input_path,
         output_path=state.output_path,
@@ -873,7 +1067,8 @@ async def retry_approval(request: RetryApprovalRequest):
         "analyzing_corrections": ConversionStatus.CONVERTING,
         "awaiting_corrections": ConversionStatus.AWAITING_USER_INPUT,
     }
-    new_status = status_map.get(new_status_str, ConversionStatus.IDLE)
+    # If unknown status, preserve current status rather than resetting to IDLE
+    new_status = status_map.get(new_status_str, state.status or ConversionStatus.AWAITING_RETRY_APPROVAL)
 
     return RetryApprovalResponse(
         accepted=True,
@@ -926,7 +1121,7 @@ async def submit_user_input(request: UserInputRequest):
 
 
 @app.post("/api/chat")
-async def chat_message(message: str = Form(...)):
+async def chat_message(message: str = Form(...), _: None = Depends(rate_limit_llm)):
     """
     Send a conversational message to the LLM-driven chat.
 
@@ -1083,9 +1278,30 @@ async def chat_message(message: str = Form(...)):
             },
         )
 
-        # Trigger conversion asynchronously (don't wait for it)
+        # Trigger conversion with proper error handling
         # The frontend will poll /api/status to monitor progress
-        asyncio.create_task(mcp_server.send_message(start_msg))
+        try:
+            # Use create_task with error callback to prevent silent failures
+            task = asyncio.create_task(mcp_server.send_message(start_msg))
+
+            # Add error callback to log failures
+            def handle_task_error(t):
+                try:
+                    t.result()
+                except Exception as e:
+                    logger.error(f"Conversion task failed: {e}", exc_info=True)
+                    # Update state to reflect failure
+                    if mcp_server.global_state:
+                        mcp_server.global_state.status = ConversionStatus.FAILED
+                        mcp_server.global_state.add_log(
+                            LogLevel.ERROR,
+                            f"Conversion failed: {str(e)}"
+                        )
+
+            task.add_done_callback(handle_task_error)
+        except Exception as e:
+            logger.error(f"Failed to start conversion: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Failed to start conversion: {str(e)}")
 
         response_status = "ready_to_convert"
     elif needs_more_info:
@@ -1109,7 +1325,7 @@ async def chat_message(message: str = Form(...)):
 
 
 @app.post("/api/chat/smart")
-async def smart_chat(message: str = Form(...)):
+async def smart_chat(message: str = Form(...), _: None = Depends(rate_limit_llm)):
     """
     Smart chat endpoint that works in ALL states, at ANY time.
 
@@ -1398,9 +1614,30 @@ async def websocket_endpoint(websocket: WebSocket):
         # Keep connection alive and handle incoming messages
         while True:
             data = await websocket.receive_json()
-            # Handle WebSocket messages if needed
-            # For MVP, just acknowledge
-            await websocket.send_json({"status": "received"})
+
+            # Route incoming WebSocket messages
+            message_type = data.get("type", "unknown")
+
+            if message_type == "ping":
+                # Health check / keep-alive
+                await websocket.send_json({"type": "pong", "timestamp": data.get("timestamp")})
+
+            elif message_type == "subscribe":
+                # Client wants to subscribe to specific event types
+                event_types = data.get("event_types", [])
+                logger.debug(f"Client subscribing to events: {event_types}")
+                await websocket.send_json({"type": "subscribed", "event_types": event_types})
+
+            elif message_type == "unsubscribe":
+                # Client wants to unsubscribe from specific event types
+                event_types = data.get("event_types", [])
+                logger.debug(f"Client unsubscribing from events: {event_types}")
+                await websocket.send_json({"type": "unsubscribed", "event_types": event_types})
+
+            else:
+                # Unknown message type - log and acknowledge
+                logger.warning(f"Unknown WebSocket message type: {message_type}")
+                await websocket.send_json({"type": "error", "message": f"Unknown message type: {message_type}"})
 
     except WebSocketDisconnect:
         logger.info("WebSocket client disconnected")
@@ -1408,7 +1645,8 @@ async def websocket_endpoint(websocket: WebSocket):
         try:
             mcp_server.unsubscribe_from_events(event_handler)
         except Exception as e:
-            logger.debug(f"Error unsubscribing from events: {e}")
+            # Log at warning level since cleanup failure could indicate memory leak
+            logger.warning(f"Error unsubscribing from events (potential memory leak): {e}", exc_info=True)
 
 
 if __name__ == "__main__":

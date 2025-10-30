@@ -338,10 +338,35 @@ Respond ONLY with the JSON object, no additional text."""
 
             result = json.loads(json_str)
 
+            # Validate against output schema if provided
+            if output_schema:
+                try:
+                    from jsonschema import validate, ValidationError as SchemaValidationError
+                    validate(instance=result, schema=output_schema)
+                except ImportError:
+                    # jsonschema not installed - log warning but continue
+                    logger.warning("jsonschema package not installed - skipping schema validation")
+                except SchemaValidationError as e:
+                    duration = time.time() - start_time
+                    logger.error(
+                        f"LLM output failed schema validation after {duration:.2f}s: {str(e)}"
+                    )
+                    raise LLMServiceError(
+                        f"LLM response doesn't match expected schema: {str(e)}",
+                        provider="anthropic",
+                        details={
+                            "model": self._model,
+                            "validation_error": str(e),
+                            "result": result,
+                            "expected_schema": output_schema,
+                            "duration": duration,
+                        },
+                    )
+
             # Log successful parsing
             duration = time.time() - start_time
             logger.info(
-                f"LLM structured output completed and parsed: {duration:.2f}s - "
+                f"LLM structured output completed and validated: {duration:.2f}s - "
                 f"result_keys={list(result.keys())}"
             )
 

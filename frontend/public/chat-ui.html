@@ -1197,11 +1197,36 @@
         let reconnectAttempts = 0;
         const MAX_RECONNECT_ATTEMPTS = 5;
         let reconnectTimer = null; // Track reconnect timer to clear it
+        // Utility functions for safe property access
+        function safeGet(obj, path, defaultValue = null) {
+            /**
+             * Safely access nested properties with fallback.
+             * Example: safeGet(data, 'user.profile.name', 'Unknown')
+             */
+            if (!obj) return defaultValue;
+            const keys = path.split('.');
+            let result = obj;
+            for (const key of keys) {
+                if (result === null || result === undefined) {
+                    return defaultValue;
+                }
+                result = result[key];
+            }
+            return result !== undefined ? result : defaultValue;
+        }
+
+        function isDefined(value) {
+            /**
+             * Check if value is defined (not null or undefined).
+             */
+            return value !== null && value !== undefined;
+        }
+
         let currentFiles = []; // Changed to array to support multiple files
         let conversionInProgress = false;
         let lastProgressMessage = null; // FIX #6: Track progress messages
         let conversionMonitorInterval = null; // Bug #10: Track monitoring interval
-        let isCheckingStatus = false; // Prevent duplicate status checks
+        let statusCheckPromise = null; // Promise-based locking to prevent duplicate status checks
         let lastDisplayedMessage = null; // Track last message to prevent duplicates
         let lastDisplayedStatus = null; // Track last status to detect changes
 
@@ -1215,6 +1240,16 @@
             canDownload: false
         };
         let activeButtons = []; // Track all active buttons to disable them later
+
+        // Bug #30: Store event handler references for cleanup
+        let fileInputHandler = null;
+        let textInputAutoResizeHandler = null;
+        let sidebarResizeHandlers = {
+            mousedown: null,
+            mousemove: null,
+            mouseup: null,
+            initialized: false
+        };
 
         // WebSocket connection
         function connectWebSocket() {
@@ -1306,16 +1341,16 @@
                 const data = message.data;
 
                 // Update progress display immediately
-                if (data.progress !== null && data.progress !== undefined) {
+                if (isDefined(data) && isDefined(data.progress)) {
                     const progressData = {
-                        status: data.status,
+                        status: safeGet(data, 'status', 'converting'),
                         progress: data.progress,
-                        progress_message: data.progress_message,
-                        current_stage: data.current_stage
+                        progress_message: safeGet(data, 'progress_message', ''),
+                        current_stage: safeGet(data, 'current_stage', '')
                     };
 
                     // Update status badge with progress
-                    updateStatusBadge(data.status || 'converting', progressData);
+                    updateStatusBadge(progressData.status, progressData);
 
                     // Update progress bar
                     updateProgressDisplay(progressData);
@@ -1346,8 +1381,8 @@
             activeButtons.push(button);
         }
 
-        // File handling
-        document.getElementById('fileInput').addEventListener('change', async (e) => {
+        // File handling - Bug #30: Store handler for cleanup
+        fileInputHandler = async (e) => {
             const files = Array.from(e.target.files);
             if (files.length > 0) {
                 currentFiles = files;
@@ -1369,7 +1404,8 @@
                     { text: '✏️ Add Metadata First', onClick: () => requestMetadata(), variant: 'secondary' }
                 ]);
             }
-        });
+        };
+        document.getElementById('fileInput').addEventListener('change', fileInputHandler);
 
         // Message handling
         function addMessage(role, content, actions = []) {
@@ -1451,13 +1487,13 @@
 
         // Status monitoring
         async function checkStatus() {
-            // Prevent duplicate concurrent checks
-            if (isCheckingStatus) {
-                return;
+            // Prevent duplicate concurrent checks using promise-based locking
+            if (statusCheckPromise) {
+                return statusCheckPromise;
             }
-            isCheckingStatus = true;
 
-            try {
+            statusCheckPromise = (async () => {
+                try {
                 const response = await fetch(`${API_BASE}/api/status`);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -1506,11 +1542,14 @@
                     console.warn('Unknown status:', data.status, 'conversation_type:', data.conversation_type);
                     // Don't show error to user unless truly stuck
                 }
-            } catch (error) {
-                console.error('Status check error:', error);
-            } finally {
-                isCheckingStatus = false; // Always release the lock
-            }
+                } catch (error) {
+                    console.error('Status check error:', error);
+                } finally {
+                    statusCheckPromise = null; // Always release the lock
+                }
+            })();
+
+            return statusCheckPromise;
         }
 
         // Handle PASSED_WITH_ISSUES validation outcome
@@ -1636,14 +1675,20 @@
         async function declineValidationFix() {
             addUserMessage('❌ Decline to Fix Validation Issues');
 
-            // Call the retry-approval endpoint with 'reject' decision to properly close the workflow
-            await fetch(`${API_BASE}/api/retry-approval`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ decision: 'reject' })
-            });
+            try {
+                // Call the retry-approval endpoint with 'reject' decision to properly close the workflow
+                await fetch(`${API_BASE}/api/retry-approval`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ decision: 'reject' })
+                });
 
-            addAssistantMessage('Validation fixes declined. The conversion has been cancelled. You can start a new conversion anytime.');
+                addAssistantMessage('Validation fixes declined. The conversion has been cancelled. You can start a new conversion anytime.');
+            } catch (error) {
+                console.error('Error declining validation fix:', error);
+                addAssistantMessage('Failed to send decline response. The session may be in an inconsistent state.');
+            }
+
             conversionInProgress = false;
         }
 
@@ -1869,7 +1914,7 @@
             }, 1000); // Changed from 2000ms to 1000ms
         }
 
-        // Bug #10: Cleanup on page unload
+        // Bug #10 & #30: Cleanup on page unload
         window.addEventListener('beforeunload', () => {
             // Clear all intervals
             if (conversionMonitorInterval) {
@@ -1889,6 +1934,38 @@
                 clearTimeout(reconnectTimer);
                 reconnectTimer = null;
             }
+
+            // Bug #30: Remove event listeners to prevent memory leaks
+            const fileInput = document.getElementById('fileInput');
+            if (fileInput && fileInputHandler) {
+                fileInput.removeEventListener('change', fileInputHandler);
+                fileInputHandler = null;
+            }
+
+            const textInput = document.getElementById('textInput');
+            if (textInput && textInputAutoResizeHandler) {
+                textInput.removeEventListener('input', textInputAutoResizeHandler);
+                textInputAutoResizeHandler = null;
+            }
+
+            // Remove sidebar resize handlers
+            if (sidebarResizeHandlers.initialized) {
+                const resizeHandle = document.getElementById('resizeHandle');
+                if (resizeHandle && sidebarResizeHandlers.mousedown) {
+                    resizeHandle.removeEventListener('mousedown', sidebarResizeHandlers.mousedown);
+                }
+                if (sidebarResizeHandlers.mousemove) {
+                    document.removeEventListener('mousemove', sidebarResizeHandlers.mousemove);
+                }
+                if (sidebarResizeHandlers.mouseup) {
+                    document.removeEventListener('mouseup', sidebarResizeHandlers.mouseup);
+                }
+                sidebarResizeHandlers.mousedown = null;
+                sidebarResizeHandlers.mousemove = null;
+                sidebarResizeHandlers.mouseup = null;
+                sidebarResizeHandlers.initialized = false;
+            }
+
             // Clean up event listeners on dynamically created buttons
             activeButtons.forEach(button => {
                 if (button) {
@@ -1899,8 +1976,12 @@
         });
 
         async function handleRetryApproval() {
-            const response = await fetch(`${API_BASE}/api/correction-context`);
-            const context = await response.json();
+            try {
+                const response = await fetch(`${API_BASE}/api/correction-context`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const context = await response.json();
 
             // PRIORITY 3 FIX: Enhanced UI with fix preview
             let issuesHtml = '<div class="fix-approval-container" style="margin: 15px 0;">';
@@ -1980,6 +2061,10 @@
                     { text: '✗ Decline', onClick: () => declineRetry(), variant: 'secondary' }
                 ]
             );
+            } catch (error) {
+                console.error('Error handling retry approval:', error);
+                addAssistantMessage('❌ Failed to load correction context. Please try refreshing the page.');
+            }
         }
 
         function showFixDetails(context) {
@@ -2037,13 +2122,19 @@
         async function declineRetry() {
             addUserMessage('❌ Decline Retry');
 
-            await fetch(`${API_BASE}/api/retry-approval`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ decision: 'reject' })
-            });
+            try {
+                await fetch(`${API_BASE}/api/retry-approval`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ decision: 'reject' })
+                });
 
-            addAssistantMessage('Conversion cancelled. You can start a new conversion anytime.');
+                addAssistantMessage('Conversion cancelled. You can start a new conversion anytime.');
+            } catch (error) {
+                console.error('Error declining retry:', error);
+                addAssistantMessage('Failed to send decline response. The session may be in an inconsistent state.');
+            }
+
             conversionInProgress = false;
         }
 
@@ -2456,15 +2547,21 @@
             localStorage.setItem('logsCollapsed', isCollapsed);
         }
 
-        // Sidebar Resize Functionality
+        // Sidebar Resize Functionality - Bug #30: Idempotent with cleanup support
         function initializeSidebarResize() {
+            // Bug #30: Prevent multiple initializations
+            if (sidebarResizeHandlers.initialized) {
+                return;
+            }
+
             const resizeHandle = document.getElementById('resizeHandle');
             const sidebar = document.querySelector('.sidebar');
             let isResizing = false;
             let startX = 0;
             let startWidth = 0;
 
-            resizeHandle.addEventListener('mousedown', (e) => {
+            // Store handlers for cleanup
+            sidebarResizeHandlers.mousedown = (e) => {
                 isResizing = true;
                 startX = e.clientX;
                 startWidth = sidebar.offsetWidth;
@@ -2472,9 +2569,9 @@
                 document.body.style.cursor = 'col-resize';
                 document.body.style.userSelect = 'none';
                 e.preventDefault();
-            });
+            };
 
-            document.addEventListener('mousemove', (e) => {
+            sidebarResizeHandlers.mousemove = (e) => {
                 if (!isResizing) return;
 
                 const deltaX = e.clientX - startX;
@@ -2486,9 +2583,9 @@
                 const constrainedWidth = Math.min(Math.max(newWidth, minWidth), maxWidth);
 
                 sidebar.style.width = constrainedWidth + 'px';
-            });
+            };
 
-            document.addEventListener('mouseup', () => {
+            sidebarResizeHandlers.mouseup = () => {
                 if (isResizing) {
                     isResizing = false;
                     resizeHandle.classList.remove('resizing');
@@ -2498,7 +2595,14 @@
                     // Save the width to localStorage
                     localStorage.setItem('sidebarWidth', sidebar.offsetWidth);
                 }
-            });
+            };
+
+            // Attach event listeners
+            resizeHandle.addEventListener('mousedown', sidebarResizeHandlers.mousedown);
+            document.addEventListener('mousemove', sidebarResizeHandlers.mousemove);
+            document.addEventListener('mouseup', sidebarResizeHandlers.mouseup);
+
+            sidebarResizeHandlers.initialized = true;
         }
 
         async function refreshLogs() {
@@ -2711,10 +2815,11 @@
             checkStatus();
             refreshLogs(); // Load initial logs
 
-            // Set up auto-resize for textarea
+            // Set up auto-resize for textarea - Bug #30: Store handler for cleanup
             const textInput = document.getElementById('textInput');
             if (textInput) {
-                textInput.addEventListener('input', autoResizeTextarea);
+                textInputAutoResizeHandler = autoResizeTextarea;
+                textInput.addEventListener('input', textInputAutoResizeHandler);
                 // Initial resize in case there's default content
                 autoResizeTextarea();
             }

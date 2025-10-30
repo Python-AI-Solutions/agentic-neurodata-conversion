@@ -1318,83 +1318,94 @@ Provide a brief, friendly update about what's happening now."""
             base_progress: Starting progress percentage (default 50%)
             max_progress: Maximum progress percentage (default 90%)
         """
-        output_file = Path(output_path)
+        # Bug #37: Top-level exception handler to prevent silent thread failures
+        try:
+            output_file = Path(output_path)
 
-        # Estimate output size (typically 60-120% of input size for NWB compression)
-        # Use conservative estimate of 100% (same size as input)
-        estimated_output_mb = input_size_mb * 1.0
+            # Estimate output size (typically 60-120% of input size for NWB compression)
+            # Use conservative estimate of 100% (same size as input)
+            estimated_output_mb = input_size_mb * 1.0
 
-        last_size_mb = 0.0
-        last_update_time = time.time()
-        stall_count = 0
+            last_size_mb = 0.0
+            last_update_time = time.time()
+            stall_count = 0
 
-        state.add_log(
-            LogLevel.INFO,
-            f"Starting file size monitoring (estimated output: {estimated_output_mb:.1f} MB)",
-            {"estimated_output_mb": estimated_output_mb},
-        )
+            state.add_log(
+                LogLevel.INFO,
+                f"Starting file size monitoring (estimated output: {estimated_output_mb:.1f} MB)",
+                {"estimated_output_mb": estimated_output_mb},
+            )
 
-        while not stop_event.is_set():
-            try:
-                if output_file.exists():
-                    current_size_bytes = output_file.stat().st_size
-                    current_size_mb = current_size_bytes / (1024 * 1024)
+            while not stop_event.is_set():
+                try:
+                    if output_file.exists():
+                        current_size_bytes = output_file.stat().st_size
+                        current_size_mb = current_size_bytes / (1024 * 1024)
 
-                    # Calculate progress based on file size
-                    if estimated_output_mb > 0:
-                        size_progress = min(1.0, current_size_mb / estimated_output_mb)
-                        progress = base_progress + (size_progress * (max_progress - base_progress))
-                    else:
-                        # If we can't estimate, just increment slowly
-                        progress = min(max_progress, base_progress + (time.time() - last_update_time) * 0.5)
-
-                    # Update progress if file grew significantly (>5 MB or >10%)
-                    size_delta_mb = current_size_mb - last_size_mb
-                    if size_delta_mb > 5.0 or (last_size_mb > 0 and size_delta_mb / last_size_mb > 0.1):
-                        # Calculate write speed
-                        time_delta = time.time() - last_update_time
-                        if time_delta > 0:
-                            speed_mbps = size_delta_mb / time_delta
-                            state.update_progress(
-                                progress,
-                                f"Writing data... ({current_size_mb:.1f} MB written, {speed_mbps:.2f} MB/s)",
-                                "data_writing",
-                            )
+                        # Calculate progress based on file size
+                        if estimated_output_mb > 0:
+                            size_progress = min(1.0, current_size_mb / estimated_output_mb)
+                            progress = base_progress + (size_progress * (max_progress - base_progress))
                         else:
-                            state.update_progress(
-                                progress,
-                                f"Writing data... ({current_size_mb:.1f} MB written)",
-                                "data_writing",
-                            )
+                            # If we can't estimate, just increment slowly
+                            progress = min(max_progress, base_progress + (time.time() - last_update_time) * 0.5)
 
-                        last_size_mb = current_size_mb
-                        last_update_time = time.time()
-                        stall_count = 0
+                        # Update progress if file grew significantly (>5 MB or >10%)
+                        size_delta_mb = current_size_mb - last_size_mb
+                        if size_delta_mb > 5.0 or (last_size_mb > 0 and size_delta_mb / last_size_mb > 0.1):
+                            # Calculate write speed
+                            time_delta = time.time() - last_update_time
+                            if time_delta > 0:
+                                speed_mbps = size_delta_mb / time_delta
+                                state.update_progress(
+                                    progress,
+                                    f"Writing data... ({current_size_mb:.1f} MB written, {speed_mbps:.2f} MB/s)",
+                                    "data_writing",
+                                )
+                            else:
+                                state.update_progress(
+                                    progress,
+                                    f"Writing data... ({current_size_mb:.1f} MB written)",
+                                    "data_writing",
+                                )
 
-                    # Detect stalls (no size change for 30 seconds)
-                    elif time.time() - last_update_time > 30:
-                        stall_count += 1
-                        if stall_count == 1:
-                            state.add_log(
-                                LogLevel.WARNING,
-                                f"File size hasn't changed in 30 seconds ({current_size_mb:.1f} MB)",
-                                {"current_size_mb": current_size_mb},
-                            )
+                            last_size_mb = current_size_mb
+                            last_update_time = time.time()
+                            stall_count = 0
 
-            except Exception as e:
-                state.add_log(
-                    LogLevel.WARNING,
-                    f"Error monitoring file size: {e}",
-                )
+                        # Detect stalls (no size change for 30 seconds)
+                        elif time.time() - last_update_time > 30:
+                            stall_count += 1
+                            if stall_count == 1:
+                                state.add_log(
+                                    LogLevel.WARNING,
+                                    f"File size hasn't changed in 30 seconds ({current_size_mb:.1f} MB)",
+                                    {"current_size_mb": current_size_mb},
+                                )
 
-            # Check every 5 seconds
-            time.sleep(5.0)
+                except Exception as e:
+                    state.add_log(
+                        LogLevel.WARNING,
+                        f"Error monitoring file size: {e}",
+                    )
 
-        state.add_log(
-            LogLevel.INFO,
-            f"File size monitoring stopped (final size: {last_size_mb:.1f} MB)",
-            {"final_size_mb": last_size_mb},
-        )
+                # Bug #36: Use event-based waiting instead of blocking sleep for faster shutdown
+                if stop_event.wait(5.0):
+                    break  # Exit immediately if stop requested
+
+            state.add_log(
+                LogLevel.INFO,
+                f"File size monitoring stopped (final size: {last_size_mb:.1f} MB)",
+                {"final_size_mb": last_size_mb},
+            )
+        except Exception as e:
+            # Bug #37: Catch any unhandled exceptions to prevent silent thread failure
+            logger.error(f"File size monitoring thread crashed: {e}", exc_info=True)
+            state.add_log(
+                LogLevel.ERROR,
+                f"File size monitoring failed: {str(e)}",
+                {"error_type": type(e).__name__},
+            )
 
     def _map_flat_to_nested_metadata(self, flat_metadata: Dict[str, Any]) -> Dict[str, Any]:
         """
