@@ -3158,18 +3158,22 @@ The conversion report has been generated with full details."""
                 state.add_log(LogLevel.INFO, "User declined to add custom metadata")
                 state.conversation_type = None  # Reset conversation type
 
-                # Proceed with conversion
+                # BUG FIX: Mark both custom metadata and metadata review as complete
+                # so _continue_conversion_workflow proceeds directly to conversion
+                state.metadata['_custom_metadata_prompted'] = True
+                state.metadata['_metadata_review_shown'] = True
+
+                # BUG FIX: Continue workflow instead of restarting from scratch
+                # Use _continue_conversion_workflow to proceed to metadata review or conversion
+                # instead of handle_start_conversion which would re-run format detection
                 if state.input_path:
-                    return await self.handle_start_conversion(
-                        MCPMessage(
-                            target_agent="conversation",
-                            action="start_conversion",
-                            context={
-                                "input_path": str(state.input_path),
-                                "metadata": state.metadata,
-                            },
-                        ),
-                        state,
+                    detected_format = state.metadata.get("format", "unknown")
+                    return await self._continue_conversion_workflow(
+                        message_id=message.message_id,
+                        input_path=str(state.input_path),
+                        detected_format=detected_format,
+                        metadata=state.metadata,
+                        state=state,
                     )
                 else:
                     return MCPResponse.error_response(

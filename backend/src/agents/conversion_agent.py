@@ -515,7 +515,18 @@ Be specific about the format name used by NeuroConv."""
         input_path = message.context.get("input_path")
         output_path = message.context.get("output_path")
         format_name = message.context.get("format")
-        metadata = message.context.get("metadata", {})
+        metadata_raw = message.context.get("metadata", {})
+
+        # BUG FIX: Filter out internal metadata fields that are not valid NWB metadata
+        # These fields are used internally for tracking but should not be passed to NWB file
+        internal_fields = {
+            "format", "device_name", "recording_modality", "recording_system",
+            "_custom_metadata_prompted", "_metadata_review_shown"
+        }
+        metadata = {
+            k: v for k, v in metadata_raw.items()
+            if k not in internal_fields and not k.startswith("_")
+        }
 
         if not all([input_path, output_path, format_name]):
             state.add_log(
