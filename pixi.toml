@@ -4,14 +4,14 @@ version = "0.1.0"
 description = "Multi-agent system for converting neuroscience data to NWB format using MCP server architecture"
 authors = ["Agentic Neurodata Conversion Team <support@pythonaisolutions.com>"]
 channels = ["conda-forge", "pyviz", "pytorch"]
-platforms = ["linux-64", "osx-arm64"]
+platforms = ["linux-64", "osx-arm64", "win-64"]
 
 [system-requirements]
 libc = { family="glibc", version="2.17" }
 
 # Base dependencies from conda-forge
 [dependencies]
-python = ">=3.12,<3.14"
+python = "3.13.*"
 pip = "*"
 
 # System dependencies for neuroscience tools
@@ -42,14 +42,21 @@ aiofiles = ">=23.0.0"
 # MCP (Model Context Protocol) server
 mcp = ">=1.0.0"
 
+# LLM Provider SDKs
+anthropic = ">=0.18.0"
+openai = ">=1.0.0"
+
+# Redis for session context
+redis = ">=5.0.0"
+
 # Neuroscience specific packages
 neuroconv = ">=0.4.0"
 pynwb = ">=3.1.2,<4"
 nwbinspector = ">=0.4.0"
+spikeinterface = ">=0.99.0"
 
-# Knowledge graph and validation
-linkml = ">=1.5.0"
-rdflib = ">=7.1.4,<8"
+# Note: LinkML and RDF libraries deferred to post-MVP per constitution
+# (Knowledge graph features not needed for MVP)
 
 # CLI and utilities
 click = ">=8.0.0"
@@ -70,6 +77,13 @@ pytest-cov = ">=4.0.0"
 pytest-mock = ">=3.10.0"
 pytest-xdist = ">=3.0.0"
 
+[feature.dev.pypi-dependencies]
+# Fake Redis for testing (not available in conda)
+fakeredis = ">=2.20.0"
+
+# HTTP mocking for tests
+respx = ">=0.20.0"
+
 # Code quality tools
 ruff = ">=0.1.0"
 mypy = ">=1.5.0"
@@ -79,8 +93,8 @@ pre-commit = ">=3.0.0"
 ipython = ">=8.0.0"
 jupyter = ">=1.0.0"
 notebook = ">=7.0.0"
-datalad = ">=0.9.3,<2"
 pytest-timeout = ">=2.4.0,<3"
+# Note: DataLad deferred to post-MVP per constitution
 
 # Security and quality tools
 bandit = ">=1.7.0"
