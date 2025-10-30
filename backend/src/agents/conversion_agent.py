@@ -1274,11 +1274,73 @@ Provide a brief, friendly update about what's happening now."""
                 ) from e
 
         else:
-            # Generic format handling
-            if input_file.is_file():
-                data_interface = interface_class(file_path=input_path)
-            else:
-                data_interface = interface_class(folder_path=input_path)
+            # Generic format handling for all other formats (Axon, Intan, Blackrock, etc.)
+            try:
+                if input_file.is_file():
+                    state.add_log(
+                        LogLevel.INFO,
+                        f"Initializing {format_name} interface with file: {input_file.name}",
+                    )
+
+                    # BUG FIX: Some interfaces (like AbfInterface) use file_paths (plural, as list)
+                    # instead of file_path (singular, as string)
+                    if format_name in ["Axon", "AxonRecording"]:
+                        # AbfInterface expects file_paths as a list
+                        state.add_log(
+                            LogLevel.INFO,
+                            f"Using file_paths parameter (list) for {format_name}",
+                        )
+                        data_interface = interface_class(file_paths=[input_path])
+                    else:
+                        # Most other interfaces use file_path as a string
+                        data_interface = interface_class(file_path=input_path)
+                else:
+                    state.add_log(
+                        LogLevel.INFO,
+                        f"Initializing {format_name} interface with folder: {input_file.name}",
+                    )
+                    data_interface = interface_class(folder_path=input_path)
+            except Exception as e:
+                # BUG FIX: Add detailed error logging for generic format initialization failures
+                error_msg = f"Failed to initialize {format_name} interface for {input_path}."
+                error_details = []
+
+                # Add format-specific hints based on common errors
+                error_str = str(e).lower()
+                if "no such file" in error_str or "does not exist" in error_str:
+                    error_details.append("File or directory not found")
+                elif "permission" in error_str:
+                    error_details.append("Permission denied - check file permissions")
+                elif "corrupt" in error_str or "invalid" in error_str:
+                    error_details.append("File may be corrupted or invalid format")
+                elif "metadata" in error_str:
+                    error_details.append("Missing or invalid metadata in file")
+                elif "compression" in error_str:
+                    error_details.append("Compression format not supported")
+                else:
+                    error_details.append(f"Error: {str(e)}")
+
+                # Log detailed error information
+                state.add_log(
+                    LogLevel.ERROR,
+                    f"{error_msg} {' | '.join(error_details)}",
+                    {
+                        "format": format_name,
+                        "input_path": input_path,
+                        "interface_class": interface_class_name,
+                        "error_type": type(e).__name__,
+                        "error_message": str(e),
+                    }
+                )
+
+                # Re-raise with context
+                raise ValueError(
+                    f"{error_msg}\n"
+                    f"Format: {format_name}\n"
+                    f"Interface: {interface_class_name}\n"
+                    f"Error: {str(e)}\n"
+                    f"Hint: Make sure the file is a valid {format_name} format and is not corrupted."
+                ) from e
 
         # For single-interface conversions, just use the interface directly
         # Get metadata from interface
