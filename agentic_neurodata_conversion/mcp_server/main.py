@@ -23,6 +23,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from agentic_neurodata_conversion.config import settings
 from agentic_neurodata_conversion.mcp_server.agent_registry import AgentRegistry
+from agentic_neurodata_conversion.mcp_server.api.downloads import (
+    router as downloads_router,
+)
 from agentic_neurodata_conversion.mcp_server.api.health import router as health_router
 from agentic_neurodata_conversion.mcp_server.api.internal import (
     router as internal_router,
@@ -128,6 +131,7 @@ def create_app() -> FastAPI:
     # Include API routers
     app.include_router(health_router)  # /health
     app.include_router(sessions_router, prefix="/api/v1")  # /api/v1/sessions/*
+    app.include_router(downloads_router)  # /api/v1/downloads/*
     app.include_router(internal_router)  # /internal/*
 
     return app

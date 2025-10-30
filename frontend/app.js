@@ -549,7 +549,7 @@ async function showCompletionFiles(sessionId) {
 
         if (nwbFile) {
             const fileName = nwbFile.split(/[/\\]/).pop();
-            const fileUrl = `../demo_output/nwb_files/${fileName}`;
+            const fileUrl = `${API_BASE_URL}/api/v1/downloads/nwb/${fileName}`;
             filesHtml += `
         <div class="file-item">
             <span class="file-icon">📄</span>
@@ -563,7 +563,7 @@ async function showCompletionFiles(sessionId) {
 
         if (reportFile) {
             const fileName = reportFile.split(/[/\\]/).pop();
-            const fileUrl = `../demo_output/reports/${fileName}`;
+            const fileUrl = `${API_BASE_URL}/api/v1/downloads/report/${fileName}`;
             filesHtml += `
         <div class="file-item">
             <span class="file-icon">📊</span>
