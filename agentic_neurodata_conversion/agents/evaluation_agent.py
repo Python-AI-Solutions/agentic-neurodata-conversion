@@ -8,6 +8,7 @@ from typing import Any
 from nwbinspector import inspect_nwbfile
 
 from agentic_neurodata_conversion.agents.base_agent import BaseAgent
+from agentic_neurodata_conversion.config import settings
 from agentic_neurodata_conversion.models.mcp_message import MCPMessage
 from agentic_neurodata_conversion.models.session_context import (
     ValidationIssue,
@@ -134,9 +135,9 @@ class EvaluationAgent(BaseAgent):
         Returns:
             Path to generated report file
         """
-        # Create reports directory if it doesn't exist
-        reports_dir = Path("./reports")
-        reports_dir.mkdir(exist_ok=True)
+        # Create reports directory using configured base path
+        reports_dir = Path(settings.filesystem_output_base_path) / "reports"
+        reports_dir.mkdir(parents=True, exist_ok=True)
 
         # Generate report path
         report_path = reports_dir / f"{session_id}_validation.json"
