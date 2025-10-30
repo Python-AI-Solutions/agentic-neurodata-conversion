@@ -210,11 +210,23 @@ class ConversionAgent:
             if llm_result and llm_result.get("confidence", 0) > 70:
                 detected_format = llm_result.get("format")
                 confidence = llm_result.get("confidence")
-                state.add_log(
-                    LogLevel.INFO,
-                    f"LLM detected format: {detected_format} (confidence: {confidence}%)",
-                )
-                return detected_format
+
+                # BUG FIX: Validate that LLM returned a valid NeuroConv format name
+                # This prevents hallucinated format names like "AxonRawBinaryFormat"
+                supported_formats = self._get_supported_formats()
+                if detected_format not in supported_formats:
+                    state.add_log(
+                        LogLevel.WARNING,
+                        f"LLM returned invalid format '{detected_format}' (not in NeuroConv). "
+                        f"This may be a hallucination. Falling back to pattern matching.",
+                        {"invalid_format": detected_format, "alternatives": llm_result.get("alternatives", [])}
+                    )
+                else:
+                    state.add_log(
+                        LogLevel.INFO,
+                        f"LLM detected format: {detected_format} (confidence: {confidence}%)",
+                    )
+                    return detected_format
 
             confidence = llm_result.get("confidence", 0) if llm_result else 0
             state.add_log(
@@ -251,6 +263,14 @@ class ConversionAgent:
                 "Format detected via pattern matching: Neuropixels",
             )
             return "Neuropixels"
+
+        # BUG FIX: Check for Axon/ABF files as fallback
+        if path.is_file() and path.suffix.lower() == ".abf":
+            state.add_log(
+                LogLevel.INFO,
+                "Format detected via pattern matching: Axon (.abf file)",
+            )
+            return "Axon"
 
         # Still ambiguous
         return None
@@ -408,19 +428,47 @@ class ConversionAgent:
 
 Your job is to analyze file structure and naming patterns to identify the recording format.
 
-Common formats:
-- **SpikeGLX**: Files like "*.ap.bin", "*.ap.meta", "*.lf.bin", "*.lf.meta"
-- **OpenEphys**: Directories with "structure.oebin", "settings.xml", or "continuous/" folders
-- **Neuropixels**: Files with ".nidq." in the name, or specific probe naming
-- **Intan**: ".rhd" or ".rhs" files
-- **Neuralynx**: ".ncs", ".nev", ".ntt" files
-- **Plexon**: ".plx" files
-- **TDT**: Tank/Block directory structure
-- **Imaging (ScanImage)**: ".tif" with specific metadata
-- **Miniscope**: ".avi" with timestamp files
-- **Calcium Imaging**: Various formats with ROI data
+IMPORTANT: You MUST use the exact format names recognized by NeuroConv. Do not invent or modify format names.
 
-Analyze the file structure carefully and make an educated guess."""
+Common electrophysiology formats:
+- **SpikeGLX** or **Neuropixels**: Files like "*.ap.bin", "*.ap.meta", "*.lf.bin", "*.lf.meta", or ".nidq." files
+- **OpenEphys** or **OpenEphysBinary**: Directories with "structure.oebin", "settings.xml", or "continuous/" folders
+- **Axon** or **AxonRecording**: ".abf" files (Axon Instruments pCLAMP/ABF format)
+- **IntanRecording**: ".rhd" or ".rhs" files (Intan Technologies)
+- **BlackrockRecording**: ".ns1", ".ns2", ".ns3", ".ns4", ".ns5", ".ns6", ".nev" files
+- **NeuralynxRecording**: ".ncs", ".nev", ".ntt", ".nvt" files
+- **PlexonRecording** or **Plexon2Recording**: ".plx" or ".pl2" files
+- **TdtRecording**: Tank/Block directory structure (Tucker-Davis Technologies)
+- **SpikeGadgetsRecording**: ".rec" files with companion metadata
+- **Spike2Recording**: ".smr" or ".smrx" files (CED Spike2)
+- **EDFRecording**: ".edf" files (European Data Format)
+- **AlphaOmegaRecording**: Alpha Omega recordings
+- **AxonaRecording**: ".bin", ".set", ".eeg" (Axona/Dacq systems)
+- **BiocamRecording**: 3Brain Biocam recordings
+- **CellExplorerRecording**: CellExplorer format
+- **MCSRawRecording**: Multi Channel Systems raw recordings
+- **MaxOneRecording**: MaxWell Biosystems MaxOne recordings
+- **NeuroScopeRecording**: NeuroScope format
+- **WhiteMatterRecording**: White Matter recordings
+
+Common imaging formats:
+- **ScanImageImaging**: ".tif" with ScanImage metadata
+- **MiniscopeImaging**: ".avi" with timestamp files (Miniscope recordings)
+- **BrukerTiffSinglePlaneImaging** or **BrukerTiffMultiPlaneImaging**: Bruker TIF files
+- **InscopixImaging**: Inscopix recordings
+- **TiffImaging**: Generic TIFF imaging
+- **ThorImaging**: ThorLabs imaging
+- **Hdf5Imaging**: HDF5-based imaging
+- **SbxImaging**: Scanbox imaging
+- **MicroManagerTiffImaging**: Micro-Manager TIFF files
+- **FemtonicsImaging**: Femtonics imaging
+
+Behavior/tracking formats:
+- **DeepLabCut**: DeepLabCut pose estimation files
+- **SLEAP**: SLEAP pose tracking files
+- **Video**: Generic video files
+
+Analyze the file structure carefully and return ONLY format names from the list above. Do not invent new format names."""
 
         user_prompt = f"""I have neuroscience recording data that I need to identify:
 
@@ -517,15 +565,32 @@ Be specific about the format name used by NeuroConv."""
         format_name = message.context.get("format")
         metadata_raw = message.context.get("metadata", {})
 
-        # BUG FIX: Filter out internal metadata fields that are not valid NWB metadata
-        # These fields are used internally for tracking but should not be passed to NWB file
-        internal_fields = {
-            "format", "device_name", "recording_modality", "recording_system",
-            "_custom_metadata_prompted", "_metadata_review_shown"
+        # BUG FIX: Use whitelist approach to only pass valid NWB metadata fields
+        # Based on official PyNWB 2.8.3+ documentation
+        # This is safer than blacklist - only documented NWB fields can pass through
+
+        # NWBFile metadata fields (from PyNWB NWBFile class)
+        NWB_FILE_FIELDS = {
+            # Required fields
+            "session_description", "identifier", "session_start_time",
+            # Optional NWBFile metadata fields
+            "experimenter", "experiment_description", "session_id", "institution",
+            "keywords", "notes", "pharmacology", "protocol", "related_publications",
+            "slices", "source_script", "source_script_file_name", "surgery", "virus",
+            "stimulus_notes", "lab", "data_collection",
         }
+
+        # Subject fields (from PyNWB Subject class)
+        # These may be passed flat and will be structured into a Subject object by NeuroConv
+        SUBJECT_FIELDS = {
+            "subject_id", "species", "sex", "age", "strain",
+            "date_of_birth", "genotype", "weight", "description"
+        }
+
+        # Filter to only allowed NWB fields - prevents internal tracking fields from leaking
         metadata = {
             k: v for k, v in metadata_raw.items()
-            if k not in internal_fields and not k.startswith("_")
+            if k in NWB_FILE_FIELDS or k in SUBJECT_FIELDS
         }
 
         if not all([input_path, output_path, format_name]):
