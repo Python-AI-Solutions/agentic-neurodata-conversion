@@ -573,3 +573,91 @@ body {
 .btn-primary:hover {
     background: var(--primary-dark);
 }
+
+/* Completion Files Styles */
+.completion-files {
+    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+    border: 2px solid #4caf50;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+}
+
+.completion-files h3 {
+    margin-top: 0;
+    color: #2e7d32;
+}
+
+.file-links {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: white;
+    padding: 1rem;
+    border-radius: 6px;
+    border: 1px solid #e0e0e0;
+}
+
+.file-icon {
+    font-size: 2rem;
+}
+
+.file-info {
+    flex: 1;
+}
+
+.file-info strong {
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.file-info small {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.status-badge {
+    display: inline-block;
+    margin-top: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-passed {
+    background: #c8e6c9;
+    color: #2e7d32;
+}
+
+.status-passed_with_warnings {
+    background: #fff9c4;
+    color: #f57f17;
+}
+
+.status-failed {
+    background: #ffcdd2;
+    color: #c62828;
+}
+
+.download-btn {
+    background: var(--primary);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+.download-btn:hover {
+    background: var(--primary-dark);
+}

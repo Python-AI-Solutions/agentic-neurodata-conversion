@@ -196,6 +196,9 @@ The conversion is now in progress. Type \`status ${data.session_id}\` to check p
         setTimeout(async () => {
             await checkForClarification(data.session_id);
         }, 2000);
+
+        // Poll for completion
+        pollForCompletion(data.session_id);
     } catch (error) {
         addAssistantMessage(`❌ Failed to start conversion: ${error.message}`);
     }
@@ -217,7 +220,7 @@ async function checkSessionStatus(sessionId) {
 **Session ID:** \`${data.session_id}\`
 **Workflow Stage:** ${data.workflow_stage}
 **Progress:** ${data.progress_percentage}%
-**Current Agent:** ${data.current_agent}
+**Current Agent:** ${data.current_agent || 'None'}
 **Status:** ${data.status_message}`;
 
         if (data.requires_clarification) {
@@ -225,6 +228,11 @@ async function checkSessionStatus(sessionId) {
         }
 
         addAssistantMessage(statusMessage);
+
+        // If completed, fetch full context and show file links
+        if (data.workflow_stage === 'completed') {
+            await showCompletionFiles(sessionId);
+        }
     } catch (error) {
         addAssistantMessage(`❌ Failed to get session status: ${error.message}`);
     }
@@ -481,5 +489,99 @@ async function submitClarification(event, sessionId) {
 
     } catch (error) {
         addAssistantMessage(`❌ Failed to submit metadata: ${error.message}`);
+    }
+}
+
+// Poll for completion
+async function pollForCompletion(sessionId, maxAttempts = 60) {
+    let attempts = 0;
+    const pollInterval = setInterval(async () => {
+        attempts++;
+
+        if (attempts > maxAttempts) {
+            clearInterval(pollInterval);
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/v1/sessions/${sessionId}/status`);
+            if (!response.ok) {
+                clearInterval(pollInterval);
+                return;
+            }
+
+            const data = await response.json();
+
+            if (data.workflow_stage === 'completed') {
+                clearInterval(pollInterval);
+                addAssistantMessage('🎉 **Conversion completed!** Fetching your files...');
+                await showCompletionFiles(sessionId);
+            } else if (data.workflow_stage === 'failed') {
+                clearInterval(pollInterval);
+            }
+        } catch (error) {
+            console.error('Polling error:', error);
+        }
+    }, 3000); // Poll every 3 seconds
+}
+
+// Show completion files with download links
+async function showCompletionFiles(sessionId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/internal/sessions/${sessionId}/context`);
+        if (!response.ok) return;
+
+        const context = await response.json();
+
+        // Extract file paths
+        const nwbFile = context.conversion_results?.nwb_file_path;
+        const reportFile = context.validation_results?.validation_report_path;
+        const overallStatus = context.validation_results?.overall_status;
+
+        if (!nwbFile && !reportFile) return;
+
+        // Create file links HTML
+        let filesHtml = `
+<div class="completion-files">
+    <h3>✅ Conversion Completed Successfully!</h3>
+    <p>Your files are ready for download:</p>
+    <div class="file-links">`;
+
+        if (nwbFile) {
+            const fileName = nwbFile.split(/[/\\]/).pop();
+            const fileUrl = `/demo_output/nwb_files/${fileName}`;
+            filesHtml += `
+        <div class="file-item">
+            <span class="file-icon">📄</span>
+            <div class="file-info">
+                <strong>NWB File</strong>
+                <small>${fileName}</small>
+            </div>
+            <a href="${fileUrl}" download="${fileName}" class="download-btn">Download NWB</a>
+        </div>`;
+        }
+
+        if (reportFile) {
+            const fileName = reportFile.split(/[/\\]/).pop();
+            const fileUrl = `/demo_output/reports/${fileName}`;
+            filesHtml += `
+        <div class="file-item">
+            <span class="file-icon">📊</span>
+            <div class="file-info">
+                <strong>Validation Report</strong>
+                <small>${fileName}</small>
+                ${overallStatus ? `<span class="status-badge status-${overallStatus}">${overallStatus}</span>` : ''}
+            </div>
+            <a href="${fileUrl}" download="${fileName}" class="download-btn">Download Report</a>
+        </div>`;
+        }
+
+        filesHtml += `
+    </div>
+</div>`;
+
+        addAssistantMessage(filesHtml, true);
+    } catch (error) {
+        console.error('Failed to fetch completion files:', error);
     }
 }
