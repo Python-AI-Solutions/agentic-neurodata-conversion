@@ -459,6 +459,16 @@ async function submitClarification(event, sessionId) {
     event.preventDefault();
 
     const form = event.target;
+    const submitButton = form.querySelector('button[type="submit"]');
+
+    // Disable button and show loading state immediately
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Submitting...';
+        submitButton.style.opacity = '0.6';
+        submitButton.style.cursor = 'not-allowed';
+    }
+
     const formData = new FormData(form);
     const metadata = {};
 
@@ -467,28 +477,33 @@ async function submitClarification(event, sessionId) {
     }
 
     try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/sessions/${sessionId}/clarify`, {
+        // Don't wait for the response - fire and forget for better UX
+        fetch(`${API_BASE_URL}/api/v1/sessions/${sessionId}/clarify`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({ updated_metadata: metadata }),
+        }).catch(error => {
+            console.error('Background clarification error:', error);
         });
 
-        if (!response.ok) {
-            throw new Error(`Server error: ${response.status}`);
-        }
-
-        addAssistantMessage('✅ Metadata submitted! Conversion will now continue...');
+        // Provide immediate feedback
+        addAssistantMessage('✅ Metadata submitted! Conversion is continuing in the background...');
         form.remove();
 
-        // Check status after a delay
-        setTimeout(async () => {
-            await checkSessionStatus(sessionId);
-        }, 3000);
+        // Start polling immediately to show progress
+        await pollForCompletion(sessionId);
 
     } catch (error) {
         addAssistantMessage(`❌ Failed to submit metadata: ${error.message}`);
+        // Re-enable button on error
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Submit & Continue Conversion';
+            submitButton.style.opacity = '1';
+            submitButton.style.cursor = 'pointer';
+        }
     }
 }
 
