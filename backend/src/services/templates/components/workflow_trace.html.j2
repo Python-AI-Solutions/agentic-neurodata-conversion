@@ -1,0 +1,89 @@
+{# Workflow Trace Component #}
+<section class="section workflow-trace-section expandable">
+    <h3 class="section-title">
+        <span class="icon">🔄</span>
+        Conversion Workflow Trace
+        <span class="expand-hint">(Click to expand)</span>
+    </h3>
+
+    <div class="workflow-timeline">
+        {% for step in workflow_trace %}
+            <div class="timeline-item status-{{ step.status | lower }}">
+                <div class="timeline-marker">
+                    <div class="timeline-dot status-{{ step.status | lower }}">
+                        {% if step.status == 'COMPLETED' %}✓
+                        {% elif step.status == 'FAILED' %}✗
+                        {% elif step.status == 'SKIPPED' %}○
+                        {% else %}•
+                        {% endif %}
+                    </div>
+                    {% if not loop.last %}
+                        <div class="timeline-line"></div>
+                    {% endif %}
+                </div>
+
+                <div class="timeline-content">
+                    <div class="timeline-header">
+                        <h4 class="timeline-title">{{ step.step_name | format_field_name }}</h4>
+                        <span class="timeline-timestamp">{{ step.timestamp | format_timestamp }}</span>
+                    </div>
+
+                    {% if step.description %}
+                    <p class="timeline-description">{{ step.description }}</p>
+                    {% endif %}
+
+                    {% if step.details %}
+                    <div class="timeline-details">
+                        {% if step.details is mapping %}
+                            <dl class="details-list">
+                                {% for key, value in step.details.items() %}
+                                    <dt class="details-key">{{ key | format_field_name }}:</dt>
+                                    <dd class="details-value">
+                                        {% if value is mapping or value is iterable and value is not string %}
+                                            <pre class="details-json">{{ value | tojson(indent=2) }}</pre>
+                                        {% else %}
+                                            {{ value }}
+                                        {% endif %}
+                                    </dd>
+                                {% endfor %}
+                            </dl>
+                        {% else %}
+                            <p>{{ step.details }}</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if step.duration_ms %}
+                    <div class="timeline-duration">
+                        <span class="duration-icon">⏱</span>
+                        Duration: {{ step.duration_ms | format_duration }}
+                    </div>
+                    {% endif %}
+
+                    {% if step.error %}
+                    <div class="timeline-error">
+                        <strong>Error:</strong> {{ step.error }}
+                    </div>
+                    {% endif %}
+
+                    {% if step.warnings %}
+                    <div class="timeline-warnings">
+                        <strong>Warnings:</strong>
+                        <ul class="warnings-list">
+                            {% for warning in step.warnings %}
+                                <li>{{ warning }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    {% if workflow_trace|length == 0 %}
+    <div class="empty-state">
+        <p>No workflow trace available.</p>
+    </div>
+    {% endif %}
+</section>

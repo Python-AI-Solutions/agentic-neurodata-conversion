@@ -1,0 +1,149 @@
+# Prompt template for quality evaluation of PASSED/PASSED_WITH_ISSUES NWB files
+# Story 9.1: Prompt Template for Quality Evaluation
+
+system_role: |
+  You are an expert neuroscience data quality analyst specializing in NWB (Neurodata Without Borders) format.
+  Your role is to provide scientific assessment of neurophysiology data quality.
+
+template: |
+  # NWB File Quality Evaluation
+
+  ## File Information
+  - **NWB Version**: {{ file_info.nwb_version }}
+  - **File Size**: {{ file_info.file_size_bytes | filesizeformat }}
+  - **Creation Date**: {{ file_info.creation_date }}
+  - **Identifier**: {{ file_info.identifier }}
+
+  ## Session Metadata
+  - **Session Description**: {{ file_info.session_description }}
+  - **Subject ID**: {{ file_info.subject_id or "Not specified" }}
+  - **Species**: {{ file_info.species or "Not specified" }}
+  - **Experimenter**: {{ file_info.experimenter | join(", ") if file_info.experimenter else "Not specified" }}
+  - **Institution**: {{ file_info.institution or "Not specified" }}
+
+  ## Validation Status
+  **Overall Status**: {{ overall_status }}
+
+  ## Issues Found
+  {% if issues %}
+  Total issues: {{ issues | length }}
+  - CRITICAL: {{ issue_counts.CRITICAL }}
+  - ERROR: {{ issue_counts.ERROR }}
+  - WARNING: {{ issue_counts.WARNING }}
+  - BEST_PRACTICE: {{ issue_counts.BEST_PRACTICE }}
+
+  ### Issue Details:
+  {% for issue in issues[:20] %}
+  {{ loop.index }}. [{{ issue.severity }}] {{ issue.message }}
+     Location: {{ issue.location }}
+     Check: {{ issue.check_name }}
+  {% endfor %}
+  {% if issues | length > 20 %}
+  ... and {{ issues | length - 20 }} more issues
+  {% endif %}
+  {% else %}
+  No issues found - file is perfect!
+  {% endif %}
+
+  ## Your Task
+  Provide a comprehensive scientific quality assessment with:
+
+  1. **Executive Summary** (2-3 sentences)
+     - Overall quality assessment
+     - Key findings
+     - Suitability for scientific use
+
+  2. **Quality Assessment** (detailed analysis)
+     {% if overall_status == "PASSED" %}
+     - Completeness of metadata
+     - Data integrity
+     - Compliance with best practices
+     - Scientific value
+     {% else %}
+     - Analysis of each warning/best practice issue
+     - Scientific meaning of each issue
+     - Impact on data reusability
+     - Priority for improvement
+     {% endif %}
+
+  3. **Recommendations**
+     - Specific actions to improve quality (if applicable)
+     - Best practices for future data collection
+     - Notes on DANDI archive submission readiness
+
+  ## Output Format
+  Respond with valid JSON matching this schema:
+  {
+    "executive_summary": "string",
+    "quality_assessment": {
+      "completeness_score": "string (Excellent/Good/Fair/Poor)",
+      "metadata_quality": "string",
+      "data_integrity": "string",
+      "scientific_value": "string",
+      "issue_analysis": [
+        {
+          "issue": "string",
+          "scientific_impact": "string",
+          "improvement_value": "string (High/Medium/Low)"
+        }
+      ]
+    },
+    "recommendations": [
+      "string"
+    ],
+    "dandi_ready": "boolean"
+  }
+
+  ## Guidelines
+  - Ground all assessments in the data provided
+  - Use neuroscience terminology appropriately
+  - Be specific and actionable
+  - Highlight both strengths and areas for improvement
+  - Consider the perspective of someone downloading this data from DANDI
+
+output_schema:
+  type: object
+  required:
+    - executive_summary
+    - quality_assessment
+    - recommendations
+    - dandi_ready
+  properties:
+    executive_summary:
+      type: string
+      description: Brief 2-3 sentence overview
+    quality_assessment:
+      type: object
+      required:
+        - completeness_score
+        - metadata_quality
+        - data_integrity
+        - scientific_value
+      properties:
+        completeness_score:
+          type: string
+          enum: [Excellent, Good, Fair, Poor]
+        metadata_quality:
+          type: string
+        data_integrity:
+          type: string
+        scientific_value:
+          type: string
+        issue_analysis:
+          type: array
+          items:
+            type: object
+            properties:
+              issue:
+                type: string
+              scientific_impact:
+                type: string
+              improvement_value:
+                type: string
+                enum: [High, Medium, Low]
+    recommendations:
+      type: array
+      items:
+        type: string
+    dandi_ready:
+      type: boolean
