@@ -1,0 +1,141 @@
+{# Validation Results Component - Enhanced Dashboard Design #}
+
+{# Dashboard Metrics Cards #}
+<div class="dashboard-metrics">
+    <div class="metric-card total">
+        <div class="metric-icon">✓</div>
+        <span class="metric-value">{{ validation_results.total_checks | default(0) }}</span>
+        <span class="metric-label">Total Checks</span>
+    </div>
+
+    <div class="metric-card passed">
+        <div class="metric-icon">✅</div>
+        <span class="metric-value">{{ validation_results.passed_checks | default(0) }}</span>
+        <span class="metric-label">Passed</span>
+    </div>
+
+    <div class="metric-card warning">
+        <div class="metric-icon">⚠️</div>
+        <span class="metric-value">{{ validation_results.warnings | default(0) }}</span>
+        <span class="metric-label">Warnings</span>
+    </div>
+
+    <div class="metric-card error">
+        <div class="metric-icon">❌</div>
+        <span class="metric-value">{{ validation_results.errors | default(0) }}</span>
+        <span class="metric-label">Errors</span>
+    </div>
+
+    <div class="metric-card critical">
+        <div class="metric-icon">🔴</div>
+        <span class="metric-value">{{ validation_results.critical | default(0) }}</span>
+        <span class="metric-label">Critical</span>
+    </div>
+</div>
+
+{# Quality Score Section with Circular Progress #}
+{% if validation_results.quality_score is defined %}
+<section class="quality-score-section">
+    <div class="quality-score-container">
+        {# Circular Progress Indicator #}
+        <div class="quality-score-visual">
+            <svg class="progress-ring" width="180" height="180">
+                {# Define gradients for different quality levels #}
+                <defs>
+                    <linearGradient id="gradient-excellent" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="gradient-good" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#2563eb;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="gradient-fair" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#d97706;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="gradient-poor" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#dc2626;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#b91c1c;stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+
+                {# Background circle #}
+                <circle
+                    class="progress-ring__circle"
+                    cx="90"
+                    cy="90"
+                    r="74"
+                />
+
+                {# Progress circle #}
+                {% set circumference = 2 * 3.14159 * 74 %}
+                {% set offset = circumference - (validation_results.quality_score / 100) * circumference %}
+                {% if validation_results.quality_score >= 90 %}
+                    {% set quality_class = 'excellent' %}
+                {% elif validation_results.quality_score >= 70 %}
+                    {% set quality_class = 'good' %}
+                {% elif validation_results.quality_score >= 50 %}
+                    {% set quality_class = 'fair' %}
+                {% else %}
+                    {% set quality_class = 'poor' %}
+                {% endif %}
+
+                <circle
+                    class="progress-ring__circle-fill {{ quality_class }}"
+                    cx="90"
+                    cy="90"
+                    r="74"
+                    stroke-dasharray="{{ circumference }} {{ circumference }}"
+                    stroke-dashoffset="{{ offset }}"
+                />
+            </svg>
+
+            {# Score text in center #}
+            <div class="quality-score-text">
+                <span class="quality-score-value">{{ validation_results.quality_score | round }}%</span>
+                <span class="quality-score-label">Score</span>
+            </div>
+        </div>
+
+        {# Quality Score Details #}
+        <div class="quality-score-details">
+            <h3>Quality Assessment</h3>
+
+            {% if validation_results.quality_score >= 90 %}
+                <p class="quality-message">🎉 Excellent data quality! Your file meets the highest standards.</p>
+            {% elif validation_results.quality_score >= 70 %}
+                <p class="quality-message">👍 Good data quality with minor issues to address.</p>
+            {% elif validation_results.quality_score >= 50 %}
+                <p class="quality-message">⚠️ Fair data quality. Some improvements needed for optimal use.</p>
+            {% else %}
+                <p class="quality-message">❗ Data quality needs significant improvement before use.</p>
+            {% endif %}
+
+            {# Summary text if available #}
+            {% if validation_results.summary %}
+            <p style="color: var(--color-text-muted); margin-top: var(--space-md);">
+                {{ validation_results.summary }}
+            </p>
+            {% endif %}
+
+            {# Best Practices Compliance #}
+            {% if validation_results.best_practices %}
+            <div class="best-practices-grid" style="margin-top: var(--space-lg);">
+                {% for practice, status in validation_results.best_practices.items() %}
+                    <div class="practice-item">
+                        <span class="practice-icon {{ status | lower }}">
+                            {% if status == 'PASS' %}✓
+                            {% elif status == 'FAIL' %}✗
+                            {% else %}○
+                            {% endif %}
+                        </span>
+                        <span class="practice-label">{{ practice }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endif %}

@@ -1173,6 +1173,15 @@ Focus on the most critical issues first."""
                 # Build workflow trace for transparency and reproducibility
                 workflow_trace = self._build_workflow_trace(state)
 
+                # Generate HTML report (interactive with embedded CSS/JS)
+                html_report_path = output_dir / f"{report_base}_evaluation_report.html"
+                self._report_service.generate_html_report(
+                    html_report_path,
+                    validation_result_data,
+                    llm_analysis,
+                    workflow_trace
+                )
+
                 # Generate PDF report (detailed with LLM analysis and workflow trace)
                 self._report_service.generate_pdf_report(
                     pdf_report_path,
@@ -1191,8 +1200,9 @@ Focus on the most critical issues first."""
 
                 state.add_log(
                     LogLevel.INFO,
-                    f"Generated evaluation reports: PDF and text",
+                    f"Generated evaluation reports: HTML, PDF, and text",
                     {
+                        "html_report": str(html_report_path),
                         "pdf_report": str(pdf_report_path),
                         "text_report": str(text_report_path),
                         "status": overall_status
@@ -1202,10 +1212,11 @@ Focus on the most critical issues first."""
                 return MCPResponse.success_response(
                     reply_to=message.message_id,
                     result={
-                        "report_path": str(pdf_report_path),  # Primary report (for backwards compatibility)
+                        "report_path": str(html_report_path),  # Primary report (HTML for interactivity)
+                        "html_report_path": str(html_report_path),
                         "pdf_report_path": str(pdf_report_path),
                         "text_report_path": str(text_report_path),
-                        "report_type": "pdf_and_text",
+                        "report_type": "html_pdf_and_text",
                     },
                 )
 
@@ -1430,12 +1441,26 @@ Focus on the most critical issues first."""
                     'action': log.message,
                 })
 
+        # Include metadata_provenance from state for HTML report
+        # This preserves original provenance (AI-parsed, user-specified, etc.)
+        # without storing it in the NWB file (which would violate DANDI compliance)
+        metadata_provenance_dict = {}
+        if state.metadata_provenance:
+            for field_name, prov_info in state.metadata_provenance.items():
+                metadata_provenance_dict[field_name] = {
+                    'provenance': prov_info.provenance.value,
+                    'confidence': prov_info.confidence,
+                    'source': prov_info.source,
+                    'timestamp': prov_info.timestamp.isoformat(),
+                }
+
         return {
             'summary': summary,
             'technologies': technologies,
             'steps': steps,
             'provenance': provenance,
             'user_interactions': user_interactions if user_interactions else None,
+            'metadata_provenance': metadata_provenance_dict,
         }
 
     def _add_metadata_provenance(

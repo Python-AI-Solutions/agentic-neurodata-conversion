@@ -1330,6 +1330,367 @@ class ReportService:
 
         return output_path
 
+    def generate_html_report(
+        self,
+        output_path: Path,
+        validation_result: Dict[str, Any],
+        llm_analysis: Optional[Dict[str, Any]] = None,
+        workflow_trace: Optional[Dict[str, Any]] = None,
+    ) -> Path:
+        """
+        Generate standalone HTML report for NWB evaluation results.
+
+        Args:
+            output_path: Path where HTML should be saved
+            validation_result: Validation result dictionary
+            llm_analysis: Optional LLM quality assessment
+            workflow_trace: Optional workflow trace for provenance
+
+        Returns:
+            Path to generated HTML
+
+        Implements interactive HTML reporting with embedded CSS/JS.
+        """
+        from jinja2 import Environment, FileSystemLoader, select_autoescape
+        import json
+
+        # Setup Jinja2 environment
+        template_dir = Path(__file__).parent / 'templates'
+        env = Environment(
+            loader=FileSystemLoader(template_dir),
+            autoescape=select_autoescape(['html', 'xml']),
+        )
+
+        # Register custom filters
+        env.filters['format_timestamp'] = self._filter_format_timestamp
+        env.filters['format_duration'] = self._filter_format_duration
+        env.filters['format_field_name'] = self._filter_format_field_name
+        env.filters['format_provenance_badge'] = self._filter_format_provenance_badge
+        env.filters['format_provenance_tooltip'] = self._filter_format_provenance_tooltip
+        env.filters['format_year'] = self._filter_format_year
+
+        # Load main template
+        template = env.get_template('report.html.j2')
+
+        # Prepare template data
+        template_data = self._prepare_template_data(
+            validation_result, llm_analysis, workflow_trace
+        )
+
+        # Render HTML
+        html_content = template.render(**template_data)
+
+        # Write to file
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+
+        return output_path
+
+    def _prepare_template_data(
+        self,
+        validation_result: Dict[str, Any],
+        llm_analysis: Optional[Dict[str, Any]],
+        workflow_trace: Optional[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        """
+        Prepare data for HTML template rendering.
+
+        Args:
+            validation_result: Validation result dictionary
+            llm_analysis: Optional LLM quality assessment
+            workflow_trace: Optional workflow trace
+
+        Returns:
+            Dictionary of template variables
+        """
+        from datetime import datetime
+
+        # Extract basic info
+        file_info_raw = validation_result.get('file_info', {})
+        issues = validation_result.get('issues', [])
+        issue_counts = validation_result.get('issue_counts', {})
+
+        # Prepare report data
+        report_data = {
+            'session_id': validation_result.get('session_id', 'unknown'),
+            'timestamp': datetime.now().isoformat(),
+            'status': validation_result.get('overall_status', 'UNKNOWN'),
+            'file_name': validation_result.get('nwb_file_path', 'Unknown').split('/')[-1],
+            'file_format': file_info_raw.get('file_format', 'NWB'),
+            'summary': self._generate_summary(validation_result),
+            'system_version': '1.0.0',
+        }
+
+        # Prepare file info with provenance
+        file_info = self._prepare_file_info(file_info_raw, workflow_trace)
+
+        # Calculate validation results
+        total_checks = sum(issue_counts.values())
+        passed_checks = max(0, total_checks - issue_counts.get('CRITICAL', 0) - issue_counts.get('ERROR', 0))
+        quality_score = self._calculate_quality_score(validation_result)
+
+        validation_results = {
+            'total_checks': total_checks,
+            'passed_checks': passed_checks,
+            'warnings': issue_counts.get('WARNING', 0),
+            'errors': issue_counts.get('ERROR', 0),
+            'critical': issue_counts.get('CRITICAL', 0),
+            'quality_score': quality_score,
+            'summary': validation_result.get('summary', ''),
+            'best_practices': self._extract_best_practices(validation_result),
+        }
+
+        # Prepare issues with enhanced formatting
+        enhanced_issues = self._prepare_issues(issues)
+
+        # Prepare recommendations
+        recommendations = self._generate_recommendations(
+            validation_result, llm_analysis
+        )
+
+        # Prepare workflow trace
+        workflow_trace_formatted = self._prepare_workflow_trace(workflow_trace)
+
+        # Extract missing fields
+        missing_fields = file_info_raw.get('_missing_fields', [])
+
+        return {
+            'report_data': report_data,
+            'file_info': file_info,
+            'missing_fields': missing_fields,
+            'validation_results': validation_results,
+            'issues': enhanced_issues,
+            'recommendations': recommendations,
+            'workflow_trace': workflow_trace_formatted,
+        }
+
+    def _prepare_file_info(
+        self, file_info_raw: Dict[str, Any], workflow_trace: Optional[Dict[str, Any]]
+    ) -> Dict[str, Dict[str, Any]]:
+        """Prepare file info with provenance badges."""
+        provenance = file_info_raw.get('_provenance', {})
+        source_files = file_info_raw.get('_source_files', {})
+        full_provenance = {}
+
+        if workflow_trace and 'metadata_provenance' in workflow_trace:
+            full_provenance = workflow_trace['metadata_provenance']
+
+        file_info = {}
+        for key, value in file_info_raw.items():
+            if key.startswith('_'):
+                continue
+
+            # Prioritize workflow_trace provenance (original sources: AI-parsed, user-specified, etc.)
+            # over file_info_raw provenance (which is all "file-extracted" when reading NWB)
+            if key in full_provenance:
+                prov_info = full_provenance[key]
+                file_info[key] = {
+                    'value': value,
+                    'provenance': prov_info.get('provenance'),
+                    'confidence': prov_info.get('confidence'),
+                    'source': prov_info.get('source'),
+                }
+            else:
+                # Fallback to file_info_raw provenance if not in workflow_trace
+                file_info[key] = {
+                    'value': value,
+                    'provenance': provenance.get(key, 'system-default'),
+                }
+
+        return file_info
+
+    def _prepare_issues(self, issues: list) -> list:
+        """Prepare issues with enhanced formatting."""
+        enhanced_issues = []
+        for issue in issues:
+            enhanced_issues.append({
+                'severity': issue.get('severity', 'UNKNOWN'),
+                'title': issue.get('check_name', 'Unknown Issue'),
+                'message': issue.get('message', ''),
+                'location': issue.get('location', ''),
+                'context': issue.get('context'),
+                'suggestion': issue.get('suggestion'),
+                'fix': issue.get('fix'),
+                'code_snippet': issue.get('code_snippet'),
+                'references': issue.get('references', []),
+                'check_name': issue.get('check_name', ''),
+                'timestamp': issue.get('timestamp'),
+            })
+        return enhanced_issues
+
+    def _generate_recommendations(
+        self, validation_result: Dict[str, Any], llm_analysis: Optional[Dict[str, Any]]
+    ) -> list:
+        """Generate recommendations based on validation results."""
+        recommendations = []
+        issue_counts = validation_result.get('issue_counts', {})
+
+        # Critical/Error issues
+        if issue_counts.get('CRITICAL', 0) > 0 or issue_counts.get('ERROR', 0) > 0:
+            recommendations.append({
+                'priority': 'HIGH',
+                'title': 'Fix Critical/Error Issues',
+                'description': 'Resolve validation errors before sharing or archiving the file.',
+                'action_items': [
+                    'Review each critical and error issue',
+                    'Apply suggested fixes',
+                    'Re-validate the file',
+                ],
+                'expected_outcome': 'File passes validation without critical errors',
+            })
+
+        # Warnings
+        if issue_counts.get('WARNING', 0) > 0:
+            recommendations.append({
+                'priority': 'MEDIUM',
+                'title': 'Address Warning Issues',
+                'description': 'Review warnings to improve data quality and compatibility.',
+                'action_items': [
+                    'Review each warning',
+                    'Determine if fixes are needed for your use case',
+                ],
+                'expected_outcome': 'Improved data quality and DANDI compliance',
+            })
+
+        # Add LLM recommendations if available
+        if llm_analysis and 'recommendations' in llm_analysis:
+            for rec_text in llm_analysis['recommendations'][:3]:
+                recommendations.append({
+                    'priority': 'MEDIUM',
+                    'title': 'Expert Recommendation',
+                    'description': rec_text,
+                    'action_items': [],
+                })
+
+        return recommendations
+
+    def _prepare_workflow_trace(self, workflow_trace: Optional[Dict[str, Any]]) -> list:
+        """Prepare workflow trace for timeline display."""
+        if not workflow_trace or 'steps' not in workflow_trace:
+            return []
+
+        formatted_steps = []
+        for step in workflow_trace.get('steps', []):
+            formatted_steps.append({
+                'step_name': step.get('name', 'Unknown Step'),
+                'status': step.get('status', 'UNKNOWN'),
+                'description': step.get('description', ''),
+                'details': step.get('details'),
+                'duration_ms': step.get('duration_ms'),
+                'timestamp': step.get('timestamp'),
+                'error': step.get('error'),
+                'warnings': step.get('warnings', []),
+            })
+
+        return formatted_steps
+
+    def _calculate_quality_score(self, validation_result: Dict[str, Any]) -> float:
+        """Calculate overall quality score (0-100)."""
+        issue_counts = validation_result.get('issue_counts', {})
+        file_info = validation_result.get('file_info', {})
+
+        # Start with 100
+        score = 100.0
+
+        # Deduct for issues
+        score -= issue_counts.get('CRITICAL', 0) * 20
+        score -= issue_counts.get('ERROR', 0) * 10
+        score -= issue_counts.get('WARNING', 0) * 5
+        score -= issue_counts.get('BEST_PRACTICE', 0) * 2
+
+        # Deduct for missing metadata
+        metadata_fields = ['experimenter', 'institution', 'lab', 'session_description',
+                          'subject_id', 'species', 'sex', 'age']
+        missing_metadata = sum(
+            1 for field in metadata_fields
+            if not file_info.get(field) or file_info.get(field) in ['N/A', 'Unknown', '']
+        )
+        score -= missing_metadata * 2
+
+        return max(0.0, min(100.0, score))
+
+    def _extract_best_practices(self, validation_result: Dict[str, Any]) -> Dict[str, str]:
+        """Extract best practices compliance from validation results."""
+        # This could be enhanced based on specific checks
+        issue_counts = validation_result.get('issue_counts', {})
+
+        return {
+            'NWB Standard Compliance': 'PASS' if issue_counts.get('CRITICAL', 0) == 0 else 'FAIL',
+            'Metadata Completeness': 'PASS' if issue_counts.get('ERROR', 0) == 0 else 'FAIL',
+            'DANDI Requirements': 'PASS' if issue_counts.get('WARNING', 0) == 0 else 'PARTIAL',
+            'Best Practices': 'PASS' if issue_counts.get('BEST_PRACTICE', 0) == 0 else 'FAIL',
+        }
+
+    def _generate_summary(self, validation_result: Dict[str, Any]) -> str:
+        """Generate a human-readable summary of validation results."""
+        status = validation_result.get('overall_status', 'UNKNOWN')
+        issue_counts = validation_result.get('issue_counts', {})
+        total_issues = sum(issue_counts.values())
+
+        if status == 'PASSED' or total_issues == 0:
+            return 'All validation checks passed successfully. The file meets NWB standards and is ready for use.'
+        elif status == 'PASSED_WITH_ISSUES':
+            return f'Validation passed with {total_issues} warnings. Review recommendations for improvements.'
+        else:
+            critical = issue_counts.get('CRITICAL', 0) + issue_counts.get('ERROR', 0)
+            return f'Validation found {critical} critical issues that must be resolved before the file can be used.'
+
+    # Custom Jinja2 filters
+    def _filter_format_timestamp(self, timestamp_str: str) -> str:
+        """Format ISO timestamp to human-readable format."""
+        try:
+            from datetime import datetime
+            dt = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+            return dt.strftime('%B %d, %Y at %I:%M %p')
+        except Exception:
+            return timestamp_str
+
+    def _filter_format_duration(self, duration_ms: float) -> str:
+        """Format duration in milliseconds to human-readable format."""
+        if duration_ms < 1000:
+            return f"{duration_ms:.0f}ms"
+        elif duration_ms < 60000:
+            return f"{duration_ms / 1000:.1f}s"
+        else:
+            return f"{duration_ms / 60000:.1f}m"
+
+    def _filter_format_field_name(self, field_name: str) -> str:
+        """Format field name to title case with spaces."""
+        return field_name.replace('_', ' ').title()
+
+    def _filter_format_provenance_badge(self, provenance: str) -> str:
+        """Format provenance type to badge text."""
+        badges = {
+            'user-specified': 'USER',
+            'file-extracted': 'FILE',
+            'ai-parsed': 'AI',
+            'ai-inferred': 'AI-INF',
+            'schema-default': 'SCHEMA',
+            'system-default': 'DEFAULT',
+        }
+        return badges.get(provenance, provenance.upper())
+
+    def _filter_format_provenance_tooltip(self, provenance: str) -> str:
+        """Format provenance type to tooltip text."""
+        tooltips = {
+            'user-specified': 'Directly provided by user',
+            'file-extracted': 'Extracted from source file',
+            'ai-parsed': 'Parsed by AI from text',
+            'ai-inferred': 'Inferred by AI from context',
+            'schema-default': 'NWB schema default value',
+            'system-default': 'System fallback value',
+        }
+        return tooltips.get(provenance, provenance)
+
+    def _filter_format_year(self, timestamp_str: str) -> str:
+        """Extract year from ISO timestamp."""
+        try:
+            from datetime import datetime
+            dt = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+            return str(dt.year)
+        except Exception:
+            return '2024'
+
     def _format_filesize(self, bytes_value: int) -> str:
         """Format file size in human-readable format."""
         for unit in ['B', 'KB', 'MB', 'GB']:

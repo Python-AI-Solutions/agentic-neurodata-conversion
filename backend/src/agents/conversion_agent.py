@@ -1414,6 +1414,7 @@ Provide a brief, friendly update about what's happening now."""
                 metadata=interface_metadata,
                 overwrite=True,
             )
+
         except Exception as e:
             # Stop monitoring thread if it was started
             if monitor_thread and monitor_thread.is_alive():

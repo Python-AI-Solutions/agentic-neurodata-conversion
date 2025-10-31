@@ -1,0 +1,105 @@
+{# File Information Component - Enhanced Design with Rich Provenance #}
+<section class="card file-info-section">
+    <h2>
+        <span class="icon">📁</span>
+        File Information
+    </h2>
+
+    {# Missing Fields Alert - Show at top if present #}
+    {% if missing_fields and missing_fields|length > 0 %}
+    <div class="missing-fields-alert">
+        <h4>
+            <span>⚠️</span>
+            Missing Required Fields
+        </h4>
+        <div class="missing-fields-list">
+            {% for field in missing_fields %}
+                <span class="missing-field-tag">{{ field | format_field_name }}</span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {# File Info Grid #}
+    <div class="info-grid">
+        {% if file_info %}
+            {% for key, value_obj in file_info.items() %}
+                <div class="info-item">
+                    <span class="label">
+                        {{ key | format_field_name }}
+                    </span>
+                    <div class="value">
+                        {% if value_obj.value is mapping %}
+                            <pre class="context-code">{{ value_obj.value | tojson(indent=2) }}</pre>
+                        {% elif value_obj.value is iterable and value_obj.value is not string %}
+                            <ul style="list-style: none; padding: 0; margin: 0;">
+                                {% for item in value_obj.value %}
+                                    <li style="padding: 0.25rem 0;">• {{ item }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <span>{{ value_obj.value }}</span>
+                        {% endif %}
+
+                        {# Enhanced Provenance Badge with Rich Metadata #}
+                        {% if value_obj.provenance %}
+                            <span class="provenance-badge {{ value_obj.provenance | replace('_', '-') }}">
+                                {{ value_obj.provenance | format_provenance_badge }}
+                                <span class="provenance-tooltip provenance-tooltip-rich">
+                                    <div style="text-align: left; min-width: 200px;">
+                                        {# Provenance Type #}
+                                        <div style="font-weight: 700; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                                            {% if value_obj.provenance == 'ai-parsed' %}
+                                                🤖 AI Metadata
+                                            {% elif value_obj.provenance == 'ai-inferred' %}
+                                                🧠 Inferred Metadata
+                                            {% elif value_obj.provenance == 'file-extracted' %}
+                                                📄 Extracted from File
+                                            {% elif value_obj.provenance == 'user-specified' %}
+                                                👤 User Provided
+                                            {% else %}
+                                                ⚙️ {{ value_obj.provenance | format_field_name }}
+                                            {% endif %}
+                                        </div>
+
+                                        {# Source #}
+                                        <div style="margin-bottom: 0.25rem;">
+                                            <strong>Source:</strong> {{ value_obj.provenance | upper | replace('_', '-') }}
+                                        </div>
+
+                                        {# Confidence Score if available #}
+                                        {% if value_obj.confidence %}
+                                        <div style="margin-bottom: 0.25rem;">
+                                            <strong>Confidence:</strong> {{ value_obj.confidence }}%
+                                        </div>
+                                        {% endif %}
+
+                                        {# Origin/Source Detail if available #}
+                                        {% if value_obj.source %}
+                                        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.2); font-size: 0.85em; opacity: 0.9;">
+                                            <strong>Origin:</strong><br>
+                                            {{ value_obj.source }}
+                                        </div>
+                                        {% endif %}
+
+                                        {# Basic tooltip fallback #}
+                                        {% if not value_obj.confidence and not value_obj.source %}
+                                        <div style="margin-top: 0.25rem; font-size: 0.85em; opacity: 0.9;">
+                                            {{ value_obj.provenance | format_provenance_tooltip }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </span>
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">📂</div>
+                <p>No file information available</p>
+            </div>
+        {% endif %}
+    </div>
+</section>

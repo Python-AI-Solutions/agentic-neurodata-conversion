@@ -1568,10 +1568,45 @@ async def download_nwb():
     )
 
 
+@app.get("/api/reports/view")
+async def view_html_report():
+    """
+    View the HTML evaluation report in browser.
+
+    Returns:
+        HTML report content for display in browser
+    """
+    from fastapi.responses import HTMLResponse
+
+    mcp_server = get_or_create_mcp_server()
+
+    if not mcp_server.global_state.output_path:
+        raise HTTPException(
+            status_code=404,
+            detail="No conversion output available",
+        )
+
+    # Find the HTML report file
+    output_dir = Path(mcp_server.global_state.output_path).parent
+    output_stem = Path(mcp_server.global_state.output_path).stem
+    html_report = output_dir / f"{output_stem}_evaluation_report.html"
+
+    if html_report.exists():
+        # Read and return HTML content directly for browser display
+        with open(html_report, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+        return HTMLResponse(content=html_content)
+
+    raise HTTPException(
+        status_code=404,
+        detail="No HTML report available. Report may not have been generated yet.",
+    )
+
+
 @app.get("/api/download/report")
 async def download_report():
     """
-    Download the evaluation report (PDF or JSON).
+    Download the evaluation report (HTML, PDF, or JSON).
 
     Returns:
         Report file as download
@@ -1588,7 +1623,16 @@ async def download_report():
     output_dir = Path(mcp_server.global_state.output_path).parent
     output_stem = Path(mcp_server.global_state.output_path).stem
 
-    # Try PDF first
+    # Try HTML first (primary format)
+    html_report = output_dir / f"{output_stem}_evaluation_report.html"
+    if html_report.exists():
+        return FileResponse(
+            path=str(html_report),
+            media_type="text/html",
+            filename=html_report.name,
+        )
+
+    # Try PDF
     pdf_report = output_dir / f"{output_stem}_evaluation_report.pdf"
     if pdf_report.exists():
         return FileResponse(
