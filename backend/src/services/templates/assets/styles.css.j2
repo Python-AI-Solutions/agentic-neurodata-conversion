@@ -554,6 +554,152 @@ body {
 }
 
 /* ========================================
+   Chat-Style Provenance Box
+   ======================================== */
+.provenance-box {
+    margin-top: var(--space-md);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+    border-left: 4px solid;
+}
+
+/* Color-coded backgrounds and borders based on provenance type */
+.provenance-box.ai-parsed {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    border-left-color: #3b82f6;
+}
+
+.provenance-box.ai-inferred {
+    background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
+    border-left-color: #f59e0b;
+}
+
+.provenance-box.user-specified {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    border-left-color: #10b981;
+}
+
+.provenance-box.file-extracted {
+    background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+    border-left-color: #8b5cf6;
+}
+
+.provenance-box.schema-default,
+.provenance-box.system-default {
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    border-left-color: #6b7280;
+}
+
+.provenance-box-header {
+    padding: var(--space-sm) var(--space-md);
+    font-weight: 700;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+/* Header colors based on provenance type */
+.provenance-box.ai-parsed .provenance-box-header {
+    color: #1e3a8a;
+}
+
+.provenance-box.ai-inferred .provenance-box-header {
+    color: #7c2d12;
+}
+
+.provenance-box.user-specified .provenance-box-header {
+    color: #064e3b;
+}
+
+.provenance-box.file-extracted .provenance-box-header {
+    color: #312e81;
+}
+
+.provenance-box.schema-default .provenance-box-header,
+.provenance-box.system-default .provenance-box-header {
+    color: #374151;
+}
+
+.provenance-box-content {
+    padding: var(--space-md);
+}
+
+.provenance-box-row {
+    display: flex;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-xs);
+    line-height: 1.6;
+}
+
+.provenance-box-row:last-child {
+    margin-bottom: 0;
+}
+
+.provenance-label {
+    font-weight: 600;
+    font-size: 0.875rem;
+    flex-shrink: 0;
+}
+
+.provenance-value {
+    font-size: 0.875rem;
+    word-break: break-word;
+}
+
+/* Content colors based on provenance type */
+.provenance-box.ai-parsed .provenance-label,
+.provenance-box.ai-parsed .provenance-value {
+    color: #1e3a8a;
+}
+
+.provenance-box.ai-inferred .provenance-label,
+.provenance-box.ai-inferred .provenance-value {
+    color: #7c2d12;
+}
+
+.provenance-box.user-specified .provenance-label,
+.provenance-box.user-specified .provenance-value {
+    color: #064e3b;
+}
+
+.provenance-box.file-extracted .provenance-label,
+.provenance-box.file-extracted .provenance-value {
+    color: #312e81;
+}
+
+.provenance-box.schema-default .provenance-label,
+.provenance-box.schema-default .provenance-value,
+.provenance-box.system-default .provenance-label,
+.provenance-box.system-default .provenance-value {
+    color: #374151;
+}
+
+/* Print styles for provenance box */
+@media print {
+    .provenance-box {
+        page-break-inside: avoid;
+        break-inside: avoid;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+
+    .provenance-box-header {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+
+    .provenance-label,
+    .provenance-value {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+}
+
+/* ========================================
    Missing Fields Warning
    ======================================== */
 .missing-fields-alert {
