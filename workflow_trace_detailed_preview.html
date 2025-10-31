@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Workflow Trace - Detailed Preview</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Courier New', monospace;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #1e293b;
+            font-size: 2.2em;
+            margin-bottom: 10px;
+            border-bottom: 3px solid #3b82f6;
+            padding-bottom: 15px;
+        }
+
+        h2 {
+            color: #1e293b;
+            font-size: 1.6em;
+            margin: 30px 0 15px;
+            padding: 12px 0;
+            border-left: 5px solid #3b82f6;
+            padding-left: 15px;
+        }
+
+        h3 {
+            color: #475569;
+            font-size: 1.3em;
+            margin: 20px 0 10px;
+        }
+
+        h4 {
+            color: #64748b;
+            font-size: 1.1em;
+            margin: 15px 0 8px;
+        }
+
+        .trace-section {
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+
+        .trace-box {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .trace-box.highlight {
+            border-left: 4px solid #3b82f6;
+        }
+
+        .trace-item {
+            padding: 12px;
+            margin: 10px 0;
+            background: #f1f5f9;
+            border-radius: 4px;
+            border-left: 3px solid #94a3b8;
+        }
+
+        .trace-item.success {
+            border-left-color: #10b981;
+            background: #ecfdf5;
+        }
+
+        .trace-item.warning {
+            border-left-color: #f59e0b;
+            background: #fffbeb;
+        }
+
+        .trace-item.info {
+            border-left-color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        .checksum {
+            font-family: 'Courier New', monospace;
+            background: #1e293b;
+            color: #10b981;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+
+        .timestamp {
+            color: #64748b;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .stat-label {
+            color: #64748b;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            color: #1e293b;
+            font-size: 1.3em;
+            font-weight: 700;
+        }
+
+        .code-block {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            line-height: 1.5;
+            margin: 10px 0;
+        }
+
+        .code-block .comment {
+            color: #94a3b8;
+        }
+
+        .code-block .key {
+            color: #60a5fa;
+        }
+
+        .code-block .value {
+            color: #10b981;
+        }
+
+        .provenance-chain {
+            margin: 15px 0;
+            padding-left: 25px;
+            border-left: 3px solid #3b82f6;
+        }
+
+        .provenance-step {
+            margin: 12px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+
+        .badge.success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge.info {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge.warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        th {
+            background: #f1f5f9;
+            font-weight: 600;
+            color: #475569;
+        }
+
+        tr:hover {
+            background: #f8fafc;
+        }
+
+        .expandable {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .expandable-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .expandable-content.open {
+            max-height: 2000px;
+        }
+
+        .expand-icon {
+            display: inline-block;
+            transition: transform 0.3s;
+            margin-right: 8px;
+        }
+
+        .expandable.open .expand-icon {
+            transform: rotate(90deg);
+        }
+
+        ul {
+            margin: 10px 0 10px 25px;
+        }
+
+        li {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Complete Workflow Trace</h1>
+        <p style="color: #64748b; margin-bottom: 30px;">
+            End-to-end process documentation for scientific reproducibility and transparency
+        </p>
+
+        <!-- SECTION 1: SESSION INFORMATION -->
+        <div class="trace-section">
+            <h2>1. Session Information</h2>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Session ID</div>
+                    <div class="stat-value">session_20251104_162200</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Start Time</div>
+                    <div class="stat-value">2025-11-04 16:22:00</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">End Time</div>
+                    <div class="stat-value">2025-11-04 16:25:27</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Duration</div>
+                    <div class="stat-value">3m 27s</div>
+                </div>
+            </div>
+
+            <div class="trace-box">
+                <strong>System Version:</strong> 1.0.0<br>
+                <strong>NWB Schema:</strong> 2.6.0<br>
+                <strong>Conversion Type:</strong> SpikeGLX → NWB<br>
+                <strong>User:</strong> Aditya Patane<br>
+                <strong>Mode:</strong> Interactive with AI assistance
+            </div>
+        </div>
+
+        <!-- SECTION 2: INPUT FILES -->
+        <div class="trace-section">
+            <h2>2. Input Files Tracking</h2>
+
+            <h3>Primary Data Files</h3>
+
+            <div class="trace-box highlight">
+                <h4>📄 File 1: Noise4Sam_g0_t0.imec0.ap.bin</h4>
+                <ul>
+                    <li><strong>Size:</strong> 610 KB (624,640 bytes)</li>
+                    <li><strong>Format:</strong> SpikeGLX binary electrophysiology data</li>
+                    <li><strong>MD5:</strong> <span class="checksum">a3b5c7d9e1f2a4b6c8d0e2f4a6b8c0d2</span></li>
+                    <li><strong>Creation Date:</strong> 2025-08-15 10:00:00</li>
+                    <li><strong>Channels:</strong> 384 (Neuropixels 1.0 probe)</li>
+                    <li><strong>Sample Rate:</strong> 30000 Hz</li>
+                    <li><strong>Duration:</strong> 60 seconds</li>
+                    <li><strong>Total Samples:</strong> 1,800,000</li>
+                    <li><strong>Used for:</strong> Raw electrophysiology timeseries data</li>
+                </ul>
+            </div>
+
+            <div class="trace-box highlight">
+                <h4>📄 File 2: Noise4Sam_g0_t0.imec0.ap.meta</h4>
+                <ul>
+                    <li><strong>Size:</strong> 2.3 KB (2,356 bytes)</li>
+                    <li><strong>Format:</strong> SpikeGLX metadata (INI-style text)</li>
+                    <li><strong>MD5:</strong> <span class="checksum">f4e8d6c2b0a8e6d4c2b0a8e6d4c2b0a8</span></li>
+                    <li><strong>Used for:</strong> Extracting recording parameters</li>
+                </ul>
+
+                <div style="margin-top: 15px;">
+                    <strong>Extracted Metadata Fields:</strong>
+                    <div class="code-block">
+<span class="key">imSampRate</span>=<span class="value">30000</span>
+<span class="key">nSavedChans</span>=<span class="value">384</span>
+<span class="key">fileCreateTime</span>=<span class="value">2025-08-15T10:00:00</span>
+<span class="key">typeThis</span>=<span class="value">imec</span>
+<span class="key">imDatPrb_type</span>=<span class="value">0</span> <span class="comment"># Neuropixels 1.0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-grid" style="margin-top: 20px;">
+                <div class="stat-card">
+                    <div class="stat-label">Total Input Files</div>
+                    <div class="stat-value">2 files</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Input Size</div>
+                    <div class="stat-value">612.3 KB</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Integrity Checks</div>
+                    <div class="stat-value badge success">✓ Passed</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 3: USER INTERACTION LOG -->
+        <div class="trace-section">
+            <h2>3. User Interaction Log</h2>
+
+            <div class="trace-item info">
+                <span class="timestamp">[16:22:05]</span> <strong>User uploaded files</strong><br>
+                └─ Files: Noise4Sam_g0_t0.imec0.ap.bin (.meta)
+            </div>
+
+            <div class="trace-item info">
+                <span class="timestamp">[16:22:12]</span> <strong>Format detection requested</strong><br>
+                └─ Action: User clicked "Detect Format"
+            </div>
+
+            <div class="trace-item success">
+                <span class="timestamp">[16:22:14]</span> <strong>Format detected: SpikeGLX</strong><br>
+                └─ Confidence: 100% (file extension + metadata format match)
+            </div>
+
+            <div class="trace-item info">
+                <span class="timestamp">[16:22:20]</span> <strong>User provided metadata via chat</strong><br>
+                <div style="margin-top: 10px; padding: 10px; background: white; border-radius: 4px;">
+                    <strong>Input text:</strong>
+                    <div class="code-block" style="margin-top: 5px;">
+"This is a neuroscience experiment with Dr. Jane Smith from MIT.
+We're recording neural activity from the visual cortex of a
+laboratory mouse. The subject is mouse001, a male C57BL/6 strain,
+P60 (60 days old). Session was on August 15, 2025 at 10 AM."
+                    </div>
+                </div>
+            </div>
+
+            <div class="trace-item info">
+                <span class="timestamp">[16:22:21]</span> <strong>AI metadata extraction triggered</strong><br>
+                └─ Service: Anthropic Claude API (claude-3-5-sonnet-20241022)
+            </div>
+
+            <div class="trace-item success">
+                <span class="timestamp">[16:22:24]</span> <strong>AI extracted 8 metadata fields</strong><br>
+                └─ Fields: experimenter, institution, experiment_description, subject_id, sex, strain, age, session_start_time
+            </div>
+
+            <div class="trace-item info">
+                <span class="timestamp">[16:22:25]</span> <strong>User confirmed metadata</strong><br>
+                └─ Action: User clicked "Start Conversion"
+            </div>
+
+            <div class="trace-item success">
+                <span class="timestamp">[16:25:20]</span> <strong>Conversion completed</strong><br>
+                └─ Output: converted_nwb_uploads.nwb (628 KB)
+            </div>
+
+            <div class="trace-item success">
+                <span class="timestamp">[16:25:27]</span> <strong>Validation completed</strong><br>
+                └─ Status: PASSED_WITH_ISSUES (0 critical, 0 errors, 2 missing fields)
+            </div>
+        </div>
+
+        <!-- SECTION 4: AI PROCESSING DETAILS -->
+        <div class="trace-section">
+            <h2>4. AI Processing Log</h2>
+
+            <div class="trace-box highlight">
+                <h3>AI Service Configuration</h3>
+                <ul>
+                    <li><strong>Provider:</strong> Anthropic</li>
+                    <li><strong>Model:</strong> claude-3-5-sonnet-20241022</li>
+                    <li><strong>Purpose:</strong> Natural language metadata extraction</li>
+                    <li><strong>API Version:</strong> 2023-06-01</li>
+                </ul>
+            </div>
+
+            <h3 class="expandable" onclick="toggleExpand(this)">
+                <span class="expand-icon">▶</span> REQUEST #1: Metadata Extraction (click to expand)
+            </h3>
+            <div class="expandable-content">
+                <div class="trace-box">
+                    <p><span class="timestamp">Timestamp: 2025-11-04 16:22:21</span></p>
+
+                    <h4>Input Prompt (truncated):</h4>
+                    <div class="code-block">
+<span class="comment">// System Prompt</span>
+<span class="key">"You are an expert at extracting neuroscience metadata from natural language."</span>
+
+<span class="comment">// User Prompt</span>
+<span class="key">"Extract all metadata fields from this text:</span>
+
+<span class="value">This is a neuroscience experiment with Dr. Jane Smith from MIT.
+We're recording neural activity from the visual cortex of a
+laboratory mouse. The subject is mouse001, a male C57BL/6 strain,
+P60 (60 days old). Session was on August 15, 2025 at 10 AM."</span>
+
+<span class="comment">// Expected Output Schema</span>
+<span class="key">{
+  "fields": [
+    {
+      "field_name": "string",
+      "raw_value": "string",
+      "normalized_value": "string",
+      "confidence": number (0-100),
+      "reasoning": "string",
+      "extraction_type": "explicit" | "inferred"
+    }
+  ]
+}</span>
+                    </div>
+
+                    <h4 style="margin-top: 20px;">AI Response (8 fields extracted):</h4>
+                    <div class="code-block">
+{
+  <span class="key">"fields"</span>: [
+    {
+      <span class="key">"field_name"</span>: <span class="value">"experimenter"</span>,
+      <span class="key">"raw_value"</span>: <span class="value">"Dr. Jane Smith"</span>,
+      <span class="key">"normalized_value"</span>: <span class="value">"Smith, Jane"</span>,
+      <span class="key">"confidence"</span>: <span class="value">95</span>,
+      <span class="key">"reasoning"</span>: <span class="value">"Explicitly stated with title"</span>,
+      <span class="key">"extraction_type"</span>: <span class="value">"explicit"</span>
+    },
+    {
+      <span class="key">"field_name"</span>: <span class="value">"institution"</span>,
+      <span class="key">"raw_value"</span>: <span class="value">"MIT"</span>,
+      <span class="key">"normalized_value"</span>: <span class="value">"Massachusetts Institute of Technology"</span>,
+      <span class="key">"confidence"</span>: <span class="value">90</span>,
+      <span class="key">"reasoning"</span>: <span class="value">"Well-known abbreviation expanded"</span>,
+      <span class="key">"extraction_type"</span>: <span class="value">"explicit"</span>
+    },
+    {
+      <span class="key">"field_name"</span>: <span class="value">"species"</span>,
+      <span class="key">"raw_value"</span>: <span class="value">"laboratory mouse"</span>,
+      <span class="key">"normalized_value"</span>: <span class="value">"Mus musculus"</span>,
+      <span class="key">"confidence"</span>: <span class="value">90</span>,
+      <span class="key">"reasoning"</span>: <span class="value">"Common lab species inference"</span>,
+      <span class="key">"extraction_type"</span>: <span class="value">"inferred"</span>
+    },
+    <span class="comment">... (5 more fields)</span>
+  ]
+}
+                    </div>
+
+                    <h4 style="margin-top: 20px;">Processing Statistics:</h4>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Processing Time</div>
+                            <div class="stat-value">2.8s</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Tokens (Input)</div>
+                            <div class="stat-value">245</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Tokens (Output)</div>
+                            <div class="stat-value">387</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Estimated Cost</div>
+                            <div class="stat-value">$0.0034 USD</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="trace-box" style="margin-top: 20px;">
+                <h4>AI Usage Summary</h4>
+                <ul>
+                    <li><strong>Total API calls:</strong> 1</li>
+                    <li><strong>Total processing time:</strong> 2.8 seconds</li>
+                    <li><strong>Fields extracted:</strong> 8</li>
+                    <li style="margin-left: 20px;">├─ Explicit (user stated): 5 fields</li>
+                    <li style="margin-left: 20px;">└─ Inferred (AI deduced): 3 fields</li>
+                    <li><strong>Average confidence:</strong> 88.75%</li>
+                    <li><strong>Total cost:</strong> $0.0034 USD</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- SECTION 5: CONVERSION PIPELINE STEPS -->
+        <div class="trace-section">
+            <h2>5. Conversion Pipeline</h2>
+
+            <h3>STEP 1: Format Detection</h3>
+            <div class="trace-item success">
+                <span class="timestamp">Start: 16:22:12 | Duration: 0.15s | Status: ✅ Completed</span>
+                <div style="margin-top: 10px;">
+                    <strong>Method:</strong> File extension + metadata signature analysis<br>
+                    <strong>Operations:</strong>
+                    <ul>
+                        <li>Check file extension: .imec0.ap.bin → SpikeGLX format</li>
+                        <li>Parse .meta file structure → Confirmed SpikeGLX</li>
+                        <li>Validate metadata fields → All required fields present</li>
+                    </ul>
+                    <strong>Result:</strong> format='spikeglx', confidence=100%
+                </div>
+            </div>
+
+            <h3>STEP 2: Metadata Collection</h3>
+            <div class="trace-item success">
+                <span class="timestamp">Start: 16:22:20 | Duration: 4.2s | Status: ✅ Completed</span>
+                <div style="margin-top: 10px;">
+                    <strong>Sources:</strong>
+                    <ul>
+                        <li>User input (chat): 8 fields
+                            <ul>
+                                <li>AI processing: 2.8s (Anthropic Claude)</li>
+                                <li>Validation: 0.2s (format checking)</li>
+                                <li>Normalization: 0.1s (ISO formats, case corrections)</li>
+                            </ul>
+                        </li>
+                        <li>.meta file extraction: 4 fields (sample_rate, channels, date, device)</li>
+                        <li>NWB schema defaults: 3 fields (nwb_version, identifier, etc.)</li>
+                    </ul>
+                    <strong>Result:</strong> 15 metadata fields collected
+                </div>
+            </div>
+
+            <h3>STEP 3: Data Conversion</h3>
+            <div class="trace-item success">
+                <span class="timestamp">Start: 16:22:25 | Duration: 2m 55s | Status: ✅ Completed</span>
+                <div style="margin-top: 10px;">
+                    <strong>Converter:</strong> NeuroConv v0.4.10 (SpikeGLXRecordingInterface)<br>
+                    <strong>Operations breakdown:</strong>
+                    <table>
+                        <tr>
+                            <th>Operation</th>
+                            <th>Duration</th>
+                            <th>Details</th>
+                        </tr>
+                        <tr>
+                            <td>Read binary data</td>
+                            <td>1.2s</td>
+                            <td>Load 610 KB binary file into memory</td>
+                        </tr>
+                        <tr>
+                            <td>Parse metadata</td>
+                            <td>0.3s</td>
+                            <td>Extract recording parameters from .meta</td>
+                        </tr>
+                        <tr>
+                            <td>Create NWB structure</td>
+                            <td>0.8s</td>
+                            <td>Initialize NWB file with metadata</td>
+                        </tr>
+                        <tr>
+                            <td>Write electrode table</td>
+                            <td>2.1s</td>
+                            <td>Create 384-row electrode table</td>
+                        </tr>
+                        <tr>
+                            <td>Write timeseries data</td>
+                            <td>2m 48s</td>
+                            <td>Write 1.8M samples with GZIP compression</td>
+                        </tr>
+                        <tr>
+                            <td>Finalize file</td>
+                            <td>0.5s</td>
+                            <td>Close HDF5 file, write checksums</td>
+                        </tr>
+                    </table>
+
+                    <strong>Data processed:</strong>
+                    <ul>
+                        <li>Channels: 384 (Neuropixels 1.0)</li>
+                        <li>Samples: 1,800,000 (60s @ 30kHz)</li>
+                        <li>Input size: 610 KB</li>
+                        <li>Output size: 628 KB (NWB HDF5)</li>
+                        <li>Compression: GZIP level 4</li>
+                        <li>Compression ratio: 1.03x (minimal due to already compact data)</li>
+                    </ul>
+                    <strong>Output:</strong> converted_nwb_uploads.nwb
+                </div>
+            </div>
+
+            <h3>STEP 4: NWB Validation</h3>
+            <div class="trace-item success">
+                <span class="timestamp">Start: 16:25:20 | Duration: 7.1s | Status: ✅ Completed</span>
+                <div style="margin-top: 10px;">
+                    <strong>Validator:</strong> NWBInspector v0.6.5<br>
+                    <strong>Checks performed:</strong> 47 total
+                    <ul>
+                        <li>Schema validation: PASSED</li>
+                        <li>Required fields check: PASSED</li>
+                        <li>Data integrity check: PASSED</li>
+                        <li>Best practices check: PASSED (0 violations)</li>
+                        <li>DANDI requirements: PASSED (but 2 fields missing)</li>
+                    </ul>
+                    <strong>Issues found:</strong> 0 critical, 0 errors, 0 warnings, 2 missing recommended fields
+                </div>
+            </div>
+
+            <h3>STEP 5: Report Generation</h3>
+            <div class="trace-item success">
+                <span class="timestamp">Start: 16:25:27 | Duration: 0.3s | Status: ✅ Completed</span>
+                <div style="margin-top: 10px;">
+                    <strong>Formats generated:</strong>
+                    <ul>
+                        <li>HTML report: 847 KB (interactive)</li>
+                        <li>JSON report: 12 KB (machine-readable)</li>
+                        <li>Text report: 8 KB (NWBInspector format)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="trace-box" style="margin-top: 20px;">
+                <h4>Pipeline Summary</h4>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Total Steps</div>
+                        <div class="stat-value">5</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Successful</div>
+                        <div class="stat-value badge success">5 ✓</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Failed</div>
+                        <div class="stat-value">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total Time</div>
+                        <div class="stat-value">3m 27s</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 6: METADATA PROVENANCE TRACE -->
+        <div class="trace-section">
+            <h2>6. Metadata Provenance Trace</h2>
+            <p style="color: #64748b; margin-bottom: 15px;">Complete provenance chain for every metadata field</p>
+
+            <h3 class="expandable" onclick="toggleExpand(this)">
+                <span class="expand-icon">▶</span> FIELD: experimenter (click to expand)
+            </h3>
+            <div class="expandable-content">
+                <div class="trace-box">
+                    <p><strong>Final Value:</strong> ["Smith, Jane"]</p>
+
+                    <div class="provenance-chain">
+                        <div class="provenance-step">
+                            <span class="badge info">Step 1</span>
+                            <span class="timestamp">[16:22:20]</span> User input (chat)<br>
+                            └─ Raw: "Dr. Jane Smith"
+                        </div>
+
+                        <div class="provenance-step">
+                            <span class="badge info">Step 2</span>
+                            <span class="timestamp">[16:22:21]</span> AI extraction (Anthropic Claude)<br>
+                            ├─ Extraction type: explicit<br>
+                            ├─ Normalized to: "Smith, Jane"<br>
+                            ├─ Confidence: 95%<br>
+                            └─ Reasoning: "Explicitly stated with title 'Dr.'"
+                        </div>
+
+                        <div class="provenance-step">
+                            <span class="badge info">Step 3</span>
+                            <span class="timestamp">[16:22:24]</span> Format validation<br>
+                            ├─ Checked: "LastName, FirstName" format<br>
+                            └─ Status: ✅ Valid
+                        </div>
+
+                        <div class="provenance-step">
+                            <span class="badge success">Step 4</span>
+                            <span class="timestamp">[16:22:25]</span> Applied to NWB<br>
+                            └─ Location: /general/experimenter
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 15px; padding: 15px; background: #ecfdf5; border-radius: 4px;">
+                        <strong>Final Classification:</strong><br>
+                        ├─ Provenance: AI_PARSED<br>
+                        ├─ Confidence: 95% (High)<br>
+                        ├─ Needs review: No<br>
+                        └─ DANDI ready: Yes
+                    </div>
+                </div>
+            </div>
+
+            <h3 class="expandable" onclick="toggleExpand(this)">
+                <span class="expand-icon">▶</span> FIELD: species (click to expand)
+            </h3>
+            <div class="expandable-content">
+                <div class="trace-box">
+                    <p><strong>Final Value:</strong> "Mus musculus"</p>
+
+                    <div class="provenance-chain">
+                        <div class="provenance-step">
+                            <span class="badge info">Step 1</span>
+                            <span class="timestamp">[16:22:20]</span> User input (chat)<br>
+                            └─ Raw: "laboratory mouse"
+                        </div>
+
+                        <div class="provenance-step">
+                            <span class="badge warning">Step 2</span>
+                            <span class="timestamp">[16:22:21]</span> AI inference (Anthropic Claude)<br>
+                            ├─ Extraction type: inferred<br>
+                            ├─ Inferred as: "Mus musculus"<br>
+                            ├─ Confidence: 90%<br>
+                            └─ Reasoning: "Common lab species inference from 'laboratory mouse' context"
+                        </div>
+
+                        <div class="provenance-step">
+                            <span class="badge info">Step 3</span>
+                            <span class="timestamp">[16:22:24]</span> Taxonomy validation<br>
+                            ├─ Checked against: NCBI Taxonomy<br>
+                            └─ Status: ✅ Valid scientific name
+                        </div>
+
+                        <div class="provenance-step">
+                            <span class="badge success">Step 4</span>
+                            <span class="timestamp">[16:22:25]</span> Applied to NWB<br>
+                            └─ Location: /general/subject/species
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 15px; padding: 15px; background: #fffbeb; border-radius: 4px;">
+                        <strong>Final Classification:</strong><br>
+                        ├─ Provenance: AI_INFERRED<br>
+                        ├─ Confidence: 90% (High)<br>
+                        ├─ Needs review: ⚠️ Recommended (inferred value)<br>
+                        └─ DANDI ready: Yes (but verify scientific name)
+                    </div>
+                </div>
+            </div>
+
+            <h3 class="expandable" onclick="toggleExpand(this)">
+                <span class="expand-icon">▶</span> FIELD: nwb_version (click to expand)
+            </h3>
+            <div class="expandable-content">
+                <div class="trace-box">
+                    <p><strong>Final Value:</strong> "2.6.0"</p>
+
+                    <div class="provenance-chain">
+                        <div class="provenance-step">
+                            <span class="badge info">Step 1</span>
+                            <span class="timestamp">[16:22:25]</span> System-generated<br>
+                            └─ Source: PyNWB library default
+                        </div>
+
+                        <div class="provenance-step">
+                            <span class="badge success">Step 2</span>
+                            <span class="timestamp">[16:22:25]</span> Applied to NWB<br>
+                            └─ Location: /nwb_version
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 15px; padding: 15px; background: #f1f5f9; border-radius: 4px;">
+                        <strong>Final Classification:</strong><br>
+                        ├─ Provenance: SYSTEM_DEFAULT<br>
+                        ├─ Confidence: N/A (system value)<br>
+                        ├─ Needs review: No<br>
+                        └─ DANDI ready: Yes
+                    </div>
+                </div>
+            </div>
+
+            <div class="trace-box" style="margin-top: 20px;">
+                <h4>Provenance Summary (All 15 Fields)</h4>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">User-Specified</div>
+                        <div class="stat-value">0 (0%)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">AI-Parsed</div>
+                        <div class="stat-value">5 (33%)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">AI-Inferred</div>
+                        <div class="stat-value">3 (20%)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">File-Extracted</div>
+                        <div class="stat-value">4 (27%)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">System-Default</div>
+                        <div class="stat-value">3 (20%)</div>
+                    </div>
+                </div>
+
+                <h4 style="margin-top: 20px;">Confidence Distribution:</h4>
+                <ul>
+                    <li>High (80-100%): 8 fields → ✅ DANDI ready</li>
+                    <li>Medium (50-79%): 0 fields → ⚠️ Review recommended</li>
+                    <li>Low (0-49%): 0 fields → ❌ Must verify</li>
+                </ul>
+
+                <h4 style="margin-top: 15px;">Review Recommendations:</h4>
+                <p>3 AI-Inferred fields should be verified before DANDI submission:</p>
+                <ul>
+                    <li>species (Mus musculus)</li>
+                    <li>experiment_description</li>
+                    <li>session_description</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- SECTION 7: OUTPUT FILES -->
+        <div class="trace-section">
+            <h2>7. Output Files Summary</h2>
+
+            <h3>Primary Output</h3>
+            <div class="trace-box highlight">
+                <h4>📤 File: converted_nwb_uploads.nwb</h4>
+                <ul>
+                    <li><strong>Size:</strong> 628,886 bytes (628 KB)</li>
+                    <li><strong>Format:</strong> NWB 2.6.0 (HDF5)</li>
+                    <li><strong>Created:</strong> 2025-11-04 16:25:20</li>
+                    <li><strong>MD5:</strong> <span class="checksum">7f9d8e6c5b4a3e2d1c0b9a8e7f6d5c4b</span></li>
+                    <li><strong>SHA256:</strong> <span class="checksum">a3f7e9d2c4b8e1f5a7c9d3e5b1f8a2c4e6d8b0f2a4c6e8d0f2a4b6c8e0d2f4a6</span></li>
+                    <li><strong>Validation:</strong> ✅ PASSED (0 critical issues)</li>
+                    <li><strong>DANDI ready:</strong> ⚠️ Yes (but 2 fields recommended)</li>
+                </ul>
+
+                <strong>Contents:</strong>
+                <ul style="margin-top: 10px;">
+                    <li>/acquisition/ElectricalSeries (384 channels, 1.8M samples)</li>
+                    <li>/general/electrodes (384 rows: location, impedance, group)</li>
+                    <li>/general/subject (metadata: id, sex, age, strain)</li>
+                    <li>/general/devices (Neuropixels 1.0 probe information)</li>
+                    <li>/session_description, /identifier, /session_start_time</li>
+                </ul>
+            </div>
+
+            <h3>Report Files</h3>
+            <table>
+                <tr>
+                    <th>File</th>
+                    <th>Size</th>
+                    <th>Format</th>
+                    <th>Purpose</th>
+                </tr>
+                <tr>
+                    <td>evaluation_report.html</td>
+                    <td>847 KB</td>
+                    <td>HTML</td>
+                    <td>Interactive validation report</td>
+                </tr>
+                <tr>
+                    <td>evaluation_report.json</td>
+                    <td>12 KB</td>
+                    <td>JSON</td>
+                    <td>Machine-readable validation data</td>
+                </tr>
+                <tr>
+                    <td>evaluation_report.txt</td>
+                    <td>8 KB</td>
+                    <td>Text</td>
+                    <td>NWBInspector-style text report</td>
+                </tr>
+            </table>
+
+            <h3>Log Files</h3>
+            <div class="trace-box">
+                <h4>📄 File: workflow_trace.json</h4>
+                <ul>
+                    <li><strong>Size:</strong> 45 KB</li>
+                    <li><strong>Created:</strong> 2025-11-04 16:25:27</li>
+                    <li><strong>Purpose:</strong> Complete workflow provenance tracking (this document's source)</li>
+                    <li><strong>Contents:</strong> Session info, user interactions, AI logs, conversion steps, metadata provenance</li>
+                </ul>
+            </div>
+
+            <div class="stats-grid" style="margin-top: 20px;">
+                <div class="stat-card">
+                    <div class="stat-label">Total Output Files</div>
+                    <div class="stat-value">5 files</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Output Size</div>
+                    <div class="stat-value">1.5 MB</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 8: SYSTEM ENVIRONMENT -->
+        <div class="trace-section">
+            <h2>8. System Environment</h2>
+
+            <h3>Platform Information</h3>
+            <div class="trace-box">
+                <ul>
+                    <li><strong>Operating System:</strong> macOS 14.0 (Sonoma)</li>
+                    <li><strong>Python Version:</strong> 3.11.4</li>
+                    <li><strong>Architecture:</strong> arm64 (Apple Silicon M1/M2)</li>
+                    <li><strong>Hostname:</strong> localhost</li>
+                    <li><strong>User:</strong> adityapatane</li>
+                </ul>
+            </div>
+
+            <h3>Core Dependencies</h3>
+            <table>
+                <tr>
+                    <th>Package</th>
+                    <th>Version</th>
+                    <th>Purpose</th>
+                </tr>
+                <tr>
+                    <td>pynwb</td>
+                    <td>2.6.0</td>
+                    <td>NWB file creation and manipulation</td>
+                </tr>
+                <tr>
+                    <td>neuroconv</td>
+                    <td>0.4.10</td>
+                    <td>Format conversion framework</td>
+                </tr>
+                <tr>
+                    <td>nwbinspector</td>
+                    <td>0.6.5</td>
+                    <td>NWB file validation</td>
+                </tr>
+                <tr>
+                    <td>spikeinterface</td>
+                    <td>0.100.0</td>
+                    <td>Electrophysiology data handling</td>
+                </tr>
+                <tr>
+                    <td>h5py</td>
+                    <td>3.10.0</td>
+                    <td>HDF5 file I/O</td>
+                </tr>
+                <tr>
+                    <td>numpy</td>
+                    <td>1.26.0</td>
+                    <td>Numerical computations</td>
+                </tr>
+                <tr>
+                    <td>hdmf</td>
+                    <td>3.12.0</td>
+                    <td>Hierarchical Data Modeling Framework</td>
+                </tr>
+            </table>
+
+            <h3>AI Services</h3>
+            <div class="trace-box">
+                <ul>
+                    <li><strong>Provider:</strong> Anthropic</li>
+                    <li><strong>Model:</strong> claude-3-5-sonnet-20241022</li>
+                    <li><strong>API Version:</strong> 2023-06-01</li>
+                    <li><strong>SDK:</strong> anthropic-sdk-python 0.18.0</li>
+                </ul>
+            </div>
+
+            <h3>Environment Variables</h3>
+            <div class="code-block">
+<span class="key">ANTHROPIC_API_KEY</span>=<span class="value">sk-ant-api03-...***15 characters (hidden)</span>
+<span class="key">NWB_INSPECTOR_DANDI_MODE</span>=<span class="value">true</span>
+<span class="key">PYTHON_PATH</span>=<span class="value">/usr/local/bin/python3.11</span>
+            </div>
+        </div>
+
+        <!-- SECTION 9: ERROR & WARNING LOG -->
+        <div class="trace-section">
+            <h2>9. Process Log (Errors & Warnings)</h2>
+
+            <div class="trace-item success" style="padding: 20px; text-align: center;">
+                <h3>✅ No errors encountered during this conversion</h3>
+                <p style="color: #64748b; margin-top: 10px;">All steps completed successfully without warnings or errors</p>
+            </div>
+
+            <h3>Informational Messages</h3>
+            <div class="trace-item info">
+                <span class="timestamp">[16:22:14]</span> INFO: SpikeGLX format detected with 100% confidence
+            </div>
+            <div class="trace-item info">
+                <span class="timestamp">[16:22:21]</span> INFO: AI extraction started (Anthropic Claude API)
+            </div>
+            <div class="trace-item info">
+                <span class="timestamp">[16:22:24]</span> INFO: 8 metadata fields extracted successfully
+            </div>
+            <div class="trace-item success">
+                <span class="timestamp">[16:22:25]</span> INFO: Conversion started using NeuroConv v0.4.10
+            </div>
+            <div class="trace-item success">
+                <span class="timestamp">[16:25:20]</span> INFO: NWB file created successfully (628 KB)
+            </div>
+            <div class="trace-item success">
+                <span class="timestamp">[16:25:27]</span> INFO: Validation passed (0 critical, 0 errors, 2 missing recommended fields)
+            </div>
+        </div>
+
+        <!-- SECTION 10: REPRODUCIBILITY CERTIFICATE -->
+        <div class="trace-section">
+            <h2>10. Reproducibility Certificate</h2>
+
+            <div class="trace-box highlight" style="border-color: #10b981;">
+                <h3>🏆 This conversion can be independently reproduced</h3>
+
+                <div style="margin: 20px 0;">
+                    <h4>Verification Hash (SHA256):</h4>
+                    <div class="checksum" style="font-size: 1em; padding: 10px; margin: 10px 0;">
+                        a3f7e9d2c4b8e1f5a7c9d3e5b1f8a2c4e6d8b0f2a4c6e8d0f2a4b6c8e0d2f4a6
+                    </div>
+                    <p style="color: #64748b; font-size: 0.9em;">
+                        This hash uniquely identifies this exact conversion workflow. Use it to verify reproducibility.
+                    </p>
+                </div>
+
+                <h4>Input Checksums:</h4>
+                <ul>
+                    <li>Noise4Sam_g0_t0.imec0.ap.bin
+                        <br><span class="checksum">MD5: a3b5c7d9e1f2a4b6c8d0e2f4a6b8c0d2</span></li>
+                    <li>Noise4Sam_g0_t0.imec0.ap.meta
+                        <br><span class="checksum">MD5: f4e8d6c2b0a8e6d4c2b0a8e6d4c2b0a8</span></li>
+                    <li>User metadata (JSON): See workflow_trace.json</li>
+                </ul>
+
+                <h4 style="margin-top: 20px;">Output Checksums:</h4>
+                <ul>
+                    <li>converted_nwb_uploads.nwb
+                        <br><span class="checksum">MD5: 7f9d8e6c5b4a3e2d1c0b9a8e7f6d5c4b</span></li>
+                </ul>
+
+                <h4 style="margin-top: 20px;">Software Versions:</h4>
+                <p>See "System Environment" section above for complete dependency list</p>
+
+                <h4 style="margin-top: 20px;">To Reproduce This Conversion:</h4>
+                <ol>
+                    <li>Use identical input files (verify checksums match)</li>
+                    <li>Use same software versions (see environment section)</li>
+                    <li>Use same metadata (see workflow_trace.json)</li>
+                    <li>Run conversion with identical parameters</li>
+                    <li>Verify output file checksum matches</li>
+                </ol>
+
+                <h4 style="margin-top: 20px;">Citation:</h4>
+                <div class="code-block">
+@software{nwb_conversion_session_20251104,
+  title = {NWB Conversion: Noise4Sam Recording},
+  author = {Patane, Aditya},
+  year = {2025},
+  month = {November},
+  note = {Session ID: session_20251104_162200},
+  url = {file://converted_nwb_uploads.nwb},
+  tool = {AI-Assisted NWB Conversion Tool v1.0.0},
+  verification_hash = {a3f7e9d2c4b8e1f5a7c9d3e5b1f8a2c4}
+}
+                </div>
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #e2e8f0; text-align: center; color: #64748b;">
+            <p><strong>Workflow Trace Generated:</strong> 2025-11-04 16:25:27</p>
+            <p style="margin-top: 8px;">
+                This document provides complete transparency for scientific reproducibility.<br>
+                All timestamps are in local time (UTC-8).
+            </p>
+            <p style="margin-top: 15px;">
+                🤖 Generated by <strong>AI-Assisted NWB Conversion Tool</strong> v1.0.0<br>
+                Using: PyNWB 2.6.0 | NeuroConv 0.4.10 | NWBInspector 0.6.5 | Anthropic Claude API
+            </p>
+        </div>
+    </div>
+
+    <script>
+        function toggleExpand(element) {
+            element.classList.toggle('open');
+            const content = element.nextElementSibling;
+            content.classList.toggle('open');
+        }
+
+        console.log('🔄 Complete Workflow Trace loaded');
+        console.log('This is a detailed preview demonstrating all 10 sections from the enhancement plan');
+    </script>
+</body>
+</html>

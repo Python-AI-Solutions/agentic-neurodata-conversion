@@ -1,12 +1,15 @@
 {# Workflow Trace Component #}
-<section class="section workflow-trace-section expandable">
-    <h3 class="section-title">
-        <span class="icon">🔄</span>
-        Conversion Workflow Trace
-        <span class="expand-hint">(Click to expand)</span>
-    </h3>
+<section class="section workflow-trace-section collapsible-section open" id="workflow-trace-section">
+    <div class="collapsible-header" onclick="toggleSection('workflow-trace-section')">
+        <h3 class="section-title">
+            <span class="icon">🔄</span>
+            Conversion Workflow Trace
+        </h3>
+        <span class="collapsible-toggle">▼</span>
+    </div>
 
-    <div class="workflow-timeline">
+    <div class="collapsible-content">
+        <div class="workflow-timeline">
         {% for step in workflow_trace %}
             <div class="timeline-item status-{{ step.status | lower }}">
                 <div class="timeline-marker">
@@ -79,11 +82,12 @@
                 </div>
             </div>
         {% endfor %}
-    </div>
+        </div>
 
-    {% if workflow_trace|length == 0 %}
-    <div class="empty-state">
-        <p>No workflow trace available.</p>
+        {% if workflow_trace|length == 0 %}
+        <div class="empty-state">
+            <p>No workflow trace available.</p>
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
 </section>

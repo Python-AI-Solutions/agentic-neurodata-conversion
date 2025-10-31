@@ -3093,16 +3093,17 @@ The conversion report has been generated with full details."""
                 # Update metadata
                 state.metadata.update(additional_metadata)
 
-                # Track provenance
+                # Track provenance - but don't overwrite if already set by parser
                 for field, value in additional_metadata.items():
-                    self._track_user_provided_metadata(
-                        state=state,
-                        field_name=field,
-                        value=value,
-                        confidence=100.0,
-                        source="Added during metadata review",
-                        raw_input=user_message[:200]
-                    )
+                    if field not in state.metadata_provenance:
+                        self._track_user_provided_metadata(
+                            state=state,
+                            field_name=field,
+                            value=value,
+                            confidence=100.0,
+                            source=f"User provided during review: '{user_message[:100]}'",
+                            raw_input=user_message[:200]
+                        )
 
                 state.add_log(
                     LogLevel.INFO,
@@ -3468,16 +3469,19 @@ The conversion report has been generated with full details."""
                 combined_metadata = {**state.auto_extracted_metadata, **state.user_provided_metadata}
                 state.metadata = combined_metadata
 
-                # PROVENANCE TRACKING: Record that user explicitly provided this metadata
+                # PROVENANCE TRACKING: Record provenance, but don't overwrite if already set by IntelligentMetadataParser
+                # IntelligentMetadataParser already sets correct provenance (AI_PARSED, AI_INFERRED)
+                # Only track as user-specified if provenance wasn't already set by the parser
                 for field_name, value in extracted_metadata.items():
-                    self._track_user_provided_metadata(
-                        state=state,
-                        field_name=field_name,
-                        value=value,
-                        confidence=100.0,
-                        source=f"User explicitly provided in conversation",
-                        raw_input=user_message[:200],  # Store original message
-                    )
+                    if field_name not in state.metadata_provenance:
+                        self._track_user_provided_metadata(
+                            state=state,
+                            field_name=field_name,
+                            value=value,
+                            confidence=100.0,
+                            source=f"User provided: '{user_message[:100]}'",
+                            raw_input=user_message[:200],  # Store original message
+                        )
 
                 state.add_log(
                     LogLevel.INFO,

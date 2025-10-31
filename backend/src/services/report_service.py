@@ -102,6 +102,25 @@ class ReportService:
             fontName='Helvetica-Bold',
         ))
 
+        # Table cell style with word wrapping
+        self.styles.add(ParagraphStyle(
+            name='TableCell',
+            parent=self.styles['Normal'],
+            fontSize=9,
+            wordWrap='CJK',  # Enable word wrapping
+            leading=11,  # Line spacing
+        ))
+
+        # Small text style for long paths
+        self.styles.add(ParagraphStyle(
+            name='SmallText',
+            parent=self.styles['Normal'],
+            fontSize=7,
+            wordWrap='CJK',
+            leading=9,
+            textColor=HexColor('#666666'),
+        ))
+
     def _format_species(self, species: str) -> str:
         """Format species with common name if known."""
         if species == 'N/A' or not species:
@@ -143,8 +162,17 @@ class ReportService:
                 return f"{iso_age} ({readable})"
         return iso_age
 
-    def _format_with_provenance(self, value: str, provenance: str, source_file: str = None) -> str:
-        """Format a value with its provenance badge for display in reports."""
+    def _format_with_provenance(self, value: str, provenance: str, source_file: str = None,
+                                confidence: float = None, source_description: str = None) -> str:
+        """Format a value with its provenance badge for display in reports.
+
+        Args:
+            value: The field value
+            provenance: Provenance type (user-specified, ai-parsed, etc.)
+            source_file: Source file path for file-extracted provenance
+            confidence: Confidence score (0-100) for AI operations
+            source_description: Description of where the value came from
+        """
         # Complete 6-tag provenance system with emoji badges
         provenance_badges = {
             'user-specified': '👤',    # User directly provided
@@ -160,10 +188,49 @@ class ReportService:
 
         badge = provenance_badges.get(provenance, '')
         if badge:
-            result = f"{value} {badge}"
+            result = f"{value} <b>{badge}</b>"
+
+            # Build detailed provenance info similar to frontend
+            details = []
+
+            # Add provenance label
+            provenance_labels = {
+                'user-specified': 'USER SPECIFIED',
+                'file-extracted': 'FILE EXTRACTED',
+                'ai-parsed': 'AI PARSED',
+                'ai-inferred': 'AI INFERRED',
+                'schema-default': 'SCHEMA DEFAULT',
+                'system-default': 'SYSTEM DEFAULT',
+                'user-provided': 'USER SPECIFIED',
+                'default': 'SYSTEM DEFAULT',
+            }
+            prov_label = provenance_labels.get(provenance, provenance.upper())
+            details.append(prov_label)
+
+            # Add confidence for AI operations
+            if confidence is not None and provenance in ['ai-parsed', 'ai-inferred']:
+                details.append(f"confidence: {confidence:.0f}%")
+
+            # Add source description (e.g., "AI parsed from: 'MIT'")
+            if source_description:
+                # Truncate long source descriptions
+                if len(source_description) > 50:
+                    source_description = source_description[:47] + '...'
+                details.append(source_description)
+
             # Add source file for file-extracted provenance
-            if provenance == 'file-extracted' and source_file:
-                result += f" (from: {source_file})"
+            elif provenance == 'file-extracted' and source_file:
+                # Truncate very long paths
+                if len(source_file) > 60:
+                    import os
+                    source_file = f".../{os.path.basename(source_file)}"
+                details.append(f"from: {source_file}")
+
+            # Format details with smaller gray font
+            if details:
+                details_str = ' | '.join(details)
+                result += f' <font size="7" color="#666666">({details_str})</font>'
+
             return result
         return value
 
@@ -220,13 +287,30 @@ class ReportService:
         provenance = file_info.get('_provenance', {})
         source_files = file_info.get('_source_files', {})
 
+        # Try to get full provenance metadata if available (for confidence and source info)
+        full_provenance = {}
+        if workflow_trace and 'metadata_provenance' in workflow_trace:
+            full_provenance = workflow_trace['metadata_provenance']
+
         story.append(Paragraph("File Information", self.styles['SectionHeading']))
 
-        # Helper to get value with provenance badge and source file
+        # Helper to get value with provenance badge and full details
         def get_with_prov(field_name, value):
             if field_name in provenance:
+                prov_type = provenance[field_name]
                 source_file = source_files.get(field_name)
-                return self._format_with_provenance(value, provenance[field_name], source_file)
+
+                # Extract confidence and source from full provenance if available
+                confidence = None
+                source_desc = None
+                if field_name in full_provenance:
+                    prov_info = full_provenance[field_name]
+                    confidence = prov_info.get('confidence')
+                    source_desc = prov_info.get('source')
+
+                return self._format_with_provenance(
+                    value, prov_type, source_file, confidence, source_desc
+                )
             return value
 
         # Format experimenter list
@@ -498,25 +582,32 @@ class ReportService:
                 'details': 'The NWB file passes all checks and is ready for use and sharing.'
             })
 
-        # Create recommendations table
-        rec_data = [['Priority', 'Action', 'Details']]
+        # Create recommendations table with proper text wrapping
+        rec_data = [[
+            Paragraph('<b>Priority</b>', self.styles['Normal']),
+            Paragraph('<b>Action</b>', self.styles['Normal']),
+            Paragraph('<b>Details</b>', self.styles['Normal'])
+        ]]
         for rec in recommendations[:5]:  # Limit to top 5 recommendations
             rec_data.append([
-                rec['priority'],
-                rec['action'],
-                rec['details'][:60] + ('...' if len(rec['details']) > 60 else '')
+                Paragraph(rec['priority'], self.styles['TableCell']),
+                Paragraph(rec['action'], self.styles['TableCell']),
+                Paragraph(rec['details'], self.styles['TableCell'])  # Don't truncate, let it wrap
             ])
 
-        rec_table = Table(rec_data, colWidths=[1.2 * inch, 2 * inch, 2.8 * inch])
+        rec_table = Table(rec_data, colWidths=[1 * inch, 1.8 * inch, 3.2 * inch])
         rec_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), HexColor('#fef3c7')),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
             ('ALIGN', (0, 0), (0, -1), 'CENTER'),
             ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#fbbf24')),
             ('ROWBACKGROUNDS', (0, 1), (-1, -1), [HexColor('#fffbeb'), HexColor('#fef3c7')]),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 4),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
         ]))
         story.append(rec_table)
         story.append(Spacer(1, 0.3 * inch))
@@ -556,22 +647,33 @@ class ReportService:
 
                 qa_data = []
                 if 'completeness_score' in quality_assessment:
-                    qa_data.append(['Completeness Score:', quality_assessment['completeness_score']])
+                    qa_data.append([
+                        Paragraph('<b>Completeness Score:</b>', self.styles['Normal']),
+                        Paragraph(str(quality_assessment['completeness_score']), self.styles['Normal'])
+                    ])
                 if 'metadata_quality' in quality_assessment:
-                    qa_data.append(['Metadata Quality:', quality_assessment['metadata_quality']])
+                    qa_data.append([
+                        Paragraph('<b>Metadata Quality:</b>', self.styles['Normal']),
+                        Paragraph(str(quality_assessment['metadata_quality']), self.styles['Normal'])
+                    ])
                 if 'data_integrity' in quality_assessment:
-                    qa_data.append(['Data Integrity:', quality_assessment['data_integrity']])
+                    qa_data.append([
+                        Paragraph('<b>Data Integrity:</b>', self.styles['Normal']),
+                        Paragraph(str(quality_assessment['data_integrity']), self.styles['Normal'])
+                    ])
                 if 'scientific_value' in quality_assessment:
-                    qa_data.append(['Scientific Value:', quality_assessment['scientific_value']])
+                    qa_data.append([
+                        Paragraph('<b>Scientific Value:</b>', self.styles['Normal']),
+                        Paragraph(str(quality_assessment['scientific_value']), self.styles['Normal'])
+                    ])
 
                 if qa_data:
                     qa_table = Table(qa_data, colWidths=[2 * inch, 4 * inch])
                     qa_table.setStyle(TableStyle([
-                        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-                        ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
                         ('FONTSIZE', (0, 0), (-1, -1), 10),
                         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                         ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                        ('TOPPADDING', (0, 0), (-1, -1), 4),
                     ]))
                     story.append(qa_table)
                     story.append(Spacer(1, 0.2 * inch))
@@ -799,73 +901,247 @@ class ReportService:
         workflow_trace: Optional[Dict[str, Any]] = None,
     ) -> Path:
         """
-        Generate JSON report for FAILED validation.
+        Generate comprehensive JSON report for validation results.
 
         Args:
             output_path: Path where JSON should be saved
             validation_result: Validation result dictionary
-            llm_guidance: Optional LLM correction guidance
+            llm_guidance: Optional LLM correction guidance or analysis
+            workflow_trace: Optional workflow trace for transparency
 
         Returns:
             Path to generated JSON
 
-        Implements Story 9.6: JSON Context Generation
+        Implements comprehensive JSON reporting with:
+        - Detailed evaluation metadata
+        - Quality metrics dashboard
+        - Complete file information with provenance
+        - All validation issues with context
+        - Metadata provenance tracking
+        - Workflow trace for reproducibility
+        - LLM analysis and recommendations
         """
+        file_info_raw = validation_result.get('file_info', {})
+        issues = validation_result.get('issues', [])
+        issue_counts = validation_result.get('issue_counts', {})
+        overall_status = validation_result.get('overall_status', 'UNKNOWN')
+
+        # Calculate quality metrics
+        quality_metrics = self._calculate_quality_metrics(
+            validation_result, file_info_raw, issue_counts
+        )
+
+        # Calculate metadata completeness
+        metadata_completeness = self._calculate_metadata_completeness(file_info_raw)
+
+        # Identify missing critical fields
+        missing_critical_fields = self._identify_missing_critical_fields(file_info_raw, issues)
+
+        # Prepare file info with provenance
+        file_info_with_provenance = self._prepare_file_info(file_info_raw, workflow_trace)
+
+        # Build comprehensive report
         report = {
-            "evaluation_metadata": {
-                "timestamp": datetime.now().isoformat(),
-                "status": validation_result.get('overall_status', 'FAILED'),
+            "report_metadata": {
+                "version": "2.0",
+                "generated_at": datetime.now().isoformat(),
+                "session_id": validation_result.get('session_id', 'unknown'),
+                "system_version": "1.0.0",
+            },
+            "evaluation_summary": {
+                "status": overall_status,
                 "nwb_file_path": validation_result.get('nwb_file_path', ''),
+                "file_format": file_info_raw.get('file_format', 'NWB'),
+                "summary": self._generate_summary(validation_result),
+                "timestamp": datetime.now().isoformat(),
             },
-            "failure_summary": {
-                "total_issues": len(validation_result.get('issues', [])),
-                "issue_counts": validation_result.get('issue_counts', {}),
+            "quality_metrics": {
+                "completeness": quality_metrics.get('completeness', {}),
+                "data_integrity": quality_metrics.get('integrity', {}),
+                "scientific_value": quality_metrics.get('scientific_value', {}),
+                "dandi_readiness": quality_metrics.get('dandi_ready', {}),
+                "overall_score": self._calculate_quality_score(validation_result),
             },
-            "critical_issues": [
+            "metadata_completeness": {
+                "percentage": metadata_completeness.get('percentage', 0),
+                "filled_fields": metadata_completeness.get('filled', 0),
+                "total_fields": metadata_completeness.get('total', 0),
+                "required_filled": metadata_completeness.get('required_filled', 0),
+                "required_total": metadata_completeness.get('required_total', 0),
+                "critical_missing": metadata_completeness.get('critical_missing', 0),
+            },
+            "file_information": {
+                "basic_info": {
+                    "nwb_version": file_info_raw.get('nwb_version', 'Unknown'),
+                    "file_size_bytes": file_info_raw.get('file_size_bytes', 0),
+                    "file_size_readable": self._format_filesize(file_info_raw.get('file_size_bytes', 0)),
+                    "creation_date": file_info_raw.get('creation_date', 'Unknown'),
+                    "identifier": file_info_raw.get('identifier', 'Unknown'),
+                },
+                "session_info": {
+                    "session_description": file_info_raw.get('session_description'),
+                    "session_start_time": file_info_raw.get('session_start_time'),
+                    "session_id": file_info_raw.get('session_id'),
+                },
+                "experiment_info": {
+                    "experimenter": file_info_raw.get('experimenter', []),
+                    "institution": file_info_raw.get('institution'),
+                    "lab": file_info_raw.get('lab'),
+                    "experiment_description": file_info_raw.get('experiment_description'),
+                },
+                "subject_info": {
+                    "subject_id": file_info_raw.get('subject_id'),
+                    "species": file_info_raw.get('species'),
+                    "sex": file_info_raw.get('sex'),
+                    "age": file_info_raw.get('age'),
+                    "date_of_birth": file_info_raw.get('date_of_birth'),
+                    "description": file_info_raw.get('description'),
+                    "genotype": file_info_raw.get('genotype'),
+                    "strain": file_info_raw.get('strain'),
+                },
+                "metadata_with_provenance": file_info_with_provenance,
+            },
+            "validation_results": {
+                "overall_status": overall_status,
+                "total_issues": len(issues),
+                "issue_counts": issue_counts,
+                "issues_by_severity": {
+                    "critical": [
+                        {
+                            "severity": issue.get('severity'),
+                            "check_name": issue.get('check_name', ''),
+                            "message": issue.get('message', ''),
+                            "location": issue.get('location', ''),
+                            "object_type": issue.get('object_type', ''),
+                            "context": issue.get('context'),
+                            "suggestion": issue.get('suggestion'),
+                            "fix": issue.get('fix'),
+                        }
+                        for issue in issues
+                        if issue.get('severity') == 'CRITICAL'
+                    ],
+                    "errors": [
+                        {
+                            "severity": issue.get('severity'),
+                            "check_name": issue.get('check_name', ''),
+                            "message": issue.get('message', ''),
+                            "location": issue.get('location', ''),
+                            "object_type": issue.get('object_type', ''),
+                            "context": issue.get('context'),
+                            "suggestion": issue.get('suggestion'),
+                            "fix": issue.get('fix'),
+                        }
+                        for issue in issues
+                        if issue.get('severity') == 'ERROR'
+                    ],
+                    "warnings": [
+                        {
+                            "severity": issue.get('severity'),
+                            "check_name": issue.get('check_name', ''),
+                            "message": issue.get('message', ''),
+                            "location": issue.get('location', ''),
+                            "object_type": issue.get('object_type', ''),
+                            "context": issue.get('context'),
+                            "suggestion": issue.get('suggestion'),
+                        }
+                        for issue in issues
+                        if issue.get('severity') == 'WARNING'
+                    ],
+                    "info": [
+                        {
+                            "severity": issue.get('severity'),
+                            "check_name": issue.get('check_name', ''),
+                            "message": issue.get('message', ''),
+                            "location": issue.get('location', ''),
+                        }
+                        for issue in issues
+                        if issue.get('severity') in ['INFO', 'BEST_PRACTICE']
+                    ],
+                },
+                "best_practices": self._extract_best_practices(validation_result),
+            },
+            "missing_critical_fields": [
                 {
-                    "severity": issue.get('severity', 'UNKNOWN'),
-                    "message": issue.get('message', ''),
-                    "location": issue.get('location', ''),
-                    "check_name": issue.get('check_name', ''),
+                    "field_name": field['name'],
+                    "fix_hint": field['fix_hint'],
+                    "impact": field['impact'],
                 }
-                for issue in validation_result.get('issues', [])
-                if issue.get('severity') in ['CRITICAL', 'ERROR']
+                for field in missing_critical_fields
             ],
-            "file_info": validation_result.get('file_info', {}),
         }
 
-        # Add LLM guidance if available
-        if llm_guidance:
-            report['llm_guidance'] = llm_guidance
+        # Add metadata provenance tracking
+        if workflow_trace and 'metadata_provenance' in workflow_trace:
+            metadata_prov = workflow_trace['metadata_provenance']
+            report['metadata_provenance'] = {
+                'summary': {
+                    'total_fields': len(metadata_prov),
+                    'needs_review_count': sum(
+                        1 for p in metadata_prov.values()
+                        if p.get('needs_review', False)
+                    ),
+                    'provenance_breakdown': {},
+                    'confidence_distribution': {
+                        'high': 0,  # >= 80%
+                        'medium': 0,  # 50-79%
+                        'low': 0,  # < 50%
+                    }
+                },
+                'fields': {}
+            }
+
+            # Calculate provenance breakdown and confidence distribution
+            for field_name, prov_info in metadata_prov.items():
+                prov_type = prov_info.get('provenance', 'unknown')
+                if prov_type not in report['metadata_provenance']['summary']['provenance_breakdown']:
+                    report['metadata_provenance']['summary']['provenance_breakdown'][prov_type] = 0
+                report['metadata_provenance']['summary']['provenance_breakdown'][prov_type] += 1
+
+                # Confidence distribution
+                confidence = prov_info.get('confidence', 0)
+                if confidence >= 80:
+                    report['metadata_provenance']['summary']['confidence_distribution']['high'] += 1
+                elif confidence >= 50:
+                    report['metadata_provenance']['summary']['confidence_distribution']['medium'] += 1
+                else:
+                    report['metadata_provenance']['summary']['confidence_distribution']['low'] += 1
+
+                # Add field-level provenance
+                report['metadata_provenance']['fields'][field_name] = {
+                    'value': file_info_raw.get(field_name),
+                    'provenance': prov_type,
+                    'confidence': confidence,
+                    'source': prov_info.get('source'),
+                    'needs_review': prov_info.get('needs_review', False),
+                }
 
         # Add workflow trace for transparency and reproducibility
         if workflow_trace:
-            report['workflow_trace'] = workflow_trace
+            report['workflow_trace'] = {
+                'summary': workflow_trace.get('summary', {}),
+                'steps': workflow_trace.get('steps', []),
+                'technologies': workflow_trace.get('technologies', []),
+                'provenance': workflow_trace.get('provenance', {}),
+                'detailed_logs': workflow_trace.get('detailed_logs', {}),
+            }
 
-            # Add metadata provenance if available
-            if 'metadata_provenance' in workflow_trace:
-                report['metadata_provenance'] = {
-                    'summary': {
-                        'total_fields': len(workflow_trace['metadata_provenance']),
-                        'needs_review_count': sum(
-                            1 for p in workflow_trace['metadata_provenance'].values()
-                            if p.get('needs_review', False)
-                        ),
-                        'provenance_breakdown': {}
-                    },
-                    'fields': workflow_trace['metadata_provenance']
-                }
+        # Add LLM analysis if available
+        if llm_guidance:
+            report['llm_analysis'] = {
+                'executive_summary': llm_guidance.get('executive_summary', ''),
+                'quality_assessment': llm_guidance.get('quality_assessment', {}),
+                'recommendations': llm_guidance.get('recommendations', []),
+                'key_insights': llm_guidance.get('key_insights', []),
+                'dandi_ready': llm_guidance.get('dandi_ready', False),
+                'dandi_blocking_issues': llm_guidance.get('dandi_blocking_issues', []),
+            }
 
-                # Calculate provenance breakdown
-                for field_name, prov_info in workflow_trace['metadata_provenance'].items():
-                    prov_type = prov_info.get('provenance', 'unknown')
-                    if prov_type not in report['metadata_provenance']['summary']['provenance_breakdown']:
-                        report['metadata_provenance']['summary']['provenance_breakdown'][prov_type] = 0
-                    report['metadata_provenance']['summary']['provenance_breakdown'][prov_type] += 1
+        # Add recommendations
+        report['recommendations'] = self._generate_recommendations(validation_result, llm_guidance)
 
-        # Write pretty-printed JSON
-        with open(output_path, 'w') as f:
-            json.dump(report, f, indent=2, default=str)
+        # Write pretty-printed JSON with custom formatting
+        with open(output_path, 'w', encoding='utf-8') as f:
+            json.dump(report, f, indent=2, default=str, ensure_ascii=False)
 
         return output_path
 
@@ -1352,6 +1628,36 @@ class ReportService:
         # Extract missing fields
         missing_fields = file_info_raw.get('_missing_fields', [])
 
+        # ===== ENHANCED REPORT DATA =====
+
+        # Calculate missing critical fields for DANDI
+        missing_critical_fields = self._identify_missing_critical_fields(file_info_raw, issues)
+
+        # Calculate quality metrics for dashboard
+        quality_metrics = self._calculate_quality_metrics(
+            validation_result, file_info_raw, issue_counts
+        )
+
+        # Calculate metadata completeness
+        metadata_completeness = self._calculate_metadata_completeness(file_info_raw)
+
+        # Group issues by severity for quick actions
+        issues_by_severity = {}
+        for issue in enhanced_issues:
+            severity = issue.get('severity', 'UNKNOWN')
+            if severity not in issues_by_severity:
+                issues_by_severity[severity] = []
+            issues_by_severity[severity].append(issue)
+
+        # Calculate total estimated time to fix all issues
+        total_estimated_time = self._estimate_fix_time(
+            missing_critical_fields, issues_by_severity
+        )
+
+        # Extract detailed logs and log file path from workflow_trace if available
+        detailed_logs = workflow_trace.get('detailed_logs', {}) if workflow_trace else {}
+        log_file_path = workflow_trace.get('log_file_path') if workflow_trace else None
+
         return {
             'report_data': report_data,
             'file_info': file_info,
@@ -1360,6 +1666,15 @@ class ReportService:
             'issues': enhanced_issues,
             'recommendations': recommendations,
             'workflow_trace': workflow_trace_formatted,
+            # Enhanced report data
+            'missing_critical_fields': missing_critical_fields,
+            'quality_metrics': quality_metrics,
+            'metadata_completeness': metadata_completeness,
+            'issues_by_severity': issues_by_severity,
+            'total_estimated_time': total_estimated_time,
+            # Detailed process logs for scientific transparency
+            'detailed_logs': detailed_logs,
+            'log_file_path': log_file_path,
         }
 
     def _prepare_file_info(
@@ -1391,12 +1706,14 @@ class ReportService:
                     'provenance': prov_info.get('provenance'),
                     'confidence': prov_info.get('confidence'),
                     'source': prov_info.get('source'),
+                    'needs_review': prov_info.get('needs_review', False),
                 }
             else:
                 # Fallback to file_info_raw provenance if not in workflow_trace
                 file_info[key] = {
                     'value': value,
                     'provenance': provenance.get(key, 'system-default'),
+                    'needs_review': False,
                 }
 
         return file_info
@@ -1564,11 +1881,12 @@ class ReportService:
         """Format provenance type to badge text."""
         badges = {
             'user-specified': 'USER',
-            'file-extracted': 'FILE',
             'ai-parsed': 'AI',
             'ai-inferred': 'AI-INF',
-            'schema-default': 'SCHEMA',
-            'system-default': 'DEFAULT',
+            'auto-extracted': 'AUTO',
+            'auto-corrected': 'FIXED',
+            'default': 'DEFAULT',
+            'system-generated': 'SYSTEM',
         }
         return badges.get(provenance, provenance.upper())
 
@@ -1576,11 +1894,12 @@ class ReportService:
         """Format provenance type to tooltip text."""
         tooltips = {
             'user-specified': 'Directly provided by user',
-            'file-extracted': 'Extracted from source file',
             'ai-parsed': 'Parsed by AI from text',
             'ai-inferred': 'Inferred by AI from context',
-            'schema-default': 'NWB schema default value',
-            'system-default': 'System fallback value',
+            'auto-extracted': 'Automatically extracted from file',
+            'auto-corrected': 'Automatically corrected by system',
+            'default': 'Default fallback value',
+            'system-generated': 'Generated by system',
         }
         return tooltips.get(provenance, provenance)
 
@@ -1600,3 +1919,197 @@ class ReportService:
                 return f"{bytes_value:.1f} {unit}"
             bytes_value /= 1024.0
         return f"{bytes_value:.1f} TB"
+
+    # ===== ENHANCED REPORT HELPER METHODS =====
+
+    def _identify_missing_critical_fields(
+        self, file_info_raw: Dict[str, Any], issues: list
+    ) -> list:
+        """Identify missing critical fields required for DANDI submission."""
+        critical_fields = []
+
+        # DANDI-required fields
+        dandi_required = [
+            ('species', 'Subject species (e.g., Mus musculus)', '🔴', 'DANDI blocker'),
+            ('age', 'Subject age or date of birth', '🔴', 'DANDI blocker'),
+            ('sex', 'Subject sex (M/F/U/O)', '🟡', 'Recommended'),
+            ('experimenter', 'Experimenter name(s)', '🟡', 'Recommended'),
+            ('session_description', 'Description of recording session', '🟡', 'Recommended'),
+        ]
+
+        for field_name, hint, icon, impact in dandi_required:
+            if field_name not in file_info_raw or not file_info_raw.get(field_name):
+                critical_fields.append({
+                    'name': field_name,
+                    'fix_hint': hint,
+                    'impact_icon': icon,
+                    'impact': impact,
+                })
+
+        return critical_fields
+
+    def _calculate_quality_metrics(
+        self,
+        validation_result: Dict[str, Any],
+        file_info_raw: Dict[str, Any],
+        issue_counts: Dict[str, int],
+    ) -> Dict[str, Dict[str, Any]]:
+        """Calculate quality metrics for the dashboard."""
+
+        # Count filled vs total recommended metadata fields
+        recommended_fields = [
+            'experimenter', 'institution', 'lab', 'experiment_description',
+            'session_description', 'session_id', 'session_start_time',
+            'identifier', 'subject_id', 'species', 'sex', 'age',
+            'date_of_birth', 'genotype', 'strain', 'weight',
+            'keywords', 'related_publications', 'notes', 'protocol'
+        ]
+        filled_count = sum(1 for f in recommended_fields if f in file_info_raw and file_info_raw.get(f))
+        completeness_pct = int((filled_count / len(recommended_fields)) * 100)
+
+        # Determine completeness rating
+        if completeness_pct >= 80:
+            completeness_rating = 'excellent'
+            completeness_label = 'Excellent'
+        elif completeness_pct >= 60:
+            completeness_rating = 'good'
+            completeness_label = 'Good'
+        elif completeness_pct >= 40:
+            completeness_rating = 'fair'
+            completeness_label = 'Fair'
+        else:
+            completeness_rating = 'needs-work'
+            completeness_label = 'Needs Work'
+
+        # Data integrity (based on critical/error issues)
+        critical_errors = issue_counts.get('CRITICAL', 0) + issue_counts.get('ERROR', 0)
+        if critical_errors == 0:
+            integrity_score = 100
+            integrity_rating = 'excellent'
+            integrity_label = 'Excellent'
+            integrity_desc = 'No validation errors'
+        elif critical_errors <= 2:
+            integrity_score = 75
+            integrity_rating = 'good'
+            integrity_label = 'Good'
+            integrity_desc = f'{critical_errors} issue(s) found'
+        else:
+            integrity_score = 40
+            integrity_rating = 'needs-work'
+            integrity_label = 'Needs Work'
+            integrity_desc = f'{critical_errors} issues found'
+
+        # Scientific value (based on completeness + descriptions)
+        has_descriptions = bool(
+            file_info_raw.get('experiment_description') and
+            file_info_raw.get('session_description')
+        )
+        scientific_value_score = int(completeness_pct * 0.7) + (30 if has_descriptions else 0)
+        scientific_value_score = min(100, scientific_value_score)
+
+        if scientific_value_score >= 80:
+            sci_rating = 'excellent'
+            sci_label = 'Excellent'
+            sci_desc = 'Well documented'
+        elif scientific_value_score >= 60:
+            sci_rating = 'good'
+            sci_label = 'Good'
+            sci_desc = 'Good documentation'
+        else:
+            sci_rating = 'fair'
+            sci_label = 'Fair'
+            sci_desc = 'Limited documentation'
+
+        # DANDI readiness (based on required fields + no critical issues)
+        dandi_required_fields = ['species', 'subject_id', 'session_start_time']
+        dandi_filled = sum(1 for f in dandi_required_fields if f in file_info_raw and file_info_raw.get(f))
+        dandi_score = int((dandi_filled / len(dandi_required_fields)) * 70)
+        if critical_errors == 0:
+            dandi_score += 30
+
+        if dandi_score >= 90:
+            dandi_rating = 'excellent'
+            dandi_label = 'Ready'
+            dandi_desc = 'Ready for DANDI'
+        elif dandi_score >= 70:
+            dandi_rating = 'good'
+            dandi_label = 'Almost Ready'
+            dandi_desc = 'Minor fixes needed'
+        elif dandi_score >= 50:
+            dandi_rating = 'fair'
+            dandi_label = 'Needs Work'
+            dandi_desc = 'Some fields missing'
+        else:
+            dandi_rating = 'needs-work'
+            dandi_label = 'Not Ready'
+            dandi_desc = 'Major fixes needed'
+
+        return {
+            'completeness': {
+                'score': completeness_pct,
+                'rating': completeness_rating,
+                'label': completeness_label,
+                'description': f'{filled_count} of {len(recommended_fields)} fields filled',
+            },
+            'integrity': {
+                'score': integrity_score,
+                'rating': integrity_rating,
+                'label': integrity_label,
+                'description': integrity_desc,
+            },
+            'scientific_value': {
+                'score': scientific_value_score,
+                'rating': sci_rating,
+                'label': sci_label,
+                'description': sci_desc,
+            },
+            'dandi_ready': {
+                'score': dandi_score,
+                'rating': dandi_rating,
+                'label': dandi_label,
+                'description': dandi_desc,
+            },
+        }
+
+    def _calculate_metadata_completeness(
+        self, file_info_raw: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Calculate metadata completeness statistics."""
+        recommended_fields = [
+            'experimenter', 'institution', 'lab', 'experiment_description',
+            'session_description', 'session_id', 'session_start_time',
+            'identifier', 'subject_id', 'species', 'sex', 'age',
+            'date_of_birth', 'genotype', 'strain', 'weight',
+            'keywords', 'related_publications', 'notes', 'protocol'
+        ]
+        required_fields = ['species', 'subject_id', 'session_start_time', 'identifier', 'session_description']
+
+        filled_count = sum(1 for f in recommended_fields if f in file_info_raw and file_info_raw.get(f))
+        required_filled = sum(1 for f in required_fields if f in file_info_raw and file_info_raw.get(f))
+
+        return {
+            'percentage': int((filled_count / len(recommended_fields)) * 100),
+            'filled': filled_count,
+            'total': len(recommended_fields),
+            'required_filled': required_filled,
+            'required_total': len(required_fields),
+            'critical_missing': len(required_fields) - required_filled,
+        }
+
+    def _estimate_fix_time(
+        self, missing_critical_fields: list, issues_by_severity: Dict[str, list]
+    ) -> int:
+        """Estimate total time in minutes to fix all issues."""
+        time_estimates = {
+            'missing_field': 3,  # 3 min per missing field
+            'CRITICAL': 5,  # 5 min per critical issue
+            'ERROR': 3,  # 3 min per error
+            'WARNING': 2,  # 2 min per warning
+        }
+
+        total_time = len(missing_critical_fields) * time_estimates['missing_field']
+        total_time += len(issues_by_severity.get('CRITICAL', [])) * time_estimates['CRITICAL']
+        total_time += len(issues_by_severity.get('ERROR', [])) * time_estimates['ERROR']
+        total_time += len(issues_by_severity.get('WARNING', [])) * time_estimates['WARNING']
+
+        return total_time

@@ -1568,10 +1568,86 @@ async def download_nwb():
     )
 
 
+@app.get("/api/reports/view")
+async def view_html_report():
+    """
+    View the HTML evaluation report in browser.
+
+    Returns:
+        HTML report content for display in browser
+    """
+    from fastapi.responses import HTMLResponse
+    import json
+
+    mcp_server = get_or_create_mcp_server()
+
+    if not mcp_server.global_state.output_path:
+        raise HTTPException(
+            status_code=404,
+            detail="No conversion output available",
+        )
+
+    # Find the HTML report file
+    output_dir = Path(mcp_server.global_state.output_path).parent
+    output_stem = Path(mcp_server.global_state.output_path).stem
+    html_report = output_dir / f"{output_stem}_evaluation_report.html"
+
+    # Check if workflow_trace JSON exists
+    workflow_trace_path = output_dir / f"{output_stem}_workflow_trace.json"
+
+    if html_report.exists():
+        # Check if we need to regenerate the report with workflow_trace
+        if workflow_trace_path.exists():
+            # Load workflow_trace
+            with open(workflow_trace_path, 'r') as f:
+                workflow_trace = json.load(f)
+
+            # Check if the workflow_trace has metadata_provenance
+            if 'metadata_provenance' in workflow_trace:
+                # Regenerate the HTML report with the correct workflow_trace
+                from services.report_service import ReportService
+                from agents.evaluation_agent import EvaluationAgent
+
+                # Extract file info from NWB file
+                nwb_path = mcp_server.global_state.output_path
+                eval_agent = EvaluationAgent()
+                file_info = eval_agent._extract_file_info(nwb_path)
+
+                # Create validation result with file info
+                validation_result = {
+                    'overall_status': mcp_server.global_state.conversion_status.value,
+                    'nwb_file_path': str(nwb_path),
+                    'file_info': file_info,
+                    'issues': [],
+                    'issue_counts': {},
+                }
+
+                # Regenerate HTML report with workflow_trace
+                report_service = ReportService()
+                report_service.generate_html_report(
+                    html_report,
+                    validation_result,
+                    None,  # llm_analysis
+                    workflow_trace
+                )
+
+                logger.info(f"Regenerated HTML report with workflow_trace from {workflow_trace_path}")
+
+        # Read and return HTML content directly for browser display
+        with open(html_report, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+        return HTMLResponse(content=html_content)
+
+    raise HTTPException(
+        status_code=404,
+        detail="No HTML report available. Report may not have been generated yet.",
+    )
+
+
 @app.get("/api/download/report")
 async def download_report():
     """
-    Download the evaluation report (PDF or JSON).
+    Download the evaluation report (HTML, PDF, or JSON).
 
     Returns:
         Report file as download
@@ -1588,7 +1664,16 @@ async def download_report():
     output_dir = Path(mcp_server.global_state.output_path).parent
     output_stem = Path(mcp_server.global_state.output_path).stem
 
-    # Try PDF first
+    # Try HTML first (primary format)
+    html_report = output_dir / f"{output_stem}_evaluation_report.html"
+    if html_report.exists():
+        return FileResponse(
+            path=str(html_report),
+            media_type="text/html",
+            filename=html_report.name,
+        )
+
+    # Try PDF
     pdf_report = output_dir / f"{output_stem}_evaluation_report.pdf"
     if pdf_report.exists():
         return FileResponse(

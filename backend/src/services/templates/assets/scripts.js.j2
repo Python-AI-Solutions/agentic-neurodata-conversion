@@ -391,5 +391,180 @@
     // Track report views, issue interactions, etc.
     // This would be implemented based on your analytics needs
 
-    console.log('NWB Report loaded successfully');
+    // ========================================
+    // ENHANCED REPORT FEATURES
+    // ========================================
+
+    // Collapsible Sections Toggle
+    window.toggleSection = function(sectionId) {
+        const section = document.getElementById(sectionId);
+        if (!section) return;
+
+        const content = section.querySelector('.collapsible-content');
+        if (!content) return;
+
+        const isOpen = section.classList.contains('open');
+
+        if (isOpen) {
+            // Collapse
+            content.style.maxHeight = '0';
+            section.classList.remove('open');
+        } else {
+            // Expand
+            // Calculate the full height
+            content.style.maxHeight = content.scrollHeight + 'px';
+            section.classList.add('open');
+
+            // After animation, set to 'none' so it can adjust if content changes
+            setTimeout(() => {
+                if (section.classList.contains('open')) {
+                    content.style.maxHeight = 'none';
+                }
+            }, 300);
+        }
+    };
+
+    // Expandable Content Toggle
+    window.toggleExpand = function(element) {
+        element.classList.toggle('open');
+        const content = element.nextElementSibling;
+        if (content) {
+            content.classList.toggle('open');
+        }
+    };
+
+    // Animate Progress Bars and Circular Charts on Load
+    function animateProgressIndicators() {
+        // Animate linear progress bars
+        const progressBars = document.querySelectorAll('.progress-bar');
+        progressBars.forEach(bar => {
+            const width = bar.style.width;
+            bar.style.width = '0%';
+            setTimeout(() => {
+                bar.style.width = width;
+            }, 100);
+        });
+
+        // Animate circular progress indicators
+        const circles = document.querySelectorAll('.score-circle');
+        circles.forEach(circle => {
+            const scoreText = circle.querySelector('.score-text');
+            if (scoreText) {
+                const score = parseInt(scoreText.textContent.replace('%', '')) || 0;
+                const circumference = 2 * Math.PI * 45; // radius is 45
+                const offset = circumference - (score / 100) * circumference;
+
+                const fillCircle = circle.querySelector('circle.fill');
+                if (fillCircle) {
+                    fillCircle.style.strokeDasharray = circumference;
+                    fillCircle.style.strokeDashoffset = circumference;
+
+                    setTimeout(() => {
+                        fillCircle.style.strokeDashoffset = offset;
+                    }, 500);
+                }
+            }
+        });
+    }
+
+    // Initialize Enhanced Features on Page Load
+    function initializeEnhancedFeatures() {
+        animateProgressIndicators();
+
+        // Add smooth scroll to Quick Action buttons
+        document.querySelectorAll('.quick-action').forEach(button => {
+            button.addEventListener('click', function(e) {
+                const targetId = this.getAttribute('data-scroll-to');
+                if (targetId) {
+                    e.preventDefault();
+                    const targetElement = document.getElementById(targetId);
+                    if (targetElement) {
+                        targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }
+            });
+        });
+
+        // Initialize all collapsible sections as closed by default
+        document.querySelectorAll('.collapsible-section').forEach(section => {
+            if (!section.classList.contains('open')) {
+                const content = section.querySelector('.collapsible-content');
+                if (content) {
+                    content.style.maxHeight = '0';
+                }
+            }
+        });
+
+        console.log('Enhanced report features initialized');
+    }
+
+    // Call on page load
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeEnhancedFeatures);
+    } else {
+        initializeEnhancedFeatures();
+    }
+
+    // ========================================
+    // Detailed Process Logs Filtering
+    // ========================================
+    window.filterDetailedLogs = function() {
+        const levelFilter = document.getElementById('log-level-filter')?.value || 'all';
+        const searchTerm = document.getElementById('log-search')?.value.toLowerCase() || '';
+
+        const logEntries = document.querySelectorAll('.log-entry');
+
+        logEntries.forEach(entry => {
+            const level = entry.dataset.level || '';
+            const searchable = entry.dataset.searchable || '';
+
+            const matchesLevel = levelFilter === 'all' || level === levelFilter;
+            const matchesSearch = !searchTerm || searchable.includes(searchTerm);
+
+            if (matchesLevel && matchesSearch) {
+                entry.classList.remove('filtered-out');
+            } else {
+                entry.classList.add('filtered-out');
+            }
+        });
+    };
+
+    window.searchDetailedLogs = function() {
+        filterDetailedLogs();
+    };
+
+    // ========================================
+    // Toggle Log Context Display
+    // ========================================
+    window.toggleLogContext = function(button) {
+        const container = button.closest('.log-context-container');
+        if (!container) return;
+
+        const context = container.querySelector('.log-context');
+        const toggleIcon = button.querySelector('.toggle-icon');
+
+        if (!context) return;
+
+        if (context.style.display === 'none' || !context.style.display) {
+            context.style.display = 'block';
+            button.textContent = '';
+            const icon = document.createElement('span');
+            icon.className = 'toggle-icon';
+            icon.textContent = '▼';
+            button.appendChild(icon);
+            button.appendChild(document.createTextNode(' Hide Context'));
+            button.classList.add('expanded');
+        } else {
+            context.style.display = 'none';
+            button.textContent = '';
+            const icon = document.createElement('span');
+            icon.className = 'toggle-icon';
+            icon.textContent = '▶';
+            button.appendChild(icon);
+            button.appendChild(document.createTextNode(' Show Context'));
+            button.classList.remove('expanded');
+        }
+    };
+
+    console.log('NWB Enhanced Report loaded successfully');
 })();

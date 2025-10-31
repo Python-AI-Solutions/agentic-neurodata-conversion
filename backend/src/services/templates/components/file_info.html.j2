@@ -5,13 +5,16 @@
         File Information
     </h2>
 
-    {# Missing Fields Alert - Show at top if present #}
+    {# Missing Recommended Fields Alert - Show at top if present #}
     {% if missing_fields and missing_fields|length > 0 %}
     <div class="missing-fields-alert">
         <h4>
-            <span>⚠️</span>
-            Missing Required Fields
+            <span>💡</span>
+            Missing Recommended Fields
         </h4>
+        <p style="margin: 0.5rem 0; font-size: 0.9em; color: #6b7280;">
+            These fields are recommended to improve dataset quality and discoverability, but are not critical for DANDI submission.
+        </p>
         <div class="missing-fields-list">
             {% for field in missing_fields %}
                 <span class="missing-field-tag">{{ field | format_field_name }}</span>
@@ -41,56 +44,57 @@
                             <span>{{ value_obj.value }}</span>
                         {% endif %}
 
-                        {# Enhanced Provenance Badge with Rich Metadata #}
+                        {# Always-Visible Provenance Information - Chat Interface Style #}
                         {% if value_obj.provenance %}
-                            <span class="provenance-badge {{ value_obj.provenance | replace('_', '-') }}">
-                                {{ value_obj.provenance | format_provenance_badge }}
-                                <span class="provenance-tooltip provenance-tooltip-rich">
-                                    <div style="text-align: left; min-width: 200px;">
-                                        {# Provenance Type #}
-                                        <div style="font-weight: 700; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">
-                                            {% if value_obj.provenance == 'ai-parsed' %}
-                                                🤖 AI Metadata
-                                            {% elif value_obj.provenance == 'ai-inferred' %}
-                                                🧠 Inferred Metadata
-                                            {% elif value_obj.provenance == 'file-extracted' %}
-                                                📄 Extracted from File
-                                            {% elif value_obj.provenance == 'user-specified' %}
-                                                👤 User Provided
-                                            {% else %}
-                                                ⚙️ {{ value_obj.provenance | format_field_name }}
-                                            {% endif %}
-                                        </div>
-
-                                        {# Source #}
-                                        <div style="margin-bottom: 0.25rem;">
-                                            <strong>Source:</strong> {{ value_obj.provenance | upper | replace('_', '-') }}
-                                        </div>
-
-                                        {# Confidence Score if available #}
-                                        {% if value_obj.confidence %}
-                                        <div style="margin-bottom: 0.25rem;">
-                                            <strong>Confidence:</strong> {{ value_obj.confidence }}%
-                                        </div>
-                                        {% endif %}
-
-                                        {# Origin/Source Detail if available #}
-                                        {% if value_obj.source %}
-                                        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.2); font-size: 0.85em; opacity: 0.9;">
-                                            <strong>Origin:</strong><br>
-                                            {{ value_obj.source }}
-                                        </div>
-                                        {% endif %}
-
-                                        {# Basic tooltip fallback #}
-                                        {% if not value_obj.confidence and not value_obj.source %}
-                                        <div style="margin-top: 0.25rem; font-size: 0.85em; opacity: 0.9;">
-                                            {{ value_obj.provenance | format_provenance_tooltip }}
-                                        </div>
-                                        {% endif %}
+                            <div class="provenance-box {{ value_obj.provenance | replace('_', '-') }}">
+                                <div class="provenance-box-header">
+                                    {% if value_obj.provenance == 'ai-parsed' %}
+                                        AI Metadata
+                                    {% elif value_obj.provenance == 'ai-inferred' %}
+                                        Inferred Metadata
+                                    {% elif value_obj.provenance == 'user-specified' %}
+                                        User Metadata
+                                    {% elif value_obj.provenance == 'auto-extracted' %}
+                                        System Metadata
+                                    {% elif value_obj.provenance == 'auto-corrected' %}
+                                        Corrected Metadata
+                                    {% elif value_obj.provenance == 'default' %}
+                                        System Metadata
+                                    {% elif value_obj.provenance == 'system-generated' %}
+                                        System Metadata
+                                    {% else %}
+                                        System Metadata
+                                    {% endif %}
+                                </div>
+                                <div class="provenance-box-content">
+                                    <div class="provenance-box-row">
+                                        <span class="provenance-label">Source:</span>
+                                        <span class="provenance-value">{{ value_obj.provenance | replace('_', '-') }}</span>
                                     </div>
-                                </span>
-                            </span>
+                                    {% if value_obj.confidence %}
+                                        <div class="provenance-box-row">
+                                            <span class="provenance-label">Confidence:</span>
+                                            <span class="provenance-value">{{ value_obj.confidence | round }}%</span>
+                                        </div>
+                                    {% endif %}
+                                    {% if value_obj.source %}
+                                        <div class="provenance-box-row">
+                                            <span class="provenance-label">Origin:</span>
+                                            <span class="provenance-value">{{ value_obj.source }}</span>
+                                        </div>
+                                    {% endif %}
+                                    {% if value_obj.needs_review %}
+                                        <div class="provenance-box-row">
+                                            <span class="provenance-value" style="color: #f59e0b;">⚠️ Needs Review</span>
+                                        </div>
+                                    {% endif %}
+                                    {% if not value_obj.confidence and not value_obj.source and not value_obj.needs_review %}
+                                        <div class="provenance-box-row">
+                                            <span class="provenance-value">{{ value_obj.provenance | format_provenance_tooltip }}</span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
                         {% endif %}
                     </div>
                 </div>

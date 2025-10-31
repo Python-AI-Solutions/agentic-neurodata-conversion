@@ -292,6 +292,10 @@ class GlobalState(BaseModel):
 
     # Logs and history
     logs: List[LogEntry] = Field(default_factory=list)
+    log_file_path: Optional[str] = Field(
+        default=None,
+        description="Path to persistent log file for this conversion session"
+    )
 
     # Correction tracking
     # WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Add retry limit (Breaking Point #7)
@@ -465,6 +469,7 @@ class GlobalState(BaseModel):
         self.user_provided_metadata = {}
         self.metadata_provenance = {}
         self.logs = []
+        self.log_file_path = None
         self.correction_attempt = 0
         self.checksums = {}
         # Reset "no progress" detection fields

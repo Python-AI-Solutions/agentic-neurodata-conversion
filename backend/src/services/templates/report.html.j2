@@ -16,20 +16,14 @@
         {# Report Header #}
         {% include 'components/header.html.j2' %}
 
-        {# Quick Actions Bar #}
-        <div class="actions-bar">
-            <div class="actions-group">
-                <button onclick="window.print()" class="btn btn-secondary">
-                    <span class="icon">🖨️</span> Print Report
-                </button>
-                <button onclick="exportJSON()" class="btn btn-secondary">
-                    <span class="icon">📥</span> Export JSON
-                </button>
-                <button onclick="copyShareLink()" class="btn btn-secondary">
-                    <span class="icon">🔗</span> Copy Link
-                </button>
-            </div>
-        </div>
+        {# Enhanced: Quick Actions Toolbar #}
+        {% include 'components/quick_actions.html.j2' %}
+
+        {# Enhanced: Missing Fields Alert #}
+        {% include 'components/missing_fields_alert.html.j2' %}
+
+        {# Enhanced: Quality Dashboard #}
+        {% include 'components/quality_dashboard.html.j2' %}
 
         {# File Information Section #}
         {% include 'components/file_info.html.j2' %}
@@ -51,6 +45,9 @@
         {% if workflow_trace and workflow_trace|length > 0 %}
             {% include 'components/workflow_trace.html.j2' %}
         {% endif %}
+
+        {# Enhanced: Help & Glossary #}
+        {% include 'components/help_glossary.html.j2' %}
 
         {# Report Footer #}
         <footer class="report-footer">

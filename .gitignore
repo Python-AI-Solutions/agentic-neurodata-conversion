@@ -45,9 +45,8 @@ Thumbs.db
 .pixi/
 pixi.lock
 
-# Test data (large files)
-test_data/*.nwb
-test_data/spikeglx/*.bin
+# Test data (large files - keep locally, not in Git)
+test_data/
 
 # Logs
 *.log
@@ -57,6 +56,31 @@ logs/
 *.tmp
 tmp/
 temp/
+
+# Test outputs
+test_*.html
+test_*.json
+test_*.py
+
+# Validation history (runtime generated)
+outputs/validation_history/
+backend/src/outputs/validation_history/
+
+# Runtime outputs (test results, generated files)
+outputs/*.json
+outputs/*.pdf
+outputs/*.txt
+test_output/*.nwb
+
+# Local shell scripts (developer-specific)
+test_e2e_three_agent_workflow.sh
+start-backend.sh
+
+# Development documentation (keep locally, not in Git)
+md docs/
+
+# Test scripts (keep locally, not in Git)
+test scripts/
 
 # Claude settings
 .claude/settings.local.json

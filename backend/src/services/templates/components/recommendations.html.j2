@@ -1,12 +1,16 @@
 {# Recommendations Component #}
-<section class="section recommendations-section">
-    <h2 class="section-title">
-        <span class="icon">💡</span>
-        Recommendations
-        <span class="recommendation-count">({{ recommendations|length }})</span>
-    </h2>
+<section class="section recommendations-section collapsible-section open" id="recommendations-section">
+    <div class="collapsible-header" onclick="toggleSection('recommendations-section')">
+        <h2 class="section-title">
+            <span class="icon">💡</span>
+            Recommendations
+            <span class="recommendation-count">({{ recommendations|length }})</span>
+        </h2>
+        <span class="collapsible-toggle">▼</span>
+    </div>
 
-    <div class="recommendations-list">
+    <div class="collapsible-content">
+        <div class="recommendations-list">
         {% for recommendation in recommendations %}
             <div class="recommendation-card priority-{{ recommendation.priority | lower }}">
                 <div class="recommendation-header">
@@ -75,12 +79,13 @@
                 {% endif %}
             </div>
         {% endfor %}
-    </div>
+        </div>
 
-    {% if recommendations|length == 0 %}
-    <div class="empty-state">
-        <div class="empty-icon">👍</div>
-        <p>No recommendations at this time. Your conversion process is optimal!</p>
+        {% if recommendations|length == 0 %}
+        <div class="empty-state">
+            <div class="empty-icon">👍</div>
+            <p>No recommendations at this time. Your conversion process is optimal!</p>
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
 </section>

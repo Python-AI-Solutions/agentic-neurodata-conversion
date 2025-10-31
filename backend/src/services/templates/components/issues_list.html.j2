@@ -1,13 +1,17 @@
 {# Issues List Component #}
-<section class="section issues-section">
-    <h2 class="section-title">
-        <span class="icon">🐛</span>
-        Issues & Findings
-        <span class="issue-count">({{ issues|length }})</span>
-    </h2>
+<section class="section issues-section collapsible-section open" id="issues-section">
+    <div class="collapsible-header" onclick="toggleSection('issues-section')">
+        <h2 class="section-title">
+            <span class="icon">🐛</span>
+            Issues & Findings
+            <span class="issue-count">({{ issues|length }})</span>
+        </h2>
+        <span class="collapsible-toggle">▼</span>
+    </div>
 
-    {# Search and Filter Controls #}
-    <div class="controls">
+    <div class="collapsible-content">
+        {# Search and Filter Controls #}
+        <div class="controls">
         <div class="search-box">
             <input type="text"
                    id="issue-search"
@@ -116,12 +120,13 @@
                 </div>
             </div>
         {% endfor %}
-    </div>
+        </div>
 
-    {% if issues|length == 0 %}
-    <div class="empty-state">
-        <div class="empty-icon">✅</div>
-        <p>No issues found! Your data looks great.</p>
+        {% if issues|length == 0 %}
+        <div class="empty-state">
+            <div class="empty-icon">✅</div>
+            <p>No issues found! Your data looks great.</p>
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
 </section>
