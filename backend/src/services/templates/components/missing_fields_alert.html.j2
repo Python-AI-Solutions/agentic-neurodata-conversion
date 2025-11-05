@@ -1,0 +1,24 @@
+{# Missing Critical Fields Alert - Enhanced Report Feature #}
+{% if missing_critical_fields and missing_critical_fields|length > 0 %}
+<div class="missing-fields-alert" id="missing-fields-section">
+    <h4>🔴 Missing Critical Metadata ({{ missing_critical_fields|length }} DANDI blocker{% if missing_critical_fields|length > 1 %}s{% endif %})</h4>
+    <p>The following <strong>critical fields</strong> are required for DANDI submission and must be added before your file can be submitted:</p>
+
+    <div class="missing-fields-list">
+        {% for field in missing_critical_fields %}
+        <div class="missing-field">
+            <span class="field-name">{{ field.name | format_field_name }}</span>
+            <span class="impact">{{ field.impact_icon | default('🔴') }} {{ field.impact | default('DANDI blocker') }}</span>
+            <button onclick="alert('To fix: {{ field.fix_hint | default('Add this field to your NWB file') }}')">
+                How to fix
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="missing-fields-summary">
+        <strong>Impact:</strong> {{ missing_critical_fields|length }} critical field{% if missing_critical_fields|length > 1 %}s{% endif %} must be added before DANDI submission.<br>
+        <strong>Estimated time to fix:</strong> ~{{ (missing_critical_fields|length * 3)|int }}-{{ (missing_critical_fields|length * 5)|int }} minutes
+    </div>
+</div>
+{% endif %}

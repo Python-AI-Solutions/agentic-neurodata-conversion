@@ -1,0 +1,112 @@
+{# Quality Dashboard - Enhanced Report Feature #}
+<div class="quality-dashboard">
+    <h3>🎯 Quality Assessment Dashboard</h3>
+
+    <div class="quality-metrics-grid">
+        {# Completeness Metric #}
+        <div class="quality-metric">
+            <div class="metric-header">
+                <span class="metric-icon">📊</span>
+                <h4>Completeness</h4>
+            </div>
+            <div class="metric-score {{ quality_metrics.completeness.rating | default('fair') }}">
+                <div class="score-circle">
+                    <svg viewBox="0 0 100 100">
+                        <circle class="bg" cx="50" cy="50" r="45"></circle>
+                        <circle class="fill" cx="50" cy="50" r="45"
+                                stroke-dasharray="283"
+                                stroke-dashoffset="{{ 283 - (283 * (quality_metrics.completeness.score | default(45) / 100)) }}"></circle>
+                    </svg>
+                    <span class="score-text">{{ quality_metrics.completeness.score | default(45) }}%</span>
+                </div>
+            </div>
+            <p class="metric-label">{{ quality_metrics.completeness.label | default('Fair') }}</p>
+            <p class="metric-description">{{ quality_metrics.completeness.description | default('Some fields filled') }}</p>
+        </div>
+
+        {# Data Integrity Metric #}
+        <div class="quality-metric">
+            <div class="metric-header">
+                <span class="metric-icon">🔒</span>
+                <h4>Data Integrity</h4>
+            </div>
+            <div class="metric-score {{ quality_metrics.integrity.rating | default('excellent') }}">
+                <div class="score-circle">
+                    <svg viewBox="0 0 100 100">
+                        <circle class="bg" cx="50" cy="50" r="45"></circle>
+                        <circle class="fill" cx="50" cy="50" r="45"
+                                stroke-dasharray="283"
+                                stroke-dashoffset="{{ 283 - (283 * (quality_metrics.integrity.score | default(100) / 100)) }}"></circle>
+                    </svg>
+                    <span class="score-text">{{ quality_metrics.integrity.score | default(100) }}%</span>
+                </div>
+            </div>
+            <p class="metric-label">{{ quality_metrics.integrity.label | default('Excellent') }}</p>
+            <p class="metric-description">{{ quality_metrics.integrity.description | default('No validation errors') }}</p>
+        </div>
+
+        {# Scientific Value Metric #}
+        <div class="quality-metric">
+            <div class="metric-header">
+                <span class="metric-icon">🔬</span>
+                <h4>Scientific Value</h4>
+            </div>
+            <div class="metric-score {{ quality_metrics.scientific_value.rating | default('good') }}">
+                <div class="score-circle">
+                    <svg viewBox="0 0 100 100">
+                        <circle class="bg" cx="50" cy="50" r="45"></circle>
+                        <circle class="fill" cx="50" cy="50" r="45"
+                                stroke-dasharray="283"
+                                stroke-dashoffset="{{ 283 - (283 * (quality_metrics.scientific_value.score | default(70) / 100)) }}"></circle>
+                    </svg>
+                    <span class="score-text">{{ quality_metrics.scientific_value.score | default(70) }}%</span>
+                </div>
+            </div>
+            <p class="metric-label">{{ quality_metrics.scientific_value.label | default('Good') }}</p>
+            <p class="metric-description">{{ quality_metrics.scientific_value.description | default('Well documented') }}</p>
+        </div>
+
+        {# DANDI Ready Metric #}
+        <div class="quality-metric">
+            <div class="metric-header">
+                <span class="metric-icon">🗄️</span>
+                <h4>DANDI Ready</h4>
+            </div>
+            <div class="metric-score {{ quality_metrics.dandi_ready.rating | default('needs-work') }}">
+                <div class="score-circle">
+                    <svg viewBox="0 0 100 100">
+                        <circle class="bg" cx="50" cy="50" r="45"></circle>
+                        <circle class="fill" cx="50" cy="50" r="45"
+                                stroke-dasharray="283"
+                                stroke-dashoffset="{{ 283 - (283 * (quality_metrics.dandi_ready.score | default(60) / 100)) }}"></circle>
+                    </svg>
+                    <span class="score-text">{{ quality_metrics.dandi_ready.score | default(60) }}%</span>
+                </div>
+            </div>
+            <p class="metric-label">{{ quality_metrics.dandi_ready.label | default('Needs Work') }}</p>
+            <p class="metric-description">{{ quality_metrics.dandi_ready.description | default('Some fields missing') }}</p>
+        </div>
+    </div>
+</div>
+
+{# Metadata Completeness Progress #}
+<div class="metadata-completeness-section">
+    <h3>📊 Metadata Completeness</h3>
+    <div class="completeness-visual">
+        <div class="progress-bar-container">
+            <div class="progress-bar" style="width: {{ metadata_completeness.percentage | default(45) }}%">
+                <span class="progress-label">{{ metadata_completeness.percentage | default(45) }}% Complete</span>
+            </div>
+        </div>
+        <div class="completeness-details">
+            <span class="stat">
+                <strong>{{ metadata_completeness.filled | default(9) }} of {{ metadata_completeness.total | default(20) }}</strong>
+                recommended fields filled
+            </span>
+            <span class="stat {{ 'critical' if metadata_completeness.critical_missing > 0 else '' }}">
+                <strong>{{ metadata_completeness.required_filled | default(3) }} of {{ metadata_completeness.required_total | default(5) }}</strong>
+                required fields filled
+            </span>
+        </div>
+    </div>
+</div>

@@ -67,8 +67,8 @@ outputs/validation_history/
 backend/src/outputs/validation_history/
 
 # Runtime outputs (test results, generated files)
-*.pdfgs
-
+*.pdf
+*html
 outputs/*.json
 outputs/*.pdf
 outputs/*.txt
