@@ -12,10 +12,11 @@ Features:
 - Pre-fill metadata forms with intelligent defaults
 - Performance Optimization: Cache LLM inferences to reduce cost and latency
 """
+
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from models import GlobalState, LogLevel
 from services import LLMService
@@ -49,7 +50,7 @@ class MetadataInferenceEngine:
         self,
         input_path: str,
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Infer metadata from input file using analysis + LLM.
 
@@ -73,11 +74,7 @@ class MetadataInferenceEngine:
 
             # Step 3: Use LLM for intelligent inference (if available)
             if self.llm_service:
-                llm_inferences = await self._llm_powered_inference(
-                    file_meta,
-                    heuristic_inferences,
-                    state
-                )
+                llm_inferences = await self._llm_powered_inference(file_meta, heuristic_inferences, state)
             else:
                 llm_inferences = {
                     "inferred_metadata": {},
@@ -97,14 +94,15 @@ class MetadataInferenceEngine:
                 "Metadata inference completed",
                 {
                     "inferred_fields": list(combined_result["inferred_metadata"].keys()),
-                    "avg_confidence": sum(combined_result["confidence_scores"].values()) / max(len(combined_result["confidence_scores"]), 1),
-                }
+                    "avg_confidence": sum(combined_result["confidence_scores"].values())
+                    / max(len(combined_result["confidence_scores"]), 1),
+                },
             )
 
             return combined_result
 
         except Exception as e:
-            logger.error(f"Metadata inference failed: {e}")
+            logger.exception(f"Metadata inference failed: {e}")
             state.add_log(
                 LogLevel.WARNING,
                 f"Metadata inference failed: {e}",
@@ -121,7 +119,7 @@ class MetadataInferenceEngine:
         self,
         input_path: str,
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Extract technical metadata directly from file.
 
@@ -153,7 +151,7 @@ class MetadataInferenceEngine:
 
         return metadata
 
-    def _extract_spikeglx_metadata(self, input_path: str) -> Dict[str, Any]:
+    def _extract_spikeglx_metadata(self, input_path: str) -> dict[str, Any]:
         """Extract metadata from SpikeGLX files."""
         meta = {"recording_type": "electrophysiology", "system": "SpikeGLX"}
 
@@ -176,7 +174,7 @@ class MetadataInferenceEngine:
         meta_file = file_path.with_suffix(".meta")
         if meta_file.exists():
             try:
-                with open(meta_file, 'r') as f:
+                with open(meta_file) as f:
                     for line in f:
                         if "=" in line:
                             key, value = line.strip().split("=", 1)
@@ -186,19 +184,20 @@ class MetadataInferenceEngine:
                                 meta["channel_count"] = int(value)
                             elif key == "fileTimeSecs":
                                 meta["duration_seconds"] = float(value)
-            except Exception:
-                pass
+            except Exception as e:
+                # Log metadata extraction failure but continue - this is non-critical
+                self._state.add_log(LogLevel.WARNING, f"Failed to extract SpikeGLX metadata from .meta file: {e}")
 
         return meta
 
-    def _extract_openephys_metadata(self, input_path: str) -> Dict[str, Any]:
+    def _extract_openephys_metadata(self, input_path: str) -> dict[str, Any]:
         """Extract metadata from OpenEphys files."""
         return {
             "recording_type": "electrophysiology",
             "system": "Open Ephys",
         }
 
-    def _extract_intan_metadata(self, input_path: str) -> Dict[str, Any]:
+    def _extract_intan_metadata(self, input_path: str) -> dict[str, Any]:
         """Extract metadata from Intan files."""
         return {
             "recording_type": "electrophysiology",
@@ -207,9 +206,9 @@ class MetadataInferenceEngine:
 
     def _apply_heuristic_rules(
         self,
-        file_meta: Dict[str, Any],
+        file_meta: dict[str, Any],
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Apply heuristic rules to infer metadata.
 
@@ -268,10 +267,10 @@ class MetadataInferenceEngine:
 
     async def _llm_powered_inference(
         self,
-        file_meta: Dict[str, Any],
-        heuristic_inferences: Dict[str, Any],
+        file_meta: dict[str, Any],
+        heuristic_inferences: dict[str, Any],
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Use LLM to infer additional metadata with reasoning.
 
@@ -368,26 +367,24 @@ Return detailed JSON with your best inferences."""
                 "confidence_scores": {
                     "type": "object",
                     "description": "Confidence 0-100 for each inferred field",
-                    "additionalProperties": {"type": "number"}
+                    "additionalProperties": {"type": "number"},
                 },
                 "reasoning": {
                     "type": "object",
                     "description": "Detailed explanation of how each inference was made",
-                    "additionalProperties": {"type": "string"}
+                    "additionalProperties": {"type": "string"},
                 },
-                "analysis_summary": {
-                    "type": "string",
-                    "description": "Brief summary of the file analysis"
-                }
+                "analysis_summary": {"type": "string", "description": "Brief summary of the file analysis"},
             },
             "required": ["inferred_metadata", "confidence_scores", "reasoning"],
         }
 
         # PERFORMANCE OPTIMIZATION: Check cache first before expensive LLM call
+        # BUG FIX: Use only available variables from method signature
         cache_context = {
-            "filename": filename,
-            "file_info": file_info,
-            "file_meta": file_meta
+            "file_meta": file_meta,
+            "heuristic_inferences": heuristic_inferences,
+            "input_path": getattr(state, "input_path", "unknown"),
         }
 
         cache_key = "metadata_inference"
@@ -396,11 +393,11 @@ Return detailed JSON with your best inferences."""
         if cached_result:
             state.add_log(
                 LogLevel.INFO,
-                f"⚡ Cache HIT: Using cached metadata inference (saved ~2-3s and API cost)",
+                "⚡ Cache HIT: Using cached metadata inference (saved ~2-3s and API cost)",
                 {
                     "cache_age_seconds": cached_result.get("cache_age_seconds"),
                     "inferred_fields": list(cached_result.get("value", {}).get("inferred_metadata", {}).keys()),
-                }
+                },
             )
             return cached_result["value"]
 
@@ -422,24 +419,20 @@ Return detailed JSON with your best inferences."""
                 "LLM metadata inference completed",
                 {
                     "inferred_fields": list(response.get("inferred_metadata", {}).keys()),
-                }
+                },
             )
 
             # PERFORMANCE OPTIMIZATION: Store result in cache for future use
             # Calculate average confidence to determine if we should cache
             confidence_scores = response.get("confidence_scores", {})
-            avg_confidence = (
-                sum(confidence_scores.values()) / len(confidence_scores)
-                if confidence_scores
-                else 0.0
-            )
+            avg_confidence = sum(confidence_scores.values()) / len(confidence_scores) if confidence_scores else 0.0
 
             cached = await self.cache.set(
                 field_name=cache_key,
                 input_context=cache_context,
                 value=response,
                 confidence=avg_confidence,
-                source="llm_metadata_inference"
+                source="llm_metadata_inference",
             )
 
             if cached:
@@ -451,7 +444,7 @@ Return detailed JSON with your best inferences."""
             return response
 
         except Exception as e:
-            logger.error(f"LLM inference failed: {e}")
+            logger.exception(f"LLM inference failed: {e}")
             state.add_log(
                 LogLevel.WARNING,
                 f"LLM-powered inference failed: {e}",
@@ -464,10 +457,10 @@ Return detailed JSON with your best inferences."""
 
     def _combine_inferences(
         self,
-        file_meta: Dict[str, Any],
-        heuristic_inferences: Dict[str, Any],
-        llm_inferences: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        file_meta: dict[str, Any],
+        heuristic_inferences: dict[str, Any],
+        llm_inferences: dict[str, Any],
+    ) -> dict[str, Any]:
         """
         Combine all inference sources with priority: LLM > Heuristic > File metadata.
 
@@ -513,23 +506,15 @@ Return detailed JSON with your best inferences."""
         # Generate suggestions for user
         suggestions.append("✅ Automatically inferred metadata from file analysis")
 
-        low_confidence_fields = [
-            key for key, conf in combined_confidence.items() if conf < 70
-        ]
+        low_confidence_fields = [key for key, conf in combined_confidence.items() if conf < 70]
         if low_confidence_fields:
-            suggestions.append(
-                f"⚠️ Low confidence fields: {', '.join(low_confidence_fields)}. Please review."
-            )
+            suggestions.append(f"⚠️ Low confidence fields: {', '.join(low_confidence_fields)}. Please review.")
 
         if combined_metadata.get("species"):
-            suggestions.append(
-                f"🔍 Detected species: {combined_metadata['species']}. Verify if correct."
-            )
+            suggestions.append(f"🔍 Detected species: {combined_metadata['species']}. Verify if correct.")
 
         if combined_metadata.get("brain_region"):
-            suggestions.append(
-                f"🧠 Detected brain region: {combined_metadata['brain_region']}. Verify if correct."
-            )
+            suggestions.append(f"🧠 Detected brain region: {combined_metadata['brain_region']}. Verify if correct.")
 
         return {
             "inferred_metadata": combined_metadata,

@@ -4,11 +4,12 @@ Model Context Protocol (MCP) message schemas.
 This module defines the message format for inter-agent communication
 following the JSON-RPC 2.0 protocol structure.
 """
+
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 from uuid import uuid4
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class MCPMessage(BaseModel):
@@ -28,7 +29,7 @@ class MCPMessage(BaseModel):
     action: str = Field(
         description="Action to perform (e.g., detect_format, run_conversion)",
     )
-    context: Dict[str, Any] = Field(
+    context: dict[str, Any] = Field(
         default_factory=dict,
         description="Action-specific payload data",
     )
@@ -42,9 +43,7 @@ class MCPMessage(BaseModel):
     )
 
     # Pydantic V2 configuration
-    model_config = ConfigDict(
-        json_encoders={datetime: lambda v: v.isoformat()}
-    )
+    model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
 
 
 class MCPResponse(BaseModel):
@@ -64,11 +63,11 @@ class MCPResponse(BaseModel):
     success: bool = Field(
         description="Whether the action succeeded",
     )
-    result: Optional[Dict[str, Any]] = Field(
+    result: Optional[dict[str, Any]] = Field(
         default=None,
         description="Action result data (if success=True)",
     )
-    error: Optional[Dict[str, Any]] = Field(
+    error: Optional[dict[str, Any]] = Field(
         default=None,
         description="Error details (if success=False)",
     )
@@ -78,15 +77,13 @@ class MCPResponse(BaseModel):
     )
 
     # Pydantic V2 configuration
-    model_config = ConfigDict(
-        json_encoders={datetime: lambda v: v.isoformat()}
-    )
+    model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
 
     @classmethod
     def success_response(
         cls,
         reply_to: str,
-        result: Dict[str, Any],
+        result: dict[str, Any],
     ) -> "MCPResponse":
         """
         Create a success response.
@@ -110,7 +107,7 @@ class MCPResponse(BaseModel):
         reply_to: str,
         error_code: str,
         error_message: str,
-        error_context: Optional[Dict[str, Any]] = None,
+        error_context: Optional[dict[str, Any]] = None,
     ) -> "MCPResponse":
         """
         Create an error response.
@@ -149,7 +146,7 @@ class MCPEvent(BaseModel):
     event_type: str = Field(
         description="Event type (e.g., status_update, progress_update)",
     )
-    data: Dict[str, Any] = Field(
+    data: dict[str, Any] = Field(
         default_factory=dict,
         description="Event payload",
     )
@@ -159,6 +156,4 @@ class MCPEvent(BaseModel):
     )
 
     # Pydantic V2 configuration
-    model_config = ConfigDict(
-        json_encoders={datetime: lambda v: v.isoformat()}
-    )
+    model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})

@@ -10,11 +10,12 @@ Features:
 - Performance monitoring
 - Structured output support
 """
+
 import asyncio
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Optional
 
 from anthropic import AsyncAnthropic
 
@@ -58,24 +59,17 @@ async def call_with_retry(
 
         except Exception as e:
             last_exception = e
-            logger.warning(
-                f"Attempt {attempt + 1}/{max_retries} failed: {str(e)[:100]}"
-            )
+            logger.warning(f"Attempt {attempt + 1}/{max_retries} failed: {str(e)[:100]}")
 
             # Don't sleep on last attempt
             if attempt < max_retries - 1:
                 # Calculate exponential backoff
-                delay = min(
-                    base_delay * (exponential_base ** attempt),
-                    max_delay
-                )
+                delay = min(base_delay * (exponential_base**attempt), max_delay)
                 logger.info(f"Retrying in {delay:.2f} seconds...")
                 await asyncio.sleep(delay)
 
     # All retries exhausted
-    logger.error(
-        f"All {max_retries} attempts failed. Last error: {str(last_exception)}"
-    )
+    logger.error(f"All {max_retries} attempts failed. Last error: {str(last_exception)}")
 
     # Try fallback if provided
     if fallback:
@@ -83,15 +77,15 @@ async def call_with_retry(
             logger.info("Attempting fallback function...")
             return await fallback()
         except Exception as fallback_error:
-            logger.error(f"Fallback also failed: {str(fallback_error)}")
+            logger.exception(f"Fallback also failed: {str(fallback_error)}")
             raise LLMServiceError(
                 f"All retries and fallback failed: {str(last_exception)}",
                 provider="retry_mechanism",
                 details={
                     "max_retries": max_retries,
                     "last_error": str(last_exception),
-                    "fallback_error": str(fallback_error)
-                }
+                    "fallback_error": str(fallback_error),
+                },
             )
 
     # No fallback, raise last exception
@@ -134,9 +128,9 @@ class LLMService(ABC):
     async def generate_structured_output(
         self,
         prompt: str,
-        output_schema: Dict[str, Any],
+        output_schema: dict[str, Any],
         system_prompt: Optional[str] = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Generate structured output matching a schema.
 
@@ -157,7 +151,7 @@ class LLMService(ABC):
 class LLMServiceError(Exception):
     """Base exception for LLM service errors."""
 
-    def __init__(self, message: str, provider: str, details: Optional[Dict[str, Any]] = None):
+    def __init__(self, message: str, provider: str, details: Optional[dict[str, Any]] = None):
         super().__init__(message)
         self.provider = provider
         self.details = details or {}
@@ -209,6 +203,7 @@ class AnthropicLLMService(LLMService):
         Raises:
             LLMServiceError: If API call fails after all retries
         """
+
         async def _api_call():
             messages = [{"role": "user", "content": prompt}]
 
@@ -225,8 +220,7 @@ class AnthropicLLMService(LLMService):
             # Start performance monitoring
             start_time = time.time()
             logger.info(
-                f"LLM API call starting: model={self._model}, "
-                f"max_tokens={max_tokens}, prompt_length={len(prompt)}"
+                f"LLM API call starting: model={self._model}, max_tokens={max_tokens}, prompt_length={len(prompt)}"
             )
 
             try:
@@ -235,15 +229,9 @@ class AnthropicLLMService(LLMService):
                 # Log performance metrics
                 duration = time.time() - start_time
                 if duration > 10:
-                    logger.error(
-                        f"LLM API call VERY SLOW: {duration:.2f}s - "
-                        f"model={self._model}, tokens={max_tokens}"
-                    )
+                    logger.error(f"LLM API call VERY SLOW: {duration:.2f}s - model={self._model}, tokens={max_tokens}")
                 elif duration > 5:
-                    logger.warning(
-                        f"LLM API call slow: {duration:.2f}s - "
-                        f"model={self._model}, tokens={max_tokens}"
-                    )
+                    logger.warning(f"LLM API call slow: {duration:.2f}s - model={self._model}, tokens={max_tokens}")
                 else:
                     logger.info(f"LLM API call completed: {duration:.2f}s")
 
@@ -258,11 +246,8 @@ class AnthropicLLMService(LLMService):
                     )
 
             except Exception as e:
-                duration = time.time() - start_time if 'start_time' in locals() else 0
-                logger.error(
-                    f"LLM API call failed after {duration:.2f}s: {str(e)} - "
-                    f"model={self._model}"
-                )
+                duration = time.time() - start_time if "start_time" in locals() else 0
+                logger.exception(f"LLM API call failed after {duration:.2f}s: {str(e)} - model={self._model}")
                 raise LLMServiceError(
                     f"Failed to generate completion: {str(e)}",
                     provider="anthropic",
@@ -278,9 +263,9 @@ class AnthropicLLMService(LLMService):
     async def generate_structured_output(
         self,
         prompt: str,
-        output_schema: Dict[str, Any],
+        output_schema: dict[str, Any],
         system_prompt: Optional[str] = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Generate structured output using Claude with prompt engineering.
 
@@ -341,16 +326,16 @@ Respond ONLY with the JSON object, no additional text."""
             # Validate against output schema if provided
             if output_schema:
                 try:
-                    from jsonschema import validate, ValidationError as SchemaValidationError
+                    from jsonschema import ValidationError as SchemaValidationError
+                    from jsonschema import validate
+
                     validate(instance=result, schema=output_schema)
                 except ImportError:
                     # jsonschema not installed - log warning but continue
                     logger.warning("jsonschema package not installed - skipping schema validation")
                 except SchemaValidationError as e:
                     duration = time.time() - start_time
-                    logger.error(
-                        f"LLM output failed schema validation after {duration:.2f}s: {str(e)}"
-                    )
+                    logger.exception(f"LLM output failed schema validation after {duration:.2f}s: {str(e)}")
                     raise LLMServiceError(
                         f"LLM response doesn't match expected schema: {str(e)}",
                         provider="anthropic",
@@ -366,15 +351,14 @@ Respond ONLY with the JSON object, no additional text."""
             # Log successful parsing
             duration = time.time() - start_time
             logger.info(
-                f"LLM structured output completed and validated: {duration:.2f}s - "
-                f"result_keys={list(result.keys())}"
+                f"LLM structured output completed and validated: {duration:.2f}s - result_keys={list(result.keys())}"
             )
 
             return result
 
         except json.JSONDecodeError as e:
             duration = time.time() - start_time
-            logger.error(
+            logger.exception(
                 f"LLM structured output JSON parsing failed after {duration:.2f}s: {str(e)} - "
                 f"model={self._model}, response_preview={completion[:100]}"
             )
@@ -388,11 +372,8 @@ Respond ONLY with the JSON object, no additional text."""
                 },
             )
         except Exception as e:
-            duration = time.time() - start_time if 'start_time' in locals() else 0
-            logger.error(
-                f"LLM structured output failed after {duration:.2f}s: {str(e)} - "
-                f"model={self._model}"
-            )
+            duration = time.time() - start_time if "start_time" in locals() else 0
+            logger.exception(f"LLM structured output failed after {duration:.2f}s: {str(e)} - model={self._model}")
             raise LLMServiceError(
                 f"Failed to generate structured output: {str(e)}",
                 provider="anthropic",
@@ -407,7 +388,7 @@ class MockLLMService(LLMService):
     Returns predefined responses without making API calls.
     """
 
-    def __init__(self, responses: Optional[Dict[str, str]] = None):
+    def __init__(self, responses: Optional[dict[str, str]] = None):
         """
         Initialize mock LLM service.
 
@@ -430,9 +411,9 @@ class MockLLMService(LLMService):
     async def generate_structured_output(
         self,
         prompt: str,
-        output_schema: Dict[str, Any],
+        output_schema: dict[str, Any],
         system_prompt: Optional[str] = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Return mock structured output."""
         # Return a minimal valid object based on schema
         return {"mock": True, "schema": output_schema}

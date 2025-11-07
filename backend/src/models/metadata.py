@@ -5,10 +5,11 @@ This module provides strict validation for all metadata fields before conversion
 catching errors immediately with helpful messages instead of failing during conversion.
 """
 
-from pydantic import BaseModel, Field, field_validator, ConfigDict
-from typing import Optional, List
-from datetime import datetime
 import re
+from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class NWBMetadata(BaseModel):
@@ -30,14 +31,14 @@ class NWBMetadata(BaseModel):
         min_length=10,
         max_length=1000,
         description="Description of what was recorded in this session (required before conversion)",
-        examples=["Recording of V1 neurons during visual stimulation with oriented gratings"]
+        examples=["Recording of V1 neurons during visual stimulation with oriented gratings"],
     )
 
-    experimenter: Optional[List[str]] = Field(
+    experimenter: Optional[list[str]] = Field(
         None,
         min_length=1,
         max_length=10,
-        description="Names of people who performed the experiment (required before conversion)"
+        description="Names of people who performed the experiment (required before conversion)",
     )
 
     institution: Optional[str] = Field(
@@ -45,7 +46,7 @@ class NWBMetadata(BaseModel):
         min_length=2,
         max_length=200,
         description="Institution where experiment was performed (required before conversion)",
-        examples=["Massachusetts Institute of Technology", "MIT"]
+        examples=["Massachusetts Institute of Technology", "MIT"],
     )
 
     # ============================================================
@@ -56,51 +57,31 @@ class NWBMetadata(BaseModel):
         None,
         max_length=200,
         description="Lab where experiment was performed",
-        examples=["Smith Lab", "Neural Systems Lab"]
+        examples=["Smith Lab", "Neural Systems Lab"],
     )
 
     session_start_time: Optional[datetime] = Field(
-        None,
-        description="When the session started (ISO 8601 format)",
-        examples=["2024-03-15T14:30:00-05:00"]
+        None, description="When the session started (ISO 8601 format)", examples=["2024-03-15T14:30:00-05:00"]
     )
 
     experiment_description: Optional[str] = Field(
         None,
         max_length=2000,
         description="General description of the experiment",
-        examples=["Investigation of orientation selectivity in mouse V1"]
+        examples=["Investigation of orientation selectivity in mouse V1"],
     )
 
-    session_id: Optional[str] = Field(
-        None,
-        max_length=100,
-        description="Unique identifier for this session"
+    session_id: Optional[str] = Field(None, max_length=100, description="Unique identifier for this session")
+
+    keywords: list[str] = Field(default_factory=list, max_length=20, description="Keywords describing the experiment")
+
+    related_publications: list[str] = Field(
+        default_factory=list, max_length=10, description="DOIs or URLs of related publications"
     )
 
-    keywords: List[str] = Field(
-        default_factory=list,
-        max_length=20,
-        description="Keywords describing the experiment"
-    )
+    protocol: Optional[str] = Field(None, max_length=500, description="Experimental protocol")
 
-    related_publications: List[str] = Field(
-        default_factory=list,
-        max_length=10,
-        description="DOIs or URLs of related publications"
-    )
-
-    protocol: Optional[str] = Field(
-        None,
-        max_length=500,
-        description="Experimental protocol"
-    )
-
-    notes: Optional[str] = Field(
-        None,
-        max_length=2000,
-        description="Additional notes about the session"
-    )
+    notes: Optional[str] = Field(None, max_length=2000, description="Additional notes about the session")
 
     # ============================================================
     # SUBJECT METADATA
@@ -112,54 +93,38 @@ class NWBMetadata(BaseModel):
         max_length=50,
         pattern=r"^[a-zA-Z0-9_-]+$",
         description="Unique identifier for the subject",
-        examples=["mouse001", "rat-123", "subject_A1"]
+        examples=["mouse001", "rat-123", "subject_A1"],
     )
 
     species: Optional[str] = Field(
         None,
         max_length=100,
         description="Species in binomial nomenclature (Genus species)",
-        examples=["Mus musculus", "Rattus norvegicus", "Homo sapiens"]
+        examples=["Mus musculus", "Rattus norvegicus", "Homo sapiens"],
     )
 
     age: Optional[str] = Field(
         None,
         pattern=r"^P(\d+[DWMY])+$",
         description="Age in ISO 8601 duration format",
-        examples=["P90D", "P3M", "P2Y6M"]
+        examples=["P90D", "P3M", "P2Y6M"],
     )
 
     sex: Optional[str] = Field(
-        None,
-        pattern=r"^[MFUO]$",
-        description="Sex: M (male), F (female), U (unknown), O (other)"
+        None, pattern=r"^[MFUO]$", description="Sex: M (male), F (female), U (unknown), O (other)"
     )
 
     weight: Optional[str] = Field(
-        None,
-        pattern=r"^\d+(\.\d+)?\s*(g|kg)$",
-        description="Weight with units",
-        examples=["25.5 g", "0.5 kg"]
+        None, pattern=r"^\d+(\.\d+)?\s*(g|kg)$", description="Weight with units", examples=["25.5 g", "0.5 kg"]
     )
 
-    description: Optional[str] = Field(
-        None,
-        max_length=500,
-        description="Additional description of the subject"
-    )
+    description: Optional[str] = Field(None, max_length=500, description="Additional description of the subject")
 
     strain: Optional[str] = Field(
-        None,
-        max_length=100,
-        description="Strain of the subject",
-        examples=["C57BL/6J", "Sprague Dawley"]
+        None, max_length=100, description="Strain of the subject", examples=["C57BL/6J", "Sprague Dawley"]
     )
 
-    genotype: Optional[str] = Field(
-        None,
-        max_length=200,
-        description="Genotype of the subject"
-    )
+    genotype: Optional[str] = Field(None, max_length=200, description="Genotype of the subject")
 
     # ============================================================
     # CUSTOM VALIDATORS
@@ -221,33 +186,25 @@ class NWBMetadata(BaseModel):
         if v.lower() in common_names:
             suggestion = common_names[v.lower()]
             raise ValueError(
-                f"Species must be in binomial nomenclature (Genus species), not common name. "
-                f"'{v}' → '{suggestion}'"
+                f"Species must be in binomial nomenclature (Genus species), not common name. '{v}' → '{suggestion}'"
             )
 
         # Check format (two words)
         if " " not in v:
             raise ValueError(
-                f"Species must be binomial nomenclature (two words): '{v}' is invalid. "
-                f"Example: 'Mus musculus'"
+                f"Species must be binomial nomenclature (two words): '{v}' is invalid. Example: 'Mus musculus'"
             )
 
         parts = v.split()
         if len(parts) != 2:
-            raise ValueError(
-                f"Species must be exactly two words (Genus species): '{v}' has {len(parts)} words"
-            )
+            raise ValueError(f"Species must be exactly two words (Genus species): '{v}' has {len(parts)} words")
 
         genus, species_name = parts
         if not genus[0].isupper():
-            raise ValueError(
-                f"Genus must be capitalized: '{genus}' → '{genus.capitalize()} {species_name}'"
-            )
+            raise ValueError(f"Genus must be capitalized: '{genus}' → '{genus.capitalize()} {species_name}'")
 
         if not species_name[0].islower():
-            raise ValueError(
-                f"Species must be lowercase: '{genus} {species_name}' → '{genus} {species_name.lower()}'"
-            )
+            raise ValueError(f"Species must be lowercase: '{genus} {species_name}' → '{genus} {species_name.lower()}'")
 
         return v
 
@@ -344,9 +301,7 @@ class NWBMetadata(BaseModel):
         v = v.strip().upper()
 
         if v not in ["M", "F", "U", "O"]:
-            raise ValueError(
-                f"Sex must be M (male), F (female), U (unknown), or O (other). Got: '{v}'"
-            )
+            raise ValueError(f"Sex must be M (male), F (female), U (unknown), or O (other). Got: '{v}'")
 
         return v
 
@@ -365,8 +320,7 @@ class NWBMetadata(BaseModel):
 
         if not match:
             raise ValueError(
-                f"Weight must be in format '<number> g' or '<number> kg'. "
-                f"Got: '{v}'. Examples: '25.5 g', '0.5 kg'"
+                f"Weight must be in format '<number> g' or '<number> kg'. Got: '{v}'. Examples: '25.5 g', '0.5 kg'"
             )
 
         number, unit = match.groups()
@@ -392,13 +346,10 @@ class NWBMetadata(BaseModel):
     model_config = ConfigDict(
         # Security: Prevent extra fields
         extra="forbid",
-
         # Strip whitespace from strings
         str_strip_whitespace=True,
-
         # Use enum values
         use_enum_values=True,
-
         # Example for API docs
         json_schema_extra={
             "examples": [
@@ -413,8 +364,8 @@ class NWBMetadata(BaseModel):
                     "species": "Mus musculus",
                     "age": "P90D",
                     "sex": "M",
-                    "weight": "25.5 g"
+                    "weight": "25.5 g",
                 }
             ]
-        }
+        },
     )

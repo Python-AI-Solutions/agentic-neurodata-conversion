@@ -7,15 +7,8 @@ WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Consolidate state transition logic
 This module provides a single source of truth for all state transition decisions,
 eliminating the distributed logic problem identified in the analysis.
 """
-from typing import List, Set
 
-from .state import (
-    GlobalState,
-    ConversionStatus,
-    ConversationPhase,
-    MetadataRequestPolicy,
-    ValidationOutcome,
-)
+from .state import ConversationPhase, ConversionStatus, GlobalState, MetadataRequestPolicy
 
 
 class WorkflowStateManager:
@@ -28,13 +21,13 @@ class WorkflowStateManager:
 
     # Required DANDI metadata fields
     REQUIRED_DANDI_FIELDS = [
-        'experimenter',
-        'institution',
-        'experiment_description',
-        'session_start_time',
-        'subject_id',
-        'species',
-        'sex'
+        "experimenter",
+        "institution",
+        "experiment_description",
+        "session_start_time",
+        "subject_id",
+        "species",
+        "sex",
     ]
 
     def __init__(self):
@@ -58,10 +51,10 @@ class WorkflowStateManager:
             True if metadata should be requested, False otherwise
         """
         return (
-            self._has_missing_required_fields(state) and
-            self._not_already_asked(state) and
-            not self._user_declined_metadata(state) and
-            not self._in_active_metadata_conversation(state)
+            self._has_missing_required_fields(state)
+            and self._not_already_asked(state)
+            and not self._user_declined_metadata(state)
+            and not self._in_active_metadata_conversation(state)
         )
 
     def can_accept_upload(self, state: GlobalState) -> bool:
@@ -118,12 +111,8 @@ class WorkflowStateManager:
         Returns:
             True if active conversation, False otherwise
         """
-        return (
-            state.status == ConversionStatus.AWAITING_USER_INPUT and
-            (
-                len(state.conversation_history) > 0 or
-                state.conversation_phase == ConversationPhase.METADATA_COLLECTION
-            )
+        return state.status == ConversionStatus.AWAITING_USER_INPUT and (
+            len(state.conversation_history) > 0 or state.conversation_phase == ConversationPhase.METADATA_COLLECTION
         )
 
     def should_proceed_with_minimal_metadata(self, state: GlobalState) -> bool:
@@ -146,7 +135,7 @@ class WorkflowStateManager:
             MetadataRequestPolicy.ASKED_ONCE,  # Already asked once
         }
 
-    def get_missing_required_fields(self, state: GlobalState) -> List[str]:
+    def get_missing_required_fields(self, state: GlobalState) -> list[str]:
         """
         Get list of missing required DANDI fields.
 
@@ -185,8 +174,8 @@ class WorkflowStateManager:
     def _in_active_metadata_conversation(self, state: GlobalState) -> bool:
         """Check if currently in active metadata collection conversation."""
         return (
-            state.conversation_phase == ConversationPhase.METADATA_COLLECTION and
-            state.metadata_policy == MetadataRequestPolicy.ASKED_ONCE
+            state.conversation_phase == ConversationPhase.METADATA_COLLECTION
+            and state.metadata_policy == MetadataRequestPolicy.ASKED_ONCE
         )
 
     def _recently_had_user_response(self, state: GlobalState) -> bool:
@@ -234,7 +223,7 @@ class WorkflowStateManager:
         # Update deprecated fields for backward compatibility
         state.user_wants_minimal = True
 
-    def format_missing_fields_message(self, missing_fields: List[str]) -> str:
+    def format_missing_fields_message(self, missing_fields: list[str]) -> str:
         """
         Format a user-friendly message for missing fields.
 
@@ -248,13 +237,13 @@ class WorkflowStateManager:
             return ""
 
         field_descriptions = {
-            'experimenter': 'experimenter name(s)',
-            'institution': 'institution name',
-            'experiment_description': 'experiment description',
-            'session_start_time': 'session start time',
-            'subject_id': 'subject ID',
-            'species': 'species (e.g., Mus musculus for mouse)',
-            'sex': "subject's sex (M/F/U)",
+            "experimenter": "experimenter name(s)",
+            "institution": "institution name",
+            "experiment_description": "experiment description",
+            "session_start_time": "session start time",
+            "subject_id": "subject ID",
+            "species": "species (e.g., Mus musculus for mouse)",
+            "sex": "subject's sex (M/F/U)",
         }
 
         formatted = []

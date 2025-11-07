@@ -5,12 +5,13 @@ This module handles persistent logging to disk for scientific transparency
 and traceability. Each conversion session generates a timestamped log file
 containing detailed process information.
 """
+
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Optional
 
-from models.state import LogEntry, LogLevel
+from models.state import LogEntry
 
 
 class LogFileManager:
@@ -62,13 +63,13 @@ class LogFileManager:
         self.current_log_file = self.output_dir / filename
 
         # Write header
-        with open(self.current_log_file, 'w', encoding='utf-8') as f:
-            f.write(f"=" * 80 + "\n")
-            f.write(f"NWB Conversion Process Log\n")
+        with open(self.current_log_file, "w", encoding="utf-8") as f:
+            f.write("=" * 80 + "\n")
+            f.write("NWB Conversion Process Log\n")
             f.write(f"Session started: {self.session_start.strftime('%m/%d/%Y, %I:%M:%S %p')}\n")
             if session_id:
                 f.write(f"Session ID: {session_id}\n")
-            f.write(f"=" * 80 + "\n\n")
+            f.write("=" * 80 + "\n\n")
 
         return self.current_log_file
 
@@ -83,9 +84,9 @@ class LogFileManager:
             # Auto-create log file if not exists
             self.create_session_log_file()
 
-        with open(self.current_log_file, 'a', encoding='utf-8') as f:
+        with open(self.current_log_file, "a", encoding="utf-8") as f:
             # Format timestamp
-            timestamp_str = log_entry.timestamp.strftime('%m/%d/%Y, %I:%M:%S %p')
+            timestamp_str = log_entry.timestamp.strftime("%m/%d/%Y, %I:%M:%S %p")
 
             # Format log level
             level_str = log_entry.level.value.upper()
@@ -100,8 +101,8 @@ class LogFileManager:
                 context_json = json.dumps(log_entry.context, indent=2, default=str)
                 # Indent each line of context
                 indented_context = "\n".join(
-                    "                         " + line  # Align with message
-                    for line in context_json.split("\n")
+                    "                         " + line
+                    for line in context_json.split("\n")  # Align with message
                 )
                 f.write(f"                         Context: \n{indented_context}\n")
 
@@ -130,7 +131,7 @@ class LogFileManager:
         session_end = datetime.now()
         duration = session_end - self.session_start if self.session_start else None
 
-        with open(self.current_log_file, 'a', encoding='utf-8') as f:
+        with open(self.current_log_file, "a", encoding="utf-8") as f:
             f.write("\n" + "=" * 80 + "\n")
             f.write(f"Session ended: {session_end.strftime('%m/%d/%Y, %I:%M:%S %p')}\n")
             if duration:
@@ -162,7 +163,7 @@ class LogFileManager:
         if self.current_log_file is None:
             self.create_session_log_file()
 
-        with open(self.current_log_file, 'a', encoding='utf-8') as f:
+        with open(self.current_log_file, "a", encoding="utf-8") as f:
             f.write("-" * 80 + "\n")
             f.write(f"STAGE: {stage_name}\n")
             f.write("-" * 80 + "\n\n")

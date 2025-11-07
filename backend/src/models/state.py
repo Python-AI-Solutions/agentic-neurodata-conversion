@@ -4,13 +4,14 @@ Global state management for conversion pipeline.
 This module defines the GlobalState model that tracks the entire conversion
 lifecycle, from upload through validation to final output.
 """
+
 import asyncio
 import threading
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Optional
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 # Import MCPEvent for WebSocket progress events
 # Safe to import here - no circular dependency (mcp.py doesn't import state.py)
@@ -60,6 +61,7 @@ class ValidationOutcome(str, Enum):
     WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Replace string-based overall_status
     with type-safe enum (Recommendation 6.2)
     """
+
     PASSED = "PASSED"
     PASSED_WITH_ISSUES = "PASSED_WITH_ISSUES"
     FAILED = "FAILED"
@@ -72,6 +74,7 @@ class ConversationPhase(str, Enum):
     WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Replace string-based conversation_type
     with type-safe enum (Recommendation 6.2, Breaking Point #3)
     """
+
     IDLE = "idle"  # No active conversation
     METADATA_COLLECTION = "required_metadata"  # Collecting required metadata
     VALIDATION_ANALYSIS = "validation_analysis"  # Analyzing validation failures
@@ -85,6 +88,7 @@ class MetadataRequestPolicy(str, Enum):
     WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Unify metadata_requests_count and
     user_wants_minimal into single enum (Recommendation 6.4, Breaking Point #5)
     """
+
     NOT_ASKED = "not_asked"  # Haven't requested metadata yet
     ASKED_ONCE = "asked_once"  # Requested once, awaiting response
     USER_PROVIDED = "user_provided"  # User gave metadata
@@ -109,13 +113,14 @@ class MetadataProvenance(str, Enum):
     Essential for scientific transparency, DANDI compliance, and user trust.
     Allows users to understand reliability and review requirements for each field.
     """
-    USER_SPECIFIED = "user-specified"       # User explicitly provided this value
-    AI_PARSED = "ai-parsed"                 # LLM parsed from natural language input
-    AI_INFERRED = "ai-inferred"             # AI guessed/inferred from context
-    AUTO_EXTRACTED = "auto-extracted"       # Extracted from file metadata (.meta, .json)
-    AUTO_CORRECTED = "auto-corrected"       # Applied during validation error correction
-    DEFAULT = "default"                     # Fallback/placeholder value
-    SYSTEM_GENERATED = "system-generated"   # Auto-generated (UUIDs, timestamps)
+
+    USER_SPECIFIED = "user-specified"  # User explicitly provided this value
+    AI_PARSED = "ai-parsed"  # LLM parsed from natural language input
+    AI_INFERRED = "ai-inferred"  # AI guessed/inferred from context
+    AUTO_EXTRACTED = "auto-extracted"  # Extracted from file metadata (.meta, .json)
+    AUTO_CORRECTED = "auto-corrected"  # Applied during validation error correction
+    DEFAULT = "default"  # Fallback/placeholder value
+    SYSTEM_GENERATED = "system-generated"  # Auto-generated (UUIDs, timestamps)
 
 
 class LogEntry(BaseModel):
@@ -124,12 +129,10 @@ class LogEntry(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.now)
     level: LogLevel
     message: str
-    context: Dict[str, Any] = Field(default_factory=dict)
+    context: dict[str, Any] = Field(default_factory=dict)
 
     # Pydantic V2 configuration
-    model_config = ConfigDict(
-        json_encoders={datetime: lambda v: v.isoformat()}
-    )
+    model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
 
 
 class ProvenanceInfo(BaseModel):
@@ -138,38 +141,25 @@ class ProvenanceInfo(BaseModel):
 
     Provides complete audit trail for scientific reproducibility and DANDI compliance.
     """
+
     value: Any = Field(description="The actual metadata value")
     provenance: MetadataProvenance = Field(description="How this value was obtained")
     confidence: float = Field(
-        default=100.0,
-        ge=0.0,
-        le=100.0,
-        description="Confidence score (0-100) for AI-parsed/inferred values"
+        default=100.0, ge=0.0, le=100.0, description="Confidence score (0-100) for AI-parsed/inferred values"
     )
-    source: str = Field(
-        description="Human-readable description of where this value came from"
-    )
-    timestamp: datetime = Field(
-        default_factory=datetime.now,
-        description="When this provenance was recorded"
-    )
-    needs_review: bool = Field(
-        default=False,
-        description="Flag indicating low-confidence field requiring user review"
-    )
+    source: str = Field(description="Human-readable description of where this value came from")
+    timestamp: datetime = Field(default_factory=datetime.now, description="When this provenance was recorded")
+    needs_review: bool = Field(default=False, description="Flag indicating low-confidence field requiring user review")
     raw_input: Optional[str] = Field(
-        default=None,
-        description="Original user input or file content that led to this value"
+        default=None, description="Original user input or file content that led to this value"
     )
 
     # Pydantic V2 configuration
-    model_config = ConfigDict(
-        json_encoders={datetime: lambda v: v.isoformat()}
-    )
+    model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
 
 
-# WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Add retry limit (Recommendation 6.5, Breaking Point #7)
-# Maximum conversion retry attempts (not LLM correction attempts)
+# Retry limit to prevent infinite loops and protect API budget
+# Matches documented architecture (CLAUDE.md) and industry standards
 MAX_RETRY_ATTEMPTS = 5
 
 
@@ -183,13 +173,11 @@ class GlobalState(BaseModel):
     # Status tracking
     status: ConversionStatus = Field(default=ConversionStatus.IDLE)
     validation_status: Optional[ValidationStatus] = Field(
-        default=None,
-        description="Final session outcome including user decisions (Story 2.1, 8.8)"
+        default=None, description="Final session outcome including user decisions (Story 2.1, 8.8)"
     )
     # WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Use ValidationOutcome enum instead of string
     overall_status: Optional[ValidationOutcome] = Field(
-        default=None,
-        description="NWB Inspector evaluation result: PASSED, PASSED_WITH_ISSUES, or FAILED (Story 7.2)"
+        default=None, description="NWB Inspector evaluation result: PASSED, PASSED_WITH_ISSUES, or FAILED (Story 7.2)"
     )
 
     # Thread safety - not serialized by Pydantic (Pydantic V2: private field)
@@ -201,7 +189,7 @@ class GlobalState(BaseModel):
     # LLM processing state
     llm_processing: bool = Field(
         default=False,
-        description="EDGE CASE FIX #1: Flag indicating LLM call in progress (prevents concurrent LLM calls)"
+        description="EDGE CASE FIX #1: Flag indicating LLM call in progress (prevents concurrent LLM calls)",
     )
 
     # File paths
@@ -209,30 +197,27 @@ class GlobalState(BaseModel):
     output_path: Optional[str] = Field(default=None)
     pending_conversion_input_path: Optional[str] = Field(
         default=None,
-        description="Stores original input_path when metadata conversation starts, used to resume conversion after skip"
+        description="Stores original input_path when metadata conversation starts, used to resume conversion after skip",
     )
     detected_format: Optional[str] = Field(
-        default=None,
-        description="Auto-detected data format (e.g., SpikeGLX, OpenEphys)"
+        default=None, description="Auto-detected data format (e.g., SpikeGLX, OpenEphys)"
     )
 
     # Metadata
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-    inference_result: Dict[str, Any] = Field(
-        default_factory=dict,
-        description="Internal metadata inference results (not included in NWB output)"
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    inference_result: dict[str, Any] = Field(
+        default_factory=dict, description="Internal metadata inference results (not included in NWB output)"
     )
-    user_provided_metadata: Dict[str, Any] = Field(
-        default_factory=dict,
-        description="Metadata explicitly provided by user (separate from auto-inferred)"
+    user_provided_metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Metadata explicitly provided by user (separate from auto-inferred)"
     )
-    auto_extracted_metadata: Dict[str, Any] = Field(
+    auto_extracted_metadata: dict[str, Any] = Field(
         default_factory=dict,
-        description="Metadata automatically extracted from file analysis (separate from user-provided)"
+        description="Metadata automatically extracted from file analysis (separate from user-provided)",
     )
-    metadata_provenance: Dict[str, ProvenanceInfo] = Field(
+    metadata_provenance: dict[str, ProvenanceInfo] = Field(
         default_factory=dict,
-        description="Tracks source, confidence, and origin of each metadata field for scientific transparency"
+        description="Tracks source, confidence, and origin of each metadata field for scientific transparency",
     )
 
     # Progress tracking
@@ -243,81 +228,68 @@ class GlobalState(BaseModel):
     # Conversational state
     # WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Use ConversationPhase enum instead of string
     conversation_phase: ConversationPhase = Field(
-        default=ConversationPhase.IDLE,
-        description="Current phase of user conversation"
+        default=ConversationPhase.IDLE, description="Current phase of user conversation"
     )
     # Deprecated: kept for backward compatibility during migration, use conversation_phase instead
-    conversation_type: Optional[str] = Field(
-        default=None,
-        description="DEPRECATED: Use conversation_phase instead"
-    )
+    conversation_type: Optional[str] = Field(default=None, description="DEPRECATED: Use conversation_phase instead")
     llm_message: Optional[str] = Field(default=None)
-    conversation_history: List[Dict[str, Any]] = Field(
-        default_factory=list,
-        description="Conversation history for LLM context (rolling window of last 50 messages)"
+    conversation_history: list[dict[str, Any]] = Field(
+        default_factory=list, description="Conversation history for LLM context (rolling window of last 50 messages)"
     )
 
     # Conversation memory - track user preferences
-    user_declined_fields: Set[str] = Field(
-        default_factory=set,
-        description="Fields/metadata that user explicitly declined to provide"
+    user_declined_fields: set[str] = Field(
+        default_factory=set, description="Fields/metadata that user explicitly declined to provide"
     )
-    already_asked_fields: Set[str] = Field(
+    already_asked_fields: set[str] = Field(
         default_factory=set,
-        description="Fields that have already been requested from user in this session (prevents re-asking)"
+        description="Fields that have already been requested from user in this session (prevents re-asking)",
     )
     # WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Use MetadataRequestPolicy enum
     metadata_policy: MetadataRequestPolicy = Field(
         default=MetadataRequestPolicy.NOT_ASKED,
-        description="Policy for metadata requests - replaces metadata_requests_count and user_wants_minimal"
+        description="Policy for metadata requests - replaces metadata_requests_count and user_wants_minimal",
     )
     # Deprecated: kept for backward compatibility during migration
     metadata_requests_count: int = Field(
         default=0,
         ge=0,
-        description="DEPRECATED: Use metadata_policy instead. Number of times we've asked user for metadata"
+        description="DEPRECATED: Use metadata_policy instead. Number of times we've asked user for metadata",
     )
     user_wants_minimal: bool = Field(
         default=False,
-        description="DEPRECATED: Use metadata_policy instead. User has indicated they want minimal metadata conversion"
+        description="DEPRECATED: Use metadata_policy instead. User has indicated they want minimal metadata conversion",
     )
     user_wants_sequential: bool = Field(
-        default=False,
-        description="User has requested sequential (one-by-one) questions instead of batch"
+        default=False, description="User has requested sequential (one-by-one) questions instead of batch"
     )
-    pending_parsed_fields: Dict[str, Any] = Field(
-        default_factory=dict,
-        description="Temporarily stores parsed metadata fields awaiting user confirmation"
+    pending_parsed_fields: dict[str, Any] = Field(
+        default_factory=dict, description="Temporarily stores parsed metadata fields awaiting user confirmation"
     )
 
     # Logs and history
-    logs: List[LogEntry] = Field(default_factory=list)
+    logs: list[LogEntry] = Field(default_factory=list)
     log_file_path: Optional[str] = Field(
-        default=None,
-        description="Path to persistent log file for this conversion session"
+        default=None, description="Path to persistent log file for this conversion session"
     )
 
     # Correction tracking
-    # WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Add retry limit (Breaking Point #7)
-    # Changed from unlimited to MAX_RETRY_ATTEMPTS=5
+    # Retry limit enforced to prevent infinite loops and protect API budget
     correction_attempt: int = Field(default=0, ge=0, le=MAX_RETRY_ATTEMPTS)
 
     # Bug #11 fix: Track previous validation issues for "no progress" detection (Story 4.7 lines 461-466)
-    previous_validation_issues: Optional[List[Dict[str, Any]]] = Field(
-        default=None,
-        description="Validation issues from previous attempt for detecting 'no progress'"
+    previous_validation_issues: Optional[list[dict[str, Any]]] = Field(
+        default=None, description="Validation issues from previous attempt for detecting 'no progress'"
     )
     user_provided_input_this_attempt: bool = Field(
-        default=False,
-        description="Whether user provided new input in current correction attempt"
+        default=False, description="Whether user provided new input in current correction attempt"
     )
     auto_corrections_applied_this_attempt: bool = Field(
-        default=False,
-        description="Whether automatic corrections were applied in current attempt"
+        default=False, description="Whether automatic corrections were applied in current attempt"
     )
 
     # File integrity
-    checksums: Dict[str, str] = Field(
+    checksums: dict[str, str] = Field(
         default_factory=dict,
         description="SHA256 checksums: {file_path: checksum}",
     )
@@ -329,7 +301,7 @@ class GlobalState(BaseModel):
     # Pydantic V2 configuration
     model_config = ConfigDict(
         json_encoders={datetime: lambda v: v.isoformat()},
-        arbitrary_types_allowed=True  # Allow asyncio.Lock type
+        arbitrary_types_allowed=True,  # Allow asyncio.Lock type
     )
 
     def __init__(self, **data):
@@ -337,10 +309,10 @@ class GlobalState(BaseModel):
         super().__init__(**data)
         # Initialize locks as None - will be created lazily when needed in async context
         # This avoids "no event loop" errors when GlobalState is created outside async context
-        object.__setattr__(self, '_status_lock', None)
-        object.__setattr__(self, '_conversation_lock', None)
-        object.__setattr__(self, '_llm_lock', None)
-        object.__setattr__(self, '_lock_init_lock', threading.Lock())  # Thread-safe lock initialization
+        object.__setattr__(self, "_status_lock", None)
+        object.__setattr__(self, "_conversation_lock", None)
+        object.__setattr__(self, "_llm_lock", None)
+        object.__setattr__(self, "_lock_init_lock", threading.Lock())  # Thread-safe lock initialization
 
     def set_mcp_server(self, mcp_server: Any) -> None:
         """
@@ -349,9 +321,9 @@ class GlobalState(BaseModel):
         Args:
             mcp_server: MCP server instance
         """
-        object.__setattr__(self, '_mcp_server', mcp_server)
+        object.__setattr__(self, "_mcp_server", mcp_server)
 
-    def add_log(self, level: LogLevel, message: str, context: Optional[Dict[str, Any]] = None) -> None:
+    def add_log(self, level: LogLevel, message: str, context: Optional[dict[str, Any]] = None) -> None:
         """
         Add a log entry to the state.
 
@@ -368,7 +340,7 @@ class GlobalState(BaseModel):
         self.logs.append(log_entry)
         self.updated_at = datetime.now()
 
-    def add_conversation_message(self, role: str, content: str, context: Optional[Dict[str, Any]] = None) -> None:
+    def add_conversation_message(self, role: str, content: str, context: Optional[dict[str, Any]] = None) -> None:
         """
         Add a message to conversation history with rolling window (SYNCHRONOUS VERSION - for backward compatibility).
 
@@ -398,7 +370,9 @@ class GlobalState(BaseModel):
 
         self.updated_at = datetime.now()
 
-    async def add_conversation_message_safe(self, role: str, content: str, context: Optional[Dict[str, Any]] = None) -> None:
+    async def add_conversation_message_safe(
+        self, role: str, content: str, context: Optional[dict[str, Any]] = None
+    ) -> None:
         """
         Add a message to conversation history with rolling window (THREAD-SAFE ASYNC VERSION).
 
@@ -412,6 +386,13 @@ class GlobalState(BaseModel):
             content: Message content
             context: Optional context data
         """
+        # Lazy initialization of conversation lock (thread-safe)
+        if self._conversation_lock is None:
+            with self._lock_init_lock:
+                # Double-check pattern to prevent race condition
+                if self._conversation_lock is None:
+                    object.__setattr__(self, "_conversation_lock", asyncio.Lock())
+
         message = {
             "role": role,
             "content": content,
@@ -429,7 +410,7 @@ class GlobalState(BaseModel):
 
         self.updated_at = datetime.now()
 
-    async def get_conversation_history_snapshot(self) -> List[Dict[str, Any]]:
+    async def get_conversation_history_snapshot(self) -> list[dict[str, Any]]:
         """
         Get an immutable snapshot of conversation history (THREAD-SAFE).
 
@@ -438,6 +419,13 @@ class GlobalState(BaseModel):
         Returns:
             Copy of conversation history list
         """
+        # Lazy initialization of conversation lock (thread-safe)
+        if self._conversation_lock is None:
+            with self._lock_init_lock:
+                # Double-check pattern to prevent race condition
+                if self._conversation_lock is None:
+                    object.__setattr__(self, "_conversation_lock", asyncio.Lock())
+
         async with self._conversation_lock:
             return list(self.conversation_history)  # Return copy
 
@@ -447,6 +435,13 @@ class GlobalState(BaseModel):
 
         BUG FIX #1: Prevents race conditions when clearing history.
         """
+        # Lazy initialization of conversation lock (thread-safe)
+        if self._conversation_lock is None:
+            with self._lock_init_lock:
+                # Double-check pattern to prevent race condition
+                if self._conversation_lock is None:
+                    object.__setattr__(self, "_conversation_lock", asyncio.Lock())
+
         async with self._conversation_lock:
             self.conversation_history.clear()
 
@@ -459,6 +454,7 @@ class GlobalState(BaseModel):
         self.status = ConversionStatus.IDLE
         self.validation_status = None
         self.overall_status = None
+        self.llm_processing = False  # EDGE CASE FIX #1: Reset LLM processing flag
         self.input_path = None
         self.output_path = None
         self.pending_conversion_input_path = None
@@ -492,12 +488,7 @@ class GlobalState(BaseModel):
         self.conversation_type = None
         self.updated_at = datetime.now()
 
-    def update_progress(
-        self,
-        percent: float,
-        message: Optional[str] = None,
-        stage: Optional[str] = None
-    ) -> None:
+    def update_progress(self, percent: float, message: Optional[str] = None, stage: Optional[str] = None) -> None:
         """
         Update conversion progress and emit WebSocket event.
 
@@ -540,9 +531,7 @@ class GlobalState(BaseModel):
                     # Try to get running event loop (works from async context)
                     loop = asyncio.get_running_loop()
                     # Schedule coroutine in the event loop from another thread
-                    asyncio.run_coroutine_threadsafe(
-                        self._mcp_server.broadcast_event(event), loop
-                    )
+                    asyncio.run_coroutine_threadsafe(self._mcp_server.broadcast_event(event), loop)
                 except RuntimeError:
                     # No event loop running (e.g., called from background thread)
                     # Skip WebSocket broadcast - progress still tracked via polling
@@ -557,7 +546,7 @@ class GlobalState(BaseModel):
     # Bug #14 fix: Removed can_retry() - unlimited retries with user permission
     # No programmatic limit on retry attempts (Story 8.7 line 933, Story 8.8 line 953)
 
-    def detect_no_progress(self, current_issues: List[Dict[str, Any]]) -> bool:
+    def detect_no_progress(self, current_issues: list[dict[str, Any]]) -> bool:
         """
         Bug #11 fix: Detect if retry attempt is making no progress (Story 4.7 lines 461-466).
 
@@ -582,12 +571,12 @@ class GlobalState(BaseModel):
 
         # Compare current issues with previous issues
         # Create normalized representations for comparison
-        def normalize_issue(issue: Dict[str, Any]) -> str:
+        def normalize_issue(issue: dict[str, Any]) -> str:
             """Create normalized string representation of issue for comparison."""
             return f"{issue.get('check_name', '')}|{issue.get('location', '')}|{issue.get('message', '')}"
 
-        previous_normalized = set(normalize_issue(issue) for issue in self.previous_validation_issues)
-        current_normalized = set(normalize_issue(issue) for issue in current_issues)
+        previous_normalized = {normalize_issue(issue) for issue in self.previous_validation_issues}
+        current_normalized = {normalize_issue(issue) for issue in current_issues}
 
         # If issues are identical, no progress was made
         return previous_normalized == current_normalized
@@ -613,7 +602,7 @@ class GlobalState(BaseModel):
             with self._lock_init_lock:
                 # Double-check pattern to prevent race condition
                 if self._status_lock is None:
-                    object.__setattr__(self, '_status_lock', asyncio.Lock())
+                    object.__setattr__(self, "_status_lock", asyncio.Lock())
 
         async with self._status_lock:
             self.status = status
@@ -652,7 +641,7 @@ class GlobalState(BaseModel):
             with self._lock_init_lock:
                 # Double-check pattern to prevent race condition
                 if self._status_lock is None:
-                    object.__setattr__(self, '_status_lock', asyncio.Lock())
+                    object.__setattr__(self, "_status_lock", asyncio.Lock())
 
         async with self._status_lock:
             self.validation_status = validation_status
@@ -664,9 +653,7 @@ class GlobalState(BaseModel):
             )
 
     async def finalize_validation(
-        self,
-        conversion_status: ConversionStatus,
-        validation_status: ValidationStatus
+        self, conversion_status: ConversionStatus, validation_status: ValidationStatus
     ) -> None:
         """
         Atomically update both conversion and validation statuses.
@@ -680,7 +667,7 @@ class GlobalState(BaseModel):
             with self._lock_init_lock:
                 # Double-check pattern to prevent race condition
                 if self._status_lock is None:
-                    object.__setattr__(self, '_status_lock', asyncio.Lock())
+                    object.__setattr__(self, "_status_lock", asyncio.Lock())
 
         async with self._status_lock:
             self.status = conversion_status
@@ -689,17 +676,14 @@ class GlobalState(BaseModel):
             self.add_log(
                 LogLevel.INFO,
                 f"Status finalized: {conversion_status.value}, validation: {validation_status.value}",
-                {
-                    "conversion_status": conversion_status.value,
-                    "validation_status": validation_status.value
-                },
+                {"conversion_status": conversion_status.value, "validation_status": validation_status.value},
             )
 
     async def set_validation_result(
         self,
         overall_status: ValidationOutcome,
         requires_user_decision: bool = False,
-        conversation_phase: Optional[ConversationPhase] = None
+        conversation_phase: Optional[ConversationPhase] = None,
     ) -> None:
         """
         Atomically update validation result and related state.
@@ -716,7 +700,7 @@ class GlobalState(BaseModel):
             with self._lock_init_lock:
                 # Double-check pattern to prevent race condition
                 if self._status_lock is None:
-                    object.__setattr__(self, '_status_lock', asyncio.Lock())
+                    object.__setattr__(self, "_status_lock", asyncio.Lock())
 
         async with self._status_lock:
             self.overall_status = overall_status
@@ -743,12 +727,26 @@ class GlobalState(BaseModel):
                 },
             )
 
+    def get_llm_lock(self) -> asyncio.Lock:
+        """
+        Get the LLM lock, initializing it lazily if needed (THREAD-SAFE).
+
+        Returns:
+            The asyncio.Lock for LLM operations
+        """
+        if self._llm_lock is None:
+            with self._lock_init_lock:
+                # Double-check pattern to prevent race condition
+                if self._llm_lock is None:
+                    object.__setattr__(self, "_llm_lock", asyncio.Lock())
+        return self._llm_lock
+
     @property
     def can_retry(self) -> bool:
         """
         Check if more retry attempts are allowed.
 
-        WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Add retry limit (Recommendation 6.5, Breaking Point #7)
+        Prevents infinite loops and protects API budget.
 
         Returns:
             True if more retries allowed, False otherwise

@@ -4,8 +4,9 @@ Smart Auto-Correction System with LLM.
 This module intelligently fixes validation issues automatically
 by understanding the context and applying domain knowledge.
 """
-from typing import Any, Dict, List, Optional
+
 import json
+from typing import Any, Optional
 
 from models import GlobalState, LogLevel
 from services import LLMService
@@ -35,11 +36,11 @@ class SmartAutoCorrectionSystem:
 
     async def analyze_and_correct(
         self,
-        validation_issues: List[Dict[str, Any]],
-        current_metadata: Dict[str, Any],
-        file_context: Dict[str, Any],
+        validation_issues: list[dict[str, Any]],
+        current_metadata: dict[str, Any],
+        file_context: dict[str, Any],
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Analyze validation issues and generate smart corrections.
 
@@ -70,12 +71,12 @@ class SmartAutoCorrectionSystem:
 
             state.add_log(
                 LogLevel.INFO,
-                f"Smart auto-correction analysis complete",
+                "Smart auto-correction analysis complete",
                 {
                     "safe_fixes": len(result.get("safe_corrections", {})),
                     "risky_fixes": len(result.get("risky_corrections", {})),
                     "needs_user": len(result.get("cannot_auto_fix", [])),
-                }
+                },
             )
 
             return result
@@ -89,11 +90,11 @@ class SmartAutoCorrectionSystem:
 
     async def _llm_smart_corrections(
         self,
-        validation_issues: List[Dict[str, Any]],
-        current_metadata: Dict[str, Any],
-        file_context: Dict[str, Any],
+        validation_issues: list[dict[str, Any]],
+        current_metadata: dict[str, Any],
+        file_context: dict[str, Any],
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Use LLM to generate intelligent corrections."""
         system_prompt = """You are an expert NWB data fixer with deep knowledge of:
 - NWB schema requirements and best practices
@@ -129,13 +130,15 @@ Be conservative: when in doubt, classify as RISKY or CANNOT."""
         # Format issues for LLM
         issues_summary = []
         for i, issue in enumerate(validation_issues, 1):
-            issues_summary.append({
-                "issue_id": i,
-                "message": issue.get("message", "Unknown issue"),
-                "severity": issue.get("severity", "INFO"),
-                "location": issue.get("location", "unknown"),
-                "importance": issue.get("importance", "medium"),
-            })
+            issues_summary.append(
+                {
+                    "issue_id": i,
+                    "message": issue.get("message", "Unknown issue"),
+                    "severity": issue.get("severity", "INFO"),
+                    "location": issue.get("location", "unknown"),
+                    "importance": issue.get("importance", "medium"),
+                }
+            )
 
         user_prompt = f"""Analyze these NWB validation issues and provide smart corrections.
 
@@ -194,9 +197,9 @@ Estimate overall success probability."""
                             "new_value": {"type": ["string", "null", "number", "array", "boolean"]},
                             "action": {"type": "string", "enum": ["add", "modify", "remove", "format"]},
                             "reasoning": {"type": "string"},
-                            "confidence": {"type": "number"}
-                        }
-                    }
+                            "confidence": {"type": "number"},
+                        },
+                    },
                 },
                 "risky_corrections": {
                     "type": "object",
@@ -208,9 +211,9 @@ Estimate overall success probability."""
                             "proposed_value": {"type": ["string", "null", "number", "array", "boolean"]},
                             "action": {"type": "string"},
                             "risk_reason": {"type": "string"},
-                            "confidence": {"type": "number"}
-                        }
-                    }
+                            "confidence": {"type": "number"},
+                        },
+                    },
                 },
                 "cannot_auto_fix": {
                     "type": "array",
@@ -220,20 +223,14 @@ Estimate overall success probability."""
                             "issue": {"type": "string"},
                             "required_info": {"type": "string"},
                             "why_manual": {"type": "string"},
-                            "example_input": {"type": "string"}
-                        }
-                    }
+                            "example_input": {"type": "string"},
+                        },
+                    },
                 },
-                "correction_plan": {
-                    "type": "string",
-                    "description": "Step-by-step correction plan"
-                },
-                "estimated_success": {
-                    "type": "number",
-                    "description": "Estimated success probability 0-100"
-                }
+                "correction_plan": {"type": "string", "description": "Step-by-step correction plan"},
+                "estimated_success": {"type": "number", "description": "Estimated success probability 0-100"},
             },
-            "required": ["safe_corrections", "risky_corrections", "cannot_auto_fix", "correction_plan"]
+            "required": ["safe_corrections", "risky_corrections", "cannot_auto_fix", "correction_plan"],
         }
 
         response = await self.llm_service.generate_structured_output(
@@ -246,9 +243,9 @@ Estimate overall success probability."""
 
     def _basic_auto_corrections(
         self,
-        validation_issues: List[Dict[str, Any]],
-        current_metadata: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        validation_issues: list[dict[str, Any]],
+        current_metadata: dict[str, Any],
+    ) -> dict[str, Any]:
         """Fallback basic auto-corrections without LLM."""
         safe_corrections = {}
         cannot_auto_fix = []
@@ -268,12 +265,14 @@ Estimate overall success probability."""
                 }
             elif "experimenter" in message or "institution" in message:
                 # Needs user input
-                cannot_auto_fix.append({
-                    "issue": message,
-                    "required_info": "User must provide this information",
-                    "why_manual": "Critical DANDI-required field",
-                    "example_input": "Dr. Jane Smith",
-                })
+                cannot_auto_fix.append(
+                    {
+                        "issue": message,
+                        "required_info": "User must provide this information",
+                        "why_manual": "Critical DANDI-required field",
+                        "example_input": "Dr. Jane Smith",
+                    }
+                )
 
         return {
             "safe_corrections": safe_corrections,
@@ -285,10 +284,10 @@ Estimate overall success probability."""
 
     async def apply_safe_corrections(
         self,
-        safe_corrections: Dict[str, Any],
-        current_metadata: Dict[str, Any],
+        safe_corrections: dict[str, Any],
+        current_metadata: dict[str, Any],
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Apply safe corrections to metadata.
 
@@ -330,7 +329,7 @@ Estimate overall success probability."""
         state.add_log(
             LogLevel.INFO,
             f"Applied {len(applied_corrections)} safe auto-corrections",
-            {"corrections": applied_corrections}
+            {"corrections": applied_corrections},
         )
 
         return updated_metadata

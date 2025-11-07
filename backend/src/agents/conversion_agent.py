@@ -6,27 +6,18 @@ Responsible for:
 - NWB conversion using NeuroConv
 - Pure technical conversion logic (no user interaction)
 """
-import hashlib
+
 import logging
 import threading
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-
-import neuroconv
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
-from pynwb import NWBHDF5IO
 
-from models import (
-    ConversionStatus,
-    GlobalState,
-    LogLevel,
-    MCPMessage,
-    MCPResponse,
-)
-from utils.file_versioning import create_versioned_file, compute_sha256
 from agents.intelligent_format_detector import IntelligentFormatDetector
+from models import ConversionStatus, GlobalState, LogLevel, MCPMessage, MCPResponse
+from utils.file_versioning import compute_sha256, create_versioned_file
 
 
 class ConversionAgent:
@@ -45,11 +36,9 @@ class ConversionAgent:
         """
         self._supported_formats = self._get_supported_formats()
         self._llm_service = llm_service
-        self._format_detector = (
-            IntelligentFormatDetector(llm_service) if llm_service else None
-        )
+        self._format_detector = IntelligentFormatDetector(llm_service) if llm_service else None
 
-    def _get_supported_formats(self) -> List[str]:
+    def _get_supported_formats(self) -> list[str]:
         """
         Get list of supported data formats from NeuroConv.
 
@@ -61,41 +50,113 @@ class ConversionAgent:
             from neuroconv import get_format_summaries
 
             summaries = get_format_summaries()
-            return [fmt["format"] for fmt in summaries]
+
+            # Handle different return types from get_format_summaries
+            if isinstance(summaries, dict):
+                # If it's a dict, extract format names from keys or values
+                return list(summaries.keys()) if summaries else []
+            elif isinstance(summaries, list):
+                # If it's a list of dicts
+                return [fmt.get("format", fmt) if isinstance(fmt, dict) else str(fmt) for fmt in summaries]
+            else:
+                # Unknown format, use fallback
+                raise ValueError(f"Unexpected format summaries type: {type(summaries)}")
         except Exception as e:
             # Fallback to all supported formats (84 total)
             logger.warning(f"Failed to get format summaries dynamically, using fallback list: {e}")
             return [
                 # Electrophysiology Recording
-                "AlphaOmegaRecording", "Axon", "AxonRecording", "AxonaRecording", "AxonaUnitRecording",
-                "BiocamRecording", "BlackrockRecording", "CellExplorerRecording", "EDFRecording",
-                "IntanRecording", "MCSRawRecording", "MEArecRecording", "MaxOneRecording",
-                "NeuralynxRecording", "Neuropixels", "NeuroScopeRecording", "OpenEphys",
-                "OpenEphysBinary", "OpenEphysLegacyRecording", "Plexon2Recording", "PlexonRecording",
-                "Spike2Recording", "SpikeGLX", "SpikeGadgetsRecording", "TdtRecording",
+                "AlphaOmegaRecording",
+                "Axon",
+                "AxonRecording",
+                "AxonaRecording",
+                "AxonaUnitRecording",
+                "BiocamRecording",
+                "BlackrockRecording",
+                "CellExplorerRecording",
+                "EDFRecording",
+                "IntanRecording",
+                "MCSRawRecording",
+                "MEArecRecording",
+                "MaxOneRecording",
+                "NeuralynxRecording",
+                "Neuropixels",
+                "NeuroScopeRecording",
+                "OpenEphys",
+                "OpenEphysBinary",
+                "OpenEphysLegacyRecording",
+                "Plexon2Recording",
+                "PlexonRecording",
+                "Spike2Recording",
+                "SpikeGLX",
+                "SpikeGadgetsRecording",
+                "TdtRecording",
                 "WhiteMatterRecording",
                 # Spike Sorting
-                "BlackrockSorting", "CellExplorerSorting", "KiloSortSorting", "NeuralynxSorting",
-                "NeuroScopeSorting", "OpenEphysSorting", "PhySorting", "PlexonSorting",
+                "BlackrockSorting",
+                "CellExplorerSorting",
+                "KiloSortSorting",
+                "NeuralynxSorting",
+                "NeuroScopeSorting",
+                "OpenEphysSorting",
+                "PhySorting",
+                "PlexonSorting",
                 # Imaging
-                "BrukerTiffMultiPlaneImaging", "BrukerTiffSinglePlaneImaging", "FemtonicsImaging",
-                "Hdf5Imaging", "InscopixImaging", "MicroManagerTiffImaging", "MiniscopeImaging",
-                "SbxImaging", "ScanImageImaging", "ScanImageLegacyImaging", "ScanImageMultiFileImaging",
-                "ThorImaging", "TiffImaging",
+                "BrukerTiffMultiPlaneImaging",
+                "BrukerTiffSinglePlaneImaging",
+                "FemtonicsImaging",
+                "Hdf5Imaging",
+                "InscopixImaging",
+                "MicroManagerTiffImaging",
+                "MiniscopeImaging",
+                "SbxImaging",
+                "ScanImageImaging",
+                "ScanImageLegacyImaging",
+                "ScanImageMultiFileImaging",
+                "ThorImaging",
+                "TiffImaging",
                 # Segmentation
-                "CaimanSegmentation", "CnmfeSegmentation", "ExtractSegmentation",
-                "InscopixSegmentation", "MinianSegmentation", "SimaSegmentation",
+                "CaimanSegmentation",
+                "CnmfeSegmentation",
+                "ExtractSegmentation",
+                "InscopixSegmentation",
+                "MinianSegmentation",
+                "SimaSegmentation",
                 "Suite2pSegmentation",
                 # Behavior/Video
-                "AxonaPositionData", "DeepLabCut", "ExternalVideo", "FicTracData", "InternalVideo",
-                "LightningPoseData", "MiniscopeBehavior", "NeuralynxNvt", "SLEAP", "Video",
+                "AxonaPositionData",
+                "DeepLabCut",
+                "ExternalVideo",
+                "FicTracData",
+                "InternalVideo",
+                "LightningPoseData",
+                "MiniscopeBehavior",
+                "NeuralynxNvt",
+                "SLEAP",
+                "Video",
                 # LFP/Analog/Other
-                "Audio", "AxonaLFPData", "CellExplorerLFP", "CsvTimeIntervals", "EDFAnalog",
-                "ExcelTimeIntervals", "Image", "IntanAnalog", "MedPC", "NeuroScopeLFP",
-                "OpenEphysBinaryAnalog", "PlexonLFP", "SpikeGLXNIDQ", "TDTFiberPhotometry",
+                "Audio",
+                "AxonaLFPData",
+                "CellExplorerLFP",
+                "CsvTimeIntervals",
+                "EDFAnalog",
+                "ExcelTimeIntervals",
+                "Image",
+                "IntanAnalog",
+                "MedPC",
+                "NeuroScopeLFP",
+                "OpenEphysBinaryAnalog",
+                "PlexonLFP",
+                "SpikeGLXNIDQ",
+                "TDTFiberPhotometry",
                 # Converters
-                "BrukerTiffMultiPlane", "BrukerTiffSinglePlane", "LightningPose", "Miniscope",
-                "SortedRecording", "SortedSpikeGLX", "SpikeGLXConverter",
+                "BrukerTiffMultiPlane",
+                "BrukerTiffSinglePlane",
+                "LightningPose",
+                "Miniscope",
+                "SortedRecording",
+                "SortedSpikeGLX",
+                "SpikeGLXConverter",
             ]
 
     async def handle_detect_format(
@@ -219,7 +280,7 @@ class ConversionAgent:
                         LogLevel.WARNING,
                         f"LLM returned invalid format '{detected_format}' (not in NeuroConv). "
                         f"This may be a hallucination. Falling back to pattern matching.",
-                        {"invalid_format": detected_format, "alternatives": llm_result.get("alternatives", [])}
+                        {"invalid_format": detected_format, "alternatives": llm_result.get("alternatives", [])},
                     )
                 else:
                     state.add_log(
@@ -300,11 +361,13 @@ class ConversionAgent:
         elif path.is_file():
             # Check if it's a SpikeGLX file by extension pattern
             is_bin = path.suffix == ".bin"
-            has_spikeglx_pattern = any([
-                ".ap." in path.name,
-                ".lf." in path.name,
-                ".nidq." in path.name,
-            ])
+            has_spikeglx_pattern = any(
+                [
+                    ".ap." in path.name,
+                    ".lf." in path.name,
+                    ".nidq." in path.name,
+                ]
+            )
             return is_bin and has_spikeglx_pattern
         return False
 
@@ -366,7 +429,7 @@ class ConversionAgent:
         self,
         input_path: str,
         state: GlobalState,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> Optional[dict[str, Any]]:
         """
         Use LLM to intelligently detect data format when hardcoded patterns fail.
 
@@ -386,8 +449,8 @@ class ConversionAgent:
         if not self._llm_service:
             return None
 
-        from pathlib import Path
         import json
+        from pathlib import Path
 
         path = Path(input_path)
 
@@ -572,26 +635,45 @@ Be specific about the format name used by NeuroConv."""
         # NWBFile metadata fields (from PyNWB NWBFile class)
         NWB_FILE_FIELDS = {
             # Required fields
-            "session_description", "identifier", "session_start_time",
+            "session_description",
+            "identifier",
+            "session_start_time",
             # Optional NWBFile metadata fields
-            "experimenter", "experiment_description", "session_id", "institution",
-            "keywords", "notes", "pharmacology", "protocol", "related_publications",
-            "slices", "source_script", "source_script_file_name", "surgery", "virus",
-            "stimulus_notes", "lab", "data_collection",
+            "experimenter",
+            "experiment_description",
+            "session_id",
+            "institution",
+            "keywords",
+            "notes",
+            "pharmacology",
+            "protocol",
+            "related_publications",
+            "slices",
+            "source_script",
+            "source_script_file_name",
+            "surgery",
+            "virus",
+            "stimulus_notes",
+            "lab",
+            "data_collection",
         }
 
         # Subject fields (from PyNWB Subject class)
         # These may be passed flat and will be structured into a Subject object by NeuroConv
         SUBJECT_FIELDS = {
-            "subject_id", "species", "sex", "age", "strain",
-            "date_of_birth", "genotype", "weight", "description"
+            "subject_id",
+            "species",
+            "sex",
+            "age",
+            "strain",
+            "date_of_birth",
+            "genotype",
+            "weight",
+            "description",
         }
 
         # Filter to only allowed NWB fields - prevents internal tracking fields from leaking
-        metadata = {
-            k: v for k, v in metadata_raw.items()
-            if k in NWB_FILE_FIELDS or k in SUBJECT_FIELDS
-        }
+        metadata = {k: v for k, v in metadata_raw.items() if k in NWB_FILE_FIELDS or k in SUBJECT_FIELDS}
 
         if not all([input_path, output_path, format_name]):
             state.add_log(
@@ -610,11 +692,13 @@ Be specific about the format name used by NeuroConv."""
         # Track conversion timing
         import time
         from datetime import datetime
+
         conversion_start_time = time.time()
         conversion_start_timestamp = datetime.now()
 
         # Get detailed file information
         from pathlib import Path
+
         file_path = Path(input_path)
         file_size_bytes = file_path.stat().st_size if file_path.exists() else 0
         file_size_mb = file_size_bytes / (1024 * 1024)
@@ -648,7 +732,7 @@ Be specific about the format name used by NeuroConv."""
 
             state.update_progress(10, f"Analyzing {format_name} data ({file_size_mb:.1f} MB)...", "analysis")
 
-            narration_start = await self._narrate_progress(
+            await self._narrate_progress(
                 stage="starting",
                 format_name=format_name,
                 context={"file_size_mb": file_size_mb},
@@ -657,7 +741,7 @@ Be specific about the format name used by NeuroConv."""
 
             # Optimize conversion parameters with LLM
             state.update_progress(20, "Optimizing conversion parameters...", "optimization")
-            optimization = await self._optimize_conversion_parameters(
+            await self._optimize_conversion_parameters(
                 format_name=format_name,
                 file_size_mb=file_size_mb,
                 state=state,
@@ -665,7 +749,7 @@ Be specific about the format name used by NeuroConv."""
 
             # 🎯 PRIORITY 5: Narrate processing
             state.update_progress(30, "Processing data...", "processing")
-            narration_processing = await self._narrate_progress(
+            await self._narrate_progress(
                 stage="processing",
                 format_name=format_name,
                 context={"file_size_mb": file_size_mb, "progress_percent": 50},
@@ -684,7 +768,7 @@ Be specific about the format name used by NeuroConv."""
 
             # 🎯 PRIORITY 5: Narrate finalization
             state.update_progress(90, "Finalizing NWB file...", "finalization")
-            narration_finalizing = await self._narrate_progress(
+            await self._narrate_progress(
                 stage="finalizing",
                 format_name=format_name,
                 context={"output_path": output_path},
@@ -697,7 +781,7 @@ Be specific about the format name used by NeuroConv."""
             state.checksums[output_path] = checksum
 
             # 🎯 PRIORITY 5: Narrate completion
-            narration_complete = await self._narrate_progress(
+            await self._narrate_progress(
                 stage="complete",
                 format_name=format_name,
                 context={"output_path": output_path, "checksum": checksum},
@@ -742,7 +826,11 @@ Be specific about the format name used by NeuroConv."""
 
             # Format duration for display
             if duration_minutes >= 1.0:
-                duration_display = f"{int(duration_minutes // 60)}h {int(duration_minutes % 60)}m {int(duration_seconds % 60)}s" if duration_minutes >= 60 else f"{int(duration_minutes)}m {int(duration_seconds % 60)}s"
+                duration_display = (
+                    f"{int(duration_minutes // 60)}h {int(duration_minutes % 60)}m {int(duration_seconds % 60)}s"
+                    if duration_minutes >= 60
+                    else f"{int(duration_minutes)}m {int(duration_seconds % 60)}s"
+                )
             else:
                 duration_display = f"{duration_seconds:.1f}s"
 
@@ -906,7 +994,7 @@ Please explain what went wrong and how to fix it in user-friendly language."""
         format_name: str,
         file_size_mb: float,
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Use LLM to determine optimal NWB conversion parameters.
 
@@ -1011,7 +1099,7 @@ Suggest optimal settings and explain reasoning."""
         self,
         stage: str,
         format_name: str,
-        context: Dict[str, Any],
+        context: dict[str, Any],
         state: GlobalState,
     ) -> str:
         """
@@ -1071,7 +1159,7 @@ Provide a brief, friendly update about what's happening now."""
         input_path: str,
         output_path: str,
         format_name: str,
-        metadata: Dict[str, Any],
+        metadata: dict[str, Any],
         state: GlobalState,
     ) -> None:
         """
@@ -1087,7 +1175,6 @@ Provide a brief, friendly update about what's happening now."""
         Raises:
             Exception: If conversion fails
         """
-        from neuroconv import NWBConverter
 
         # Comprehensive format-to-interface mapping for all 84 NeuroConv interfaces
         # Using dynamic imports to avoid loading all interfaces at startup
@@ -1119,7 +1206,6 @@ Provide a brief, friendly update about what's happening now."""
             "SpikeGadgetsRecording": "SpikeGadgetsRecordingInterface",
             "TdtRecording": "TdtRecordingInterface",
             "WhiteMatterRecording": "WhiteMatterRecordingInterface",
-
             # Spike Sorting (8 formats)
             "BlackrockSorting": "BlackrockSortingInterface",
             "CellExplorerSorting": "CellExplorerSortingInterface",
@@ -1129,7 +1215,6 @@ Provide a brief, friendly update about what's happening now."""
             "OpenEphysSorting": "OpenEphysSortingInterface",
             "PhySorting": "PhySortingInterface",
             "PlexonSorting": "PlexonSortingInterface",
-
             # Imaging (13 formats)
             "BrukerTiffMultiPlaneImaging": "BrukerTiffMultiPlaneImagingInterface",
             "BrukerTiffSinglePlaneImaging": "BrukerTiffSinglePlaneImagingInterface",
@@ -1144,7 +1229,6 @@ Provide a brief, friendly update about what's happening now."""
             "ScanImageMultiFileImaging": "ScanImageMultiFileImagingInterface",
             "ThorImaging": "ThorImagingInterface",
             "TiffImaging": "TiffImagingInterface",
-
             # Segmentation (7 formats)
             "CaimanSegmentation": "CaimanSegmentationInterface",
             "CnmfeSegmentation": "CnmfeSegmentationInterface",
@@ -1153,7 +1237,6 @@ Provide a brief, friendly update about what's happening now."""
             "MinianSegmentation": "MinianSegmentationInterface",
             "SimaSegmentation": "SimaSegmentationInterface",
             "Suite2pSegmentation": "Suite2pSegmentationInterface",
-
             # Behavior/Video (11 formats)
             "AxonaPositionData": "AxonaPositionDataInterface",
             "DeepLabCut": "DeepLabCutInterface",
@@ -1165,7 +1248,6 @@ Provide a brief, friendly update about what's happening now."""
             "NeuralynxNvt": "NeuralynxNvtInterface",
             "SLEAP": "SLEAPInterface",
             "Video": "VideoInterface",
-
             # LFP/Analog/Other (15 formats)
             "Audio": "AudioInterface",
             "AxonaLFPData": "AxonaLFPDataInterface",
@@ -1181,7 +1263,6 @@ Provide a brief, friendly update about what's happening now."""
             "PlexonLFP": "PlexonLFPInterface",
             "SpikeGLXNIDQ": "SpikeGLXNIDQInterface",
             "TDTFiberPhotometry": "TDTFiberPhotometryInterface",
-
             # Converters (6 formats)
             "BrukerTiffMultiPlane": "BrukerTiffMultiPlaneConverter",
             "BrukerTiffSinglePlane": "BrukerTiffSinglePlaneConverter",
@@ -1202,15 +1283,16 @@ Provide a brief, friendly update about what's happening now."""
         interface_class_name = format_to_interface_map[format_name]
         try:
             from neuroconv import datainterfaces
+
             interface_class = getattr(datainterfaces, interface_class_name)
         except (ImportError, AttributeError) as e:
             raise ValueError(
-                f"Failed to import interface '{interface_class_name}' for format '{format_name}'. "
-                f"Error: {str(e)}"
+                f"Failed to import interface '{interface_class_name}' for format '{format_name}'. Error: {str(e)}"
             ) from e
 
         # Create interface with source data
         from pathlib import Path
+
         input_file = Path(input_path)
 
         # Format-specific interface initialization
@@ -1227,16 +1309,15 @@ Provide a brief, friendly update about what's happening now."""
             state.update_progress(60, "Detecting data streams...", "stream_detection")
             try:
                 # First try without stream_id to see what's available
-                from spikeinterface.extractors import SpikeGLXRecordingExtractor
                 import neo
 
                 # Get available streams
                 reader = neo.rawio.SpikeGLXRawIO(dirname=folder_path)
                 reader.parse_header()
-                stream_ids = reader.header['signal_streams']['id']
+                stream_ids = reader.header["signal_streams"]["id"]
 
                 # Prefer non-SYNC streams (typically 'imec0.ap' or similar)
-                non_sync_streams = [s for s in stream_ids if 'SYNC' not in s]
+                non_sync_streams = [s for s in stream_ids if "SYNC" not in s]
                 stream_id = non_sync_streams[0] if non_sync_streams else stream_ids[0]
 
                 data_interface = interface_class(folder_path=folder_path, stream_id=stream_id)
@@ -1259,10 +1340,7 @@ Provide a brief, friendly update about what's happening now."""
 
         elif format_name in ["OpenEphys", "OpenEphysBinary"]:
             # OpenEphys requires a folder path
-            if input_file.is_file():
-                folder_path = str(input_file.parent)
-            else:
-                folder_path = input_path
+            folder_path = str(input_file.parent) if input_file.is_file() else input_path
 
             try:
                 data_interface = interface_class(folder_path=folder_path)
@@ -1330,7 +1408,7 @@ Provide a brief, friendly update about what's happening now."""
                         "interface_class": interface_class_name,
                         "error_type": type(e).__name__,
                         "error_message": str(e),
-                    }
+                    },
                 )
 
                 # Re-raise with context
@@ -1415,7 +1493,7 @@ Provide a brief, friendly update about what's happening now."""
                 overwrite=True,
             )
 
-        except Exception as e:
+        except Exception:
             # Stop monitoring thread if it was started
             if monitor_thread and monitor_thread.is_alive():
                 stop_monitoring.set()
@@ -1549,7 +1627,7 @@ Provide a brief, friendly update about what's happening now."""
                 {"error_type": type(e).__name__},
             )
 
-    def _map_flat_to_nested_metadata(self, flat_metadata: Dict[str, Any]) -> Dict[str, Any]:
+    def _map_flat_to_nested_metadata(self, flat_metadata: dict[str, Any]) -> dict[str, Any]:
         """
         Map flat user-provided metadata to NWB's nested structure.
 
@@ -1608,7 +1686,7 @@ Provide a brief, friendly update about what's happening now."""
         # Process standard fields
         for key, value in flat_metadata.items():
             # Skip internal metadata fields
-            if key.startswith('_'):
+            if key.startswith("_"):
                 continue
 
             if key in NWBFILE_FIELDS:
@@ -1639,8 +1717,8 @@ Provide a brief, friendly update about what's happening now."""
                 nested["NWBFile"][key] = value
 
         # Process custom fields if present
-        if '_custom_fields' in flat_metadata:
-            custom_fields = flat_metadata['_custom_fields']
+        if "_custom_fields" in flat_metadata:
+            custom_fields = flat_metadata["_custom_fields"]
 
             # Create a custom namespace for user-defined fields
             if custom_fields:
@@ -1651,10 +1729,10 @@ Provide a brief, friendly update about what's happening now."""
                 # NWB allows arbitrary fields in the file
                 for custom_key, custom_value in custom_fields.items():
                     # Clean the key name to be NWB-compliant
-                    clean_key = custom_key.replace(' ', '_').lower()
+                    clean_key = custom_key.replace(" ", "_").lower()
 
                     # Try to intelligently place custom fields
-                    if any(term in clean_key for term in ['subject', 'animal', 'mouse', 'rat']):
+                    if any(term in clean_key for term in ["subject", "animal", "mouse", "rat"]):
                         # Subject-related custom field
                         if "Subject" not in nested:
                             nested["Subject"] = {}
@@ -1707,7 +1785,7 @@ Provide a brief, friendly update about what's happening now."""
         Returns:
             MCPResponse with reconversion result
         """
-        correction_context = message.context.get("correction_context")
+        message.context.get("correction_context")
         auto_fixes = message.context.get("auto_fixes", {})
         user_input = message.context.get("user_input", {})
 
@@ -1752,7 +1830,7 @@ Provide a brief, friendly update about what's happening now."""
                 versioned_path, checksum = create_versioned_file(
                     Path(state.output_path),
                     state.correction_attempt - 1,  # Previous attempt
-                    compute_checksum=True
+                    compute_checksum=True,
                 )
                 state.add_log(
                     LogLevel.INFO,

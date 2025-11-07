@@ -15,12 +15,13 @@ Features:
 - Preventive recommendations
 - Knowledge base accumulation
 """
-from typing import Any, Dict, List, Optional
+
 import json
 import logging
-from pathlib import Path
-from datetime import datetime
 from collections import defaultdict
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Optional
 
 from models import GlobalState, LogLevel, ValidationResult
 from services import LLMService
@@ -39,11 +40,7 @@ class ValidationHistoryLearner:
     - User-specific patterns
     """
 
-    def __init__(
-        self,
-        llm_service: Optional[LLMService] = None,
-        history_path: Optional[str] = None
-    ):
+    def __init__(self, llm_service: Optional[LLMService] = None, history_path: Optional[str] = None):
         """
         Initialize the history learner.
 
@@ -58,8 +55,8 @@ class ValidationHistoryLearner:
     async def record_validation_session(
         self,
         validation_result: ValidationResult,
-        file_context: Dict[str, Any],
-        resolution_actions: Optional[List[Dict[str, Any]]],
+        file_context: dict[str, Any],
+        resolution_actions: Optional[list[dict[str, Any]]],
         state: GlobalState,
     ) -> None:
         """
@@ -86,9 +83,9 @@ class ValidationHistoryLearner:
                 },
                 "issues": [
                     {
-                        "severity": issue.severity.value if hasattr(issue, 'severity') else 'unknown',
-                        "message": issue.message if hasattr(issue, 'message') else str(issue),
-                        "check_function": issue.check_function_name if hasattr(issue, 'check_function_name') else None,
+                        "severity": issue.severity.value if hasattr(issue, "severity") else "unknown",
+                        "message": issue.message if hasattr(issue, "message") else str(issue),
+                        "check_function": issue.check_function_name if hasattr(issue, "check_function_name") else None,
                     }
                     for issue in validation_result.issues[:50]  # Store first 50
                 ],
@@ -97,14 +94,10 @@ class ValidationHistoryLearner:
 
             # Save to history
             session_file = self.history_path / f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-            with open(session_file, 'w') as f:
+            with open(session_file, "w") as f:
                 json.dump(session_record, f, indent=2)
 
-            state.add_log(
-                LogLevel.DEBUG,
-                f"Recorded validation session to history",
-                {"session_file": str(session_file)}
-            )
+            state.add_log(LogLevel.DEBUG, "Recorded validation session to history", {"session_file": str(session_file)})
 
         except Exception as e:
             logger.warning(f"Failed to record validation session: {e}")
@@ -112,7 +105,7 @@ class ValidationHistoryLearner:
     async def analyze_patterns(
         self,
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Analyze patterns across all validation history.
 
@@ -133,7 +126,7 @@ class ValidationHistoryLearner:
                     "format_specific_issues": {},
                     "success_patterns": [],
                     "preventive_recommendations": [],
-                    "note": "Insufficient history data (need at least 2 sessions)"
+                    "note": "Insufficient history data (need at least 2 sessions)",
                 }
 
             # Analyze patterns
@@ -143,16 +136,9 @@ class ValidationHistoryLearner:
 
             # Use LLM for intelligent insights if available
             if self.llm_service:
-                insights = await self._llm_pattern_analysis(
-                    common_issues,
-                    format_issues,
-                    success_patterns,
-                    state
-                )
+                insights = await self._llm_pattern_analysis(common_issues, format_issues, success_patterns, state)
             else:
-                insights = {
-                    "preventive_recommendations": self._basic_recommendations(common_issues)
-                }
+                insights = {"preventive_recommendations": self._basic_recommendations(common_issues)}
 
             return {
                 "common_issues": common_issues,
@@ -164,7 +150,7 @@ class ValidationHistoryLearner:
             }
 
         except Exception as e:
-            logger.error(f"Pattern analysis failed: {e}")
+            logger.exception(f"Pattern analysis failed: {e}")
             state.add_log(LogLevel.WARNING, f"Pattern analysis failed: {e}")
             return {
                 "common_issues": [],
@@ -174,13 +160,13 @@ class ValidationHistoryLearner:
                 "error": str(e),
             }
 
-    def _load_history(self) -> List[Dict[str, Any]]:
+    def _load_history(self) -> list[dict[str, Any]]:
         """Load all validation history records."""
         sessions = []
 
         for session_file in sorted(self.history_path.glob("session_*.json")):
             try:
-                with open(session_file, 'r') as f:
+                with open(session_file) as f:
                     session = json.load(f)
                     sessions.append(session)
             except Exception as e:
@@ -188,7 +174,7 @@ class ValidationHistoryLearner:
 
         return sessions
 
-    def _identify_common_issues(self, sessions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _identify_common_issues(self, sessions: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Identify most common validation issues across sessions."""
         issue_counts = defaultdict(int)
         issue_severities = defaultdict(list)
@@ -203,12 +189,14 @@ class ValidationHistoryLearner:
         # Sort by frequency
         common_issues = []
         for message, count in sorted(issue_counts.items(), key=lambda x: x[1], reverse=True)[:10]:
-            common_issues.append({
-                "issue_pattern": message,
-                "occurrence_count": count,
-                "percentage": round((count / len(sessions)) * 100, 1),
-                "typical_severity": max(set(issue_severities[message]), key=issue_severities[message].count),
-            })
+            common_issues.append(
+                {
+                    "issue_pattern": message,
+                    "occurrence_count": count,
+                    "percentage": round((count / len(sessions)) * 100, 1),
+                    "typical_severity": max(set(issue_severities[message]), key=issue_severities[message].count),
+                }
+            )
 
         return common_issues
 
@@ -226,14 +214,14 @@ class ValidationHistoryLearner:
         normalized = re.sub(r"'[^']*'", "'...'", message)
 
         # Remove file paths
-        normalized = re.sub(r'/[^\s]+', '/...', normalized)
+        normalized = re.sub(r"/[^\s]+", "/...", normalized)
 
         # Remove numbers
-        normalized = re.sub(r'\d+', 'N', normalized)
+        normalized = re.sub(r"\d+", "N", normalized)
 
         return normalized
 
-    def _analyze_format_specific_issues(self, sessions: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+    def _analyze_format_specific_issues(self, sessions: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
         """Analyze issues specific to each file format."""
         format_issues = defaultdict(lambda: defaultdict(int))
 
@@ -257,24 +245,24 @@ class ValidationHistoryLearner:
 
         return result
 
-    def _analyze_success_patterns(self, sessions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _analyze_success_patterns(self, sessions: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Identify patterns that correlate with successful validation."""
         patterns = []
 
         # Pattern 1: File size correlation
         valid_sizes = [
-            s.get("file_info", {}).get("size_mb", 0)
-            for s in sessions
-            if s.get("validation", {}).get("is_valid", False)
+            s.get("file_info", {}).get("size_mb", 0) for s in sessions if s.get("validation", {}).get("is_valid", False)
         ]
 
         if valid_sizes:
             avg_valid_size = sum(valid_sizes) / len(valid_sizes)
-            patterns.append({
-                "pattern": "File size",
-                "observation": f"Successfully validated files average {avg_valid_size:.1f} MB",
-                "sample_size": len(valid_sizes),
-            })
+            patterns.append(
+                {
+                    "pattern": "File size",
+                    "observation": f"Successfully validated files average {avg_valid_size:.1f} MB",
+                    "sample_size": len(valid_sizes),
+                }
+            )
 
         # Pattern 2: Format success rates
         format_success = defaultdict(lambda: {"total": 0, "valid": 0})
@@ -287,15 +275,17 @@ class ValidationHistoryLearner:
         for fmt, stats in format_success.items():
             if stats["total"] >= 2:  # At least 2 samples
                 success_rate = (stats["valid"] / stats["total"]) * 100
-                patterns.append({
-                    "pattern": f"Format: {fmt}",
-                    "observation": f"{success_rate:.0f}% success rate ({stats['valid']}/{stats['total']})",
-                    "sample_size": stats["total"],
-                })
+                patterns.append(
+                    {
+                        "pattern": f"Format: {fmt}",
+                        "observation": f"{success_rate:.0f}% success rate ({stats['valid']}/{stats['total']})",
+                        "sample_size": stats["total"],
+                    }
+                )
 
         return patterns
 
-    def _basic_recommendations(self, common_issues: List[Dict[str, Any]]) -> List[str]:
+    def _basic_recommendations(self, common_issues: list[dict[str, Any]]) -> list[str]:
         """Generate basic preventive recommendations."""
         recommendations = []
 
@@ -315,11 +305,11 @@ class ValidationHistoryLearner:
 
     async def _llm_pattern_analysis(
         self,
-        common_issues: List[Dict[str, Any]],
-        format_issues: Dict[str, List[Dict[str, Any]]],
-        success_patterns: List[Dict[str, Any]],
+        common_issues: list[dict[str, Any]],
+        format_issues: dict[str, list[dict[str, Any]]],
+        success_patterns: list[dict[str, Any]],
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Use LLM to generate intelligent insights from patterns."""
         system_prompt = """You are an expert data scientist analyzing NWB validation patterns.
 
@@ -358,12 +348,9 @@ Generate 5-7 specific preventive recommendations to help users avoid common issu
                             "rationale": {"type": "string"},
                             "applies_to": {
                                 "type": "string",
-                                "description": "When this applies (e.g., 'All formats', 'SpikeGLX only')"
+                                "description": "When this applies (e.g., 'All formats', 'SpikeGLX only')",
                             },
-                            "priority": {
-                                "type": "string",
-                                "enum": ["high", "medium", "low"]
-                            },
+                            "priority": {"type": "string", "enum": ["high", "medium", "low"]},
                         },
                         "required": ["recommendation", "rationale", "applies_to", "priority"],
                     },
@@ -371,7 +358,7 @@ Generate 5-7 specific preventive recommendations to help users avoid common issu
                 "key_insights": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": "Key insights from the analysis"
+                    "description": "Key insights from the analysis",
                 },
             },
             "required": ["preventive_recommendations", "key_insights"],
@@ -387,7 +374,7 @@ Generate 5-7 specific preventive recommendations to help users avoid common issu
             return analysis
 
         except Exception as e:
-            logger.error(f"LLM pattern analysis failed: {e}")
+            logger.exception(f"LLM pattern analysis failed: {e}")
             state.add_log(LogLevel.WARNING, f"LLM pattern analysis failed: {e}")
             return {
                 "preventive_recommendations": self._basic_recommendations(common_issues),
@@ -396,9 +383,9 @@ Generate 5-7 specific preventive recommendations to help users avoid common issu
 
     async def predict_issues(
         self,
-        file_context: Dict[str, Any],
+        file_context: dict[str, Any],
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Predict likely validation issues based on file characteristics and history.
 
@@ -416,11 +403,7 @@ Generate 5-7 specific preventive recommendations to help users avoid common issu
             sessions = self._load_history()
 
             if len(sessions) < 3:
-                return {
-                    "likely_issues": [],
-                    "preventive_actions": [],
-                    "note": "Insufficient history for predictions"
-                }
+                return {"likely_issues": [], "preventive_actions": [], "note": "Insufficient history for predictions"}
 
             # Find similar files in history
             similar_sessions = self._find_similar_sessions(file_context, sessions)
@@ -436,24 +419,17 @@ Generate 5-7 specific preventive recommendations to help users avoid common issu
 
             # Use LLM for intelligent predictions if available
             if self.llm_service:
-                predictions = await self._llm_issue_prediction(
-                    file_context,
-                    similar_sessions,
-                    likely_issues,
-                    state
-                )
+                predictions = await self._llm_issue_prediction(file_context, similar_sessions, likely_issues, state)
             else:
                 predictions = {
                     "likely_issues": likely_issues,
-                    "preventive_actions": [
-                        f"Check for: {issue['pattern']}" for issue in likely_issues[:3]
-                    ],
+                    "preventive_actions": [f"Check for: {issue['pattern']}" for issue in likely_issues[:3]],
                 }
 
             return predictions
 
         except Exception as e:
-            logger.error(f"Issue prediction failed: {e}")
+            logger.exception(f"Issue prediction failed: {e}")
             return {
                 "likely_issues": [],
                 "preventive_actions": [],
@@ -461,10 +437,8 @@ Generate 5-7 specific preventive recommendations to help users avoid common issu
             }
 
     def _find_similar_sessions(
-        self,
-        file_context: Dict[str, Any],
-        sessions: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+        self, file_context: dict[str, Any], sessions: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         """Find validation sessions for similar files."""
         target_format = file_context.get("format", "").lower()
         target_size = file_context.get("file_size_mb", 0)
@@ -486,10 +460,7 @@ Generate 5-7 specific preventive recommendations to help users avoid common issu
 
         return similar
 
-    def _extract_common_issues_from_similar(
-        self,
-        similar_sessions: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+    def _extract_common_issues_from_similar(self, similar_sessions: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Extract common issues from similar validation sessions."""
         issue_counts = defaultdict(int)
 
@@ -507,21 +478,23 @@ Generate 5-7 specific preventive recommendations to help users avoid common issu
 
         for issue_pattern, count in sorted(issue_counts.items(), key=lambda x: x[1], reverse=True)[:5]:
             likelihood = (count / total_sessions) * 100
-            likely_issues.append({
-                "pattern": issue_pattern,
-                "likelihood_percent": round(likelihood, 1),
-                "occurred_in": f"{count}/{total_sessions} similar files",
-            })
+            likely_issues.append(
+                {
+                    "pattern": issue_pattern,
+                    "likelihood_percent": round(likelihood, 1),
+                    "occurred_in": f"{count}/{total_sessions} similar files",
+                }
+            )
 
         return likely_issues
 
     async def _llm_issue_prediction(
         self,
-        file_context: Dict[str, Any],
-        similar_sessions: List[Dict[str, Any]],
-        likely_issues: List[Dict[str, Any]],
+        file_context: dict[str, Any],
+        similar_sessions: list[dict[str, Any]],
+        likely_issues: list[dict[str, Any]],
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Use LLM to generate intelligent issue predictions."""
         system_prompt = """You are an expert at predicting NWB validation issues.
 
@@ -579,13 +552,11 @@ Provide:
 
             return {
                 "likely_issues": result.get("predictions", []),
-                "preventive_actions": [
-                    p.get("preventive_action") for p in result.get("predictions", [])
-                ],
+                "preventive_actions": [p.get("preventive_action") for p in result.get("predictions", [])],
             }
 
         except Exception as e:
-            logger.error(f"LLM issue prediction failed: {e}")
+            logger.exception(f"LLM issue prediction failed: {e}")
             return {
                 "likely_issues": likely_issues,
                 "preventive_actions": [],

@@ -4,8 +4,8 @@ Intelligent Conversation Context Management.
 Manages conversation history with smart summarization to prevent
 context overflow while preserving critical information.
 """
-from typing import Any, Dict, List, Optional
-import json
+
+from typing import Any, Optional
 
 from models import GlobalState, LogLevel
 from services import LLMService
@@ -45,9 +45,9 @@ class ConversationContextManager:
 
     async def manage_context(
         self,
-        conversation_history: List[Dict[str, Any]],
+        conversation_history: list[dict[str, Any]],
         state: GlobalState,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Manage conversation context intelligently.
 
@@ -70,48 +70,40 @@ class ConversationContextManager:
         try:
             return await self._smart_summarization(conversation_history, state)
         except Exception as e:
-            state.add_log(
-                LogLevel.WARNING,
-                f"Context summarization failed, using simple truncation: {e}"
-            )
+            state.add_log(LogLevel.WARNING, f"Context summarization failed, using simple truncation: {e}")
             return self._simple_truncation(conversation_history, state)
 
     def _simple_truncation(
         self,
-        conversation_history: List[Dict[str, Any]],
+        conversation_history: list[dict[str, Any]],
         state: GlobalState,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Simple truncation fallback (no LLM needed).
 
         Keeps most recent messages and critical system messages.
         """
         state.add_log(
-            LogLevel.DEBUG,
-            f"Using simple truncation (no LLM)",
-            {"original_length": len(conversation_history)}
+            LogLevel.DEBUG, "Using simple truncation (no LLM)", {"original_length": len(conversation_history)}
         )
 
         # Keep last N messages
-        recent = conversation_history[-self.keep_recent:]
+        recent = conversation_history[-self.keep_recent :]
 
         # Extract critical info from older messages
-        older = conversation_history[:-self.keep_recent]
+        older = conversation_history[: -self.keep_recent]
         critical_info = self._extract_critical_info(older)
 
         # Create summary message
         summary_msg = {
             "role": "system",
             "content": f"[Conversation summary]: {critical_info}",
-            "timestamp": "system_generated"
+            "timestamp": "system_generated",
         }
 
         return [summary_msg] + recent
 
-    def _extract_critical_info(
-        self,
-        messages: List[Dict[str, Any]]
-    ) -> str:
+    def _extract_critical_info(self, messages: list[dict[str, Any]]) -> str:
         """
         Extract critical information from messages (keyword-based).
         """
@@ -132,26 +124,26 @@ class ConversationContextManager:
 
     async def _smart_summarization(
         self,
-        conversation_history: List[Dict[str, Any]],
+        conversation_history: list[dict[str, Any]],
         state: GlobalState,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         LLM-powered smart summarization.
 
         Preserves critical information while reducing token count.
         """
         # Keep last N messages verbatim
-        recent_messages = conversation_history[-self.keep_recent:]
-        older_messages = conversation_history[:-self.keep_recent]
+        recent_messages = conversation_history[-self.keep_recent :]
+        older_messages = conversation_history[: -self.keep_recent]
 
         state.add_log(
             LogLevel.DEBUG,
-            f"Summarizing conversation context",
+            "Summarizing conversation context",
             {
                 "total_messages": len(conversation_history),
                 "recent_kept": len(recent_messages),
-                "older_to_summarize": len(older_messages)
-            }
+                "older_to_summarize": len(older_messages),
+            },
         )
 
         # Format older messages for summarization
@@ -203,35 +195,26 @@ Be concise but preserve ALL critical details."""
                 "role": "system",
                 "content": f"[Previous conversation summary]:\n\n{summary}",
                 "timestamp": "llm_generated",
-                "metadata": {
-                    "summarized_messages": len(older_messages),
-                    "summary_tokens_approx": len(summary.split())
-                }
+                "metadata": {"summarized_messages": len(older_messages), "summary_tokens_approx": len(summary.split())},
             }
 
             state.add_log(
                 LogLevel.INFO,
-                f"Conversation context summarized successfully",
+                "Conversation context summarized successfully",
                 {
                     "original_messages": len(conversation_history),
                     "new_messages": len([summary_msg] + recent_messages),
-                    "compression_ratio": f"{len(older_messages)}/{len([summary_msg] + recent_messages)}"
-                }
+                    "compression_ratio": f"{len(older_messages)}/{len([summary_msg] + recent_messages)}",
+                },
             )
 
             return [summary_msg] + recent_messages
 
         except Exception as e:
-            state.add_log(
-                LogLevel.ERROR,
-                f"LLM summarization failed: {e}"
-            )
+            state.add_log(LogLevel.ERROR, f"LLM summarization failed: {e}")
             raise
 
-    def _format_messages_for_summary(
-        self,
-        messages: List[Dict[str, Any]]
-    ) -> str:
+    def _format_messages_for_summary(self, messages: list[dict[str, Any]]) -> str:
         """
         Format messages for LLM summarization.
         """
@@ -240,7 +223,7 @@ Be concise but preserve ALL critical details."""
         for i, msg in enumerate(messages, 1):
             role = msg.get("role", "unknown")
             content = msg.get("content", "")
-            timestamp = msg.get("timestamp", "")
+            msg.get("timestamp", "")
 
             # Format each message
             formatted_lines.append(f"[{i}] {role.upper()}: {content[:200]}")
@@ -253,13 +236,13 @@ Be concise but preserve ALL critical details."""
 
         return "\n".join(formatted_lines)
 
-    def should_summarize(self, conversation_history: List[Dict[str, Any]]) -> bool:
+    def should_summarize(self, conversation_history: list[dict[str, Any]]) -> bool:
         """
         Determine if summarization is needed.
         """
         return len(conversation_history) > self.summarize_threshold
 
-    def estimate_tokens(self, conversation_history: List[Dict[str, Any]]) -> int:
+    def estimate_tokens(self, conversation_history: list[dict[str, Any]]) -> int:
         """
         Rough estimate of token count.
 

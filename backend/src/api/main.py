@@ -3,35 +3,30 @@ FastAPI application for agentic neurodata conversion.
 
 Main API server with REST endpoints and WebSocket support.
 """
+
 import logging
 import os
 import tempfile
 import threading
 import time
 from collections import defaultdict
-from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
+
 load_dotenv()
 
 # BUG #14 FIX: Initialize logger for WebSocket cleanup logging
 logger = logging.getLogger(__name__)
 
+from agents import register_conversation_agent, register_conversion_agent, register_evaluation_agent
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
-
-from agents import (
-    register_conversation_agent,
-    register_conversion_agent,
-    register_evaluation_agent,
-)
 from models import (
     ConversionStatus,
-    ErrorResponse,
     HealthResponse,
     LogLevel,
     LogsResponse,
@@ -40,16 +35,16 @@ from models import (
     RetryApprovalResponse,
     StatusResponse,
     UploadResponse,
-    UserDecision,
     UserInputRequest,
     UserInputResponse,
     ValidationResponse,
     WebSocketMessage,
 )
 from models.metadata import NWBMetadata
+from models.state import ConversationPhase
+
 # WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Phase 2 Integration
 from models.workflow_state_manager import WorkflowStateManager
-from models.state import ValidationOutcome, ConversationPhase, MetadataRequestPolicy
 from pydantic import ValidationError
 from services import MCPServer, create_llm_service, get_mcp_server
 
@@ -78,7 +73,7 @@ class SimpleRateLimiter:
     """Simple in-memory rate limiter for MVP."""
 
     def __init__(self):
-        self._requests: Dict[str, List[float]] = defaultdict(list)
+        self._requests: dict[str, list[float]] = defaultdict(list)
         self._lock = threading.Lock()
 
     def is_allowed(self, client_id: str, max_requests: int, window_seconds: int) -> bool:
@@ -98,10 +93,7 @@ class SimpleRateLimiter:
 
         with self._lock:
             # Remove old requests outside the window
-            self._requests[client_id] = [
-                req_time for req_time in self._requests[client_id]
-                if req_time > cutoff
-            ]
+            self._requests[client_id] = [req_time for req_time in self._requests[client_id] if req_time > cutoff]
 
             # Check if under limit
             if len(self._requests[client_id]) < max_requests:
@@ -141,7 +133,7 @@ def check_rate_limit(request: Request, max_requests: int = RATE_LIMIT_REQUESTS, 
         raise HTTPException(
             status_code=429,
             detail=f"Rate limit exceeded. Try again in {retry_after} seconds.",
-            headers={"Retry-After": str(retry_after)}
+            headers={"Retry-After": str(retry_after)},
         )
 
 
@@ -155,7 +147,7 @@ async def rate_limit_llm(request: Request):
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
 
 # Convert "*" string to list for CORSMiddleware
-if CORS_ORIGINS == ["*"]:
+if ["*"] == CORS_ORIGINS:
     logger.warning("⚠️  CORS is configured to allow ALL origins (*)")
     logger.warning("⚠️  Disabling credentials to prevent CSRF attacks")
     logger.warning("⚠️  Set CORS_ORIGINS environment variable in production!")
@@ -209,8 +201,8 @@ async def validation_exception_handler(request: Request, exc: ValidationError):
             "detail": "Validation failed",
             "errors": errors,
             "error_type": "ValidationError",
-            "path": str(request.url.path)
-        }
+            "path": str(request.url.path),
+        },
     )
 
 
@@ -228,11 +220,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
     return JSONResponse(
         status_code=500,
-        content={
-            "detail": error_detail,
-            "error_type": type(exc).__name__,
-            "path": str(request.url.path)
-        }
+        content={"detail": error_detail, "error_type": type(exc).__name__, "path": str(request.url.path)},
     )
 
 
@@ -383,10 +371,16 @@ async def root():
 @app.get("/api/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint."""
-    return HealthResponse(
-        status="healthy",
-        version="0.1.0"
-    )
+    try:
+        mcp_server = get_or_create_mcp_server()
+        agents = dict.fromkeys(mcp_server.agents.keys(), "active")
+        handlers = dict.fromkeys(mcp_server.handlers.keys(), "registered")
+    except Exception:
+        # Fallback if MCP server not initialized
+        agents = {}
+        handlers = {}
+
+    return HealthResponse(status="healthy", version="0.1.0", agents=agents, handlers=handlers)
 
 
 def sanitize_filename(filename: str) -> str:
@@ -404,27 +398,22 @@ def sanitize_filename(filename: str) -> str:
     """
     # SECURITY: Decode URL-encoded sequences first to prevent bypasses like %2e%2e%2f
     from urllib.parse import unquote
-    decoded_name = unquote(filename, errors='strict')
+
+    decoded_name = unquote(filename, errors="strict")
 
     # Remove any directory components (handles ../../../etc/passwd attacks)
     safe_name = os.path.basename(decoded_name)
 
     # Remove null bytes and other control characters
-    safe_name = safe_name.replace('\0', '').replace('\n', '').replace('\r', '')
+    safe_name = safe_name.replace("\0", "").replace("\n", "").replace("\r", "")
 
     # Validate filename isn't empty or just dots
-    if not safe_name or safe_name in ('.', '..'):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid filename: {filename}"
-        )
+    if not safe_name or safe_name in (".", ".."):
+        raise HTTPException(status_code=400, detail=f"Invalid filename: {filename}")
 
     # Additional check: ensure no path separators remain
-    if '/' in safe_name or '\\' in safe_name:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Filename contains invalid characters: {filename}"
-        )
+    if "/" in safe_name or "\\" in safe_name:
+        raise HTTPException(status_code=400, detail=f"Filename contains invalid characters: {filename}")
 
     return safe_name
 
@@ -452,10 +441,7 @@ def validate_safe_path(file_path: Path, base_dir: Path) -> Path:
         resolved_path.relative_to(resolved_base)
     except ValueError:
         # Path is outside base directory - path traversal attempt!
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid file path: attempted path traversal detected"
-        )
+        raise HTTPException(status_code=400, detail="Invalid file path: attempted path traversal detected")
 
     return resolved_path
 
@@ -463,7 +449,7 @@ def validate_safe_path(file_path: Path, base_dir: Path) -> Path:
 @app.post("/api/upload", response_model=UploadResponse)
 async def upload_file(
     file: UploadFile = File(...),
-    additional_files: List[UploadFile] = File(default=[]),
+    additional_files: list[UploadFile] = File(default=[]),
     metadata: Optional[str] = Form(None),
 ):
     """
@@ -484,9 +470,10 @@ async def upload_file(
 
     # WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Phase 2 - Use WorkflowStateManager
     if not _workflow_manager.can_accept_upload(mcp_server.global_state):
+        status_str = mcp_server.global_state.status.value if mcp_server.global_state.status else "unknown"
         raise HTTPException(
             status_code=409,
-            detail=f"Cannot upload while {mcp_server.global_state.status.value}. Please wait or reset.",
+            detail=f"Cannot upload while {status_str}. Please wait or reset.",
         )
 
     # EDGE CASE FIX #2: Validate file count and types (prevent multiple separate datasets)
@@ -497,40 +484,52 @@ async def upload_file(
         raise HTTPException(
             status_code=400,
             detail=f"Too many files uploaded ({total_files}). Maximum 10 files allowed. "
-                   "If you have multiple datasets, please upload them one at a time."
+            "If you have multiple datasets, please upload them one at a time.",
         )
 
     # Check for multiple primary data files (suggests multiple separate datasets)
-    primary_extensions = {'.bin', '.dat', '.continuous', '.h5', '.nwb'}
+    primary_extensions = {".bin", ".dat", ".continuous", ".h5", ".nwb"}
     all_files_list = [file] + additional_files
-    primary_files = [f for f in all_files_list
-                     if any(f.filename.lower().endswith(ext) for ext in primary_extensions)]
+    primary_files = [f for f in all_files_list if any(f.filename.lower().endswith(ext) for ext in primary_extensions)]
 
     if len(primary_files) > 1:
         # Check if this is a legitimate multi-file format
         filenames = [f.filename for f in primary_files]
-        is_spikeglx_set = any('.ap.bin' in fn or '.lf.bin' in fn for fn in filenames)
-        is_openephys_set = all('.continuous' in fn for fn in filenames)
+        is_spikeglx_set = any(".ap.bin" in fn or ".lf.bin" in fn for fn in filenames)
+        is_openephys_set = all(".continuous" in fn for fn in filenames)
 
         if not (is_spikeglx_set or is_openephys_set):
             raise HTTPException(
                 status_code=400,
                 detail=f"Multiple data files detected ({len(primary_files)}). "
-                       f"This system processes ONE recording session at a time. "
-                       f"Please upload files for a single session only. "
-                       f"Files: {', '.join(filenames)}"
+                f"This system processes ONE recording session at a time. "
+                f"Please upload files for a single session only. "
+                f"Files: {', '.join(filenames)}",
             )
 
     # Validate file type
     ALLOWED_EXTENSIONS = {
-        '.abf', '.avi', '.bin', '.continuous', '.dat', '.json', '.meta',
-        '.ncs', '.nev', '.ntt', '.nwb', '.plx', '.rhd', '.rhs', '.tif'
+        ".abf",
+        ".avi",
+        ".bin",
+        ".continuous",
+        ".dat",
+        ".json",
+        ".meta",
+        ".ncs",
+        ".nev",
+        ".ntt",
+        ".nwb",
+        ".plx",
+        ".rhd",
+        ".rhs",
+        ".tif",
     }
     file_ext = Path(file.filename).suffix.lower()
     if file_ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported file type: {file_ext}. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}"
+            detail=f"Unsupported file type: {file_ext}. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}",
         )
 
     # Validate file size
@@ -539,22 +538,15 @@ async def upload_file(
 
     # Validate content was successfully read
     if content is None:
-        raise HTTPException(
-            status_code=400,
-            detail="Failed to read file content"
-        )
+        raise HTTPException(status_code=400, detail="Failed to read file content")
 
     if len(content) > MAX_UPLOAD_SIZE_BYTES:
         raise HTTPException(
-            status_code=413,
-            detail=f"File too large: {len(content) / (1024**3):.2f}GB. Maximum: {MAX_UPLOAD_SIZE_GB}GB"
+            status_code=413, detail=f"File too large: {len(content) / (1024**3):.2f}GB. Maximum: {MAX_UPLOAD_SIZE_GB}GB"
         )
 
     if len(content) == 0:
-        raise HTTPException(
-            status_code=400,
-            detail="Empty file uploaded"
-        )
+        raise HTTPException(status_code=400, detail="Empty file uploaded")
 
     # Save main file - BUG #13 FIX: Sanitize filename to prevent path traversal
     safe_filename = sanitize_filename(file.filename)
@@ -591,9 +583,9 @@ async def upload_file(
             raise HTTPException(
                 status_code=400,
                 detail=f"SpikeGLX .bin files require a matching .meta file. "
-                       f"Please upload both '{safe_filename}' and '{meta_filename}' together. "
-                       f"The .meta file contains essential recording parameters (sampling rate, "
-                       f"channel count, probe configuration) needed for accurate conversion."
+                f"Please upload both '{safe_filename}' and '{meta_filename}' together. "
+                f"The .meta file contains essential recording parameters (sampling rate, "
+                f"channel count, probe configuration) needed for accurate conversion.",
             )
 
     # Validate OpenEphys files have required companion files
@@ -604,9 +596,9 @@ async def upload_file(
         if len(additional_files) == 0:
             raise HTTPException(
                 status_code=400,
-                detail=f"OpenEphys format requires multiple files. When uploading 'structure.oebin', "
-                       f"please also upload the accompanying .dat files and other recording files from the same session folder. "
-                       f"All files from the recording session are needed for complete data extraction."
+                detail="OpenEphys format requires multiple files. When uploading 'structure.oebin', "
+                "please also upload the accompanying .dat files and other recording files from the same session folder. "
+                "All files from the recording session are needed for complete data extraction.",
             )
     # BUG #13 FIX: Use sanitized filename
     elif safe_filename == "settings.xml":
@@ -615,9 +607,9 @@ async def upload_file(
         if len(continuous_files) == 0:
             raise HTTPException(
                 status_code=400,
-                detail=f"Old OpenEphys format requires .continuous data files. When uploading 'settings.xml', "
-                       f"please also upload all .continuous files from the same recording session. "
-                       f"All files are needed for complete data extraction."
+                detail="Old OpenEphys format requires .continuous data files. When uploading 'settings.xml', "
+                "please also upload all .continuous files from the same recording session. "
+                "All files are needed for complete data extraction.",
             )
 
     # Calculate checksum of main file
@@ -638,14 +630,14 @@ async def upload_file(
         mcp_server.global_state.overall_status = None  # Bug #9: Reset overall_status
         mcp_server.global_state.conversation_history = []  # Clear old conversations
         # Reset custom metadata flag to ensure proper workflow
-        if '_custom_metadata_prompted' in mcp_server.global_state.metadata:
-            del mcp_server.global_state.metadata['_custom_metadata_prompted']
+        if "_custom_metadata_prompted" in mcp_server.global_state.metadata:
+            del mcp_server.global_state.metadata["_custom_metadata_prompted"]
     else:
         # Preserve conversation state but update file paths
         mcp_server.global_state.add_log(
             LogLevel.INFO,
             "Re-upload detected during active conversation - preserving conversation state",
-            {"previous_request_count": mcp_server.global_state.metadata_requests_count}
+            {"previous_request_count": mcp_server.global_state.metadata_requests_count},
         )
 
     # Parse and validate metadata if provided
@@ -675,7 +667,7 @@ async def upload_file(
                 # Keep all fields including None to track what was provided vs omitted
                 metadata_dict = validated_metadata.model_dump(exclude_unset=True)
                 # Also store which fields were explicitly set by user for validation tracking
-                metadata_dict['_user_provided_fields'] = set(metadata_raw.keys())
+                metadata_dict["_user_provided_fields"] = set(metadata_raw.keys())
             except ValidationError as e:
                 # Build user-friendly error messages
                 errors = []
@@ -689,8 +681,8 @@ async def upload_file(
                     detail={
                         "message": "Metadata validation failed",
                         "errors": errors,
-                        "hint": "Please check the required fields and formats. See /docs for examples."
-                    }
+                        "hint": "Please check the required fields and formats. See /docs for examples.",
+                    },
                 )
 
     # CRITICAL FIX: DO NOT auto-start conversion on upload
@@ -705,11 +697,17 @@ async def upload_file(
         mcp_server.global_state.add_log(
             LogLevel.INFO,
             "Upload during active conversation - skipping duplicate acknowledgment",
-            {"status": str(mcp_server.global_state.status), "conversation_type": mcp_server.global_state.conversation_type}
+            {
+                "status": str(mcp_server.global_state.status),
+                "conversation_type": mcp_server.global_state.conversation_type,
+            },
         )
 
         # Return the current conversation state
-        current_message = mcp_server.global_state.llm_message or "Please continue the conversation to provide the requested information."
+        current_message = (
+            mcp_server.global_state.llm_message
+            or "Please continue the conversation to provide the requested information."
+        )
 
         return UploadResponse(
             session_id="session-1",
@@ -751,8 +749,8 @@ async def upload_file(
             "file": file.filename,
             "size_mb": len(content) / (1024 * 1024),
             "checksum": checksum,
-            "conversion_input_path": conversion_input_path
-        }
+            "conversion_input_path": conversion_input_path,
+        },
     )
 
     # Generate LLM-powered welcome message that DOES NOT auto-start conversion
@@ -782,13 +780,7 @@ Generate a welcome message that:
 
 Return JSON with a 'message' field."""
 
-            output_schema = {
-                "type": "object",
-                "properties": {
-                    "message": {"type": "string"}
-                },
-                "required": ["message"]
-            }
+            output_schema = {"type": "object", "properties": {"message": {"type": "string"}}, "required": ["message"]}
 
             response = await llm_service.generate_structured_output(
                 prompt=user_prompt,
@@ -796,7 +788,9 @@ Return JSON with a 'message' field."""
                 system_prompt=system_prompt,
             )
 
-            welcome_message = response.get("message", "File uploaded successfully! Ready to start conversion when you are.")
+            welcome_message = response.get(
+                "message", "File uploaded successfully! Ready to start conversion when you are."
+            )
         except Exception as e:
             mcp_server.global_state.add_log(
                 LogLevel.WARNING,
@@ -902,9 +896,10 @@ async def start_conversion():
                 detail="No file uploaded. Please upload a file first.",
             )
         else:
+            status_str = mcp_server.global_state.status.value if mcp_server.global_state.status else "unknown"
             raise HTTPException(
                 status_code=409,
-                detail=f"Conversion already in progress: {mcp_server.global_state.status.value}",
+                detail=f"Conversion already in progress: {status_str}",
             )
 
     # Send message to Conversation Agent to start conversion workflow
@@ -937,7 +932,7 @@ async def start_conversion():
 
     return {
         "message": "Conversion workflow started",
-        "status": mcp_server.global_state.status.value,
+        "status": mcp_server.global_state.status.value if mcp_server.global_state.status else "unknown",
     }
 
 
@@ -988,7 +983,8 @@ async def improvement_decision(decision: str = Form(...)):
             # Include warning/info issues (not critical, since this is PASSED_WITH_ISSUES)
             issues = validation_result.get("issues", [])
             warning_issues = [
-                issue for issue in issues[:10]  # Top 10 warnings
+                issue
+                for issue in issues[:10]  # Top 10 warnings
                 if issue.get("severity") in ["WARNING", "BEST_PRACTICE", "INFO"]
             ]
             if warning_issues:
@@ -1006,7 +1002,7 @@ async def improvement_decision(decision: str = Form(...)):
     return {
         "accepted": True,
         "message": response.result.get("message", "Decision accepted"),
-        "status": mcp_server.global_state.status.value,
+        "status": mcp_server.global_state.status.value if mcp_server.global_state.status else "unknown",
     }
 
 
@@ -1046,8 +1042,9 @@ async def retry_approval(request: RetryApprovalRequest):
             # Include top critical issues
             issues = validation_result.get("issues", [])
             critical_issues = [
-                issue for issue in issues[:5]  # Top 5 issues
-                if issue.get("severity") in ["CRITICAL", "ERROR"]
+                issue
+                for issue in issues[:5]
+                if issue.get("severity") in ["CRITICAL", "ERROR"]  # Top 5 issues
             ]
             if critical_issues:
                 error_detail["critical_issues"] = critical_issues
@@ -1069,7 +1066,9 @@ async def retry_approval(request: RetryApprovalRequest):
         "awaiting_corrections": ConversionStatus.AWAITING_USER_INPUT,
     }
     # If unknown status, preserve current status rather than resetting to IDLE
-    new_status = status_map.get(new_status_str, state.status or ConversionStatus.AWAITING_RETRY_APPROVAL)
+    new_status = status_map.get(
+        new_status_str, mcp_server.global_state.status or ConversionStatus.AWAITING_RETRY_APPROVAL
+    )
 
     return RetryApprovalResponse(
         accepted=True,
@@ -1092,28 +1091,27 @@ async def submit_user_input(request: UserInputRequest):
     mcp_server = get_or_create_mcp_server()
 
     # Check if we're awaiting format selection
-    if mcp_server.global_state.status == ConversionStatus.AWAITING_USER_INPUT:
-        if "format" in request.input_data:
-            # Format selection
-            format_msg = MCPMessage(
-                target_agent="conversation",
-                action="user_format_selection",
-                context={"format": request.input_data["format"]},
+    if mcp_server.global_state.status == ConversionStatus.AWAITING_USER_INPUT and "format" in request.input_data:
+        # Format selection
+        format_msg = MCPMessage(
+            target_agent="conversation",
+            action="user_format_selection",
+            context={"format": request.input_data["format"]},
+        )
+
+        response = await mcp_server.send_message(format_msg)
+
+        if not response.success:
+            raise HTTPException(
+                status_code=400,
+                detail=response.error["message"],
             )
 
-            response = await mcp_server.send_message(format_msg)
-
-            if not response.success:
-                raise HTTPException(
-                    status_code=400,
-                    detail=response.error["message"],
-                )
-
-            return UserInputResponse(
-                accepted=True,
-                message="Format selection accepted, conversion started",
-                new_status=ConversionStatus.CONVERTING,
-            )
+        return UserInputResponse(
+            accepted=True,
+            message="Format selection accepted, conversion started",
+            new_status=ConversionStatus.CONVERTING,
+        )
 
     raise HTTPException(
         status_code=400,
@@ -1154,7 +1152,8 @@ async def chat_message(message: str = Form(...), _: None = Depends(rate_limit_ll
             # Double-check pattern to prevent race condition
             if state._llm_lock is None:
                 import asyncio
-                object.__setattr__(state, '_llm_lock', asyncio.Lock())
+
+                object.__setattr__(state, "_llm_lock", asyncio.Lock())
 
     # Acquire LLM lock to prevent concurrent processing
     async with state._llm_lock:
@@ -1169,9 +1168,10 @@ async def chat_message(message: str = Form(...), _: None = Depends(rate_limit_ll
 
             # Add timeout to prevent indefinite waiting
             import asyncio
+
             response = await asyncio.wait_for(
                 mcp_server.send_message(chat_msg),
-                timeout=180.0  # 3 minute timeout for LLM processing
+                timeout=180.0,  # 3 minute timeout for LLM processing
             )
 
         except asyncio.TimeoutError:
@@ -1215,7 +1215,11 @@ async def chat_message(message: str = Form(...), _: None = Depends(rate_limit_ll
         }
 
     if not response.success:
-        error_msg = response.error.get("message", "Failed to process message") if hasattr(response, 'error') and response.error else "Unknown error"
+        error_msg = (
+            response.error.get("message", "Failed to process message")
+            if hasattr(response, "error") and response.error
+            else "Unknown error"
+        )
         state.add_log(
             LogLevel.ERROR,
             "Conversation agent returned error",
@@ -1229,7 +1233,7 @@ async def chat_message(message: str = Form(...), _: None = Depends(rate_limit_ll
             "extracted_metadata": {},
         }
 
-    result = response.result if hasattr(response, 'result') else {}
+    result = response.result if hasattr(response, "result") else {}
 
     # Validate result has required fields
     if not isinstance(result, dict):
@@ -1253,18 +1257,20 @@ async def chat_message(message: str = Form(...), _: None = Depends(rate_limit_ll
         # Trigger conversion workflow in background
         # Import here to avoid circular dependency
         import asyncio
+
         from agents import register_conversation_agent
 
         # Create conversion task message
-        conv_agent = register_conversation_agent(mcp_server)
+        register_conversation_agent(mcp_server)
 
         # Get format from state or detect it
-        format_name = state.detected_format if hasattr(state, 'detected_format') and state.detected_format else "unknown"
+        format_name = state.detected_format if state.detected_format else "unknown"
 
         # If format is unknown, we need to detect it first
         if format_name == "unknown":
             from agents import register_conversion_agent
-            conv_agent_inst = register_conversion_agent(mcp_server)
+
+            register_conversion_agent(mcp_server)
 
             detect_msg = MCPMessage(
                 target_agent="conversion",
@@ -1303,10 +1309,7 @@ async def chat_message(message: str = Form(...), _: None = Depends(rate_limit_ll
                     # Update state to reflect failure
                     if mcp_server.global_state:
                         mcp_server.global_state.status = ConversionStatus.FAILED
-                        mcp_server.global_state.add_log(
-                            LogLevel.ERROR,
-                            f"Conversion failed: {str(e)}"
-                        )
+                        mcp_server.global_state.add_log(LogLevel.ERROR, f"Conversion failed: {str(e)}")
 
             task.add_done_callback(handle_task_error)
         except Exception as e:
@@ -1368,7 +1371,8 @@ async def smart_chat(message: str = Form(...), _: None = Depends(rate_limit_llm)
             # Double-check pattern to prevent race condition
             if state._llm_lock is None:
                 import asyncio
-                object.__setattr__(state, '_llm_lock', asyncio.Lock())
+
+                object.__setattr__(state, "_llm_lock", asyncio.Lock())
 
     # Acquire LLM lock to prevent concurrent processing
     async with state._llm_lock:
@@ -1386,8 +1390,8 @@ async def smart_chat(message: str = Form(...), _: None = Depends(rate_limit_llm)
 
             # Check if we're in an active conversation requiring conversational handling
             in_active_conversation = (
-                state.conversation_type in active_conversation_types or
-                state.conversation_phase == ConversationPhase.METADATA_COLLECTION
+                state.conversation_type in active_conversation_types
+                or state.conversation_phase == ConversationPhase.METADATA_COLLECTION
             )
 
             if in_active_conversation:
@@ -1432,7 +1436,7 @@ async def get_validation_results():
     Returns:
         Validation results if available
     """
-    mcp_server = get_or_create_mcp_server()
+    get_or_create_mcp_server()
 
     # For MVP, return simplified validation info from logs
     # In full implementation, this would fetch from evaluation agent
@@ -1463,9 +1467,8 @@ async def get_correction_context():
             # Try to extract correction data from log context
             if log.context:
                 llm_guidance = log.context
-        if "validation" in log.message.lower() and log.context:
-            if "overall_status" in log.context:
-                validation_result = log.context
+        if "validation" in log.message.lower() and log.context and "overall_status" in log.context:
+            validation_result = log.context
 
     if not llm_guidance and not validation_result:
         return {
@@ -1497,11 +1500,13 @@ async def get_correction_context():
     if not auto_fixable and not user_input_required and validation_result:
         summary = validation_result.get("summary", {})
         if summary.get("error", 0) > 0:
-            auto_fixable.append({
-                "issue": f"{summary['error']} validation errors found",
-                "suggestion": "System will attempt automatic corrections",
-                "severity": "error",
-            })
+            auto_fixable.append(
+                {
+                    "issue": f"{summary['error']} validation errors found",
+                    "suggestion": "System will attempt automatic corrections",
+                    "severity": "error",
+                }
+            )
 
     return {
         "status": "available",
@@ -1576,8 +1581,9 @@ async def view_html_report():
     Returns:
         HTML report content for display in browser
     """
-    from fastapi.responses import HTMLResponse
     import json
+
+    from fastapi.responses import HTMLResponse
 
     mcp_server = get_or_create_mcp_server()
 
@@ -1587,9 +1593,16 @@ async def view_html_report():
             detail="No conversion output available",
         )
 
+    output_path_str = str(mcp_server.global_state.output_path).strip()
+    if not output_path_str:
+        raise HTTPException(
+            status_code=404,
+            detail="Output path is empty",
+        )
+
     # Find the HTML report file
-    output_dir = Path(mcp_server.global_state.output_path).parent
-    output_stem = Path(mcp_server.global_state.output_path).stem
+    output_dir = Path(output_path_str).parent
+    output_stem = Path(output_path_str).stem
     html_report = output_dir / f"{output_stem}_evaluation_report.html"
 
     # Check if workflow_trace JSON exists
@@ -1599,27 +1612,36 @@ async def view_html_report():
         # Check if we need to regenerate the report with workflow_trace
         if workflow_trace_path.exists():
             # Load workflow_trace
-            with open(workflow_trace_path, 'r') as f:
+            with open(workflow_trace_path) as f:
                 workflow_trace = json.load(f)
 
             # Check if the workflow_trace has metadata_provenance
-            if 'metadata_provenance' in workflow_trace:
+            if "metadata_provenance" in workflow_trace:
                 # Regenerate the HTML report with the correct workflow_trace
-                from services.report_service import ReportService
                 from agents.evaluation_agent import EvaluationAgent
+                from services.report_service import ReportService
 
                 # Extract file info from NWB file
                 nwb_path = mcp_server.global_state.output_path
                 eval_agent = EvaluationAgent()
                 file_info = eval_agent._extract_file_info(nwb_path)
 
+                # MERGE BACK the original provenance from workflow_trace
+                # This preserves the detailed AI-parsed provenance instead of generic "file-extracted"
+                if "metadata_provenance" in workflow_trace:
+                    file_info["_workflow_provenance"] = workflow_trace["metadata_provenance"]
+
                 # Create validation result with file info
                 validation_result = {
-                    'overall_status': mcp_server.global_state.conversion_status.value,
-                    'nwb_file_path': str(nwb_path),
-                    'file_info': file_info,
-                    'issues': [],
-                    'issue_counts': {},
+                    "overall_status": (
+                        mcp_server.global_state.overall_status.value
+                        if mcp_server.global_state.overall_status
+                        else "UNKNOWN"
+                    ),
+                    "nwb_file_path": str(nwb_path),
+                    "file_info": file_info,
+                    "issues": [],
+                    "issue_counts": {},
                 }
 
                 # Regenerate HTML report with workflow_trace
@@ -1628,13 +1650,13 @@ async def view_html_report():
                     html_report,
                     validation_result,
                     None,  # llm_analysis
-                    workflow_trace
+                    workflow_trace,
                 )
 
                 logger.info(f"Regenerated HTML report with workflow_trace from {workflow_trace_path}")
 
         # Read and return HTML content directly for browser display
-        with open(html_report, 'r', encoding='utf-8') as f:
+        with open(html_report, encoding="utf-8") as f:
             html_content = f.read()
         return HTMLResponse(content=html_content)
 
@@ -1660,9 +1682,16 @@ async def download_report():
             detail="No conversion output available",
         )
 
+    output_path_str = str(mcp_server.global_state.output_path).strip()
+    if not output_path_str:
+        raise HTTPException(
+            status_code=404,
+            detail="Output path is empty",
+        )
+
     # Find the report file
-    output_dir = Path(mcp_server.global_state.output_path).parent
-    output_stem = Path(mcp_server.global_state.output_path).stem
+    output_dir = Path(output_path_str).parent
+    output_stem = Path(output_path_str).stem
 
     # Try HTML first (primary format)
     html_report = output_dir / f"{output_stem}_evaluation_report.html"

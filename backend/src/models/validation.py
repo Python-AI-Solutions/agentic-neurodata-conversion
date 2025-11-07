@@ -3,8 +3,9 @@ Validation result models.
 
 Models for NWB Inspector validation results and correction contexts.
 """
+
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -41,11 +42,11 @@ class ValidationResult(BaseModel):
     is_valid: bool = Field(
         description="Overall validation status",
     )
-    issues: List[ValidationIssue] = Field(
+    issues: list[ValidationIssue] = Field(
         default_factory=list,
         description="List of validation issues",
     )
-    summary: Dict[str, int] = Field(
+    summary: dict[str, int] = Field(
         default_factory=dict,
         description="Count of issues by severity",
     )
@@ -57,7 +58,7 @@ class ValidationResult(BaseModel):
     @classmethod
     def from_inspector_output(
         cls,
-        inspector_results: List[Dict[str, Any]],
+        inspector_results: list[dict[str, Any]],
         inspector_version: str,
     ) -> "ValidationResult":
         """
@@ -114,20 +115,20 @@ class CorrectionContext(BaseModel):
     """
 
     validation_result: ValidationResult
-    input_metadata: Dict[str, Any] = Field(
+    input_metadata: dict[str, Any] = Field(
         default_factory=dict,
         description="Metadata extracted from input files",
     )
-    conversion_parameters: Dict[str, Any] = Field(
+    conversion_parameters: dict[str, Any] = Field(
         default_factory=dict,
         description="Parameters used for conversion",
     )
-    previous_attempts: List[Dict[str, Any]] = Field(
+    previous_attempts: list[dict[str, Any]] = Field(
         default_factory=list,
         description="History of previous correction attempts",
     )
 
-    def add_attempt(self, attempt_data: Dict[str, Any]) -> None:
+    def add_attempt(self, attempt_data: dict[str, Any]) -> None:
         """
         Record a correction attempt.
 

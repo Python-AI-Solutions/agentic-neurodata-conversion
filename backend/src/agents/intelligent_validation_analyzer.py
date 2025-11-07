@@ -11,9 +11,10 @@ Features:
 - Pattern recognition across validation sessions
 - Smart grouping of related issues
 """
-from typing import Any, Dict, List, Optional, Tuple
+
 import json
 import logging
+from typing import Any, Optional
 
 from models import GlobalState, LogLevel, ValidationResult
 from services import LLMService
@@ -44,9 +45,9 @@ class IntelligentValidationAnalyzer:
     async def analyze_validation_results(
         self,
         validation_result: ValidationResult,
-        file_context: Dict[str, Any],
+        file_context: dict[str, Any],
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Deep analysis of validation results.
 
@@ -68,38 +69,19 @@ class IntelligentValidationAnalyzer:
                 return self._basic_analysis(validation_result, state)
 
             # Step 1: Group related issues
-            issue_groups = await self._group_related_issues(
-                validation_result.issues,
-                state
-            )
+            issue_groups = await self._group_related_issues(validation_result.issues, state)
 
             # Step 2: Identify root causes
-            root_causes = await self._identify_root_causes(
-                validation_result.issues,
-                issue_groups,
-                file_context,
-                state
-            )
+            root_causes = await self._identify_root_causes(validation_result.issues, issue_groups, file_context, state)
 
             # Step 3: Determine fix order
-            fix_order = await self._determine_fix_order(
-                root_causes,
-                issue_groups,
-                state
-            )
+            fix_order = await self._determine_fix_order(root_causes, issue_groups, state)
 
             # Step 4: Assess impact
-            impact_analysis = await self._assess_issue_impact(
-                validation_result.issues,
-                root_causes,
-                state
-            )
+            impact_analysis = await self._assess_issue_impact(validation_result.issues, root_causes, state)
 
             # Step 5: Identify quick wins
-            quick_wins = self._identify_quick_wins(
-                validation_result.issues,
-                impact_analysis
-            )
+            quick_wins = self._identify_quick_wins(validation_result.issues, impact_analysis)
 
             analysis_result = {
                 "root_causes": root_causes,
@@ -107,9 +89,7 @@ class IntelligentValidationAnalyzer:
                 "fix_order": fix_order,
                 "impact_analysis": impact_analysis,
                 "quick_wins": quick_wins,
-                "analysis_summary": self._generate_summary(
-                    root_causes, quick_wins, len(validation_result.issues)
-                ),
+                "analysis_summary": self._generate_summary(root_causes, quick_wins, len(validation_result.issues)),
             }
 
             state.add_log(
@@ -119,24 +99,21 @@ class IntelligentValidationAnalyzer:
                     "root_causes_found": len(root_causes),
                     "issue_groups": len(issue_groups),
                     "quick_wins": len(quick_wins),
-                }
+                },
             )
 
             return analysis_result
 
         except Exception as e:
-            logger.error(f"Validation analysis failed: {e}")
-            state.add_log(
-                LogLevel.WARNING,
-                f"Validation analysis failed: {e}"
-            )
+            logger.exception(f"Validation analysis failed: {e}")
+            state.add_log(LogLevel.WARNING, f"Validation analysis failed: {e}")
             return self._basic_analysis(validation_result, state)
 
     def _basic_analysis(
         self,
         validation_result: ValidationResult,
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Basic analysis when LLM is not available.
 
@@ -145,18 +122,15 @@ class IntelligentValidationAnalyzer:
         # Simple grouping by severity
         issue_groups = {}
         for issue in validation_result.issues:
-            severity = issue.severity.value if hasattr(issue, 'severity') else 'unknown'
+            severity = issue.severity.value if hasattr(issue, "severity") else "unknown"
             if severity not in issue_groups:
                 issue_groups[severity] = []
-            issue_groups[severity].append(
-                issue.model_dump() if hasattr(issue, 'model_dump') else issue
-            )
+            issue_groups[severity].append(issue.model_dump() if hasattr(issue, "model_dump") else issue)
 
         return {
             "root_causes": [],
             "issue_groups": [
-                {"name": severity, "issues": issues, "count": len(issues)}
-                for severity, issues in issue_groups.items()
+                {"name": severity, "issues": issues, "count": len(issues)} for severity, issues in issue_groups.items()
             ],
             "fix_order": ["Fix critical issues first", "Then address errors", "Finally warnings"],
             "impact_analysis": {},
@@ -166,9 +140,9 @@ class IntelligentValidationAnalyzer:
 
     async def _group_related_issues(
         self,
-        issues: List[Any],
+        issues: list[Any],
         state: GlobalState,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Group related issues together using LLM understanding.
 
@@ -200,7 +174,7 @@ For each group, provide:
         # Format issues for analysis
         issues_text = []
         for idx, issue in enumerate(issues[:30], 1):  # Limit to 30 for efficiency
-            issue_dict = issue.model_dump() if hasattr(issue, 'model_dump') else issue
+            issue_dict = issue.model_dump() if hasattr(issue, "model_dump") else issue
             issues_text.append(
                 f"{idx}. [{issue_dict.get('severity', 'UNKNOWN')}] "
                 f"{issue_dict.get('message', 'No message')}\n"
@@ -232,15 +206,12 @@ Provide clear group names and explanations."""
                             "issue_indices": {
                                 "type": "array",
                                 "items": {"type": "number"},
-                                "description": "1-based indices of issues in this group"
+                                "description": "1-based indices of issues in this group",
                             },
-                            "relationship": {
-                                "type": "string",
-                                "description": "How these issues are related"
-                            },
+                            "relationship": {"type": "string", "description": "How these issues are related"},
                             "common_root_cause": {
                                 "type": "string",
-                                "description": "The underlying cause linking these issues"
+                                "description": "The underlying cause linking these issues",
                             },
                         },
                         "required": ["group_name", "issue_indices", "relationship"],
@@ -266,33 +237,33 @@ Provide clear group names and explanations."""
                     actual_idx = idx - 1
                     if 0 <= actual_idx < len(issues):
                         issue = issues[actual_idx]
-                        group_issues.append(
-                            issue.model_dump() if hasattr(issue, 'model_dump') else issue
-                        )
+                        group_issues.append(issue.model_dump() if hasattr(issue, "model_dump") else issue)
 
                 if group_issues:  # Only include groups with valid issues
-                    groups.append({
-                        "group_name": group.get("group_name"),
-                        "relationship": group.get("relationship"),
-                        "common_root_cause": group.get("common_root_cause", ""),
-                        "issues": group_issues,
-                        "count": len(group_issues),
-                    })
+                    groups.append(
+                        {
+                            "group_name": group.get("group_name"),
+                            "relationship": group.get("relationship"),
+                            "common_root_cause": group.get("common_root_cause", ""),
+                            "issues": group_issues,
+                            "count": len(group_issues),
+                        }
+                    )
 
             return groups
 
         except Exception as e:
-            logger.error(f"Issue grouping failed: {e}")
+            logger.exception(f"Issue grouping failed: {e}")
             state.add_log(LogLevel.WARNING, f"Issue grouping failed: {e}")
             return []
 
     async def _identify_root_causes(
         self,
-        issues: List[Any],
-        issue_groups: List[Dict[str, Any]],
-        file_context: Dict[str, Any],
+        issues: list[Any],
+        issue_groups: list[dict[str, Any]],
+        file_context: dict[str, Any],
         state: GlobalState,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Identify root causes that explain multiple validation issues.
 
@@ -325,10 +296,8 @@ For each root cause:
         # Prepare context
         issues_summary = []
         for idx, issue in enumerate(issues[:20], 1):
-            issue_dict = issue.model_dump() if hasattr(issue, 'model_dump') else issue
-            issues_summary.append(
-                f"{idx}. [{issue_dict.get('severity')}] {issue_dict.get('message')}"
-            )
+            issue_dict = issue.model_dump() if hasattr(issue, "model_dump") else issue
+            issues_summary.append(f"{idx}. [{issue_dict.get('severity')}] {issue_dict.get('message')}")
 
         groups_summary = []
         for group in issue_groups[:10]:
@@ -357,14 +326,11 @@ Identify 3-5 root causes that explain most issues. Focus on actionable, fixable 
                     "items": {
                         "type": "object",
                         "properties": {
-                            "cause": {
-                                "type": "string",
-                                "description": "Clear description of root cause"
-                            },
+                            "cause": {"type": "string", "description": "Clear description of root cause"},
                             "explained_issues": {
                                 "type": "array",
                                 "items": {"type": "string"},
-                                "description": "Which issue types this explains"
+                                "description": "Which issue types this explains",
                             },
                             "impact_score": {
                                 "type": "number",
@@ -372,14 +338,11 @@ Identify 3-5 root causes that explain most issues. Focus on actionable, fixable 
                                 "minimum": 0,
                                 "maximum": 100,
                             },
-                            "remediation": {
-                                "type": "string",
-                                "description": "How to fix this root cause"
-                            },
+                            "remediation": {"type": "string", "description": "How to fix this root cause"},
                             "difficulty": {
                                 "type": "string",
                                 "enum": ["easy", "medium", "hard"],
-                                "description": "Difficulty to fix"
+                                "description": "Difficulty to fix",
                             },
                         },
                         "required": ["cause", "explained_issues", "impact_score", "remediation", "difficulty"],
@@ -404,16 +367,16 @@ Identify 3-5 root causes that explain most issues. Focus on actionable, fixable 
             return root_causes
 
         except Exception as e:
-            logger.error(f"Root cause identification failed: {e}")
+            logger.exception(f"Root cause identification failed: {e}")
             state.add_log(LogLevel.WARNING, f"Root cause identification failed: {e}")
             return []
 
     async def _determine_fix_order(
         self,
-        root_causes: List[Dict[str, Any]],
-        issue_groups: List[Dict[str, Any]],
+        root_causes: list[dict[str, Any]],
+        issue_groups: list[dict[str, Any]],
         state: GlobalState,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Determine optimal order to fix issues for maximum impact.
 
@@ -443,7 +406,7 @@ Provide a clear, actionable sequence."""
 {json.dumps(root_causes, indent=2, default=str)}
 
 **Issue Groups**:
-{json.dumps([{k: v for k, v in g.items() if k != 'issues'} for g in issue_groups], indent=2, default=str)}
+{json.dumps([{k: v for k, v in g.items() if k != "issues"} for g in issue_groups], indent=2, default=str)}
 
 Provide step-by-step fix order with rationale."""
 
@@ -461,12 +424,12 @@ Provide step-by-step fix order with rationale."""
                             "expected_impact": {"type": "string"},
                             "estimated_effort": {
                                 "type": "string",
-                                "enum": ["5 min", "15 min", "30 min", "1 hour", "2+ hours"]
+                                "enum": ["5 min", "15 min", "30 min", "1 hour", "2+ hours"],
                             },
                             "dependencies": {
                                 "type": "array",
                                 "items": {"type": "number"},
-                                "description": "Step numbers that must be completed first"
+                                "description": "Step numbers that must be completed first",
                             },
                         },
                         "required": ["step_number", "action", "rationale", "expected_impact", "estimated_effort"],
@@ -486,16 +449,16 @@ Provide step-by-step fix order with rationale."""
             return response.get("fix_steps", [])
 
         except Exception as e:
-            logger.error(f"Fix order determination failed: {e}")
+            logger.exception(f"Fix order determination failed: {e}")
             state.add_log(LogLevel.WARNING, f"Fix order determination failed: {e}")
             return []
 
     async def _assess_issue_impact(
         self,
-        issues: List[Any],
-        root_causes: List[Dict[str, Any]],
+        issues: list[Any],
+        root_causes: list[dict[str, Any]],
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Assess the impact of each issue on:
         - DANDI submission readiness
@@ -509,14 +472,14 @@ Provide step-by-step fix order with rationale."""
         best_practices = 0
 
         for issue in issues:
-            issue_dict = issue.model_dump() if hasattr(issue, 'model_dump') else issue
-            severity = issue_dict.get('severity', '').lower()
-            message = issue_dict.get('message', '').lower()
+            issue_dict = issue.model_dump() if hasattr(issue, "model_dump") else issue
+            severity = issue_dict.get("severity", "").lower()
+            message = issue_dict.get("message", "").lower()
 
             # Heuristics for DANDI blocking
-            if any(keyword in message for keyword in ['required', 'missing', 'subject_id', 'session_description']):
+            if any(keyword in message for keyword in ["required", "missing", "subject_id", "session_description"]):
                 dandi_blocking += 1
-            elif severity in ['critical', 'error']:
+            elif severity in ["critical", "error"]:
                 usability_impact += 1
             else:
                 best_practices += 1
@@ -535,9 +498,9 @@ Provide step-by-step fix order with rationale."""
 
     def _identify_quick_wins(
         self,
-        issues: List[Any],
-        impact_analysis: Dict[str, Any],
-    ) -> List[Dict[str, Any]]:
+        issues: list[Any],
+        impact_analysis: dict[str, Any],
+    ) -> list[dict[str, Any]]:
         """
         Identify "quick win" issues - easy to fix with significant impact.
 
@@ -546,37 +509,39 @@ Provide step-by-step fix order with rationale."""
         quick_wins = []
 
         for issue in issues[:10]:  # First 10 issues
-            issue_dict = issue.model_dump() if hasattr(issue, 'model_dump') else issue
-            message = issue_dict.get('message', '').lower()
+            issue_dict = issue.model_dump() if hasattr(issue, "model_dump") else issue
+            message = issue_dict.get("message", "").lower()
 
             # Heuristics for quick wins
             is_quick_win = False
             win_type = ""
 
-            if 'missing' in message and any(field in message for field in ['experimenter', 'institution', 'lab']):
+            if "missing" in message and any(field in message for field in ["experimenter", "institution", "lab"]):
                 is_quick_win = True
                 win_type = "Add simple metadata field"
-            elif 'keywords' in message:
+            elif "keywords" in message:
                 is_quick_win = True
                 win_type = "Add keywords for discoverability"
-            elif 'description' in message and 'missing' not in message:
+            elif "description" in message and "missing" not in message:
                 is_quick_win = True
                 win_type = "Improve existing description"
 
             if is_quick_win:
-                quick_wins.append({
-                    "issue": issue_dict.get('message'),
-                    "type": win_type,
-                    "estimated_time": "< 5 minutes",
-                    "impact": "Improves metadata completeness",
-                })
+                quick_wins.append(
+                    {
+                        "issue": issue_dict.get("message"),
+                        "type": win_type,
+                        "estimated_time": "< 5 minutes",
+                        "impact": "Improves metadata completeness",
+                    }
+                )
 
         return quick_wins
 
     def _generate_summary(
         self,
-        root_causes: List[Dict[str, Any]],
-        quick_wins: List[Dict[str, Any]],
+        root_causes: list[dict[str, Any]],
+        quick_wins: list[dict[str, Any]],
         total_issues: int,
     ) -> str:
         """Generate human-readable analysis summary."""
@@ -592,8 +557,6 @@ Provide step-by-step fix order with rationale."""
             )
 
         if quick_wins:
-            summary_parts.append(
-                f"Found {len(quick_wins)} quick wins that can be fixed in < 5 minutes each."
-            )
+            summary_parts.append(f"Found {len(quick_wins)} quick wins that can be fixed in < 5 minutes each.")
 
         return " ".join(summary_parts)

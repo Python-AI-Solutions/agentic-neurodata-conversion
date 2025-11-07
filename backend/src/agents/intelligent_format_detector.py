@@ -4,9 +4,10 @@ Intelligent File Format Detection using LLM.
 This module uses LLM + heuristics to intelligently detect neuroscience data formats,
 going beyond simple file extension matching.
 """
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+
 import json
+from pathlib import Path
+from typing import Any, Optional
 
 from models import GlobalState, LogLevel
 from services import LLMService
@@ -35,6 +36,11 @@ class IntelligentFormatDetector:
 
         # Known format patterns
         self.format_patterns = {
+            "NWB": {
+                "extensions": [".nwb", ".nwb.h5"],
+                "patterns": ["nwb", "neurodata"],
+                "description": "Neurodata Without Borders format",
+            },
             "SpikeGLX": {
                 "extensions": [".bin", ".meta"],
                 "patterns": ["imec", "ap.bin", "lf.bin", "_g0_", "_t0"],
@@ -73,7 +79,7 @@ class IntelligentFormatDetector:
         self,
         file_path: str,
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Intelligently detect the format of a neuroscience data file.
 
@@ -123,7 +129,7 @@ class IntelligentFormatDetector:
                 "detection_method": "heuristic",
             }
 
-    def _analyze_file_structure(self, path: Path) -> Dict[str, Any]:
+    def _analyze_file_structure(self, path: Path) -> dict[str, Any]:
         """Analyze file/directory structure."""
         info = {
             "path": str(path),
@@ -133,24 +139,28 @@ class IntelligentFormatDetector:
         }
 
         if path.is_file():
-            info.update({
-                "extension": path.suffix.lower(),
-                "stem": path.stem,
-                "size_mb": path.stat().st_size / (1024 * 1024),
-                "parent_files": [f.name for f in path.parent.iterdir() if f.is_file()][:20],  # Limit to 20
-            })
+            info.update(
+                {
+                    "extension": path.suffix.lower(),
+                    "stem": path.stem,
+                    "size_mb": path.stat().st_size / (1024 * 1024),
+                    "parent_files": [f.name for f in path.parent.iterdir() if f.is_file()][:20],  # Limit to 20
+                }
+            )
         elif path.is_dir():
             files = list(path.rglob("*"))[:50]  # Limit to 50 files
-            info.update({
-                "file_count": len(files),
-                "file_names": [f.name for f in files if f.is_file()][:20],
-                "extensions": list(set(f.suffix.lower() for f in files if f.is_file())),
-                "subdirs": [d.name for d in path.iterdir() if d.is_dir()][:10],
-            })
+            info.update(
+                {
+                    "file_count": len(files),
+                    "file_names": [f.name for f in files if f.is_file()][:20],
+                    "extensions": list({f.suffix.lower() for f in files if f.is_file()}),
+                    "subdirs": [d.name for d in path.iterdir() if d.is_dir()][:10],
+                }
+            )
 
         return info
 
-    def _apply_heuristics(self, file_info: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _apply_heuristics(self, file_info: dict[str, Any]) -> list[dict[str, Any]]:
         """Apply heuristic rules to detect format."""
         results = []
 
@@ -211,7 +221,7 @@ class IntelligentFormatDetector:
 
         return results
 
-    def _generate_suggestions(self, format_name: str, missing_files: List[str]) -> List[str]:
+    def _generate_suggestions(self, format_name: str, missing_files: list[str]) -> list[str]:
         """Generate helpful suggestions based on detection."""
         suggestions = []
 
@@ -227,13 +237,14 @@ class IntelligentFormatDetector:
 
     async def _llm_format_analysis(
         self,
-        file_info: Dict[str, Any],
-        heuristic_results: List[Dict[str, Any]],
+        file_info: dict[str, Any],
+        heuristic_results: list[dict[str, Any]],
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Use LLM to intelligently choose between multiple possible formats."""
         try:
             system_prompt = """You are an expert in neuroscience data formats with deep knowledge of:
+- NWB (Neurodata Without Borders) format
 - SpikeGLX/Neuropixels file structures
 - OpenEphys recording formats
 - Intan, Blackrock, Plexon, Neuralynx systems
@@ -243,10 +254,9 @@ class IntelligentFormatDetector:
 Your job is to analyze file information and determine the most likely data format."""
 
             # Format heuristic results for LLM
-            candidates = "\n".join([
-                f"**{r['format']}** (confidence: {r['confidence']}%)\n- {r['reasoning']}"
-                for r in heuristic_results
-            ])
+            candidates = "\n".join(
+                [f"**{r['format']}** (confidence: {r['confidence']}%)\n- {r['reasoning']}" for r in heuristic_results]
+            )
 
             user_prompt = f"""Analyze this neuroscience data file and determine its format.
 
@@ -271,35 +281,26 @@ Be decisive but honest about uncertainty."""
             output_schema = {
                 "type": "object",
                 "properties": {
-                    "detected_format": {
-                        "type": "string",
-                        "description": "The most likely data format"
-                    },
-                    "confidence": {
-                        "type": "number",
-                        "description": "Confidence score 0-100"
-                    },
-                    "reasoning": {
-                        "type": "string",
-                        "description": "Detailed explanation of format detection"
-                    },
+                    "detected_format": {"type": "string", "description": "The most likely data format"},
+                    "confidence": {"type": "number", "description": "Confidence score 0-100"},
+                    "reasoning": {"type": "string", "description": "Detailed explanation of format detection"},
                     "missing_files": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Expected companion files that are missing"
+                        "description": "Expected companion files that are missing",
                     },
                     "suggestions": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Actionable suggestions for the user"
+                        "description": "Actionable suggestions for the user",
                     },
                     "alternative_formats": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Other possible formats to consider"
-                    }
+                        "description": "Other possible formats to consider",
+                    },
                 },
-                "required": ["detected_format", "confidence", "reasoning"]
+                "required": ["detected_format", "confidence", "reasoning"],
             }
 
             response = await self.llm_service.generate_structured_output(
@@ -316,7 +317,7 @@ Be decisive but honest about uncertainty."""
                 {
                     "format": response["detected_format"],
                     "confidence": response["confidence"],
-                }
+                },
             )
 
             return response

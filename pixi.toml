@@ -16,10 +16,13 @@ jinja2 = ">=3.1.4"
 pytest = ">=8.3.3"
 pytest-cov = ">=6.0.0"
 pytest-asyncio = ">=0.24.0"
+pytest-timeout = ">=2.2.0"
+pytest-mock = ">=3.12.0"
 httpx = ">=0.27.2"
 pyyaml = ">=6.0.2"
 numpy = ">=2.1.3"
 h5py = ">=3.12.1"
+pre-commit = ">=4.3.0,<5"
 
 [pypi-dependencies]
 neuroconv = ">=0.6.3"
@@ -33,16 +36,25 @@ python-dotenv = ">=1.0.0"
 [tasks]
 # Development tasks
 dev = "sh -c 'cd backend/src && uvicorn api.main:app --reload --host 0.0.0.0 --port 8000'"
-test = "pytest backend/tests -v --cov=backend/src --cov-report=term-missing"
-test-unit = "pytest backend/tests/unit -v"
-test-integration = "pytest backend/tests/integration -v"
-lint = "ruff check backend/"
-format = "ruff format backend/"
+
+# Test tasks
+test = "pytest 'test scripts' -v"
+test-cov = "pytest 'test scripts' -v --cov=backend/src --cov-report=term-missing --cov-report=html"
+test-unit = "pytest 'test scripts/unit' -v"
+test-integration = "pytest 'test scripts/integration' -v"
+test-critical = "pytest 'test scripts' -v -m critical"
+test-fast = "pytest 'test scripts' -v -m 'not slow and not llm'"
+test-smoke = "pytest 'test scripts' -v -m smoke"
+
+# Code quality tasks
+lint = "ruff check backend/ 'test scripts/'"
+format = "ruff format backend/ 'test scripts/'"
 typecheck = "mypy backend/src"
+precommit = "sh -c 'pixi run lint && pixi run format && pixi run typecheck && pixi run test'"
 
 # Utility tasks
-generate-fixtures = "python backend/tests/fixtures/generate_toy_dataset.py"
-clean = "rm -rf backend/src/__pycache__ backend/tests/__pycache__ .pytest_cache .coverage htmlcov"
+generate-fixtures = "python 'test scripts/fixtures/generate_toy_dataset.py'"
+clean = "rm -rf backend/src/__pycache__ 'test scripts/__pycache__' .pytest_cache .coverage htmlcov coverage.xml"
 serve = "python run_server.py"
 
 [feature.dev.dependencies]

@@ -6,13 +6,16 @@ fields in NWB files and DANDI archive compliance.
 
 This replaces hardcoded field lists with a dynamic, schema-driven approach.
 """
-from typing import Dict, List, Any, Optional
+
 from enum import Enum
+from typing import Any, Optional
+
 from pydantic import BaseModel, Field
 
 
 class FieldRequirementLevel(str, Enum):
     """Requirement level for metadata fields."""
+
     REQUIRED = "required"  # Must have for valid NWB
     RECOMMENDED = "recommended"  # Should have for DANDI compliance
     OPTIONAL = "optional"  # Nice to have
@@ -20,6 +23,7 @@ class FieldRequirementLevel(str, Enum):
 
 class FieldType(str, Enum):
     """Data type for metadata fields."""
+
     STRING = "string"
     LIST = "list"
     DATE = "date"
@@ -39,14 +43,14 @@ class MetadataFieldSchema(BaseModel):
     requirement_level: FieldRequirementLevel = Field(description="How critical this field is")
 
     # Validation and normalization
-    allowed_values: Optional[List[str]] = Field(default=None, description="Enum values if applicable")
+    allowed_values: Optional[list[str]] = Field(default=None, description="Enum values if applicable")
     format: Optional[str] = Field(default=None, description="Format string (e.g., ISO 8601)")
     example: str = Field(description="Example value")
 
     # Extraction hints for LLM
-    extraction_patterns: List[str] = Field(description="Patterns to look for in user text")
-    synonyms: List[str] = Field(default_factory=list, description="Alternative names/terms")
-    normalization_rules: Dict[str, str] = Field(default_factory=dict, description="Value mappings")
+    extraction_patterns: list[str] = Field(description="Patterns to look for in user text")
+    synonyms: list[str] = Field(default_factory=list, description="Alternative names/terms")
+    normalization_rules: dict[str, str] = Field(default_factory=dict, description="Value mappings")
 
     # Context
     nwb_path: Optional[str] = Field(default=None, description="Path in NWB file structure")
@@ -63,7 +67,7 @@ class NWBDANDISchema:
     """
 
     @staticmethod
-    def get_all_fields() -> List[MetadataFieldSchema]:
+    def get_all_fields() -> list[MetadataFieldSchema]:
         """Get complete list of all metadata fields."""
         return [
             # ============================================================
@@ -78,8 +82,14 @@ class NWBDANDISchema:
                 format="DANDI format: 'LastName, FirstName' or 'LastName, FirstName MiddleInitial.'",
                 example='["Smith, Jane", "Doe, John M."]',
                 extraction_patterns=[
-                    "experimenter", "researcher", "scientist", "performed by",
-                    "recorded by", "collected by", "my name is", "I am"
+                    "experimenter",
+                    "researcher",
+                    "scientist",
+                    "performed by",
+                    "recorded by",
+                    "collected by",
+                    "my name is",
+                    "I am",
                 ],
                 synonyms=["researcher", "scientist", "investigator", "PI"],
                 normalization_rules={
@@ -91,7 +101,6 @@ class NWBDANDISchema:
                 dandi_field="contributor",
                 why_needed="Required to credit data creators and enable contact for questions",
             ),
-
             MetadataFieldSchema(
                 name="institution",
                 display_name="Institution",
@@ -100,8 +109,15 @@ class NWBDANDISchema:
                 requirement_level=FieldRequirementLevel.REQUIRED,
                 example="University of California, Berkeley",
                 extraction_patterns=[
-                    "institution", "university", "lab", "at", "from",
-                    "institute", "college", "hospital", "center"
+                    "institution",
+                    "university",
+                    "lab",
+                    "at",
+                    "from",
+                    "institute",
+                    "college",
+                    "hospital",
+                    "center",
                 ],
                 synonyms=["university", "lab", "research center", "facility"],
                 normalization_rules={
@@ -117,7 +133,6 @@ class NWBDANDISchema:
                 dandi_field="affiliation",
                 why_needed="Required for institutional affiliation and data provenance",
             ),
-
             MetadataFieldSchema(
                 name="lab",
                 display_name="Lab Name",
@@ -132,7 +147,6 @@ class NWBDANDISchema:
                 dandi_field="lab",
                 why_needed="Helps identify specific research group within institution",
             ),
-
             MetadataFieldSchema(
                 name="experiment_description",
                 display_name="Experiment Description",
@@ -141,8 +155,14 @@ class NWBDANDISchema:
                 requirement_level=FieldRequirementLevel.REQUIRED,
                 example="Extracellular electrophysiology recording from mouse primary visual cortex using Neuropixels probes during visual stimulation",
                 extraction_patterns=[
-                    "experiment", "study", "recording", "measurement",
-                    "we recorded", "we measured", "data from", "investigating"
+                    "experiment",
+                    "study",
+                    "recording",
+                    "measurement",
+                    "we recorded",
+                    "we measured",
+                    "data from",
+                    "investigating",
                 ],
                 synonyms=["study description", "experimental design", "methods"],
                 normalization_rules={},
@@ -150,7 +170,6 @@ class NWBDANDISchema:
                 dandi_field="description",
                 why_needed="Required to understand what the experiment is about",
             ),
-
             MetadataFieldSchema(
                 name="session_description",
                 display_name="Session Description",
@@ -159,8 +178,14 @@ class NWBDANDISchema:
                 requirement_level=FieldRequirementLevel.REQUIRED,
                 example="Mouse performing visual discrimination task with drifting gratings",
                 extraction_patterns=[
-                    "session", "recording", "trial", "run", "during",
-                    "performing", "task", "condition"
+                    "session",
+                    "recording",
+                    "trial",
+                    "run",
+                    "during",
+                    "performing",
+                    "task",
+                    "condition",
                 ],
                 synonyms=["recording session", "trial description"],
                 normalization_rules={},
@@ -168,7 +193,6 @@ class NWBDANDISchema:
                 dandi_field="session_description",
                 why_needed="Required to describe what happened in this particular session",
             ),
-
             MetadataFieldSchema(
                 name="session_start_time",
                 display_name="Session Start Time",
@@ -177,17 +201,13 @@ class NWBDANDISchema:
                 requirement_level=FieldRequirementLevel.REQUIRED,
                 format="ISO 8601: YYYY-MM-DDTHH:MM:SS±HH:MM",
                 example="2024-01-15T14:30:00-08:00",
-                extraction_patterns=[
-                    "date", "time", "started", "began", "on", "at",
-                    "recorded on", "session date"
-                ],
+                extraction_patterns=["date", "time", "started", "began", "on", "at", "recorded on", "session date"],
                 synonyms=["recording date", "session date", "start time"],
                 normalization_rules={},
                 nwb_path="/session_start_time",
                 dandi_field="session_start_time",
                 why_needed="Required for temporal organization and data provenance",
             ),
-
             MetadataFieldSchema(
                 name="keywords",
                 display_name="Keywords",
@@ -196,7 +216,10 @@ class NWBDANDISchema:
                 requirement_level=FieldRequirementLevel.RECOMMENDED,
                 example='["electrophysiology", "visual cortex", "neuropixels", "mouse", "V1"]',
                 extraction_patterns=[
-                    "keywords", "tags", "topics", "related to",
+                    "keywords",
+                    "tags",
+                    "topics",
+                    "related to",
                     # Inferred from context
                 ],
                 synonyms=["tags", "topics", "categories"],
@@ -209,7 +232,6 @@ class NWBDANDISchema:
                 dandi_field="keywords",
                 why_needed="Improves data discoverability in DANDI archive",
             ),
-
             # ============================================================
             # SUBJECT METADATA (NWB Core)
             # ============================================================
@@ -220,17 +242,13 @@ class NWBDANDISchema:
                 field_type=FieldType.STRING,
                 requirement_level=FieldRequirementLevel.REQUIRED,
                 example="mouse_001",
-                extraction_patterns=[
-                    "subject", "animal", "ID", "identifier", "number",
-                    "mouse", "rat", "participant"
-                ],
+                extraction_patterns=["subject", "animal", "ID", "identifier", "number", "mouse", "rat", "participant"],
                 synonyms=["animal ID", "subject number", "participant ID"],
                 normalization_rules={},
                 nwb_path="/general/subject/subject_id",
                 dandi_field="subject_id",
                 why_needed="Required to identify individual subject in dataset",
             ),
-
             MetadataFieldSchema(
                 name="species",
                 display_name="Species",
@@ -239,10 +257,7 @@ class NWBDANDISchema:
                 requirement_level=FieldRequirementLevel.REQUIRED,
                 format="Use scientific name (binomial nomenclature)",
                 example="Mus musculus",
-                extraction_patterns=[
-                    "species", "mouse", "rat", "monkey", "human",
-                    "animal", "organism"
-                ],
+                extraction_patterns=["species", "mouse", "rat", "monkey", "human", "animal", "organism"],
                 synonyms=["organism", "animal species"],
                 normalization_rules={
                     "mouse": "Mus musculus",
@@ -260,7 +275,6 @@ class NWBDANDISchema:
                 dandi_field="species",
                 why_needed="Required to identify experimental organism",
             ),
-
             MetadataFieldSchema(
                 name="sex",
                 display_name="Sex",
@@ -269,9 +283,7 @@ class NWBDANDISchema:
                 requirement_level=FieldRequirementLevel.REQUIRED,
                 allowed_values=["M", "F", "U", "O"],
                 example="M",
-                extraction_patterns=[
-                    "sex", "gender", "male", "female", "M", "F"
-                ],
+                extraction_patterns=["sex", "gender", "male", "female", "M", "F"],
                 synonyms=["gender"],
                 normalization_rules={
                     "male": "M",
@@ -290,7 +302,6 @@ class NWBDANDISchema:
                 dandi_field="sex",
                 why_needed="Required NWB field when subject info is provided",
             ),
-
             MetadataFieldSchema(
                 name="age",
                 display_name="Age",
@@ -299,10 +310,7 @@ class NWBDANDISchema:
                 requirement_level=FieldRequirementLevel.RECOMMENDED,
                 format="ISO 8601 duration (e.g., P90D for 90 days, P12W for 12 weeks)",
                 example="P60D",
-                extraction_patterns=[
-                    "age", "old", "days", "weeks", "months", "years",
-                    "P", "postnatal day"
-                ],
+                extraction_patterns=["age", "old", "days", "weeks", "months", "years", "P", "postnatal day"],
                 synonyms=["age at recording"],
                 normalization_rules={
                     "60 days": "P60D",
@@ -315,7 +323,6 @@ class NWBDANDISchema:
                 dandi_field="age",
                 why_needed="Important for developmental studies and data interpretation",
             ),
-
             MetadataFieldSchema(
                 name="strain",
                 display_name="Strain/Genotype",
@@ -323,10 +330,7 @@ class NWBDANDISchema:
                 field_type=FieldType.STRING,
                 requirement_level=FieldRequirementLevel.RECOMMENDED,
                 example="C57BL/6J",
-                extraction_patterns=[
-                    "strain", "genotype", "genetic", "line", "C57",
-                    "transgenic", "knockout"
-                ],
+                extraction_patterns=["strain", "genotype", "genetic", "line", "C57", "transgenic", "knockout"],
                 synonyms=["genetic background", "mouse line"],
                 normalization_rules={
                     "C57": "C57BL/6J",
@@ -337,7 +341,6 @@ class NWBDANDISchema:
                 dandi_field="genotype",
                 why_needed="Critical for genetic studies and reproducibility",
             ),
-
             MetadataFieldSchema(
                 name="date_of_birth",
                 display_name="Date of Birth",
@@ -353,7 +356,6 @@ class NWBDANDISchema:
                 dandi_field="date_of_birth",
                 why_needed="Useful for calculating exact age at recording",
             ),
-
             MetadataFieldSchema(
                 name="weight",
                 display_name="Weight",
@@ -368,7 +370,6 @@ class NWBDANDISchema:
                 dandi_field="weight",
                 why_needed="Useful for dosing calculations and health monitoring",
             ),
-
             MetadataFieldSchema(
                 name="description",
                 display_name="Subject Description",
@@ -383,7 +384,6 @@ class NWBDANDISchema:
                 dandi_field="subject_description",
                 why_needed="Provides additional context about subject condition",
             ),
-
             # ============================================================
             # DANDI-SPECIFIC FIELDS
             # ============================================================
@@ -401,7 +401,6 @@ class NWBDANDISchema:
                 dandi_field="relatedResource",
                 why_needed="Links data to published research",
             ),
-
             MetadataFieldSchema(
                 name="protocol",
                 display_name="Protocol",
@@ -416,7 +415,6 @@ class NWBDANDISchema:
                 dandi_field="protocol",
                 why_needed="Required for ethical compliance documentation",
             ),
-
             MetadataFieldSchema(
                 name="data_collection",
                 display_name="Data Collection Notes",
@@ -431,7 +429,6 @@ class NWBDANDISchema:
                 dandi_field="approach",
                 why_needed="Documents data collection methodology",
             ),
-
             MetadataFieldSchema(
                 name="surgery",
                 display_name="Surgery Details",
@@ -446,7 +443,6 @@ class NWBDANDISchema:
                 dandi_field="surgery",
                 why_needed="Important for understanding data quality and interpretation",
             ),
-
             MetadataFieldSchema(
                 name="virus",
                 display_name="Virus/Injection Details",
@@ -461,7 +457,6 @@ class NWBDANDISchema:
                 dandi_field="virus",
                 why_needed="Critical for optogenetic and imaging experiments",
             ),
-
             MetadataFieldSchema(
                 name="pharmacology",
                 display_name="Pharmacology",
@@ -476,7 +471,6 @@ class NWBDANDISchema:
                 dandi_field="pharmacology",
                 why_needed="Important for understanding experimental conditions",
             ),
-
             MetadataFieldSchema(
                 name="stimulus_notes",
                 display_name="Stimulus Notes",
@@ -494,22 +488,21 @@ class NWBDANDISchema:
         ]
 
     @staticmethod
-    def get_required_fields() -> List[MetadataFieldSchema]:
+    def get_required_fields() -> list[MetadataFieldSchema]:
         """Get only required fields."""
         return [
-            field for field in NWBDANDISchema.get_all_fields()
+            field
+            for field in NWBDANDISchema.get_all_fields()
             if field.requirement_level == FieldRequirementLevel.REQUIRED
         ]
 
     @staticmethod
-    def get_recommended_fields() -> List[MetadataFieldSchema]:
+    def get_recommended_fields() -> list[MetadataFieldSchema]:
         """Get recommended fields for DANDI compliance."""
         return [
-            field for field in NWBDANDISchema.get_all_fields()
-            if field.requirement_level in [
-                FieldRequirementLevel.REQUIRED,
-                FieldRequirementLevel.RECOMMENDED
-            ]
+            field
+            for field in NWBDANDISchema.get_all_fields()
+            if field.requirement_level in [FieldRequirementLevel.REQUIRED, FieldRequirementLevel.RECOMMENDED]
         ]
 
     @staticmethod
@@ -623,7 +616,7 @@ Extract as much as possible from the user's message!
         return prompt
 
     @staticmethod
-    def validate_metadata(metadata: Dict[str, Any]) -> tuple[bool, List[str]]:
+    def validate_metadata(metadata: dict[str, Any]) -> tuple[bool, list[str]]:
         """
         Validate metadata against schema.
 
@@ -640,7 +633,7 @@ Extract as much as possible from the user's message!
         return len(missing) == 0, missing
 
     @staticmethod
-    def get_field_display_info(field_name: str) -> Dict[str, str]:
+    def get_field_display_info(field_name: str) -> dict[str, str]:
         """Get user-friendly display information for a field."""
         field = NWBDANDISchema.get_field_by_name(field_name)
         if not field:

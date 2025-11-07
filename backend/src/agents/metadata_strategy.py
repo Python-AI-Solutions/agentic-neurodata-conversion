@@ -7,20 +7,22 @@ This module implements intelligent, priority-based metadata collection that:
 3. Offers OPTIONAL fields as a batch
 4. Respects user's "skip" preferences at field and global levels
 """
-import logging
-from typing import Any, Dict, List, Optional, Set
-from enum import Enum
 
-from models import GlobalState, LogLevel
+import logging
+from enum import Enum
+from typing import Any, Optional
+
+from models import GlobalState
 
 logger = logging.getLogger(__name__)
 
 
 class FieldPriority(str, Enum):
     """Priority levels for metadata fields."""
-    CRITICAL = "critical"      # Must have for DANDI archive
+
+    CRITICAL = "critical"  # Must have for DANDI archive
     RECOMMENDED = "recommended"  # Strongly suggested
-    OPTIONAL = "optional"      # Nice to have
+    OPTIONAL = "optional"  # Nice to have
 
 
 class MetadataField:
@@ -75,7 +77,6 @@ METADATA_FIELDS = {
         example="Recording of neural activity in mouse V1 during visual stimulation",
         field_type="text",
     ),
-
     # RECOMMENDED: Strongly suggested for data quality
     "subject_id": MetadataField(
         name="subject_id",
@@ -104,7 +105,6 @@ METADATA_FIELDS = {
         example="First training session with visual stimuli",
         field_type="text",
     ),
-
     # OPTIONAL: Nice to have for enhanced searchability
     "keywords": MetadataField(
         name="keywords",
@@ -156,8 +156,8 @@ class MetadataRequestStrategy:
     def get_next_request(
         self,
         state: GlobalState,
-        validation_result: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        validation_result: dict[str, Any],
+    ) -> dict[str, Any]:
         """
         Determine the next metadata request based on current state and priorities.
 
@@ -172,10 +172,7 @@ class MetadataRequestStrategy:
         missing_fields = self._extract_missing_fields(validation_result)
 
         # Filter out already declined fields
-        available_fields = [
-            f for f in missing_fields
-            if f not in state.user_declined_fields
-        ]
+        available_fields = [f for f in missing_fields if f not in state.user_declined_fields]
 
         if not available_fields:
             # Nothing left to ask
@@ -203,9 +200,9 @@ class MetadataRequestStrategy:
 
     def _request_critical_batch(
         self,
-        critical_fields: List[str],
+        critical_fields: list[str],
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Request critical fields (batch or sequential based on user preference)."""
         # Defensive check: ensure critical_fields is not empty
         if not critical_fields:
@@ -243,14 +240,13 @@ You can:
         # Otherwise, ask as batch (default behavior)
         fields_info = [METADATA_FIELDS[f] for f in critical_fields]
 
-        fields_list = "\n".join([
-            f"• **{field.display_name}**: {field.why_needed}\n  Example: {field.example}"
-            for field in fields_info
-        ])
+        fields_list = "\n".join(
+            [f"• **{field.display_name}**: {field.why_needed}\n  Example: {field.example}" for field in fields_info]
+        )
 
         message = f"""🔴 **Critical Information Needed**
 
-To create a DANDI-compatible NWB file, I need {len(critical_fields)} essential field{'s' if len(critical_fields) > 1 else ''}:
+To create a DANDI-compatible NWB file, I need {len(critical_fields)} essential field{"s" if len(critical_fields) > 1 else ""}:
 
 {fields_list}
 
@@ -270,9 +266,9 @@ To create a DANDI-compatible NWB file, I need {len(critical_fields)} essential f
 
     def _request_next_recommended(
         self,
-        recommended_fields: List[str],
+        recommended_fields: list[str],
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Request the next recommended field sequentially."""
         # Defensive check: ensure recommended_fields is not empty
         if not recommended_fields:
@@ -282,7 +278,11 @@ To create a DANDI-compatible NWB file, I need {len(critical_fields)} essential f
         field = METADATA_FIELDS[next_field_name]
 
         remaining = len(recommended_fields) - 1
-        progress = f"({len(state.user_declined_fields) + 1} of {len(recommended_fields)} recommended fields)" if remaining > 0 else "(last recommended field)"
+        progress = (
+            f"({len(state.user_declined_fields) + 1} of {len(recommended_fields)} recommended fields)"
+            if remaining > 0
+            else "(last recommended field)"
+        )
 
         message = f"""💡 **{field.display_name}** {progress}
 
@@ -307,16 +307,13 @@ You can:
 
     def _offer_optional_batch(
         self,
-        optional_fields: List[str],
+        optional_fields: list[str],
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Offer optional fields as a batch with easy skip."""
         fields_info = [METADATA_FIELDS[f] for f in optional_fields]
 
-        fields_list = "\n".join([
-            f"• **{field.display_name}**: {field.description}"
-            for field in fields_info
-        ])
+        fields_list = "\n".join([f"• **{field.display_name}**: {field.description}" for field in fields_info])
 
         message = f"""✨ **Optional Enhancements**
 
@@ -337,8 +334,8 @@ Would you like to add any of these? (You can say "skip" to proceed with conversi
 
     def _extract_missing_fields(
         self,
-        validation_result: Dict[str, Any],
-    ) -> List[str]:
+        validation_result: dict[str, Any],
+    ) -> list[str]:
         """Extract missing field names from validation issues."""
         missing = []
 
@@ -347,7 +344,7 @@ Would you like to add any of these? (You can say "skip" to proceed with conversi
             issue_msg = issue.get("message", "").lower()
 
             # Check each known field
-            for field_name in METADATA_FIELDS.keys():
+            for field_name in METADATA_FIELDS:
                 # Match field name or variations
                 field_variations = [
                     field_name,
@@ -363,14 +360,11 @@ Would you like to add any of these? (You can say "skip" to proceed with conversi
 
     def _filter_by_priority(
         self,
-        field_names: List[str],
+        field_names: list[str],
         priority: FieldPriority,
-    ) -> List[str]:
+    ) -> list[str]:
         """Filter fields by priority level."""
-        return [
-            name for name in field_names
-            if name in METADATA_FIELDS and METADATA_FIELDS[name].priority == priority
-        ]
+        return [name for name in field_names if name in METADATA_FIELDS and METADATA_FIELDS[name].priority == priority]
 
     async def detect_skip_type_with_llm(self, user_message: str, conversation_context: str = "") -> str:
         """
@@ -456,18 +450,12 @@ What is the user's intent? Respond with exactly one word: global, field, sequent
                     "intent": {
                         "type": "string",
                         "enum": ["global", "field", "sequential", "none"],
-                        "description": "User's intent category"
+                        "description": "User's intent category",
                     },
-                    "confidence": {
-                        "type": "number",
-                        "description": "Confidence level 0-100"
-                    },
-                    "reasoning": {
-                        "type": "string",
-                        "description": "Brief explanation of classification"
-                    }
+                    "confidence": {"type": "number", "description": "Confidence level 0-100"},
+                    "reasoning": {"type": "string", "description": "Brief explanation of classification"},
                 },
-                "required": ["intent", "confidence"]
+                "required": ["intent", "confidence"],
             }
 
             response = await self.llm_service.generate_structured_output(
@@ -486,6 +474,7 @@ What is the user's intent? Respond with exactly one word: global, field, sequent
             # DETAILED DEBUG LOGGING to state logs
             if self.state:
                 from models.state import LogLevel
+
                 self.state.add_log(
                     LogLevel.INFO,
                     "LLM intent detection result",
@@ -494,7 +483,7 @@ What is the user's intent? Respond with exactly one word: global, field, sequent
                         "confidence": confidence,
                         "reasoning": reasoning[:200] if reasoning else "",
                         "user_message": user_message[:100],
-                    }
+                    },
                 )
 
             # If confidence is low, fall back to keyword matching
@@ -505,7 +494,7 @@ What is the user's intent? Respond with exactly one word: global, field, sequent
                     self.state.add_log(
                         LogLevel.INFO,
                         f"Low LLM confidence ({confidence}%), using keyword fallback",
-                        {"llm_intent": intent, "fallback_intent": fallback}
+                        {"llm_intent": intent, "fallback_intent": fallback},
                     )
                 return fallback
 
@@ -532,8 +521,12 @@ What is the user's intent? Respond with exactly one word: global, field, sequent
 
         # Check for "ask one by one" / "sequential" request
         sequential_keywords = [
-            "ask one by one", "one by one", "ask separately",
-            "one at a time", "ask individually", "sequential"
+            "ask one by one",
+            "one by one",
+            "ask separately",
+            "one at a time",
+            "ask individually",
+            "sequential",
         ]
         if any(kw in message_lower for kw in sequential_keywords):
             return "sequential"
@@ -541,21 +534,40 @@ What is the user's intent? Respond with exactly one word: global, field, sequent
         # Global skip phrases (stop ALL questions)
         # NOTE: These are checked BEFORE field-level skips, so add specific phrases here
         global_keywords = [
-            "skip all", "skip everything", "skip remaining",
-            "stop asking", "no more questions", "just proceed",
-            "go ahead", "skip asking questions", "don't ask anymore",
-            "skip the rest", "proceed without",
-            "skip for now", "skip it for now", "skip this for now",
-            "maybe later", "not right now", "I'll add that later"
+            "skip all",
+            "skip everything",
+            "skip remaining",
+            "stop asking",
+            "no more questions",
+            "just proceed",
+            "go ahead",
+            "skip asking questions",
+            "don't ask anymore",
+            "skip the rest",
+            "proceed without",
+            "skip for now",
+            "skip it for now",
+            "skip this for now",
+            "maybe later",
+            "not right now",
+            "I'll add that later",
         ]
         if any(kw in message_lower for kw in global_keywords):
             return "global"
 
         # Field-level skip (just this one question)
         field_keywords = [
-            "skip", "skip it", "skip this", "no", "nope",
-            "i don't have", "not available", "don't have that",
-            "not needed", "not now", "pass"
+            "skip",
+            "skip it",
+            "skip this",
+            "no",
+            "nope",
+            "i don't have",
+            "not available",
+            "don't have that",
+            "not needed",
+            "not now",
+            "pass",
         ]
         if any(kw in message_lower for kw in field_keywords):
             return "field"

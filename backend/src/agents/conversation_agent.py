@@ -7,32 +7,31 @@ Responsible for:
 - Managing retry logic
 - Gathering user input
 """
+
 import json
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
+from agents.adaptive_retry import AdaptiveRetryStrategy
+from agents.conversational_handler import ConversationalHandler
+from agents.error_recovery import IntelligentErrorRecovery
+from agents.intelligent_metadata_mapper import IntelligentMetadataMapper
+from agents.metadata_inference import MetadataInferenceEngine
+from agents.nwb_dandi_schema import NWBDANDISchema
+from agents.predictive_metadata import PredictiveMetadataSystem
+from agents.smart_autocorrect import SmartAutoCorrectionSystem
 from models import (
+    ConversationPhase,
     ConversionStatus,
     GlobalState,
     LogLevel,
     MCPMessage,
     MCPResponse,
-    ValidationStatus,
     ValidationOutcome,
-    ConversationPhase,
-    MetadataRequestPolicy,
+    ValidationStatus,
 )
 from models.workflow_state_manager import WorkflowStateManager
 from services import LLMService, MCPServer
-from agents.conversational_handler import ConversationalHandler
-from agents.metadata_inference import MetadataInferenceEngine
-from agents.adaptive_retry import AdaptiveRetryStrategy
-from agents.error_recovery import IntelligentErrorRecovery
-from agents.predictive_metadata import PredictiveMetadataSystem
-from agents.intelligent_metadata_mapper import IntelligentMetadataMapper
-from agents.smart_autocorrect import SmartAutoCorrectionSystem
-from agents.nwb_dandi_schema import NWBDANDISchema
-
 
 # Maximum number of correction attempts allowed
 # Maximum attempts for LLM to generate correction prompts (not conversion retries)
@@ -61,27 +60,13 @@ class ConversationAgent:
         """
         self._mcp_server = mcp_server
         self._llm_service = llm_service
-        self._conversational_handler = (
-            ConversationalHandler(llm_service) if llm_service else None
-        )
-        self._metadata_inference_engine = (
-            MetadataInferenceEngine(llm_service) if llm_service else None
-        )
-        self._adaptive_retry_strategy = (
-            AdaptiveRetryStrategy(llm_service) if llm_service else None
-        )
-        self._error_recovery = (
-            IntelligentErrorRecovery(llm_service) if llm_service else None
-        )
-        self._predictive_metadata = (
-            PredictiveMetadataSystem(llm_service) if llm_service else None
-        )
-        self._smart_autocorrect = (
-            SmartAutoCorrectionSystem(llm_service) if llm_service else None
-        )
-        self._metadata_mapper = (
-            IntelligentMetadataMapper(llm_service) if llm_service else None
-        )
+        self._conversational_handler = ConversationalHandler(llm_service) if llm_service else None
+        self._metadata_inference_engine = MetadataInferenceEngine(llm_service) if llm_service else None
+        self._adaptive_retry_strategy = AdaptiveRetryStrategy(llm_service) if llm_service else None
+        self._error_recovery = IntelligentErrorRecovery(llm_service) if llm_service else None
+        self._predictive_metadata = PredictiveMetadataSystem(llm_service) if llm_service else None
+        self._smart_autocorrect = SmartAutoCorrectionSystem(llm_service) if llm_service else None
+        self._metadata_mapper = IntelligentMetadataMapper(llm_service) if llm_service else None
         self._workflow_manager = WorkflowStateManager()
         # Conversation history now managed in GlobalState to prevent memory leaks
 
@@ -112,8 +97,9 @@ class ConversationAgent:
             needs_review: Whether this field needs user review
             raw_input: Original input that led to this value
         """
-        from models import ProvenanceInfo, MetadataProvenance
         from datetime import datetime
+
+        from models import MetadataProvenance, ProvenanceInfo
 
         # Create provenance info
         provenance_info = ProvenanceInfo(
@@ -237,9 +223,9 @@ class ConversationAgent:
 
     async def _generate_dynamic_metadata_request(
         self,
-        missing_fields: List[str],
-        inference_result: Dict[str, Any],
-        file_info: Dict[str, Any],
+        missing_fields: list[str],
+        inference_result: dict[str, Any],
+        file_info: dict[str, Any],
         state: GlobalState,
     ) -> str:
         """
@@ -277,29 +263,25 @@ Please provide what you're comfortable sharing, or skip to proceed."""
         try:
             inferred_metadata = inference_result.get("inferred_metadata", {})
             confidence_scores = inference_result.get("confidence_scores", {})
-            suggestions = inference_result.get("suggestions", [])
+            inference_result.get("suggestions", [])
 
             # Build summary of what we successfully inferred
             inferred_summary = []
             for key, value in inferred_metadata.items():
                 conf = confidence_scores.get(key, 0)
                 if conf >= 70:  # Only mention high-confidence inferences
-                    inferred_summary.append({
-                        "field": key,
-                        "value": str(value),
-                        "confidence": conf
-                    })
+                    inferred_summary.append({"field": key, "value": str(value), "confidence": conf})
 
             # Check conversation history to adapt the message
             conversation_context = ""
             request_count = state.metadata_requests_count
-            recent_user_messages = [msg for msg in state.conversation_history if msg.get('role') == 'user']
+            recent_user_messages = [msg for msg in state.conversation_history if msg.get("role") == "user"]
 
             if request_count > 0 and recent_user_messages:
                 conversation_context = f"""
 **Previous Conversation Context:**
 This is NOT the first time asking. Previous request count: {request_count}
-Recent user responses: {json.dumps([msg.get('content', '')[:100] for msg in recent_user_messages[-2:]], indent=2)}
+Recent user responses: {json.dumps([msg.get("content", "")[:100] for msg in recent_user_messages[-2:]], indent=2)}
 
 IMPORTANT: Adapt your message to acknowledge their previous responses. Don't repeat the exact same format.
 If they've already provided some information, acknowledge it specifically.
@@ -322,9 +304,9 @@ Be specific, contextual, and helpful - not generic.
             user_prompt = f"""Generate a metadata request message for this specific file.
 
 **File Information:**
-- Name: {file_info.get('name', 'unknown')}
-- Format: {file_info.get('format', 'unknown')}
-- Size: {file_info.get('size_mb', 0):.1f} MB
+- Name: {file_info.get("name", "unknown")}
+- Format: {file_info.get("format", "unknown")}
+- Size: {file_info.get("size_mb", 0):.1f} MB
 
 **What I Successfully Inferred from Analysis:**
 {json.dumps(inferred_summary, indent=2) if inferred_summary else "Limited automatic inference"}
@@ -352,15 +334,15 @@ Keep it warm, conversational, and emphasize that skipping is totally fine.
                 "properties": {
                     "message": {
                         "type": "string",
-                        "description": "The personalized metadata request message (2-4 paragraphs max)"
+                        "description": "The personalized metadata request message (2-4 paragraphs max)",
                     },
                     "context_highlights": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Key file details mentioned in the message"
-                    }
+                        "description": "Key file details mentioned in the message",
+                    },
                 },
-                "required": ["message"]
+                "required": ["message"],
             }
 
             response = await self._llm_service.generate_structured_output(
@@ -375,8 +357,8 @@ Keep it warm, conversational, and emphasize that skipping is totally fine.
                 {
                     "inferred_fields_count": len(inferred_summary),
                     "missing_fields_count": len(missing_fields),
-                    "context_highlights": response.get("context_highlights", [])
-                }
+                    "context_highlights": response.get("context_highlights", []),
+                },
             )
 
             return response.get("message", "")
@@ -389,7 +371,7 @@ Keep it warm, conversational, and emphasize that skipping is totally fine.
             # Fallback with some file context
             return f"""🔍 **File Analysis Complete**
 
-I've analyzed your {file_info.get('format', 'unknown')} file: `{file_info.get('name', 'file')}`
+I've analyzed your {file_info.get("format", "unknown")} file: `{file_info.get("name", "file")}`
 
 To create a DANDI-compatible NWB file, I need:
 {chr(10).join(f"• **{field.replace('_', ' ').title()}**" for field in missing_fields)}
@@ -498,9 +480,7 @@ Please provide these details, or say "skip for now" to proceed with minimal meta
 
                 # Pre-fill metadata with high-confidence inferences (>= 80% confidence)
                 high_confidence_inferences = {
-                    key: value
-                    for key, value in inferred_metadata.items()
-                    if confidence_scores.get(key, 0) >= 80
+                    key: value for key, value in inferred_metadata.items() if confidence_scores.get(key, 0) >= 80
                 }
 
                 if high_confidence_inferences:
@@ -520,13 +500,14 @@ Please provide these details, or say "skip for now" to proceed with minimal meta
                         "Auto-extracted metadata from file analysis (stored separately)",
                         {
                             "auto_extracted_fields": list(high_confidence_inferences.keys()),
-                            "confidence_scores": {k: confidence_scores.get(k, 0) for k in high_confidence_inferences.keys()},
+                            "confidence_scores": {k: confidence_scores.get(k, 0) for k in high_confidence_inferences},
                             "suggestions": inference_result.get("suggestions", []),
-                        }
+                        },
                     )
 
                     # PROVENANCE TRACKING: Track auto-extracted metadata from file analysis
                     from pathlib import Path
+
                     for field_name, value in high_confidence_inferences.items():
                         confidence = confidence_scores.get(field_name, 80.0)
                         self._track_metadata_provenance(
@@ -570,7 +551,6 @@ Please provide these details, or say "skip for now" to proceed with minimal meta
                 "experiment_description": metadata.get("experiment_description"),
                 "session_description": metadata.get("session_description"),
                 "session_start_time": metadata.get("session_start_time"),
-
                 # Subject-level metadata (REQUIRED by NWB spec)
                 "subject_id": metadata.get("subject_id"),
                 "species": metadata.get("species"),
@@ -580,7 +560,7 @@ Please provide these details, or say "skip for now" to proceed with minimal meta
             # Filter out fields the user already declined OR already provided/asked
             # This prevents re-asking for the same fields in a loop
             # Track which fields we've already asked about in this session
-            if not hasattr(state, 'already_asked_fields'):
+            if not hasattr(state, "already_asked_fields"):
                 state.already_asked_fields = set()
 
             # CRITICAL FIX: Check BOTH state.metadata AND user_provided_metadata for field presence
@@ -614,7 +594,7 @@ Please provide these details, or say "skip for now" to proceed with minimal meta
                     "conversation_phase": state.conversation_phase.value,
                     "status": state.status.value,
                     "conversation_history_length": len(state.conversation_history),
-                }
+                },
             )
 
             if self._workflow_manager.should_request_metadata(state):
@@ -632,9 +612,10 @@ Please provide these details, or say "skip for now" to proceed with minimal meta
 
                 # Generate DYNAMIC, file-specific message asking for required metadata
                 from pathlib import Path
+
                 message_text = await self._generate_dynamic_metadata_request(
                     missing_fields=missing_fields,
-                    inference_result=getattr(state, 'inference_result', {}),
+                    inference_result=getattr(state, "inference_result", {}),
                     file_info={
                         "name": Path(input_path).name,
                         "format": detected_format,
@@ -653,7 +634,7 @@ Please provide these details, or say "skip for now" to proceed with minimal meta
                 state.add_log(
                     LogLevel.DEBUG,
                     f"Marked {len(missing_fields)} fields as already asked to prevent re-asking",
-                    {"already_asked_fields": list(state.already_asked_fields)}
+                    {"already_asked_fields": list(state.already_asked_fields)},
                 )
 
                 # Store input_path for later use when resuming conversion after skip
@@ -661,7 +642,7 @@ Please provide these details, or say "skip for now" to proceed with minimal meta
                 state.add_log(
                     LogLevel.DEBUG,
                     "Stored pending_conversion_input_path for metadata conversation",
-                    {"input_path": input_path}
+                    {"input_path": input_path},
                 )
 
                 # BUG FIX: Set llm_message so the frontend can display it via /api/status
@@ -699,8 +680,11 @@ Please provide these details, or say "skip for now" to proceed with minimal meta
                 # Log the warning but don't block conversion
                 state.add_log(
                     LogLevel.WARNING,
-                    f"Proactive analysis detected risks (can proceed anyway)",
-                    {"risk_level": prediction["risk_level"], "success_probability": prediction.get("success_probability")},
+                    "Proactive analysis detected risks (can proceed anyway)",
+                    {
+                        "risk_level": prediction["risk_level"],
+                        "success_probability": prediction.get("success_probability"),
+                    },
                 )
                 # Store warning in metadata for user to see, but continue conversion
                 state.metadata["proactive_warning"] = {
@@ -721,29 +705,22 @@ Please provide these details, or say "skip for now" to proceed with minimal meta
         # 4. We're not in ASK_ALL policy (piece by piece mode)
 
         # Check if user has declined ALL missing fields
-        all_missing_declined = all(
-            field in state.user_declined_fields
-            for field in missing
-        ) if missing else False
+        all_missing_declined = all(field in state.user_declined_fields for field in missing) if missing else False
 
         should_ask_custom = (
-            (is_standard_complete or all_missing_declined) and  # Standard complete OR all declined
-            not state.metadata.get('_custom_metadata_prompted', False) and  # Haven't asked yet
-            state.conversation_phase != ConversationPhase.METADATA_COLLECTION and  # Not collecting standard
-            not state.user_wants_sequential  # Not in sequential questioning mode
+            (is_standard_complete or all_missing_declined)  # Standard complete OR all declined
+            and not state.metadata.get("_custom_metadata_prompted", False)  # Haven't asked yet
+            and state.conversation_phase != ConversationPhase.METADATA_COLLECTION  # Not collecting standard
+            and not state.user_wants_sequential  # Not in sequential questioning mode
         )
 
         if should_ask_custom:
-            state.metadata['_custom_metadata_prompted'] = True
+            state.metadata["_custom_metadata_prompted"] = True
             state.conversation_type = "custom_metadata_collection"
             await state.update_status(ConversionStatus.AWAITING_USER_INPUT)
 
             # Generate friendly message about custom metadata
-            custom_metadata_prompt = await self._generate_custom_metadata_prompt(
-                detected_format,
-                metadata,
-                state
-            )
+            custom_metadata_prompt = await self._generate_custom_metadata_prompt(detected_format, metadata, state)
 
             return MCPResponse.success_response(
                 reply_to=message.message_id,
@@ -756,17 +733,13 @@ Please provide these details, or say "skip for now" to proceed with minimal meta
 
         # Step 3: Show metadata review before conversion
         # Give user one last chance to add/modify metadata
-        if not state.metadata.get('_metadata_review_shown', False):
-            state.metadata['_metadata_review_shown'] = True
+        if not state.metadata.get("_metadata_review_shown", False):
+            state.metadata["_metadata_review_shown"] = True
             state.conversation_type = "metadata_review"
             await state.update_status(ConversionStatus.AWAITING_USER_INPUT)
 
             # Generate metadata review message
-            review_message = await self._generate_metadata_review_message(
-                metadata,
-                detected_format,
-                state
-            )
+            review_message = await self._generate_metadata_review_message(metadata, detected_format, state)
 
             return MCPResponse.success_response(
                 reply_to=message.message_id,
@@ -789,10 +762,10 @@ Please provide these details, or say "skip for now" to proceed with minimal meta
 
     async def _explain_error_to_user(
         self,
-        error: Dict[str, Any],
-        context: Dict[str, Any],
+        error: dict[str, Any],
+        context: dict[str, Any],
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Use LLM to explain errors in user-friendly terms.
 
@@ -830,14 +803,14 @@ Be:
             user_prompt = f"""A data conversion error occurred. Help the user understand what happened and what to do next.
 
 Error Details:
-- Message: {error.get('message', 'Unknown error')}
-- Code: {error.get('code', 'UNKNOWN')}
-- Context: {error.get('context', {})}
+- Message: {error.get("message", "Unknown error")}
+- Code: {error.get("code", "UNKNOWN")}
+- Context: {error.get("context", {})}
 
 Conversion Context:
-- Format: {context.get('format', 'unknown')}
-- Input file: {context.get('input_path', 'unknown')}
-- What was happening: {context.get('operation', 'conversion')}
+- Format: {context.get("format", "unknown")}
+- Input file: {context.get("input_path", "unknown")}
+- What was happening: {context.get("operation", "conversion")}
 
 Provide:
 1. Simple explanation of what went wrong (no technical jargon)
@@ -850,29 +823,20 @@ Respond in JSON format."""
             output_schema = {
                 "type": "object",
                 "properties": {
-                    "explanation": {
-                        "type": "string",
-                        "description": "Simple, clear explanation of what went wrong"
-                    },
-                    "likely_cause": {
-                        "type": "string",
-                        "description": "Why this error probably occurred"
-                    },
+                    "explanation": {"type": "string", "description": "Simple, clear explanation of what went wrong"},
+                    "likely_cause": {"type": "string", "description": "Why this error probably occurred"},
                     "suggested_actions": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Specific steps user can take to fix or work around the issue"
+                        "description": "Specific steps user can take to fix or work around the issue",
                     },
                     "is_recoverable": {
                         "type": "boolean",
-                        "description": "Whether this error can be fixed by user action"
+                        "description": "Whether this error can be fixed by user action",
                     },
-                    "help_url": {
-                        "type": "string",
-                        "description": "Optional URL to relevant documentation"
-                    }
+                    "help_url": {"type": "string", "description": "Optional URL to relevant documentation"},
                 },
-                "required": ["explanation", "likely_cause", "suggested_actions", "is_recoverable"]
+                "required": ["explanation", "likely_cause", "suggested_actions", "is_recoverable"],
             }
 
             explanation = await self._llm_service.generate_structured_output(
@@ -904,8 +868,8 @@ Respond in JSON format."""
 
     async def _generate_missing_metadata_message(
         self,
-        missing_fields: List[str],
-        metadata: Dict[str, Any],
+        missing_fields: list[str],
+        metadata: dict[str, Any],
         state: GlobalState,
     ) -> str:
         """
@@ -942,15 +906,12 @@ Be warm, specific, and actionable. Keep it concise (2-3 sentences)."""
             )
             return response
         except Exception as e:
-            self._state.add_log(
-                LogLevel.WARNING,
-                f"Failed to generate LLM metadata message, using fallback: {e}"
-            )
+            self._state.add_log(LogLevel.WARNING, f"Failed to generate LLM metadata message, using fallback: {e}")
             return self._generate_fallback_missing_metadata_message(missing_fields)
 
     def _generate_fallback_missing_metadata_message(
         self,
-        missing_fields: List[str],
+        missing_fields: list[str],
     ) -> str:
         """
         Generate basic message for missing metadata (fallback without LLM).
@@ -968,7 +929,6 @@ Be warm, specific, and actionable. Keep it concise (2-3 sentences)."""
             "experiment_description": "brief description of the experiment purpose and methods",
             "session_description": "brief description of this specific recording session",
             "session_start_time": "when the recording session started (ISO 8601 format: YYYY-MM-DDTHH:MM:SS±HH:MM)",
-
             # Subject-level metadata
             "subject_id": "unique identifier for the experimental subject",
             "species": "species of the subject (use scientific name, e.g., 'Mus musculus' for mouse)",
@@ -995,7 +955,7 @@ You can provide this via the chat interface."""
         input_path: str,
         format_name: str,
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Use LLM to analyze file BEFORE conversion and predict potential issues.
 
@@ -1014,7 +974,6 @@ You can provide this via the chat interface."""
             return {"risk_level": "unknown", "should_proceed": True}
 
         from pathlib import Path
-        import os
 
         # Gather file characteristics
         try:
@@ -1047,11 +1006,11 @@ Analyze files BEFORE conversion to predict issues and prevent failures."""
         user_prompt = f"""Analyze this {format_name} file for potential NWB conversion issues:
 
 File Information:
-- Filename: {file_info['filename']}
-- Size: {file_info['size_mb']} MB
-- Format: {file_info['format']}
-- Sibling files: {file_info['sibling_files']}
-- Has metadata: {file_info['has_metadata_file']}
+- Filename: {file_info["filename"]}
+- Size: {file_info["size_mb"]} MB
+- Format: {file_info["format"]}
+- Sibling files: {file_info["sibling_files"]}
+- Has metadata: {file_info["has_metadata_file"]}
 
 Predict:
 1. Likely validation issues
@@ -1129,9 +1088,9 @@ Be specific and actionable."""
     async def _decide_next_action(
         self,
         current_state: str,
-        context: Dict[str, Any],
+        context: dict[str, Any],
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Use LLM to decide the next best action based on current state.
 
@@ -1233,7 +1192,7 @@ What should happen next? Which agent should handle it?"""
     async def _generate_status_message(
         self,
         status: str,
-        context: Dict[str, Any],
+        context: dict[str, Any],
         state: GlobalState,
     ) -> str:
         """
@@ -1333,10 +1292,7 @@ Create a friendly, informative message."""
             return fallback_messages.get(status, "Operation completed")
 
     async def _generate_metadata_review_message(
-        self,
-        metadata: Dict[str, Any],
-        format_name: str,
-        state: GlobalState
+        self, metadata: dict[str, Any], format_name: str, state: GlobalState
     ) -> str:
         """
         Generate a metadata review message before starting conversion.
@@ -1363,13 +1319,13 @@ Create a friendly, informative message."""
 **Metadata Collected:**
 """
             for key, value in metadata.items():
-                if not key.startswith('_'):  # Skip internal fields
+                if not key.startswith("_"):  # Skip internal fields
                     message += f"• **{key.replace('_', ' ').title()}**: {value}\n"
 
             if missing_fields:
                 message += f"""
 
-**Note:** Some recommended fields are missing: {', '.join(missing_fields)}
+**Note:** Some recommended fields are missing: {", ".join(missing_fields)}
 These are not required but would improve DANDI compatibility.
 """
 
@@ -1396,7 +1352,7 @@ Generate a friendly, clear review message that:
             # Format metadata for display
             metadata_summary = {}
             for key, value in metadata.items():
-                if not key.startswith('_'):  # Skip internal fields
+                if not key.startswith("_"):  # Skip internal fields
                     if isinstance(value, (list, dict)):
                         metadata_summary[key] = json.dumps(value)[:50] + "..."
                     else:
@@ -1406,7 +1362,7 @@ Generate a friendly, clear review message that:
 
 Format: {format_name}
 Collected metadata: {json.dumps(metadata_summary, indent=2)}
-Missing recommended fields: {missing_fields if missing_fields else 'None'}
+Missing recommended fields: {missing_fields if missing_fields else "None"}
 
 Create a clear, friendly message that:
 1. Shows what we have
@@ -1414,18 +1370,10 @@ Create a clear, friendly message that:
 3. Asks if they want to add anything before conversion
 4. Makes it clear they can proceed as-is"""
 
-            output_schema = {
-                "type": "object",
-                "properties": {
-                    "message": {"type": "string"}
-                },
-                "required": ["message"]
-            }
+            output_schema = {"type": "object", "properties": {"message": {"type": "string"}}, "required": ["message"]}
 
             response = await self._llm_service.generate_structured_output(
-                prompt=user_prompt,
-                output_schema=output_schema,
-                system_prompt=system_prompt
+                prompt=user_prompt, output_schema=output_schema, system_prompt=system_prompt
             )
 
             return response.get("message", "")
@@ -1451,8 +1399,15 @@ Create a clear, friendly message that:
             True if message expresses intent to add without providing concrete data
         """
         intent_phrases = [
-            "want to add", "like to add", "add more", "add some",
-            "yes", "sure", "i'll add", "let me add", "can i add"
+            "want to add",
+            "like to add",
+            "add more",
+            "add some",
+            "yes",
+            "sure",
+            "i'll add",
+            "let me add",
+            "can i add",
         ]
 
         msg_lower = user_message.lower().strip()
@@ -1474,7 +1429,7 @@ Create a clear, friendly message that:
         message_id: str,
         input_path: str,
         detected_format: str,
-        metadata: Dict[str, Any],
+        metadata: dict[str, Any],
         state: GlobalState,
     ) -> MCPResponse:
         """
@@ -1496,34 +1451,27 @@ Create a clear, friendly message that:
         state.add_log(
             LogLevel.INFO,
             "Continuing conversion workflow after metadata collection",
-            {"format": detected_format, "metadata_fields": list(metadata.keys())}
+            {"format": detected_format, "metadata_fields": list(metadata.keys())},
         )
 
         # Step 2: Check for custom metadata
         is_standard_complete, missing = self._validate_required_nwb_metadata(metadata)
 
-        all_missing_declined = all(
-            field in state.user_declined_fields
-            for field in missing
-        ) if missing else False
+        all_missing_declined = all(field in state.user_declined_fields for field in missing) if missing else False
 
         should_ask_custom = (
-            (is_standard_complete or all_missing_declined) and
-            not metadata.get('_custom_metadata_prompted', False) and
-            state.conversation_phase != ConversationPhase.METADATA_COLLECTION and
-            not state.user_wants_sequential
+            (is_standard_complete or all_missing_declined)
+            and not metadata.get("_custom_metadata_prompted", False)
+            and state.conversation_phase != ConversationPhase.METADATA_COLLECTION
+            and not state.user_wants_sequential
         )
 
         if should_ask_custom:
-            state.metadata['_custom_metadata_prompted'] = True
+            state.metadata["_custom_metadata_prompted"] = True
             state.conversation_type = "custom_metadata_collection"
             await state.update_status(ConversionStatus.AWAITING_USER_INPUT)
 
-            custom_metadata_prompt = await self._generate_custom_metadata_prompt(
-                detected_format,
-                metadata,
-                state
-            )
+            custom_metadata_prompt = await self._generate_custom_metadata_prompt(detected_format, metadata, state)
 
             return MCPResponse.success_response(
                 reply_to=message_id,
@@ -1535,16 +1483,12 @@ Create a clear, friendly message that:
             )
 
         # Step 3: Show metadata review before conversion
-        if not metadata.get('_metadata_review_shown', False):
-            state.metadata['_metadata_review_shown'] = True
+        if not metadata.get("_metadata_review_shown", False):
+            state.metadata["_metadata_review_shown"] = True
             state.conversation_type = "metadata_review"
             await state.update_status(ConversionStatus.AWAITING_USER_INPUT)
 
-            review_message = await self._generate_metadata_review_message(
-                metadata,
-                detected_format,
-                state
-            )
+            review_message = await self._generate_metadata_review_message(metadata, detected_format, state)
 
             return MCPResponse.success_response(
                 reply_to=message_id,
@@ -1566,10 +1510,7 @@ Create a clear, friendly message that:
         )
 
     async def _generate_custom_metadata_prompt(
-        self,
-        format_name: str,
-        metadata: Dict[str, Any],
-        state: GlobalState
+        self, format_name: str, metadata: dict[str, Any], state: GlobalState
     ) -> str:
         """
         Generate a friendly prompt asking if user wants to add custom metadata.
@@ -1612,33 +1553,23 @@ Just type your additional metadata in a natural way. For example:
             system_prompt = "You are helping collect custom metadata for neuroscience data conversion."
 
             # Get suggestions for metadata based on file type
-            suggestions = []
             if self._metadata_mapper:
-                suggestions = await self._metadata_mapper.suggest_missing_metadata(
-                    metadata, format_name
-                )
+                await self._metadata_mapper.suggest_missing_metadata(metadata, format_name)
 
             user_prompt = f"""Generate a friendly message asking if the user wants to add custom metadata.
 
 Format detected: {format_name}
-Already collected: {', '.join(metadata.keys())}
+Already collected: {", ".join(metadata.keys())}
 
 Suggest relevant metadata they might want to add based on the file format.
 Be encouraging about adding custom fields - anything they think is important.
 Make it clear they can add ANY metadata, not just standard fields.
 End with clear instructions on how to provide it or skip."""
 
-            output_schema = {
-                "type": "object",
-                "properties": {
-                    "message": {"type": "string"}
-                }
-            }
+            output_schema = {"type": "object", "properties": {"message": {"type": "string"}}}
 
             response = await self._llm_service.generate_structured_output(
-                prompt=user_prompt,
-                output_schema=output_schema,
-                system_prompt=system_prompt
+                prompt=user_prompt, output_schema=output_schema, system_prompt=system_prompt
             )
 
             return response.get("message", self._generate_custom_metadata_prompt.__doc__)
@@ -1647,11 +1578,7 @@ End with clear instructions on how to provide it or skip."""
             state.add_log(LogLevel.WARNING, f"Failed to generate custom prompt: {e}")
             return self._generate_custom_metadata_prompt.__doc__
 
-    async def _handle_custom_metadata_response(
-        self,
-        user_input: str,
-        state: GlobalState
-    ) -> Dict[str, Any]:
+    async def _handle_custom_metadata_response(self, user_input: str, state: GlobalState) -> dict[str, Any]:
         """
         Process user's custom metadata input using intelligent mapping.
 
@@ -1669,41 +1596,39 @@ End with clear instructions on how to provide it or skip."""
         try:
             # Parse custom metadata using LLM
             parsed_metadata = await self._metadata_mapper.parse_custom_metadata(
-                user_input=user_input,
-                existing_metadata=state.metadata,
-                state=state
+                user_input=user_input, existing_metadata=state.metadata, state=state
             )
 
             # Update state metadata with parsed fields
-            if parsed_metadata.get('standard_fields'):
-                state.metadata.update(parsed_metadata['standard_fields'])
-                for field, value in parsed_metadata['standard_fields'].items():
+            if parsed_metadata.get("standard_fields"):
+                state.metadata.update(parsed_metadata["standard_fields"])
+                for field, value in parsed_metadata["standard_fields"].items():
                     self._track_ai_parsed_metadata(
                         state=state,
                         field_name=field,
                         value=value,
                         confidence=90,
                         raw_input=user_input,
-                        reasoning="Parsed from custom metadata input"
+                        reasoning="Parsed from custom metadata input",
                     )
 
             # Store custom fields separately for special handling
-            if parsed_metadata.get('custom_fields'):
-                if '_custom_fields' not in state.metadata:
-                    state.metadata['_custom_fields'] = {}
-                state.metadata['_custom_fields'].update(parsed_metadata['custom_fields'])
+            if parsed_metadata.get("custom_fields"):
+                if "_custom_fields" not in state.metadata:
+                    state.metadata["_custom_fields"] = {}
+                state.metadata["_custom_fields"].update(parsed_metadata["custom_fields"])
 
             # Store mapping report for display
-            if parsed_metadata.get('mapping_report'):
-                state.metadata['_mapping_report'] = parsed_metadata['mapping_report']
+            if parsed_metadata.get("mapping_report"):
+                state.metadata["_mapping_report"] = parsed_metadata["mapping_report"]
 
             state.add_log(
                 LogLevel.INFO,
                 "Processed custom metadata",
                 {
-                    "standard_fields_count": len(parsed_metadata.get('standard_fields', {})),
-                    "custom_fields_count": len(parsed_metadata.get('custom_fields', {}))
-                }
+                    "standard_fields_count": len(parsed_metadata.get("standard_fields", {})),
+                    "custom_fields_count": len(parsed_metadata.get("custom_fields", {})),
+                },
             )
 
             return parsed_metadata
@@ -1716,7 +1641,7 @@ End with clear instructions on how to provide it or skip."""
         self,
         original_message_id: str,
         output_path: str,
-        validation_result: Dict[str, Any],
+        validation_result: dict[str, Any],
         format_name: str,
         input_path: str,
         state: GlobalState,
@@ -1814,8 +1739,8 @@ The conversion report has been generated with full details."""
 
     def _validate_required_nwb_metadata(
         self,
-        metadata: Dict[str, Any],
-    ) -> tuple[bool, List[str]]:
+        metadata: dict[str, Any],
+    ) -> tuple[bool, list[str]]:
         """
         Validate that all required NWB metadata fields are present BEFORE conversion.
 
@@ -1838,7 +1763,7 @@ The conversion report has been generated with full details."""
         original_message_id: str,
         input_path: str,
         format_name: str,
-        metadata: Dict[str, Any],
+        metadata: dict[str, Any],
         state: GlobalState,
     ) -> MCPResponse:
         """
@@ -1865,20 +1790,20 @@ The conversion report has been generated with full details."""
             state.add_log(
                 LogLevel.WARNING,
                 f"Some recommended NWB metadata fields are missing: {missing_fields}",
-                {"missing_fields": missing_fields}
+                {"missing_fields": missing_fields},
             )
 
             # Store missing fields info for potential later use
             # But DO NOT block conversion - users should have the choice
-            state.metadata['_missing_fields_warning'] = {
-                'fields': missing_fields,
-                'message': f"Note: Some recommended fields are missing ({', '.join(missing_fields)}). The conversion will proceed with available metadata.",
-                'timestamp': datetime.now().isoformat()
+            state.metadata["_missing_fields_warning"] = {
+                "fields": missing_fields,
+                "message": f"Note: Some recommended fields are missing ({', '.join(missing_fields)}). The conversion will proceed with available metadata.",
+                "timestamp": datetime.now().isoformat(),
             }
 
         # ENHANCEMENT: Auto-fill optional fields from inference if not provided by user
         # This ensures NWB Inspector validation passes for recommended fields
-        inference_result = getattr(state, 'inference_result', {})
+        inference_result = getattr(state, "inference_result", {})
         if inference_result:
             inferred_metadata = inference_result.get("inferred_metadata", {})
             confidence_scores = inference_result.get("confidence_scores", {})
@@ -1891,10 +1816,11 @@ The conversion report has been generated with full details."""
                 # 1. Not already in metadata (user didn't provide it)
                 # 2. Was inferred with reasonable confidence (>= 60%)
                 # 3. Inference result has this field
-                if (not metadata.get(field_name) and
-                    field_name in inferred_metadata and
-                    confidence_scores.get(field_name, 0) >= 60):
-
+                if (
+                    not metadata.get(field_name)
+                    and field_name in inferred_metadata
+                    and confidence_scores.get(field_name, 0) >= 60
+                ):
                     inferred_value = inferred_metadata[field_name]
                     confidence = confidence_scores.get(field_name, 60)
 
@@ -1921,8 +1847,8 @@ The conversion report has been generated with full details."""
                             "field": field_name,
                             "value": str(inferred_value)[:100],  # Truncate for logging
                             "confidence": confidence,
-                            "provenance": "ai-inferred"
-                        }
+                            "provenance": "ai-inferred",
+                        },
                     )
 
         # Generate output path
@@ -2051,7 +1977,9 @@ The conversion report has been generated with full details."""
                 status="success",
                 context={
                     "format": format_name,
-                    "file_size_mb": Path(output_path).stat().st_size / (1024 * 1024) if Path(output_path).exists() else 0,
+                    "file_size_mb": (
+                        Path(output_path).stat().st_size / (1024 * 1024) if Path(output_path).exists() else 0
+                    ),
                     "validation_summary": validation_result.get("summary", {}),
                     "output_path": output_path,
                     "input_filename": Path(input_path).name,
@@ -2103,7 +2031,9 @@ The conversion report has been generated with full details."""
             if warning_count > 0:
                 issue_parts.append(f"{warning_count} warning{'s' if warning_count != 1 else ''}")
             if best_practice_count > 0:
-                issue_parts.append(f"{best_practice_count} best practice suggestion{'s' if best_practice_count != 1 else ''}")
+                issue_parts.append(
+                    f"{best_practice_count} best practice suggestion{'s' if best_practice_count != 1 else ''}"
+                )
             if info_count > 0:
                 issue_parts.append(f"{info_count} informational issue{'s' if info_count != 1 else ''}")
 
@@ -2200,9 +2130,7 @@ The conversion report has been generated with full details."""
 
                     # Add to conversation history
                     state.add_conversation_message(
-                        role="assistant",
-                        content=llm_analysis.get("message", ""),
-                        context=llm_analysis
+                        role="assistant", content=llm_analysis.get("message", ""), context=llm_analysis
                     )
 
                     # Store conversational state for frontend
@@ -2247,7 +2175,9 @@ The conversion report has been generated with full details."""
                 status="retry_available",
                 context={
                     "format": format_name,
-                    "file_size_mb": Path(output_path).stat().st_size / (1024 * 1024) if Path(output_path).exists() else 0,
+                    "file_size_mb": (
+                        Path(output_path).stat().st_size / (1024 * 1024) if Path(output_path).exists() else 0
+                    ),
                     "validation_summary": validation_result.get("summary", {}),
                     "output_path": output_path,
                     "input_filename": Path(input_path).name,
@@ -2348,7 +2278,11 @@ The conversion report has been generated with full details."""
             # Only valid for PASSED_WITH_ISSUES (has warnings but no critical errors)
             # Use enum comparison
             try:
-                status_enum = ValidationOutcome(state.overall_status) if isinstance(state.overall_status, str) else state.overall_status
+                status_enum = (
+                    ValidationOutcome(state.overall_status)
+                    if isinstance(state.overall_status, str)
+                    else state.overall_status
+                )
             except (ValueError, AttributeError):
                 status_enum = state.overall_status
 
@@ -2424,7 +2358,7 @@ The conversion report has been generated with full details."""
                 )
 
                 # Warn user and ask for confirmation
-                warning_message = (
+                (
                     f"⚠️ No changes detected since last attempt (attempt #{state.correction_attempt}).\n\n"
                     f"The same {len(current_issues)} validation errors still exist because:\n"
                     f"- No user input was provided\n"
@@ -2470,7 +2404,7 @@ The conversion report has been generated with full details."""
                         "should_retry": retry_recommendation.get("should_retry"),
                         "strategy": retry_recommendation.get("strategy"),
                         "approach": retry_recommendation.get("approach"),
-                    }
+                    },
                 )
 
                 # Check if we should ask user for help instead of retrying
@@ -2630,7 +2564,9 @@ The conversion report has been generated with full details."""
                             state.metadata["last_validation_result"] = validation_result
 
                             # Track improvement progress
-                            old_issue_count = len(state.metadata.get("previous_validation_result", {}).get("issues", []))
+                            old_issue_count = len(
+                                state.metadata.get("previous_validation_result", {}).get("issues", [])
+                            )
                             new_issue_count = len(issues)
 
                             state.add_log(
@@ -2680,9 +2616,7 @@ The conversion report has been generated with full details."""
                                 await state.update_status(ConversionStatus.AWAITING_USER_INPUT)
                                 state.conversation_type = "improvement_decision"
 
-                                improvement_msg = (
-                                    f"✅ Corrections applied! The file is improved but still has {new_issue_count} issue(s).\n\n"
-                                )
+                                improvement_msg = f"✅ Corrections applied! The file is improved but still has {new_issue_count} issue(s).\n\n"
 
                                 if new_issue_count > old_issue_count:
                                     improvement_msg += (
@@ -2717,7 +2651,7 @@ The conversion report has been generated with full details."""
                                     reply_to=message.message_id,
                                     result={
                                         "status": "completed",
-                                        "message": f"✅ Success! All issues have been fixed. Your NWB file is ready for download.",
+                                        "message": "✅ Success! All issues have been fixed. Your NWB file is ready for download.",
                                         "overall_status": overall_status,
                                         "output_path": state.output_path,
                                         "correction_attempt": state.correction_attempt,
@@ -2738,7 +2672,7 @@ The conversion report has been generated with full details."""
                                     reply_to=message.message_id,
                                     result={
                                         "status": "failed",
-                                        "message": f"❌ After applying corrections, the file now has critical errors. Would you like to retry with different metadata?",
+                                        "message": "❌ After applying corrections, the file now has critical errors. Would you like to retry with different metadata?",
                                         "overall_status": overall_status,
                                         "issue_count": new_issue_count,
                                     },
@@ -2773,9 +2707,11 @@ The conversion report has been generated with full details."""
                     LogLevel.ERROR,
                     "Cannot restart conversion - input_path not available",
                     {
-                        "pending_conversion_input_path": str(state.pending_conversion_input_path) if state.pending_conversion_input_path else "None",
-                        "input_path": str(state.input_path) if state.input_path else "None"
-                    }
+                        "pending_conversion_input_path": (
+                            str(state.pending_conversion_input_path) if state.pending_conversion_input_path else "None"
+                        ),
+                        "input_path": str(state.input_path) if state.input_path else "None",
+                    },
                 )
                 return MCPResponse.error_response(
                     reply_to=message.message_id,
@@ -2810,7 +2746,7 @@ The conversion report has been generated with full details."""
                 },
             )
 
-    def _identify_user_input_required(self, corrections: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _identify_user_input_required(self, corrections: dict[str, Any]) -> list[dict[str, Any]]:
         """
         Identify issues that require user input to fix.
 
@@ -2836,48 +2772,56 @@ The conversion report has been generated with full details."""
 
             # Identify specific fields that need user input
             if "subject_id" in issue and ("missing" in issue or "empty" in issue):
-                required_fields.append({
-                    "field_name": "subject_id",
-                    "label": "Subject ID",
-                    "type": "text",
-                    "required": True,
-                    "help_text": "Unique identifier for the experimental subject",
-                    "reason": suggestion.get("issue", ""),
-                })
+                required_fields.append(
+                    {
+                        "field_name": "subject_id",
+                        "label": "Subject ID",
+                        "type": "text",
+                        "required": True,
+                        "help_text": "Unique identifier for the experimental subject",
+                        "reason": suggestion.get("issue", ""),
+                    }
+                )
 
             elif "session_description" in issue and "too short" in suggestion_text:
-                required_fields.append({
-                    "field_name": "session_description",
-                    "label": "Session Description",
-                    "type": "textarea",
-                    "required": True,
-                    "help_text": "Detailed description of the experimental session (minimum 20 characters)",
-                    "reason": suggestion.get("issue", ""),
-                })
+                required_fields.append(
+                    {
+                        "field_name": "session_description",
+                        "label": "Session Description",
+                        "type": "textarea",
+                        "required": True,
+                        "help_text": "Detailed description of the experimental session (minimum 20 characters)",
+                        "reason": suggestion.get("issue", ""),
+                    }
+                )
 
             elif "experimenter" in issue and ("missing" in issue or "empty" in issue):
-                required_fields.append({
-                    "field_name": "experimenter",
-                    "label": "Experimenter Name(s)",
-                    "type": "text",
-                    "required": True,
-                    "help_text": "Name(s) of experimenter(s) who conducted the session (comma-separated)",
-                    "reason": suggestion.get("issue", ""),
-                })
+                required_fields.append(
+                    {
+                        "field_name": "experimenter",
+                        "label": "Experimenter Name(s)",
+                        "type": "text",
+                        "required": True,
+                        "help_text": "Name(s) of experimenter(s) who conducted the session (comma-separated)",
+                        "reason": suggestion.get("issue", ""),
+                    }
+                )
 
             elif "institution" in issue and "empty" not in suggestion_text:
-                required_fields.append({
-                    "field_name": "institution",
-                    "label": "Institution",
-                    "type": "text",
-                    "required": False,
-                    "help_text": "Institution where the experiment was conducted",
-                    "reason": suggestion.get("issue", ""),
-                })
+                required_fields.append(
+                    {
+                        "field_name": "institution",
+                        "label": "Institution",
+                        "type": "text",
+                        "required": False,
+                        "help_text": "Institution where the experiment was conducted",
+                        "reason": suggestion.get("issue", ""),
+                    }
+                )
 
         return required_fields
 
-    def _extract_auto_fixes(self, corrections: Dict[str, Any]) -> Dict[str, Any]:
+    def _extract_auto_fixes(self, corrections: dict[str, Any]) -> dict[str, Any]:
         """
         Extract automatically fixable corrections from LLM analysis.
 
@@ -2991,7 +2935,7 @@ The conversion report has been generated with full details."""
 
         state.add_log(
             LogLevel.INFO,
-            f"Processing conversational response from user",
+            "Processing conversational response from user",
             {"message_preview": user_message[:100]},
         )
 
@@ -3016,11 +2960,7 @@ The conversion report has been generated with full details."""
 
         # Handle auto-fix approval conversation type
         if state.conversation_type == "auto_fix_approval":
-            return await self._handle_auto_fix_approval_response(
-                user_message,
-                message.message_id,
-                state
-            )
+            return await self._handle_auto_fix_approval_response(user_message, message.message_id, state)
 
         # Handle metadata review conversation type
         if state.conversation_type == "metadata_review":
@@ -3047,10 +2987,7 @@ The conversion report has been generated with full details."""
 
             # Check if user expresses intent to add but hasn't provided data yet
             if self._user_expresses_intent_to_add_more(user_message):
-                state.add_log(
-                    LogLevel.INFO,
-                    "User expressed intent to add metadata without providing concrete data"
-                )
+                state.add_log(LogLevel.INFO, "User expressed intent to add metadata without providing concrete data")
                 return MCPResponse.success_response(
                     reply_to=message.message_id,
                     result={
@@ -3071,23 +3008,22 @@ The conversion report has been generated with full details."""
 
             # Simple pattern matching for "field: value" format
             import re
-            pattern = r'(\w+)\s*[:=]\s*(.+?)(?=\w+\s*[:=]|$)'
+
+            pattern = r"(\w+)\s*[:=]\s*(.+?)(?=\w+\s*[:=]|$)"
             matches = re.findall(pattern, user_message)
             for field, value in matches:
-                field = field.lower().replace(' ', '_')
+                field = field.lower().replace(" ", "_")
                 additional_metadata[field] = value.strip()
 
             # If no pattern matches, try to parse with metadata mapper if available
             if not additional_metadata and self._metadata_mapper:
                 parsed = await self._metadata_mapper.parse_custom_metadata(
-                    user_input=user_message,
-                    existing_metadata=state.metadata,
-                    state=state
+                    user_input=user_message, existing_metadata=state.metadata, state=state
                 )
-                if parsed.get('standard_fields'):
-                    additional_metadata.update(parsed['standard_fields'])
-                if parsed.get('custom_fields'):
-                    additional_metadata.update(parsed['custom_fields'])
+                if parsed.get("standard_fields"):
+                    additional_metadata.update(parsed["standard_fields"])
+                if parsed.get("custom_fields"):
+                    additional_metadata.update(parsed["custom_fields"])
 
             if additional_metadata:
                 # Update metadata
@@ -3102,16 +3038,16 @@ The conversion report has been generated with full details."""
                             value=value,
                             confidence=100.0,
                             source=f"User provided during review: '{user_message[:100]}'",
-                            raw_input=user_message[:200]
+                            raw_input=user_message[:200],
                         )
 
                 state.add_log(
                     LogLevel.INFO,
                     f"Added {len(additional_metadata)} fields during metadata review",
-                    {"fields": list(additional_metadata.keys())}
+                    {"fields": list(additional_metadata.keys())},
                 )
 
-                confirmation = f"Added {len(additional_metadata)} metadata field(s). Starting conversion..."
+                f"Added {len(additional_metadata)} metadata field(s). Starting conversion..."
 
                 state.conversation_type = None  # Reset for conversion
 
@@ -3132,10 +3068,7 @@ The conversion report has been generated with full details."""
                     )
             else:
                 # No metadata detected - ask for clarification instead of converting
-                state.add_log(
-                    LogLevel.INFO,
-                    "No metadata detected in user message - asking for clarification"
-                )
+                state.add_log(LogLevel.INFO, "No metadata detected in user message - asking for clarification")
                 return MCPResponse.success_response(
                     reply_to=message.message_id,
                     result={
@@ -3161,8 +3094,8 @@ The conversion report has been generated with full details."""
 
                 # BUG FIX: Mark both custom metadata and metadata review as complete
                 # so _continue_conversion_workflow proceeds directly to conversion
-                state.metadata['_custom_metadata_prompted'] = True
-                state.metadata['_metadata_review_shown'] = True
+                state.metadata["_custom_metadata_prompted"] = True
+                state.metadata["_metadata_review_shown"] = True
 
                 # BUG FIX: Continue workflow instead of restarting from scratch
                 # Use _continue_conversion_workflow to proceed to metadata review or conversion
@@ -3184,19 +3117,15 @@ The conversion report has been generated with full details."""
                     )
 
             # Process custom metadata
-            parsed_metadata = await self._handle_custom_metadata_response(
-                user_message,
-                state
-            )
+            parsed_metadata = await self._handle_custom_metadata_response(user_message, state)
 
             # Generate confirmation message
-            if self._metadata_mapper and parsed_metadata.get('mapping_report'):
-                confirmation = self._metadata_mapper.format_metadata_for_display(
-                    state.metadata,
-                    parsed_metadata.get('mapping_report', [])
+            if self._metadata_mapper and parsed_metadata.get("mapping_report"):
+                self._metadata_mapper.format_metadata_for_display(
+                    state.metadata, parsed_metadata.get("mapping_report", [])
                 )
             else:
-                confirmation = f"Added {len(parsed_metadata.get('standard_fields', {}))} standard fields and {len(parsed_metadata.get('custom_fields', {}))} custom fields."
+                f"Added {len(parsed_metadata.get('standard_fields', {}))} standard fields and {len(parsed_metadata.get('custom_fields', {}))} custom fields."
 
             state.conversation_type = None  # Reset conversation type
             state.add_log(LogLevel.INFO, "Custom metadata collected, proceeding with conversion")
@@ -3230,20 +3159,23 @@ The conversion report has been generated with full details."""
 
         # CHECK IF USER IS DECLINING TO PROVIDE METADATA
         # Use LLM-based detection for better understanding of user intent
-        conversation_context = "\n".join([
-            f"{msg['role']}: {msg['content'][:100]}"
-            for msg in state.conversation_history[-3:]  # Last 3 exchanges for context
-        ]) if state.conversation_history else ""
-
-        skip_type = await self._conversational_handler.detect_skip_type_with_llm(
-            user_message,
-            conversation_context
+        conversation_context = (
+            "\n".join(
+                [
+                    f"{msg['role']}: {msg['content'][:100]}"
+                    for msg in state.conversation_history[-3:]  # Last 3 exchanges for context
+                ]
+            )
+            if state.conversation_history
+            else ""
         )
+
+        skip_type = await self._conversational_handler.detect_skip_type_with_llm(user_message, conversation_context)
 
         state.add_log(
             LogLevel.INFO,
             f"User intent detected: {skip_type}",
-            {"user_message": user_message[:100], "skip_type": skip_type}
+            {"user_message": user_message[:100], "skip_type": skip_type},
         )
 
         # NOTE: Removed duplicate graceful error handling code here
@@ -3284,7 +3216,7 @@ The conversion report has been generated with full details."""
                     "user_wants_minimal": state.user_wants_minimal,
                     "metadata_requests_count": state.metadata_requests_count,
                     "status_before": state.status.value,
-                }
+                },
             )
 
             # ✅ FIX: Validate that we have a valid input_path before proceeding
@@ -3296,9 +3228,11 @@ The conversion report has been generated with full details."""
                     LogLevel.ERROR,
                     "Cannot restart conversion - input_path not available",
                     {
-                        "pending_conversion_input_path": str(state.pending_conversion_input_path) if state.pending_conversion_input_path else "None",
-                        "input_path": str(state.input_path) if state.input_path else "None"
-                    }
+                        "pending_conversion_input_path": (
+                            str(state.pending_conversion_input_path) if state.pending_conversion_input_path else "None"
+                        ),
+                        "input_path": str(state.input_path) if state.input_path else "None",
+                    },
                 )
                 return MCPResponse.error_response(
                     reply_to=message.message_id,
@@ -3323,9 +3257,7 @@ The conversion report has been generated with full details."""
             # User wants to skip THIS specific field only
             # Get the current field being asked from conversation context
             last_context = (
-                state.conversation_history[-1].get("context", {})
-                if len(state.conversation_history) >= 1
-                else {}
+                state.conversation_history[-1].get("context", {}) if len(state.conversation_history) >= 1 else {}
             )
 
             current_field = last_context.get("field")
@@ -3349,9 +3281,13 @@ The conversion report has been generated with full details."""
                         LogLevel.ERROR,
                         "Cannot restart conversion - input_path not available",
                         {
-                            "pending_conversion_input_path": str(state.pending_conversion_input_path) if state.pending_conversion_input_path else "None",
-                            "input_path": str(state.input_path) if state.input_path else "None"
-                        }
+                            "pending_conversion_input_path": (
+                                str(state.pending_conversion_input_path)
+                                if state.pending_conversion_input_path
+                                else "None"
+                            ),
+                            "input_path": str(state.input_path) if state.input_path else "None",
+                        },
                     )
                     return MCPResponse.error_response(
                         reply_to=message.message_id,
@@ -3395,9 +3331,11 @@ The conversion report has been generated with full details."""
                     LogLevel.ERROR,
                     "Cannot restart conversion - input_path not available",
                     {
-                        "pending_conversion_input_path": str(state.pending_conversion_input_path) if state.pending_conversion_input_path else "None",
-                        "input_path": str(state.input_path) if state.input_path else "None"
-                    }
+                        "pending_conversion_input_path": (
+                            str(state.pending_conversion_input_path) if state.pending_conversion_input_path else "None"
+                        ),
+                        "input_path": str(state.input_path) if state.input_path else "None",
+                    },
                 )
                 return MCPResponse.error_response(
                     reply_to=message.message_id,
@@ -3420,9 +3358,7 @@ The conversion report has been generated with full details."""
         try:
             # Build conversation context
             last_context = (
-                state.conversation_history[-2].get("context", {})
-                if len(state.conversation_history) >= 2
-                else {}
+                state.conversation_history[-2].get("context", {}) if len(state.conversation_history) >= 2 else {}
             )
 
             context = {
@@ -3445,17 +3381,19 @@ The conversion report has been generated with full details."""
                 {
                     "response_type": response.get("type"),
                     "has_extracted_metadata": bool(response.get("extracted_metadata")),
-                    "extracted_metadata_keys": list(response.get("extracted_metadata", {}).keys()) if response.get("extracted_metadata") else [],
+                    "extracted_metadata_keys": (
+                        list(response.get("extracted_metadata", {}).keys())
+                        if response.get("extracted_metadata")
+                        else []
+                    ),
                     "ready_to_proceed": response.get("ready_to_proceed"),
                     "needs_more_info": response.get("needs_more_info"),
-                }
+                },
             )
 
             # Add assistant response to conversation history
             state.add_conversation_message(
-                role="assistant",
-                content=response.get("follow_up_message", ""),
-                context=response
+                role="assistant", content=response.get("follow_up_message", ""), context=response
             )
 
             # ✅ FIX: ALWAYS persist extracted metadata incrementally, even if not ready to proceed
@@ -3494,7 +3432,6 @@ The conversion report has been generated with full details."""
 
             # Check if we're ready to proceed with fixes
             if response.get("ready_to_proceed", False):
-
                 # Bug #11 fix: Mark that user provided input for "no progress" detection
                 # Mark true regardless of whether metadata was extracted - user engaged with the system
                 state.user_provided_input_this_attempt = True
@@ -3518,9 +3455,13 @@ The conversion report has been generated with full details."""
                         LogLevel.ERROR,
                         "Cannot restart conversion - input_path not available",
                         {
-                            "pending_conversion_input_path": str(state.pending_conversion_input_path) if state.pending_conversion_input_path else "None",
-                            "input_path": str(state.input_path) if state.input_path else "None"
-                        }
+                            "pending_conversion_input_path": (
+                                str(state.pending_conversion_input_path)
+                                if state.pending_conversion_input_path
+                                else "None"
+                            ),
+                            "input_path": str(state.input_path) if state.input_path else "None",
+                        },
                     )
                     return MCPResponse.error_response(
                         reply_to=message.message_id,
@@ -3627,10 +3568,16 @@ The conversion report has been generated with full details."""
             }
 
             # Recent conversation history for context
-            recent_history = "\n".join([
-                f"{msg['role']}: {msg['content'][:100]}"
-                for msg in state.conversation_history[-3:]  # Last 3 exchanges
-            ]) if state.conversation_history else "No previous conversation"
+            recent_history = (
+                "\n".join(
+                    [
+                        f"{msg['role']}: {msg['content'][:100]}"
+                        for msg in state.conversation_history[-3:]  # Last 3 exchanges
+                    ]
+                )
+                if state.conversation_history
+                else "No previous conversation"
+            )
 
             system_prompt = """You are an expert NWB (Neurodata Without Borders) conversion assistant.
 
@@ -3653,13 +3600,13 @@ You should:
             user_prompt = f"""User question: "{user_query}"
 
 Current conversion context:
-- Status: {context_info['current_status']}
-- Has file uploaded: {context_info['has_input_file']}
-- File path: {context_info['input_path'] or 'None'}
-- Format detected: {context_info['detected_format'] or 'Not yet detected'}
-- Validation status: {context_info['validation_status'] or 'Not yet validated'}
-- Correction attempt: {context_info['correction_attempt']}
-- Can retry: {context_info['can_retry']}
+- Status: {context_info["current_status"]}
+- Has file uploaded: {context_info["has_input_file"]}
+- File path: {context_info["input_path"] or "None"}
+- Format detected: {context_info["detected_format"] or "Not yet detected"}
+- Validation status: {context_info["validation_status"] or "Not yet validated"}
+- Correction attempt: {context_info["correction_attempt"]}
+- Can retry: {context_info["can_retry"]}
 
 Recent conversation:
 {recent_history}
@@ -3670,21 +3617,18 @@ Respond in JSON format."""
             output_schema = {
                 "type": "object",
                 "properties": {
-                    "answer": {
-                        "type": "string",
-                        "description": "Conversational answer to the user's question"
-                    },
+                    "answer": {"type": "string", "description": "Conversational answer to the user's question"},
                     "follow_up_suggestions": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Optional suggestions for next steps or related questions"
+                        "description": "Optional suggestions for next steps or related questions",
                     },
                     "relevant_action": {
                         "type": "string",
-                        "description": "Optional action the user might want to take (e.g., 'upload_file', 'start_conversion')"
-                    }
+                        "description": "Optional action the user might want to take (e.g., 'upload_file', 'start_conversion')",
+                    },
                 },
-                "required": ["answer"]
+                "required": ["answer"],
             }
 
             response = await self._llm_service.generate_structured_output(
@@ -3723,7 +3667,6 @@ Respond in JSON format."""
                 error_code="QUERY_PROCESSING_FAILED",
                 error_message=f"Failed to process your question: {str(e)}",
             )
-
 
     async def handle_improvement_decision(
         self,
@@ -3880,9 +3823,7 @@ Respond in JSON format."""
                         state,
                     )
                 else:
-                    prompt_msg = self._generate_basic_correction_prompts(
-                        user_input_required
-                    )
+                    prompt_msg = self._generate_basic_correction_prompts(user_input_required)
 
                 state.llm_message = prompt_msg
                 await state.update_status(ConversionStatus.AWAITING_USER_INPUT)
@@ -3945,7 +3886,7 @@ Respond in JSON format."""
 
     async def _generate_correction_prompts(
         self,
-        issues: List[Dict[str, Any]],
+        issues: list[dict[str, Any]],
         state: GlobalState,
     ) -> str:
         """
@@ -3982,13 +3923,7 @@ Generate a friendly message asking for the missing information. Include:
 
 Return JSON with a 'message' field."""
 
-        output_schema = {
-            "type": "object",
-            "properties": {
-                "message": {"type": "string"}
-            },
-            "required": ["message"]
-        }
+        output_schema = {"type": "object", "properties": {"message": {"type": "string"}}, "required": ["message"]}
 
         try:
             # Acquire LLM lock to prevent concurrent requests
@@ -4012,10 +3947,7 @@ Return JSON with a 'message' field."""
             return self._generate_basic_correction_prompts(issues)
 
     async def _handle_auto_fix_approval_response(
-        self,
-        user_message: str,
-        reply_to: str,
-        state: GlobalState
+        self, user_message: str, reply_to: str, state: GlobalState
     ) -> MCPResponse:
         """
         Handle user's response to auto-fix approval request.
@@ -4057,15 +3989,19 @@ Return JSON with a 'message' field."""
             state.add_log(
                 LogLevel.INFO,
                 f"Extracted {len(auto_fixes)} automatic fixes from {len(auto_fixable_issues)} issues",
-                {"fixes": auto_fixes}
+                {"fixes": auto_fixes},
             )
 
             # PROVENANCE TRACKING: Track auto-corrected metadata
             for field_name, value in auto_fixes.items():
                 issue_desc = next(
-                    (issue.get('message', '') for issue in auto_fixable_issues
-                     if issue.get('field_name') == field_name or field_name.lower() in issue.get('message', '').lower()),
-                    f"Auto-fix for validation issue"
+                    (
+                        issue.get("message", "")
+                        for issue in auto_fixable_issues
+                        if issue.get("field_name") == field_name
+                        or field_name.lower() in issue.get("message", "").lower()
+                    ),
+                    "Auto-fix for validation issue",
                 )
                 self._track_auto_corrected_metadata(
                     state=state,
@@ -4123,9 +4059,9 @@ Return JSON with a 'message' field."""
             # Generate detailed list
             detailed_list = "Here are the issues I can fix automatically:\n\n"
             for i, issue in enumerate(auto_fixable, 1):
-                check_name = issue.get('check_name', 'Unknown')
-                message = issue.get('message', 'No details')
-                severity = issue.get('severity', 'warning')
+                check_name = issue.get("check_name", "Unknown")
+                message = issue.get("message", "No details")
+                severity = issue.get("severity", "warning")
                 detailed_list += f"{i}. **{check_name}** ({severity})\n   {message}\n\n"
 
             detailed_list += "\nWould you like me to apply these fixes? (respond with 'apply' or 'cancel')"
@@ -4157,8 +4093,7 @@ Return JSON with a 'message' field."""
             state.conversation_type = None
 
             state.llm_message = (
-                "Understood! I'll keep the file as-is. "
-                "Your NWB file is ready for download with the existing warnings."
+                "Understood! I'll keep the file as-is. Your NWB file is ready for download with the existing warnings."
             )
 
             return MCPResponse.success_response(
@@ -4189,7 +4124,7 @@ Return JSON with a 'message' field."""
                 },
             )
 
-    def _generate_auto_fix_summary(self, issues: List[Dict[str, Any]]) -> str:
+    def _generate_auto_fix_summary(self, issues: list[dict[str, Any]]) -> str:
         """
         Generate summary of auto-fixable issues.
 
@@ -4201,8 +4136,8 @@ Return JSON with a 'message' field."""
         """
         summary = ""
         for i, issue in enumerate(issues, 1):
-            issue_name = issue.get('check_name', 'Unknown issue')
-            issue_msg = issue.get('message', 'No details available')
+            issue_name = issue.get("check_name", "Unknown issue")
+            issue_msg = issue.get("message", "No details available")
             # Truncate long messages
             if len(issue_msg) > 100:
                 issue_msg = issue_msg[:97] + "..."
@@ -4210,10 +4145,8 @@ Return JSON with a 'message' field."""
         return summary.strip()
 
     def _extract_fixes_from_issues(
-        self,
-        auto_fixable_issues: List[Dict[str, Any]],
-        state: GlobalState
-    ) -> Dict[str, Any]:
+        self, auto_fixable_issues: list[dict[str, Any]], state: GlobalState
+    ) -> dict[str, Any]:
         """
         PRIORITY 2 FIX: Extract metadata fixes from auto-fixable issues.
 
@@ -4230,16 +4163,14 @@ Return JSON with a 'message' field."""
 
         for issue in auto_fixable_issues:
             # Get suggested fix from issue analysis
-            suggested_fix = issue.get('suggested_fix')
-            field_name = issue.get('field_name')
+            suggested_fix = issue.get("suggested_fix")
+            field_name = issue.get("field_name")
 
             if suggested_fix and field_name:
                 # Direct field/value mapping available
                 auto_fixes[field_name] = suggested_fix
                 state.add_log(
-                    LogLevel.DEBUG,
-                    f"Extracted fix: {field_name} = {suggested_fix}",
-                    {"issue": issue.get('check_name')}
+                    LogLevel.DEBUG, f"Extracted fix: {field_name} = {suggested_fix}", {"issue": issue.get("check_name")}
                 )
             else:
                 # Try to infer fix from issue message
@@ -4249,11 +4180,7 @@ Return JSON with a 'message' field."""
 
         return auto_fixes
 
-    def _infer_fix_from_issue(
-        self,
-        issue: Dict[str, Any],
-        state: GlobalState
-    ) -> Optional[Dict[str, Any]]:
+    def _infer_fix_from_issue(self, issue: dict[str, Any], state: GlobalState) -> Optional[dict[str, Any]]:
         """
         Infer metadata fix from validation issue message.
 
@@ -4264,38 +4191,30 @@ Return JSON with a 'message' field."""
         Returns:
             Dictionary with inferred fix, or None if unable to infer
         """
-        message = issue.get('message', '').lower()
-        check_name = issue.get('check_name', '').lower()
+        message = issue.get("message", "").lower()
+        check_name = issue.get("check_name", "").lower()
 
         # Common patterns for missing metadata
-        if 'experimenter' in message or 'experimenter' in check_name:
+        if "experimenter" in message or "experimenter" in check_name:
             # Use existing metadata if available, otherwise use placeholder
-            return {'experimenter': state.metadata.get('experimenter', 'Unknown')}
+            return {"experimenter": state.metadata.get("experimenter", "Unknown")}
 
-        elif 'institution' in message or 'institution' in check_name:
-            return {'institution': state.metadata.get('institution', 'Unknown')}
+        elif "institution" in message or "institution" in check_name:
+            return {"institution": state.metadata.get("institution", "Unknown")}
 
-        elif 'session_description' in message or 'session_description' in check_name:
+        elif "session_description" in message or "session_description" in check_name:
             # Generate from experiment_description if available
-            exp_desc = state.metadata.get('experiment_description')
-            return {'session_description': exp_desc if exp_desc else 'Electrophysiology recording session'}
+            exp_desc = state.metadata.get("experiment_description")
+            return {"session_description": exp_desc if exp_desc else "Electrophysiology recording session"}
 
-        elif 'subject_id' in message or 'subject_id' in check_name:
-            return {'subject_id': state.metadata.get('subject_id', 'subject_001')}
+        elif "subject_id" in message or "subject_id" in check_name:
+            return {"subject_id": state.metadata.get("subject_id", "subject_001")}
 
         # Unable to infer fix
-        state.add_log(
-            LogLevel.DEBUG,
-            f"Could not infer fix for issue: {check_name}",
-            {"message": message[:100]}
-        )
+        state.add_log(LogLevel.DEBUG, f"Could not infer fix for issue: {check_name}", {"message": message[:100]})
         return None
 
-    async def _extract_metadata_from_message(
-        self,
-        user_message: str,
-        state: GlobalState
-    ) -> Dict[str, Any]:
+    async def _extract_metadata_from_message(self, user_message: str, state: GlobalState) -> dict[str, Any]:
         """
         Extract metadata from user's message using intelligent parsing.
 
@@ -4312,7 +4231,7 @@ Return JSON with a 'message' field."""
             # Use LLM to extract metadata
             context = {
                 "conversation_history": state.conversation_history[-3:],
-                "expected_fields": [f.name for f in NWBDANDISchema.get_required_fields()]
+                "expected_fields": [f.name for f in NWBDANDISchema.get_required_fields()],
             }
 
             response = await self._conversational_handler.process_user_response(
@@ -4326,19 +4245,17 @@ Return JSON with a 'message' field."""
         else:
             # Fallback to simple pattern matching
             import re
+
             # Pattern for "field: value" format
-            pattern = r'(\w+)\s*[:=]\s*(.+?)(?=\w+\s*[:=]|$)'
+            pattern = r"(\w+)\s*[:=]\s*(.+?)(?=\w+\s*[:=]|$)"
             matches = re.findall(pattern, user_message)
             for field, value in matches:
-                field = field.lower().replace(' ', '_')
+                field = field.lower().replace(" ", "_")
                 extracted_metadata[field] = value.strip()
 
         return extracted_metadata
 
-    def _validate_metadata_format(
-        self,
-        metadata: Dict[str, Any]
-    ) -> Dict[str, str]:
+    def _validate_metadata_format(self, metadata: dict[str, Any]) -> dict[str, str]:
         """
         Validate metadata format and return any errors.
 
@@ -4361,8 +4278,8 @@ Return JSON with a 'message' field."""
                 # Check if it's a valid date format
                 if not self._is_valid_date_format(value):
                     errors[field] = (
-                        f"Please provide date in ISO format (YYYY-MM-DDTHH:MM:SS) "
-                        f"or natural language like 'August 15, 2025 at 10am'"
+                        "Please provide date in ISO format (YYYY-MM-DDTHH:MM:SS) "
+                        "or natural language like 'August 15, 2025 at 10am'"
                     )
 
             elif field == "sex" and value not in ["M", "F", "U"]:
@@ -4375,10 +4292,9 @@ Return JSON with a 'message' field."""
                 species in str(value).lower()
                 for species in ["mus musculus", "rattus norvegicus", "homo sapiens", "macaca"]
             ):
-                errors[field] = (
-                    "Please use scientific name (e.g., 'Mus musculus' for mouse, "
-                    "'Rattus norvegicus' for rat)"
-                )
+                errors[
+                    field
+                ] = "Please use scientific name (e.g., 'Mus musculus' for mouse, 'Rattus norvegicus' for rat)"
 
         return errors
 
@@ -4393,17 +4309,19 @@ Return JSON with a 'message' field."""
             True if valid format
         """
         import re
+
         # ISO format check
-        iso_pattern = r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}'
+        iso_pattern = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}"
         if re.match(iso_pattern, str(value)):
             return True
 
         # Try parsing with dateutil
         try:
             from dateutil import parser
+
             parser.parse(str(value))
             return True
-        except (ValueError, TypeError, AttributeError, ImportError) as e:
+        except (ValueError, TypeError, AttributeError, ImportError):
             # ValueError: Invalid date format
             # TypeError: value is None or wrong type
             # AttributeError: parser module issue
@@ -4411,7 +4329,7 @@ Return JSON with a 'message' field."""
             # Silently return False as this is a validation check
             return False
 
-    def _generate_basic_correction_prompts(self, issues: List[Dict[str, Any]]) -> str:
+    def _generate_basic_correction_prompts(self, issues: list[dict[str, Any]]) -> str:
         """
         Generate basic correction prompts without LLM.
 

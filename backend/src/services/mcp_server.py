@@ -4,11 +4,12 @@ MCP (Model Context Protocol) Server implementation.
 This is the central orchestration layer that routes messages between agents
 and manages the global state.
 """
-import asyncio
-from typing import Any, Callable, Dict, List, Optional
 
-from models.state import GlobalState, LogLevel
+import asyncio
+from typing import Callable, Optional
+
 from models.mcp import MCPEvent, MCPMessage, MCPResponse
+from models.state import GlobalState, LogLevel
 
 
 class MCPServer:
@@ -24,8 +25,8 @@ class MCPServer:
 
     def __init__(self):
         """Initialize the MCP server."""
-        self._handlers: Dict[str, Dict[str, Callable]] = {}
-        self._event_subscribers: List[Callable] = []
+        self._handlers: dict[str, dict[str, Callable]] = {}
+        self._event_subscribers: list[Callable] = []
         self._global_state: GlobalState = GlobalState()
         self._message_queue: asyncio.Queue = asyncio.Queue()
 
@@ -197,16 +198,14 @@ class MCPServer:
             "Global state reset",
         )
 
-    def get_handlers_info(self) -> Dict[str, List[str]]:
+    def get_handlers_info(self) -> dict[str, list[str]]:
         """
         Get information about registered handlers.
 
         Returns:
             Dictionary mapping agent names to lists of registered actions
         """
-        return {
-            agent: list(actions.keys()) for agent, actions in self._handlers.items()
-        }
+        return {agent: list(actions.keys()) for agent, actions in self._handlers.items()}
 
 
 # Global MCP server instance

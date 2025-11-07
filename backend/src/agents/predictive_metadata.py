@@ -4,9 +4,10 @@ Predictive Metadata System with LLM Learning.
 This module predicts and suggests metadata based on deep file analysis,
 going beyond simple inference to provide smart defaults.
 """
-from typing import Any, Dict, List, Optional
-from pathlib import Path
+
 import json
+from pathlib import Path
+from typing import Any, Optional
 
 from models import GlobalState, LogLevel
 from services import LLMService
@@ -38,9 +39,9 @@ class PredictiveMetadataSystem:
         self,
         file_path: str,
         file_format: str,
-        basic_inference: Dict[str, Any],
+        basic_inference: dict[str, Any],
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Predict comprehensive metadata using deep analysis.
 
@@ -86,8 +87,9 @@ class PredictiveMetadataSystem:
                 f"Predictive metadata generated with {len(predictions.get('predicted_metadata', {}))} fields",
                 {
                     "predicted_fields": list(predictions.get("predicted_metadata", {}).keys()),
-                    "avg_confidence": sum(predictions.get("confidence_scores", {}).values()) / max(len(predictions.get("confidence_scores", {})), 1),
-                }
+                    "avg_confidence": sum(predictions.get("confidence_scores", {}).values())
+                    / max(len(predictions.get("confidence_scores", {})), 1),
+                },
             )
 
             return predictions
@@ -104,7 +106,7 @@ class PredictiveMetadataSystem:
         file_path: str,
         file_format: str,
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Perform deep analysis of file beyond basic inference.
         """
@@ -123,7 +125,7 @@ class PredictiveMetadataSystem:
 
         return analysis
 
-    def _parse_filename(self, filename: str) -> Dict[str, Any]:
+    def _parse_filename(self, filename: str) -> dict[str, Any]:
         """Extract structured information from filename."""
         parts = {
             "has_date": False,
@@ -137,10 +139,11 @@ class PredictiveMetadataSystem:
 
         # Detect date patterns (YYYYMMDD, YYYY-MM-DD, etc.)
         import re
+
         date_patterns = [
-            r'\d{8}',  # 20240117
-            r'\d{4}-\d{2}-\d{2}',  # 2024-01-17
-            r'\d{4}_\d{2}_\d{2}',  # 2024_01_17
+            r"\d{8}",  # 20240117
+            r"\d{4}-\d{2}-\d{2}",  # 2024-01-17
+            r"\d{4}_\d{2}_\d{2}",  # 2024_01_17
         ]
         for pattern in date_patterns:
             if re.search(pattern, filename):
@@ -150,10 +153,10 @@ class PredictiveMetadataSystem:
 
         # Detect subject ID patterns
         subject_patterns = [
-            r'mouse[_-]?\d+',
-            r'rat[_-]?\d+',
-            r'subject[_-]?\d+',
-            r'animal[_-]?\d+',
+            r"mouse[_-]?\d+",
+            r"rat[_-]?\d+",
+            r"subject[_-]?\d+",
+            r"animal[_-]?\d+",
         ]
         for pattern in subject_patterns:
             match = re.search(pattern, filename_lower)
@@ -164,9 +167,9 @@ class PredictiveMetadataSystem:
 
         # Detect session ID patterns
         session_patterns = [
-            r'session[_-]?\d+',
-            r'sess[_-]?\d+',
-            r's\d{2,}',
+            r"session[_-]?\d+",
+            r"sess[_-]?\d+",
+            r"s\d{2,}",
         ]
         for pattern in session_patterns:
             match = re.search(pattern, filename_lower)
@@ -177,15 +180,15 @@ class PredictiveMetadataSystem:
 
         # Detect lab/experimenter name patterns
         # Common patterns: LastnameYYYY, Lastname_YYYYMMDD, etc.
-        if '_' in filename or '-' in filename:
-            first_part = filename.split('_')[0].split('-')[0]
+        if "_" in filename or "-" in filename:
+            first_part = filename.split("_")[0].split("-")[0]
             if first_part.isalpha() and len(first_part) > 2:
                 parts["has_experimenter_hint"] = True
                 parts["experimenter_hint"] = first_part
 
         return parts
 
-    async def _analyze_spikeglx_deep(self, path: Path, state: GlobalState) -> Dict[str, Any]:
+    async def _analyze_spikeglx_deep(self, path: Path, state: GlobalState) -> dict[str, Any]:
         """Deep analysis of SpikeGLX files."""
         analysis = {"spikeglx_details": {}}
 
@@ -194,10 +197,10 @@ class PredictiveMetadataSystem:
         if meta_file.exists():
             try:
                 meta_content = {}
-                with open(meta_file, 'r') as f:
+                with open(meta_file) as f:
                     for line in f:
-                        if '=' in line:
-                            key, value = line.strip().split('=', 1)
+                        if "=" in line:
+                            key, value = line.strip().split("=", 1)
                             meta_content[key] = value
 
                 analysis["spikeglx_details"] = {
@@ -212,11 +215,11 @@ class PredictiveMetadataSystem:
 
         return analysis
 
-    async def _analyze_openephys_deep(self, path: Path, state: GlobalState) -> Dict[str, Any]:
+    async def _analyze_openephys_deep(self, path: Path, state: GlobalState) -> dict[str, Any]:
         """Deep analysis of OpenEphys files."""
         return {"openephys_details": {}}
 
-    def _find_similar_patterns(self, file_analysis: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _find_similar_patterns(self, file_analysis: dict[str, Any]) -> list[dict[str, Any]]:
         """Find similar file patterns from history."""
         similar = []
 
@@ -237,11 +240,13 @@ class PredictiveMetadataSystem:
                 similarity_score += 10
 
             if similarity_score > 40:
-                similar.append({
-                    "past_file": past_prediction.get("path"),
-                    "similarity": similarity_score,
-                    "metadata_used": past_prediction.get("metadata", {}),
-                })
+                similar.append(
+                    {
+                        "past_file": past_prediction.get("path"),
+                        "similarity": similarity_score,
+                        "metadata_used": past_prediction.get("metadata", {}),
+                    }
+                )
 
         return similar
 
@@ -249,11 +254,11 @@ class PredictiveMetadataSystem:
         self,
         file_path: str,
         file_format: str,
-        file_analysis: Dict[str, Any],
-        basic_inference: Dict[str, Any],
-        similar_patterns: List[Dict[str, Any]],
+        file_analysis: dict[str, Any],
+        basic_inference: dict[str, Any],
+        similar_patterns: list[dict[str, Any]],
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Use LLM to predict metadata intelligently."""
         system_prompt = """You are an expert neuroscience data curator with predictive abilities.
 
@@ -319,29 +324,17 @@ Be aggressive with predictions - provide values even if uncertain!"""
         output_schema = {
             "type": "object",
             "properties": {
-                "predicted_metadata": {
-                    "type": "object",
-                    "description": "Predicted metadata field values"
-                },
-                "confidence_scores": {
-                    "type": "object",
-                    "description": "Confidence 0-100 for each field"
-                },
-                "reasoning": {
-                    "type": "object",
-                    "description": "Explanation for each prediction"
-                },
-                "smart_defaults": {
-                    "type": "object",
-                    "description": "Suggested default values for empty fields"
-                },
+                "predicted_metadata": {"type": "object", "description": "Predicted metadata field values"},
+                "confidence_scores": {"type": "object", "description": "Confidence 0-100 for each field"},
+                "reasoning": {"type": "object", "description": "Explanation for each prediction"},
+                "smart_defaults": {"type": "object", "description": "Suggested default values for empty fields"},
                 "fill_suggestions": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": "Suggestions for how user can fill remaining fields"
-                }
+                    "description": "Suggestions for how user can fill remaining fields",
+                },
             },
-            "required": ["predicted_metadata", "confidence_scores", "reasoning"]
+            "required": ["predicted_metadata", "confidence_scores", "reasoning"],
         }
 
         response = await self.llm_service.generate_structured_output(
@@ -352,7 +345,7 @@ Be aggressive with predictions - provide values even if uncertain!"""
 
         return response
 
-    def _basic_predictions(self, basic_inference: Dict[str, Any]) -> Dict[str, Any]:
+    def _basic_predictions(self, basic_inference: dict[str, Any]) -> dict[str, Any]:
         """Fallback basic predictions without LLM."""
         return {
             "predicted_metadata": basic_inference.get("inferred_metadata", {}),
@@ -362,14 +355,16 @@ Be aggressive with predictions - provide values even if uncertain!"""
             "fill_suggestions": ["Provide metadata based on your experimental protocol"],
         }
 
-    def _store_prediction(self, file_path: str, predictions: Dict[str, Any]):
+    def _store_prediction(self, file_path: str, predictions: dict[str, Any]):
         """Store prediction for future pattern learning."""
-        self.prediction_history.append({
-            "path": file_path,
-            "metadata": predictions.get("predicted_metadata", {}),
-            "confidence": predictions.get("confidence_scores", {}),
-            "timestamp": "stored",
-        })
+        self.prediction_history.append(
+            {
+                "path": file_path,
+                "metadata": predictions.get("predicted_metadata", {}),
+                "confidence": predictions.get("confidence_scores", {}),
+                "timestamp": "stored",
+            }
+        )
 
         # Keep only last 20 predictions
         if len(self.prediction_history) > 20:

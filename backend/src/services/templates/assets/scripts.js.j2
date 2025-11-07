@@ -190,16 +190,41 @@
             return;
         }
 
-        const dataStr = JSON.stringify(reportData, null, 2);
-        const blob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `nwb_report_${reportData.session_id || 'export'}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        try {
+            // Add export metadata to indicate this is a comprehensive export
+            const exportData = {
+                ...reportData,
+                export_metadata: {
+                    exported_at: new Date().toISOString(),
+                    export_type: 'comprehensive_html_report',
+                    export_source: 'nwb_evaluation_report_html',
+                    note: 'Complete NWB evaluation report including all validation results, metadata with provenance tracking, quality metrics, workflow trace, detailed logs, and actionable recommendations.'
+                }
+            };
+
+            // Convert to formatted JSON
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+
+            // Better filename with session ID and date
+            const sessionId = reportData.report_metadata?.session_id || reportData.session_id || 'unknown';
+            const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+            a.download = `nwb_comprehensive_report_${sessionId}_${timestamp}.json`;
+
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            // Show success notification
+            showNotification('Comprehensive JSON report exported successfully! Includes all validation results, metadata, logs, and recommendations.', 'success');
+        } catch (error) {
+            console.error('Error exporting JSON:', error);
+            alert('Error exporting report: ' + error.message);
+        }
     };
 
     // ========================================
@@ -510,27 +535,23 @@
     // ========================================
     window.filterDetailedLogs = function() {
         const levelFilter = document.getElementById('log-level-filter')?.value || 'all';
-        const searchTerm = document.getElementById('log-search')?.value.toLowerCase() || '';
+        const stageFilter = document.getElementById('log-stage-filter')?.value || 'all';
 
         const logEntries = document.querySelectorAll('.log-entry');
 
         logEntries.forEach(entry => {
             const level = entry.dataset.level || '';
-            const searchable = entry.dataset.searchable || '';
+            const stage = entry.dataset.stage || '';
 
             const matchesLevel = levelFilter === 'all' || level === levelFilter;
-            const matchesSearch = !searchTerm || searchable.includes(searchTerm);
+            const matchesStage = stageFilter === 'all' || stage === stageFilter;
 
-            if (matchesLevel && matchesSearch) {
+            if (matchesLevel && matchesStage) {
                 entry.classList.remove('filtered-out');
             } else {
                 entry.classList.add('filtered-out');
             }
         });
-    };
-
-    window.searchDetailedLogs = function() {
-        filterDetailedLogs();
     };
 
     // ========================================

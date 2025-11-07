@@ -1474,6 +1474,76 @@ code {
     color: white;
 }
 
+/* Stage Badge Styling - for sequential log view */
+.stage-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: 4px 12px;
+    border-radius: var(--radius-md);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-right: var(--space-sm);
+    border: 1px solid;
+}
+
+/* Stage-specific colors */
+.stage-badge.stage-initialization {
+    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+    color: #075985;
+    border-color: #7dd3fc;
+}
+
+.stage-badge.stage-upload {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    color: #065f46;
+    border-color: #6ee7b7;
+}
+
+.stage-badge.stage-format_detection {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #92400e;
+    border-color: #fcd34d;
+}
+
+.stage-badge.stage-metadata_extraction {
+    background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+    color: #5b21b6;
+    border-color: #c4b5fd;
+}
+
+.stage-badge.stage-metadata_collection {
+    background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);
+    color: #4c1d95;
+    border-color: #a78bfa;
+}
+
+.stage-badge.stage-conversion {
+    background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+    color: #3730a3;
+    border-color: #a5b4fc;
+}
+
+.stage-badge.stage-validation {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    color: #166534;
+    border-color: #86efac;
+}
+
+.stage-badge.stage-completion {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    color: #065f46;
+    border-color: #6ee7b7;
+}
+
+.stage-badge.stage-general {
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    color: #4b5563;
+    border-color: #d1d5db;
+}
+
 .log-timestamp {
     font-size: 0.875rem;
     color: var(--color-text-muted);

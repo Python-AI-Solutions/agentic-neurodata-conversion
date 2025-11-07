@@ -12,10 +12,10 @@ Features:
 - Integration with existing metadata
 - Validation of proposed fixes before application
 """
-from typing import Any, Dict, List, Optional
+
 import json
 import logging
-from pathlib import Path
+from typing import Any, Optional
 
 from models import GlobalState, LogLevel
 from services import LLMService
@@ -46,11 +46,11 @@ class SmartIssueResolution:
 
     async def generate_resolution_plan(
         self,
-        issues: List[Any],
-        file_context: Dict[str, Any],
-        existing_metadata: Dict[str, Any],
+        issues: list[Any],
+        file_context: dict[str, Any],
+        existing_metadata: dict[str, Any],
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Generate comprehensive resolution plan for validation issues.
 
@@ -73,19 +73,10 @@ class SmartIssueResolution:
                 return self._basic_resolution_plan(issues, state)
 
             # Generate intelligent resolution plan
-            resolution_plan = await self._llm_resolution_planning(
-                issues,
-                file_context,
-                existing_metadata,
-                state
-            )
+            resolution_plan = await self._llm_resolution_planning(issues, file_context, existing_metadata, state)
 
             # Enhance with code examples
-            resolution_plan = await self._add_code_examples(
-                resolution_plan,
-                file_context,
-                state
-            )
+            resolution_plan = await self._add_code_examples(resolution_plan, file_context, state)
 
             state.add_log(
                 LogLevel.INFO,
@@ -93,42 +84,41 @@ class SmartIssueResolution:
                 {
                     "workflows_count": len(resolution_plan.get("workflows", [])),
                     "has_code_examples": len(resolution_plan.get("code_examples", [])) > 0,
-                }
+                },
             )
 
             return resolution_plan
 
         except Exception as e:
-            logger.error(f"Resolution plan generation failed: {e}")
-            state.add_log(
-                LogLevel.WARNING,
-                f"Resolution plan generation failed: {e}"
-            )
+            logger.exception(f"Resolution plan generation failed: {e}")
+            state.add_log(LogLevel.WARNING, f"Resolution plan generation failed: {e}")
             return self._basic_resolution_plan(issues, state)
 
     def _basic_resolution_plan(
         self,
-        issues: List[Any],
+        issues: list[Any],
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Basic resolution plan when LLM is not available.
         """
         workflows = []
 
         for idx, issue in enumerate(issues[:5], 1):
-            issue_dict = issue.model_dump() if hasattr(issue, 'model_dump') else issue
-            workflows.append({
-                "issue_number": idx,
-                "issue": issue_dict.get('message', 'Unknown issue'),
-                "steps": [
-                    "Review the validation error message",
-                    "Check NWB Inspector documentation",
-                    "Make appropriate metadata corrections",
-                    "Re-run validation to verify fix"
-                ],
-                "estimated_effort": "15-30 minutes",
-            })
+            issue_dict = issue.model_dump() if hasattr(issue, "model_dump") else issue
+            workflows.append(
+                {
+                    "issue_number": idx,
+                    "issue": issue_dict.get("message", "Unknown issue"),
+                    "steps": [
+                        "Review the validation error message",
+                        "Check NWB Inspector documentation",
+                        "Make appropriate metadata corrections",
+                        "Re-run validation to verify fix",
+                    ],
+                    "estimated_effort": "15-30 minutes",
+                }
+            )
 
         return {
             "workflows": workflows,
@@ -139,11 +129,11 @@ class SmartIssueResolution:
 
     async def _llm_resolution_planning(
         self,
-        issues: List[Any],
-        file_context: Dict[str, Any],
-        existing_metadata: Dict[str, Any],
+        issues: list[Any],
+        file_context: dict[str, Any],
+        existing_metadata: dict[str, Any],
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Use LLM to generate intelligent resolution workflows.
         """
@@ -204,7 +194,7 @@ Be specific, practical, and actionable."""
         # Format issues for analysis
         issues_text = []
         for idx, issue in enumerate(issues[:15], 1):
-            issue_dict = issue.model_dump() if hasattr(issue, 'model_dump') else issue
+            issue_dict = issue.model_dump() if hasattr(issue, "model_dump") else issue
             issues_text.append(
                 f"{idx}. [{issue_dict.get('severity', 'UNKNOWN')}] "
                 f"{issue_dict.get('message', 'No message')}\n"
@@ -217,9 +207,9 @@ Be specific, practical, and actionable."""
 {chr(10).join(issues_text)}
 
 **File Context**:
-- NWB Path: {file_context.get('nwb_path', 'Unknown')}
-- File Size: {file_context.get('file_size_mb', 0)} MB
-- NWB Version: {file_context.get('nwb_version', 'Unknown')}
+- NWB Path: {file_context.get("nwb_path", "Unknown")}
+- File Size: {file_context.get("file_size_mb", 0)} MB
+- NWB Version: {file_context.get("nwb_version", "Unknown")}
 
 **Existing Metadata**:
 {json.dumps(existing_metadata, indent=2, default=str)[:500]}
@@ -243,16 +233,10 @@ Focus on the top 5-7 most critical issues."""
                         "properties": {
                             "issue_description": {
                                 "type": "string",
-                                "description": "What issue this workflow addresses"
+                                "description": "What issue this workflow addresses",
                             },
-                            "severity": {
-                                "type": "string",
-                                "description": "Issue severity level"
-                            },
-                            "resolution_approach": {
-                                "type": "string",
-                                "description": "Overall approach to fixing this"
-                            },
+                            "severity": {"type": "string", "description": "Issue severity level"},
+                            "resolution_approach": {"type": "string", "description": "Overall approach to fixing this"},
                             "steps": {
                                 "type": "array",
                                 "items": {
@@ -263,7 +247,7 @@ Focus on the top 5-7 most critical issues."""
                                         "details": {"type": "string"},
                                         "code_snippet": {
                                             "type": "string",
-                                            "description": "Python code example (if applicable)"
+                                            "description": "Python code example (if applicable)",
                                         },
                                         "expected_outcome": {"type": "string"},
                                     },
@@ -273,24 +257,18 @@ Focus on the top 5-7 most critical issues."""
                             "prerequisites": {
                                 "type": "array",
                                 "items": {"type": "string"},
-                                "description": "What's needed before starting"
+                                "description": "What's needed before starting",
                             },
                             "estimated_effort": {
                                 "type": "string",
-                                "description": "Time estimate (e.g., '5 minutes', '30 minutes')"
+                                "description": "Time estimate (e.g., '5 minutes', '30 minutes')",
                             },
-                            "difficulty": {
-                                "type": "string",
-                                "enum": ["easy", "medium", "hard"]
-                            },
-                            "success_criteria": {
-                                "type": "string",
-                                "description": "How to verify the fix worked"
-                            },
+                            "difficulty": {"type": "string", "enum": ["easy", "medium", "hard"]},
+                            "success_criteria": {"type": "string", "description": "How to verify the fix worked"},
                             "alternative_approaches": {
                                 "type": "array",
                                 "items": {"type": "string"},
-                                "description": "Other ways to solve this (optional)"
+                                "description": "Other ways to solve this (optional)",
                             },
                         },
                         "required": [
@@ -300,18 +278,15 @@ Focus on the top 5-7 most critical issues."""
                             "prerequisites",
                             "estimated_effort",
                             "difficulty",
-                            "success_criteria"
+                            "success_criteria",
                         ],
                     },
                 },
-                "overall_strategy": {
-                    "type": "string",
-                    "description": "High-level strategy for addressing all issues"
-                },
+                "overall_strategy": {"type": "string", "description": "High-level strategy for addressing all issues"},
                 "recommended_order": {
                     "type": "array",
                     "items": {"type": "number"},
-                    "description": "Recommended order to tackle workflows (by index)"
+                    "description": "Recommended order to tackle workflows (by index)",
                 },
             },
             "required": ["workflows", "overall_strategy"],
@@ -327,16 +302,16 @@ Focus on the top 5-7 most critical issues."""
             return response
 
         except Exception as e:
-            logger.error(f"LLM resolution planning failed: {e}")
+            logger.exception(f"LLM resolution planning failed: {e}")
             state.add_log(LogLevel.WARNING, f"LLM resolution planning failed: {e}")
             raise
 
     async def _add_code_examples(
         self,
-        resolution_plan: Dict[str, Any],
-        file_context: Dict[str, Any],
+        resolution_plan: dict[str, Any],
+        file_context: dict[str, Any],
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Add concrete, runnable code examples for common fixes.
         """
@@ -388,8 +363,7 @@ Make examples specific to the actual issues being fixed."""
 
             # Check if this issue benefits from code example
             needs_code = any(
-                keyword in issue_desc.lower()
-                for keyword in ['missing', 'metadata', 'field', 'required', 'add']
+                keyword in issue_desc.lower() for keyword in ["missing", "metadata", "field", "required", "add"]
             )
 
             if needs_code:
@@ -401,26 +375,20 @@ Make examples specific to the actual issues being fixed."""
 {json.dumps(steps, indent=2, default=str)}
 
 **File Context**:
-- NWB Path: {file_context.get('nwb_path', 'file.nwb')}
-- NWB Version: {file_context.get('nwb_version', '2.5.0')}
+- NWB Path: {file_context.get("nwb_path", "file.nwb")}
+- NWB Version: {file_context.get("nwb_version", "2.5.0")}
 
 Generate a complete, runnable code example that implements this fix."""
 
                 output_schema = {
                     "type": "object",
                     "properties": {
-                        "code": {
-                            "type": "string",
-                            "description": "Complete Python code"
-                        },
-                        "explanation": {
-                            "type": "string",
-                            "description": "Brief explanation of what the code does"
-                        },
+                        "code": {"type": "string", "description": "Complete Python code"},
+                        "explanation": {"type": "string", "description": "Brief explanation of what the code does"},
                         "notes": {
                             "type": "array",
                             "items": {"type": "string"},
-                            "description": "Important notes or caveats"
+                            "description": "Important notes or caveats",
                         },
                     },
                     "required": ["code", "explanation"],
@@ -433,13 +401,15 @@ Generate a complete, runnable code example that implements this fix."""
                         system_prompt=system_prompt,
                     )
 
-                    code_examples.append({
-                        "workflow_index": idx,
-                        "issue": issue_desc,
-                        "code": code_result.get("code", ""),
-                        "explanation": code_result.get("explanation", ""),
-                        "notes": code_result.get("notes", []),
-                    })
+                    code_examples.append(
+                        {
+                            "workflow_index": idx,
+                            "issue": issue_desc,
+                            "code": code_result.get("code", ""),
+                            "explanation": code_result.get("explanation", ""),
+                            "notes": code_result.get("notes", []),
+                        }
+                    )
 
                 except Exception as e:
                     logger.warning(f"Code example generation failed for workflow {idx}: {e}")
@@ -452,9 +422,9 @@ Generate a complete, runnable code example that implements this fix."""
     async def generate_interactive_decision_tree(
         self,
         issue: Any,
-        context: Dict[str, Any],
+        context: dict[str, Any],
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Generate interactive decision tree for complex issues with multiple resolution paths.
 
@@ -464,7 +434,7 @@ Generate a complete, runnable code example that implements this fix."""
         if not self.llm_service:
             return {}
 
-        issue_dict = issue.model_dump() if hasattr(issue, 'model_dump') else issue
+        issue_dict = issue.model_dump() if hasattr(issue, "model_dump") else issue
 
         system_prompt = """You are an expert at creating decision trees for troubleshooting NWB validation issues.
 
@@ -495,9 +465,9 @@ Make it practical and actionable."""
 
         user_prompt = f"""Create an interactive decision tree for this issue:
 
-**Issue**: {issue_dict.get('message', 'Unknown')}
-**Severity**: {issue_dict.get('severity', 'Unknown')}
-**Location**: {issue_dict.get('location', 'Unknown')}
+**Issue**: {issue_dict.get("message", "Unknown")}
+**Severity**: {issue_dict.get("severity", "Unknown")}
+**Location**: {issue_dict.get("location", "Unknown")}
 
 **Context**:
 {json.dumps(context, indent=2, default=str)[:300]}
@@ -507,10 +477,7 @@ Create a decision tree that helps users choose the right resolution approach."""
         output_schema = {
             "type": "object",
             "properties": {
-                "root_question": {
-                    "type": "string",
-                    "description": "First question to determine path"
-                },
+                "root_question": {"type": "string", "description": "First question to determine path"},
                 "decision_paths": {
                     "type": "array",
                     "items": {
@@ -538,5 +505,5 @@ Create a decision tree that helps users choose the right resolution approach."""
             return decision_tree
 
         except Exception as e:
-            logger.error(f"Decision tree generation failed: {e}")
+            logger.exception(f"Decision tree generation failed: {e}")
             return {}

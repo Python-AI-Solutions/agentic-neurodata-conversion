@@ -7,34 +7,32 @@ Responsible for:
 - Correction analysis (using LLM if available)
 - Performance Optimization: Batch parallel LLM calls for quality assessment
 """
-import asyncio
+
 import json
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
-
-from models import (
-    ConversionStatus,
-    CorrectionContext,
-    GlobalState,
-    LogLevel,
-    MCPMessage,
-    MCPResponse,
-    ValidationResult,
-    ValidationStatus,
-    ValidationOutcome,
-)
-from services import LLMService
-from services.report_service import ReportService
-from services.prompt_service import PromptService
 
 # Import intelligent evaluation modules
 from agents.intelligent_validation_analyzer import IntelligentValidationAnalyzer
 from agents.smart_issue_resolution import SmartIssueResolution
 from agents.validation_history_learning import ValidationHistoryLearner
+from models import (
+    CorrectionContext,
+    GlobalState,
+    LogLevel,
+    MCPMessage,
+    MCPResponse,
+    ValidationOutcome,
+    ValidationResult,
+    ValidationStatus,
+)
+from services import LLMService
+from services.prompt_service import PromptService
+from services.report_service import ReportService
 
 
 class EvaluationAgent:
@@ -56,15 +54,9 @@ class EvaluationAgent:
         self._prompt_service = PromptService()
 
         # Initialize intelligent evaluation modules
-        self._validation_analyzer = (
-            IntelligentValidationAnalyzer(llm_service) if llm_service else None
-        )
-        self._issue_resolution = (
-            SmartIssueResolution(llm_service) if llm_service else None
-        )
-        self._history_learner = (
-            ValidationHistoryLearner(llm_service) if llm_service else None
-        )
+        self._validation_analyzer = IntelligentValidationAnalyzer(llm_service) if llm_service else None
+        self._issue_resolution = SmartIssueResolution(llm_service) if llm_service else None
+        self._history_learner = ValidationHistoryLearner(llm_service) if llm_service else None
 
     async def handle_run_validation(
         self,
@@ -127,9 +119,9 @@ class EvaluationAgent:
             if validation_result.is_valid and overall_status == ValidationOutcome.PASSED:
                 # Check if this is after a correction attempt (Story 8.8 line 957)
                 if state.correction_attempt > 0:
-                    state.update_validation_status(ValidationStatus.PASSED_IMPROVED)
+                    await state.update_validation_status(ValidationStatus.PASSED_IMPROVED)
                 else:
-                    state.update_validation_status(ValidationStatus.PASSED)
+                    await state.update_validation_status(ValidationStatus.PASSED)
 
                 state.add_log(
                     LogLevel.INFO,
@@ -146,7 +138,11 @@ class EvaluationAgent:
                 state.add_log(
                     LogLevel.INFO,
                     f"Validation {overall_status.value.lower()} (awaiting user decision)",
-                    {"nwb_path": nwb_path, "summary": validation_result.summary, "overall_status": overall_status.value},
+                    {
+                        "nwb_path": nwb_path,
+                        "summary": validation_result.summary,
+                        "overall_status": overall_status.value,
+                    },
                 )
             else:
                 # FAILED status - don't set validation_status yet, wait for user decision
@@ -188,7 +184,11 @@ class EvaluationAgent:
                     state.add_log(
                         LogLevel.INFO,
                         f"Prioritized {len(prioritized_issues)} validation issues",
-                        {"dandi_blocking_count": len([i for i in prioritized_issues if i.get("priority") == "dandi_blocking"])},
+                        {
+                            "dandi_blocking_count": len(
+                                [i for i in prioritized_issues if i.get("priority") == "dandi_blocking"]
+                            )
+                        },
                     )
                 except Exception as e:
                     state.add_log(
@@ -313,7 +313,7 @@ class EvaluationAgent:
                 error_context={"exception": str(e)},
             )
 
-    def _extract_file_info(self, nwb_path: str) -> Dict[str, Any]:
+    def _extract_file_info(self, nwb_path: str) -> dict[str, Any]:
         """
         Extract comprehensive file information from NWB file for reports.
 
@@ -325,44 +325,42 @@ class EvaluationAgent:
             institution, subject info, etc.
         """
         from datetime import datetime
+
         import h5py
 
         # Initialize with all possible NWB metadata fields
         file_info = {
             # File-level metadata
-            'nwb_version': 'Unknown',
-            'file_size_bytes': 0,
-            'creation_date': 'Unknown',
-            'identifier': 'Unknown',
-            'session_description': 'N/A',
-            'session_start_time': 'N/A',
-            'session_id': 'N/A',
-
+            "nwb_version": "Unknown",
+            "file_size_bytes": 0,
+            "creation_date": "Unknown",
+            "identifier": "Unknown",
+            "session_description": "N/A",
+            "session_start_time": "N/A",
+            "session_id": "N/A",
             # General metadata (experimenter, institution, lab)
-            'experimenter': [],
-            'institution': 'N/A',
-            'lab': 'N/A',
-            'experiment_description': 'N/A',
-
+            "experimenter": [],
+            "institution": "N/A",
+            "lab": "N/A",
+            "experiment_description": "N/A",
             # Subject metadata
-            'subject_id': 'N/A',
-            'species': 'N/A',
-            'sex': 'N/A',
-            'age': 'N/A',
-            'date_of_birth': 'N/A',
-            'description': 'N/A',
-            'genotype': 'N/A',
-            'strain': 'N/A',
-
+            "subject_id": "N/A",
+            "species": "N/A",
+            "sex": "N/A",
+            "age": "N/A",
+            "date_of_birth": "N/A",
+            "description": "N/A",
+            "genotype": "N/A",
+            "strain": "N/A",
             # Provenance tracking - record source of each metadata field
-            '_provenance': {},
-            '_source_files': {},
+            "_provenance": {},
+            "_source_files": {},
         }
 
         def decode_value(value):
             """Helper to decode bytes to string."""
             if isinstance(value, bytes):
-                return value.decode('utf-8')
+                return value.decode("utf-8")
             elif isinstance(value, str):
                 return value
             else:
@@ -373,14 +371,14 @@ class EvaluationAgent:
 
             # Get file size and creation date
             if nwb_file_path.exists():
-                file_info['file_size_bytes'] = nwb_file_path.stat().st_size
-                file_info['creation_date'] = datetime.fromtimestamp(
-                    nwb_file_path.stat().st_ctime
-                ).strftime('%Y-%m-%d %H:%M:%S')
+                file_info["file_size_bytes"] = nwb_file_path.stat().st_size
+                file_info["creation_date"] = datetime.fromtimestamp(nwb_file_path.stat().st_ctime).strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
 
             # Try to read NWB metadata using h5py
             try:
-                with h5py.File(nwb_path, 'r') as f:
+                with h5py.File(nwb_path, "r") as f:
                     # Debug logging (use state.add_log instead of print)
                     self._state.add_log(LogLevel.DEBUG, f"Reading NWB file with h5py: {nwb_path}")
                     self._state.add_log(LogLevel.DEBUG, f"Root level groups: {list(f.keys())}")
@@ -394,19 +392,19 @@ class EvaluationAgent:
                         if attr_name in f.attrs:
                             value = decode_value(f.attrs[attr_name])
                             file_info[field_name] = value
-                            file_info['_provenance'][field_name] = 'file-extracted'
-                            file_info['_source_files'][field_name] = nwb_path
+                            file_info["_provenance"][field_name] = "file-extracted"
+                            file_info["_source_files"][field_name] = nwb_path
 
                     # Extract top-level attributes
-                    set_attr_with_provenance('nwb_version')
-                    set_attr_with_provenance('identifier')
-                    set_attr_with_provenance('session_description')
-                    set_attr_with_provenance('session_start_time')
+                    set_attr_with_provenance("nwb_version")
+                    set_attr_with_provenance("identifier")
+                    set_attr_with_provenance("session_description")
+                    set_attr_with_provenance("session_start_time")
 
                     # Extract general metadata
-                    if 'general' in f:
-                        general = f['general']
-                        self._state.add_log(LogLevel.DEBUG, f"Found /general group")
+                    if "general" in f:
+                        general = f["general"]
+                        self._state.add_log(LogLevel.DEBUG, "Found /general group")
                         self._state.add_log(LogLevel.DEBUG, f"/general attrs: {list(general.attrs.keys())}")
                         self._state.add_log(LogLevel.DEBUG, f"/general subgroups: {list(general.keys())}")
 
@@ -421,144 +419,168 @@ class EvaluationAgent:
                                 return group[key][()]
                             return None
 
-                        def set_with_provenance(field_name, value, provenance='file-extracted', source_file=None):
+                        def set_with_provenance(field_name, value, provenance="file-extracted", source_file=None):
                             """Set a field value and track its provenance."""
                             file_info[field_name] = value
-                            file_info['_provenance'][field_name] = provenance
+                            file_info["_provenance"][field_name] = provenance
                             if source_file:
-                                file_info['_source_files'][field_name] = source_file
+                                file_info["_source_files"][field_name] = source_file
 
                         # Experimenter (can be string or array)
-                        exp_value = get_value(general, 'experimenter')
+                        exp_value = get_value(general, "experimenter")
                         if exp_value is not None:
                             exp_value = exp_value
                             if isinstance(exp_value, bytes):
-                                set_with_provenance('experimenter', [exp_value.decode('utf-8')], 'file-extracted', nwb_path)
+                                set_with_provenance(
+                                    "experimenter", [exp_value.decode("utf-8")], "file-extracted", nwb_path
+                                )
                             elif isinstance(exp_value, str):
-                                set_with_provenance('experimenter', [exp_value], 'file-extracted', nwb_path)
+                                set_with_provenance("experimenter", [exp_value], "file-extracted", nwb_path)
                             elif isinstance(exp_value, (list, tuple)):
-                                set_with_provenance('experimenter', [
-                                    e.decode('utf-8') if isinstance(e, bytes) else str(e)
-                                    for e in exp_value
-                                ], 'file-extracted', nwb_path)
+                                set_with_provenance(
+                                    "experimenter",
+                                    [e.decode("utf-8") if isinstance(e, bytes) else str(e) for e in exp_value],
+                                    "file-extracted",
+                                    nwb_path,
+                                )
                             else:
                                 # Handle numpy arrays or other iterable types
                                 try:
-                                    set_with_provenance('experimenter', [decode_value(e) for e in exp_value], 'file-extracted', nwb_path)
+                                    set_with_provenance(
+                                        "experimenter", [decode_value(e) for e in exp_value], "file-extracted", nwb_path
+                                    )
                                 except TypeError:
-                                    set_with_provenance('experimenter', [decode_value(exp_value)], 'file-extracted', nwb_path)
+                                    set_with_provenance(
+                                        "experimenter", [decode_value(exp_value)], "file-extracted", nwb_path
+                                    )
 
                         # Institution
-                        inst_value = get_value(general, 'institution')
+                        inst_value = get_value(general, "institution")
                         if inst_value is not None:
-                            set_with_provenance('institution', decode_value(inst_value), 'file-extracted', nwb_path)
+                            set_with_provenance("institution", decode_value(inst_value), "file-extracted", nwb_path)
 
                         # Lab
-                        lab_value = get_value(general, 'lab')
+                        lab_value = get_value(general, "lab")
                         if lab_value is not None:
-                            set_with_provenance('lab', decode_value(lab_value), 'file-extracted', nwb_path)
+                            set_with_provenance("lab", decode_value(lab_value), "file-extracted", nwb_path)
 
                         # Experiment description
-                        exp_desc_value = get_value(general, 'experiment_description')
+                        exp_desc_value = get_value(general, "experiment_description")
                         if exp_desc_value is not None:
-                            set_with_provenance('experiment_description', decode_value(exp_desc_value), 'file-extracted', nwb_path)
+                            set_with_provenance(
+                                "experiment_description", decode_value(exp_desc_value), "file-extracted", nwb_path
+                            )
 
                         # Session ID
-                        session_id_value = get_value(general, 'session_id')
+                        session_id_value = get_value(general, "session_id")
                         if session_id_value is not None:
-                            set_with_provenance('session_id', decode_value(session_id_value), 'file-extracted', nwb_path)
+                            set_with_provenance(
+                                "session_id", decode_value(session_id_value), "file-extracted", nwb_path
+                            )
 
                         # Extract subject metadata
-                        if 'subject' in general:
-                            subject_group = general['subject']
+                        if "subject" in general:
+                            subject_group = general["subject"]
 
                             # Check both attrs and datasets for subject fields
-                            subj_id_value = get_value(subject_group, 'subject_id')
+                            subj_id_value = get_value(subject_group, "subject_id")
                             if subj_id_value is not None:
-                                set_with_provenance('subject_id', decode_value(subj_id_value), 'file-extracted', nwb_path)
+                                set_with_provenance(
+                                    "subject_id", decode_value(subj_id_value), "file-extracted", nwb_path
+                                )
 
-                            species_value = get_value(subject_group, 'species')
+                            species_value = get_value(subject_group, "species")
                             if species_value is not None:
-                                set_with_provenance('species', decode_value(species_value), 'file-extracted', nwb_path)
+                                set_with_provenance("species", decode_value(species_value), "file-extracted", nwb_path)
 
-                            sex_value = get_value(subject_group, 'sex')
+                            sex_value = get_value(subject_group, "sex")
                             if sex_value is not None:
-                                set_with_provenance('sex', decode_value(sex_value), 'file-extracted', nwb_path)
+                                set_with_provenance("sex", decode_value(sex_value), "file-extracted", nwb_path)
 
-                            age_value = get_value(subject_group, 'age')
+                            age_value = get_value(subject_group, "age")
                             if age_value is not None:
-                                set_with_provenance('age', decode_value(age_value), 'file-extracted', nwb_path)
+                                set_with_provenance("age", decode_value(age_value), "file-extracted", nwb_path)
 
-                            dob_value = get_value(subject_group, 'date_of_birth')
+                            dob_value = get_value(subject_group, "date_of_birth")
                             if dob_value is not None:
-                                set_with_provenance('date_of_birth', decode_value(dob_value), 'file-extracted', nwb_path)
+                                set_with_provenance(
+                                    "date_of_birth", decode_value(dob_value), "file-extracted", nwb_path
+                                )
 
-                            desc_value = get_value(subject_group, 'description')
+                            desc_value = get_value(subject_group, "description")
                             if desc_value is not None:
-                                set_with_provenance('description', decode_value(desc_value), 'file-extracted', nwb_path)
+                                set_with_provenance("description", decode_value(desc_value), "file-extracted", nwb_path)
 
-                            geno_value = get_value(subject_group, 'genotype')
+                            geno_value = get_value(subject_group, "genotype")
                             if geno_value is not None:
-                                set_with_provenance('genotype', decode_value(geno_value), 'file-extracted', nwb_path)
+                                set_with_provenance("genotype", decode_value(geno_value), "file-extracted", nwb_path)
 
-                            strain_value = get_value(subject_group, 'strain')
+                            strain_value = get_value(subject_group, "strain")
                             if strain_value is not None:
-                                set_with_provenance('strain', decode_value(strain_value), 'file-extracted', nwb_path)
+                                set_with_provenance("strain", decode_value(strain_value), "file-extracted", nwb_path)
 
             except Exception as e:
                 # If h5py fails, try PyNWB
                 logger.debug(f"h5py extraction failed: {e}, trying PyNWB...")
                 try:
                     from pynwb import NWBHDF5IO
-                    with NWBHDF5IO(nwb_path, 'r') as io:
+
+                    with NWBHDF5IO(nwb_path, "r") as io:
                         nwbfile = io.read()
 
                         # File-level attributes
-                        file_info['nwb_version'] = str(getattr(nwbfile, 'nwb_version', 'Unknown'))
-                        file_info['identifier'] = str(getattr(nwbfile, 'identifier', 'Unknown'))
-                        file_info['session_description'] = str(getattr(nwbfile, 'session_description', 'N/A'))
-                        file_info['session_start_time'] = str(getattr(nwbfile, 'session_start_time', 'N/A'))
-                        file_info['session_id'] = str(getattr(nwbfile, 'session_id', 'N/A'))
+                        file_info["nwb_version"] = str(getattr(nwbfile, "nwb_version", "Unknown"))
+                        file_info["identifier"] = str(getattr(nwbfile, "identifier", "Unknown"))
+                        file_info["session_description"] = str(getattr(nwbfile, "session_description", "N/A"))
+                        file_info["session_start_time"] = str(getattr(nwbfile, "session_start_time", "N/A"))
+                        file_info["session_id"] = str(getattr(nwbfile, "session_id", "N/A"))
 
                         # General metadata
-                        experimenter = getattr(nwbfile, 'experimenter', None)
+                        experimenter = getattr(nwbfile, "experimenter", None)
                         if experimenter:
-                            file_info['experimenter'] = list(experimenter) if hasattr(experimenter, '__iter__') and not isinstance(experimenter, str) else [str(experimenter)]
+                            file_info["experimenter"] = (
+                                list(experimenter)
+                                if hasattr(experimenter, "__iter__") and not isinstance(experimenter, str)
+                                else [str(experimenter)]
+                            )
 
-                        file_info['institution'] = str(getattr(nwbfile, 'institution', 'N/A'))
-                        file_info['lab'] = str(getattr(nwbfile, 'lab', 'N/A'))
-                        file_info['experiment_description'] = str(getattr(nwbfile, 'experiment_description', 'N/A'))
+                        file_info["institution"] = str(getattr(nwbfile, "institution", "N/A"))
+                        file_info["lab"] = str(getattr(nwbfile, "lab", "N/A"))
+                        file_info["experiment_description"] = str(getattr(nwbfile, "experiment_description", "N/A"))
 
                         # Subject metadata
                         if nwbfile.subject:
-                            file_info['subject_id'] = str(getattr(nwbfile.subject, 'subject_id', 'N/A'))
-                            file_info['species'] = str(getattr(nwbfile.subject, 'species', 'N/A'))
-                            file_info['sex'] = str(getattr(nwbfile.subject, 'sex', 'N/A'))
-                            file_info['age'] = str(getattr(nwbfile.subject, 'age', 'N/A'))
-                            file_info['date_of_birth'] = str(getattr(nwbfile.subject, 'date_of_birth', 'N/A'))
-                            file_info['description'] = str(getattr(nwbfile.subject, 'description', 'N/A'))
-                            file_info['genotype'] = str(getattr(nwbfile.subject, 'genotype', 'N/A'))
-                            file_info['strain'] = str(getattr(nwbfile.subject, 'strain', 'N/A'))
+                            file_info["subject_id"] = str(getattr(nwbfile.subject, "subject_id", "N/A"))
+                            file_info["species"] = str(getattr(nwbfile.subject, "species", "N/A"))
+                            file_info["sex"] = str(getattr(nwbfile.subject, "sex", "N/A"))
+                            file_info["age"] = str(getattr(nwbfile.subject, "age", "N/A"))
+                            file_info["date_of_birth"] = str(getattr(nwbfile.subject, "date_of_birth", "N/A"))
+                            file_info["description"] = str(getattr(nwbfile.subject, "description", "N/A"))
+                            file_info["genotype"] = str(getattr(nwbfile.subject, "genotype", "N/A"))
+                            file_info["strain"] = str(getattr(nwbfile.subject, "strain", "N/A"))
                         else:
-                            logger.warning(f"NWB file has no subject object!")
+                            logger.warning("NWB file has no subject object!")
 
-                        logger.debug(f"PyNWB extraction succeeded: experimenter={file_info['experimenter']}, institution={file_info['institution']}, subject_id={file_info['subject_id']}")
+                        logger.debug(
+                            f"PyNWB extraction succeeded: experimenter={file_info['experimenter']}, institution={file_info['institution']}, subject_id={file_info['subject_id']}"
+                        )
 
                 except Exception as pynwb_error:
-                    logger.error(f"Could not extract file info with PyNWB either: {pynwb_error}")
+                    logger.exception(f"Could not extract file info with PyNWB either: {pynwb_error}")
                     import traceback
+
                     traceback.print_exc()
 
         except Exception as e:
-            logger.error(f"Error extracting file info: {e}")
+            logger.exception(f"Error extracting file info: {e}")
 
         return file_info
 
     async def _prioritize_and_explain_issues(
         self,
-        issues: List[Any],
+        issues: list[Any],
         state: GlobalState,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Use LLM to prioritize validation issues and explain their importance.
 
@@ -574,12 +596,11 @@ class EvaluationAgent:
         Returns:
             List of prioritized issues with explanations and action items
         """
-        import json
 
         # Format issues for LLM
         issues_text = []
         for idx, issue in enumerate(issues[:20], 1):  # Limit to first 20 for token efficiency
-            issue_dict = issue.model_dump() if hasattr(issue, 'model_dump') else issue
+            issue_dict = issue.model_dump() if hasattr(issue, "model_dump") else issue
             issues_text.append(
                 f"{idx}. [{issue_dict.get('severity', 'UNKNOWN')}] "
                 f"{issue_dict.get('message', 'No message')}\n"
@@ -664,16 +685,18 @@ Focus on DANDI archive requirements."""
             result = []
             for idx, prioritized_issue in enumerate(prioritized):
                 if idx < len(issues):
-                    original = issues[idx].model_dump() if hasattr(issues[idx], 'model_dump') else issues[idx]
-                    result.append({
-                        **original,  # Keep all original fields
-                        "priority": prioritized_issue.get("priority"),
-                        "explanation": prioritized_issue.get("explanation"),
-                        "why_it_matters": prioritized_issue.get("why_it_matters"),
-                        "fix_action": prioritized_issue.get("fix_action"),
-                        "user_fixable": prioritized_issue.get("user_fixable", False),
-                        "dandi_requirement": prioritized_issue.get("dandi_requirement", False),
-                    })
+                    original = issues[idx].model_dump() if hasattr(issues[idx], "model_dump") else issues[idx]
+                    result.append(
+                        {
+                            **original,  # Keep all original fields
+                            "priority": prioritized_issue.get("priority"),
+                            "explanation": prioritized_issue.get("explanation"),
+                            "why_it_matters": prioritized_issue.get("why_it_matters"),
+                            "fix_action": prioritized_issue.get("fix_action"),
+                            "user_fixable": prioritized_issue.get("user_fixable", False),
+                            "dandi_requirement": prioritized_issue.get("dandi_requirement", False),
+                        }
+                    )
 
             return result
 
@@ -683,14 +706,14 @@ Focus on DANDI archive requirements."""
                 f"LLM prioritization failed: {e}",
             )
             # Fallback: return original issues without prioritization
-            return [issue.model_dump() if hasattr(issue, 'model_dump') else issue for issue in issues]
+            return [issue.model_dump() if hasattr(issue, "model_dump") else issue for issue in issues]
 
     async def _assess_nwb_quality(
         self,
         nwb_path: str,
         validation_result: ValidationResult,
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         🎯 PRIORITY 3: Quality Scoring System
         Use LLM to assess overall NWB file quality on a 0-100 scale.
@@ -711,7 +734,6 @@ Focus on DANDI archive requirements."""
             Quality assessment with score, grade, and improvement suggestions
         """
         import json
-        from pathlib import Path
 
         # Extract file information
         file_info = self._extract_file_info(nwb_path)
@@ -726,10 +748,8 @@ Focus on DANDI archive requirements."""
         # Get sample issues for context
         sample_issues = []
         for issue in validation_result.issues[:10]:  # First 10 issues
-            issue_dict = issue.model_dump() if hasattr(issue, 'model_dump') else issue
-            sample_issues.append(
-                f"[{issue_dict.get('severity', 'UNKNOWN')}] {issue_dict.get('message', 'No message')}"
-            )
+            issue_dict = issue.model_dump() if hasattr(issue, "model_dump") else issue
+            sample_issues.append(f"[{issue_dict.get('severity', 'UNKNOWN')}] {issue_dict.get('message', 'No message')}")
 
         system_prompt = """You are an expert NWB data quality assessor and DANDI archive curator.
 
@@ -879,8 +899,8 @@ Provide:
         Raises:
             Exception: If validation cannot be run
         """
-        from nwbinspector import inspect_nwbfile
         from nwbinspector import __version__ as inspector_version
+        from nwbinspector import inspect_nwbfile
 
         # Run NWB Inspector
         results = list(inspect_nwbfile(nwbfile_path=nwb_path))
@@ -888,12 +908,14 @@ Provide:
         # Convert to our format
         inspector_results = []
         for check_result in results:
-            inspector_results.append({
-                "severity": check_result.severity.name.lower(),
-                "message": check_result.message,
-                "location": str(check_result.location) if hasattr(check_result, "location") else None,
-                "check_function_name": check_result.check_function_name,
-            })
+            inspector_results.append(
+                {
+                    "severity": check_result.severity.name.lower(),
+                    "message": check_result.message,
+                    "location": str(check_result.location) if hasattr(check_result, "location") else None,
+                    "check_function_name": check_result.check_function_name,
+                }
+            )
 
         validation_result = ValidationResult.from_inspector_output(
             inspector_results,
@@ -994,7 +1016,7 @@ Provide:
         self,
         correction_context: CorrectionContext,
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Use LLM to analyze validation issues and suggest corrections.
 
@@ -1051,11 +1073,13 @@ Provide:
         Returns:
             Prompt string
         """
-        issues_text = "\n".join([
-            f"- [{issue.severity.value.upper()}] {issue.message}"
-            + (f" (at {issue.location})" if issue.location else "")
-            for issue in context.validation_result.issues[:20]  # Limit to 20 issues
-        ])
+        issues_text = "\n".join(
+            [
+                f"- [{issue.severity.value.upper()}] {issue.message}"
+                + (f" (at {issue.location})" if issue.location else "")
+                for issue in context.validation_result.issues[:20]  # Limit to 20 issues
+            ]
+        )
 
         if len(context.validation_result.issues) > 20:
             issues_text += f"\n... and {len(context.validation_result.issues) - 20} more issues"
@@ -1064,9 +1088,9 @@ Provide:
 
 ## Summary
 - Total issues: {len(context.validation_result.issues)}
-- Critical: {context.validation_result.summary.get('critical', 0)}
-- Errors: {context.validation_result.summary.get('error', 0)}
-- Warnings: {context.validation_result.summary.get('warning', 0)}
+- Critical: {context.validation_result.summary.get("critical", 0)}
+- Errors: {context.validation_result.summary.get("error", 0)}
+- Warnings: {context.validation_result.summary.get("warning", 0)}
 
 ## Issues
 {issues_text}
@@ -1118,11 +1142,11 @@ Focus on the most critical issues first."""
 
         try:
             # Determine report type based on validation status
-            overall_status = validation_result_data.get('overall_status', 'UNKNOWN')
+            overall_status = validation_result_data.get("overall_status", "UNKNOWN")
 
             # BUG #4 FIX: If user accepted PASSED_WITH_ISSUES, treat as PASSED for final report generation
-            if final_accepted and overall_status == 'PASSED_WITH_ISSUES':
-                overall_status = 'PASSED'
+            if final_accepted and overall_status == "PASSED_WITH_ISSUES":
+                overall_status = "PASSED"
                 state.add_log(
                     LogLevel.INFO,
                     "Generating final reports for PASSED_WITH_ISSUES after user acceptance (treating as PASSED)",
@@ -1137,7 +1161,7 @@ Focus on the most critical issues first."""
 
             # BUG #4 FIX: Only generate final reports for clean PASSED
             # For PASSED_WITH_ISSUES, wait for user decision before generating final reports
-            if overall_status == 'PASSED':
+            if overall_status == "PASSED":
                 # Generate both PDF and text reports (clean pass)
                 output_dir = Path(state.output_path).parent if state.output_path else Path("outputs")
                 pdf_report_path = output_dir / f"{report_base}_evaluation_report.pdf"
@@ -1159,7 +1183,7 @@ Focus on the most critical issues first."""
                         state=state,
                     )
 
-                    validation_result_data['file_info'] = file_info_with_provenance
+                    validation_result_data["file_info"] = file_info_with_provenance
                     state.add_log(
                         LogLevel.DEBUG,
                         f"Extracted file metadata: experimenter={file_info.get('experimenter')}, "
@@ -1177,45 +1201,33 @@ Focus on the most critical issues first."""
                 # Generate HTML report (interactive with embedded CSS/JS)
                 html_report_path = output_dir / f"{report_base}_evaluation_report.html"
                 self._report_service.generate_html_report(
-                    html_report_path,
-                    validation_result_data,
-                    llm_analysis,
-                    workflow_trace
+                    html_report_path, validation_result_data, llm_analysis, workflow_trace
                 )
 
                 # Save workflow_trace to JSON for later retrieval
                 workflow_trace_path = output_dir / f"{report_base}_workflow_trace.json"
-                with open(workflow_trace_path, 'w') as f:
+                with open(workflow_trace_path, "w") as f:
                     json.dump(workflow_trace, f, indent=2, default=str)
-                state.add_log(
-                    LogLevel.DEBUG,
-                    f"Saved workflow trace to {workflow_trace_path}"
-                )
+                state.add_log(LogLevel.DEBUG, f"Saved workflow trace to {workflow_trace_path}")
 
                 # Generate PDF report (detailed with LLM analysis and workflow trace)
                 self._report_service.generate_pdf_report(
-                    pdf_report_path,
-                    validation_result_data,
-                    llm_analysis,
-                    workflow_trace
+                    pdf_report_path, validation_result_data, llm_analysis, workflow_trace
                 )
 
                 # Generate text report (NWB Inspector style with LLM analysis and workflow trace)
                 self._report_service.generate_text_report(
-                    text_report_path,
-                    validation_result_data,
-                    llm_analysis,
-                    workflow_trace
+                    text_report_path, validation_result_data, llm_analysis, workflow_trace
                 )
 
                 state.add_log(
                     LogLevel.INFO,
-                    f"Generated evaluation reports: HTML, PDF, and text",
+                    "Generated evaluation reports: HTML, PDF, and text",
                     {
                         "html_report": str(html_report_path),
                         "pdf_report": str(pdf_report_path),
                         "text_report": str(text_report_path),
-                        "status": overall_status
+                        "status": overall_status,
                     },
                 )
 
@@ -1230,7 +1242,7 @@ Focus on the most critical issues first."""
                     },
                 )
 
-            elif overall_status == 'PASSED_WITH_ISSUES':
+            elif overall_status == "PASSED_WITH_ISSUES":
                 # BUG #4 FIX: For PASSED_WITH_ISSUES, don't generate final reports yet
                 # Wait for user decision (improve or accept) before generating final reports
                 # Generate a temporary JSON summary for user to review
@@ -1252,22 +1264,19 @@ Focus on the most critical issues first."""
                         state=state,
                     )
 
-                    validation_result_data['file_info'] = file_info_with_provenance
+                    validation_result_data["file_info"] = file_info_with_provenance
 
                 # Build workflow trace
                 workflow_trace = self._build_workflow_trace(state)
 
                 # Generate preview JSON report (not final)
                 self._report_service.generate_json_report(
-                    preview_report_path,
-                    validation_result_data,
-                    llm_analysis,
-                    workflow_trace
+                    preview_report_path, validation_result_data, llm_analysis, workflow_trace
                 )
 
                 state.add_log(
                     LogLevel.INFO,
-                    f"Generated preview report for PASSED_WITH_ISSUES (final reports deferred until user accepts)",
+                    "Generated preview report for PASSED_WITH_ISSUES (final reports deferred until user accepts)",
                     {"preview_report": str(preview_report_path), "status": overall_status},
                 )
 
@@ -1300,7 +1309,7 @@ Focus on the most critical issues first."""
                         state=state,
                     )
 
-                    validation_result_data['file_info'] = file_info_with_provenance
+                    validation_result_data["file_info"] = file_info_with_provenance
 
                 # If LLM service available and no analysis provided, generate it
                 if self._llm_service and not llm_analysis:
@@ -1310,10 +1319,7 @@ Focus on the most critical issues first."""
                 workflow_trace = self._build_workflow_trace(state)
 
                 self._report_service.generate_json_report(
-                    report_path,
-                    validation_result_data,
-                    llm_analysis,
-                    workflow_trace
+                    report_path, validation_result_data, llm_analysis, workflow_trace
                 )
 
                 state.add_log(
@@ -1344,8 +1350,118 @@ Focus on the most critical issues first."""
                 error_context={"exception": str(e)},
             )
 
-    def _categorize_logs_by_stage(self, logs: List[LogEntry]) -> Dict[str, List[Dict[str, Any]]]:
+    def _prepare_logs_for_sequential_view(self, logs: list[LogEntry]) -> tuple[list[dict[str, Any]], list[str]]:
         """
+        Prepare logs for sequential chronological display with stage tags.
+
+        This method organizes logs in chronological order while tagging each with its
+        workflow stage for filtering. This preserves the natural flow of events while
+        still allowing users to filter by specific stages.
+
+        Args:
+            logs: List of log entries from GlobalState in chronological order
+
+        Returns:
+            Tuple of (enhanced_logs, stage_options) where:
+            - enhanced_logs: List of log dicts with stage tags in chronological order
+            - stage_options: List of stage display names for the filter dropdown
+        """
+        # Define workflow stages and their associated keywords
+        stage_keywords = {
+            "initialization": ["reset", "initialized", "starting", "session", "global state"],
+            "upload": ["upload", "file received", "checksum"],
+            "format_detection": ["detecting format", "detected format", "format detection", "llm format"],
+            "metadata_extraction": ["extracting metadata", "metadata extracted", "inference", "metadata check"],
+            "metadata_collection": [
+                "user input",
+                "metadata collection",
+                "awaiting user",
+                "conversation",
+                "conversational",
+                "parse",
+                "natural language",
+            ],
+            "conversion": [
+                "converting",
+                "conversion",
+                "neuroconv",
+                "creating nwb",
+                "nwb conversion",
+                "spikeglx",
+                "writing nwb",
+            ],
+            "validation": ["validating", "validation", "nwb inspector", "checking", "validation session"],
+            "completion": ["metadata inference completed"],
+        }
+
+        # Human-readable stage display names
+        stage_display_names = {
+            "initialization": "Initialization",
+            "upload": "Upload",
+            "format_detection": "Format Detection",
+            "metadata_extraction": "Metadata Extraction",
+            "metadata_collection": "Metadata Collection",
+            "conversion": "Conversion",
+            "validation": "Validation",
+            "completion": "Completion",
+            "general": "General",
+        }
+
+        # Stage icons for visual identification
+        stage_icons = {
+            "initialization": "🚀",
+            "upload": "📤",
+            "format_detection": "🔍",
+            "metadata_extraction": "🧠",
+            "metadata_collection": "💬",
+            "conversion": "⚙️",
+            "validation": "✅",
+            "completion": "🎉",
+            "general": "📝",
+        }
+
+        enhanced_logs = []
+        for log in logs:
+            message_lower = log.message.lower()
+
+            # Determine stage for this log
+            stage = "general"  # default
+            for stage_name, keywords in stage_keywords.items():
+                if any(keyword in message_lower for keyword in keywords):
+                    stage = stage_name
+                    break
+
+            enhanced_logs.append(
+                {
+                    "timestamp": log.timestamp.isoformat(),
+                    "level": log.level.value.upper(),
+                    "message": log.message,
+                    "context": log.context if log.context else None,
+                    "stage": stage,  # For filtering (e.g., "initialization")
+                    "stage_display": stage_display_names[stage],  # For display (e.g., "Initialization")
+                    "stage_icon": stage_icons[stage],  # For visual identification
+                }
+            )
+
+        # Return enhanced logs and stage options for the dropdown
+        stage_options = [
+            {"value": "initialization", "label": "🚀 Initialization"},
+            {"value": "upload", "label": "📤 Upload"},
+            {"value": "format_detection", "label": "🔍 Format Detection"},
+            {"value": "metadata_extraction", "label": "🧠 Metadata Extraction"},
+            {"value": "metadata_collection", "label": "💬 Metadata Collection"},
+            {"value": "conversion", "label": "⚙️ Conversion"},
+            {"value": "validation", "label": "✅ Validation"},
+            {"value": "completion", "label": "🎉 Completion"},
+            {"value": "general", "label": "📝 General"},
+        ]
+
+        return enhanced_logs, stage_options
+
+    def _categorize_logs_by_stage(self, logs: list[LogEntry]) -> dict[str, list[dict[str, Any]]]:
+        """
+        DEPRECATED: Use _prepare_logs_for_sequential_view instead.
+
         Categorize logs by workflow stage for detailed process tracing.
 
         This method organizes logs into stages for better readability and scientific transparency,
@@ -1359,20 +1475,20 @@ Focus on the most critical issues first."""
         """
         # Define workflow stages and their associated keywords
         stage_keywords = {
-            'initialization': ['reset', 'initialized', 'starting', 'session'],
-            'upload': ['upload', 'file received', 'checksum'],
-            'format_detection': ['detecting format', 'detected format', 'format detection'],
-            'metadata_extraction': ['extracting metadata', 'metadata extracted', 'parsing', 'ai', 'llm'],
-            'metadata_collection': ['user input', 'metadata collection', 'awaiting user', 'conversation'],
-            'conversion': ['converting', 'conversion', 'neuroconv', 'creating nwb'],
-            'validation': ['validating', 'validation', 'nwb inspector', 'checking'],
-            'completion': ['completed', 'success', 'finished'],
-            'error_handling': ['error', 'failed', 'exception', 'retry'],
+            "initialization": ["reset", "initialized", "starting", "session"],
+            "upload": ["upload", "file received", "checksum"],
+            "format_detection": ["detecting format", "detected format", "format detection"],
+            "metadata_extraction": ["extracting metadata", "metadata extracted", "parsing", "ai", "llm"],
+            "metadata_collection": ["user input", "metadata collection", "awaiting user", "conversation"],
+            "conversion": ["converting", "conversion", "neuroconv", "creating nwb"],
+            "validation": ["validating", "validation", "nwb inspector", "checking"],
+            "completion": ["completed", "success", "finished"],
+            "error_handling": ["error", "failed", "exception", "retry"],
         }
 
         # Categorize logs
-        categorized = {stage: [] for stage in stage_keywords.keys()}
-        categorized['general'] = []  # For logs that don't match any stage
+        categorized = {stage: [] for stage in stage_keywords}
+        categorized["general"] = []  # For logs that don't match any stage
 
         for log in logs:
             message_lower = log.message.lower()
@@ -1381,28 +1497,32 @@ Focus on the most critical issues first."""
             # Try to match log to a stage
             for stage, keywords in stage_keywords.items():
                 if any(keyword in message_lower for keyword in keywords):
-                    categorized[stage].append({
-                        'timestamp': log.timestamp.isoformat(),
-                        'level': log.level.value.upper(),
-                        'message': log.message,
-                        'context': log.context if log.context else None,
-                    })
+                    categorized[stage].append(
+                        {
+                            "timestamp": log.timestamp.isoformat(),
+                            "level": log.level.value.upper(),
+                            "message": log.message,
+                            "context": log.context if log.context else None,
+                        }
+                    )
                     matched = True
                     break
 
             # If no match, add to general
             if not matched:
-                categorized['general'].append({
-                    'timestamp': log.timestamp.isoformat(),
-                    'level': log.level.value.upper(),
-                    'message': log.message,
-                    'context': log.context if log.context else None,
-                })
+                categorized["general"].append(
+                    {
+                        "timestamp": log.timestamp.isoformat(),
+                        "level": log.level.value.upper(),
+                        "message": log.message,
+                        "context": log.context if log.context else None,
+                    }
+                )
 
         # Remove empty stages
         return {stage: logs_list for stage, logs_list in categorized.items() if logs_list}
 
-    def _build_workflow_trace(self, state: GlobalState) -> Dict[str, Any]:
+    def _build_workflow_trace(self, state: GlobalState) -> dict[str, Any]:
         """
         Build a comprehensive workflow trace from the state for transparency and reproducibility.
 
@@ -1412,7 +1532,7 @@ Focus on the most critical issues first."""
         Returns:
             Dictionary containing complete workflow trace
         """
-        from datetime import datetime, timedelta
+        from datetime import datetime
 
         # Calculate duration
         start_time = None
@@ -1426,10 +1546,10 @@ Focus on the most critical issues first."""
 
         # Build summary
         summary = {
-            'start_time': start_time.isoformat() if start_time else 'N/A',
-            'end_time': end_time.isoformat(),
-            'duration': duration,
-            'input_format': state.metadata.get('detected_format', 'Unknown'),
+            "start_time": start_time.isoformat() if start_time else "N/A",
+            "end_time": end_time.isoformat(),
+            "duration": duration,
+            "input_format": state.metadata.get("detected_format", "Unknown"),
         }
 
         # Technologies used
@@ -1448,66 +1568,73 @@ Focus on the most critical issues first."""
         # Build workflow steps from logs
         steps = []
         step_mapping = {
-            'detecting_format': {
-                'name': 'Format Detection',
-                'description': 'Automatically detected the input data format using intelligent pattern matching',
+            "detecting_format": {
+                "name": "Format Detection",
+                "description": "Automatically detected the input data format using intelligent pattern matching",
             },
-            'awaiting_user_input': {
-                'name': 'Metadata Collection',
-                'description': 'Collected required NWB metadata from user with AI-assisted suggestions',
+            "awaiting_user_input": {
+                "name": "Metadata Collection",
+                "description": "Collected required NWB metadata from user with AI-assisted suggestions",
             },
-            'converting': {
-                'name': 'Data Conversion',
-                'description': 'Converted electrophysiology data to NWB format using NeuroConv',
+            "converting": {
+                "name": "Data Conversion",
+                "description": "Converted electrophysiology data to NWB format using NeuroConv",
             },
-            'validating': {
-                'name': 'Validation',
-                'description': 'Validated NWB file against standards using NWB Inspector',
+            "validating": {
+                "name": "Validation",
+                "description": "Validated NWB file against standards using NWB Inspector",
             },
-            'completed': {
-                'name': 'Completion',
-                'description': 'Conversion and validation completed successfully',
+            "completed": {
+                "name": "Completion",
+                "description": "Conversion and validation completed successfully",
             },
         }
 
         # Extract steps from logs
         seen_statuses = set()
         for log in state.logs:
-            if log.level == LogLevel.INFO and 'Status changed to' in log.message:
-                status = log.context.get('status', '')
+            if log.level == LogLevel.INFO and "Status changed to" in log.message:
+                status = log.context.get("status", "")
                 if status and status not in seen_statuses:
                     seen_statuses.add(status)
-                    step_info = step_mapping.get(status, {
-                        'name': status.replace('_', ' ').title(),
-                        'description': f'Pipeline stage: {status}',
-                    })
-                    steps.append({
-                        'name': step_info['name'],
-                        'status': 'completed',
-                        'description': step_info['description'],
-                        'timestamp': log.timestamp.isoformat(),
-                    })
+                    step_info = step_mapping.get(
+                        status,
+                        {
+                            "name": status.replace("_", " ").title(),
+                            "description": f"Pipeline stage: {status}",
+                        },
+                    )
+                    steps.append(
+                        {
+                            "name": step_info["name"],
+                            "status": "completed",
+                            "description": step_info["description"],
+                            "timestamp": log.timestamp.isoformat(),
+                        }
+                    )
 
         # Data provenance
         provenance = {
-            'original_file': state.input_path or 'N/A',
-            'conversion_method': 'NeuroConv with AI-assisted metadata collection',
-            'metadata_sources': [
-                'User-provided metadata',
-                'File header extraction',
-                'AI-assisted inference',
+            "original_file": state.input_path or "N/A",
+            "conversion_method": "NeuroConv with AI-assisted metadata collection",
+            "metadata_sources": [
+                "User-provided metadata",
+                "File header extraction",
+                "AI-assisted inference",
             ],
-            'agent_versions': 'Multi-agent system: ConversationAgent, ConversionAgent, EvaluationAgent',
+            "agent_versions": "Multi-agent system: ConversationAgent, ConversionAgent, EvaluationAgent",
         }
 
         # User interactions
         user_interactions = []
         for log in state.logs:
-            if 'chat' in log.message.lower() or 'user' in log.message.lower():
-                user_interactions.append({
-                    'timestamp': log.timestamp.isoformat(),
-                    'action': log.message,
-                })
+            if "chat" in log.message.lower() or "user" in log.message.lower():
+                user_interactions.append(
+                    {
+                        "timestamp": log.timestamp.isoformat(),
+                        "action": log.message,
+                    }
+                )
 
         # Include metadata_provenance from state for HTML report
         # This preserves original provenance (AI-parsed, user-specified, etc.)
@@ -1516,32 +1643,29 @@ Focus on the most critical issues first."""
         if state.metadata_provenance:
             for field_name, prov_info in state.metadata_provenance.items():
                 metadata_provenance_dict[field_name] = {
-                    'provenance': prov_info.provenance.value,
-                    'confidence': prov_info.confidence,
-                    'source': prov_info.source,
-                    'needs_review': prov_info.needs_review,
-                    'timestamp': prov_info.timestamp.isoformat(),
+                    "provenance": prov_info.provenance.value,
+                    "confidence": prov_info.confidence,
+                    "source": prov_info.source,
+                    "needs_review": prov_info.needs_review,
+                    "timestamp": prov_info.timestamp.isoformat(),
                 }
 
-        # Build detailed logs categorized by workflow stage for scientific transparency
-        detailed_logs = self._categorize_logs_by_stage(state.logs)
+        # Build detailed logs for sequential view with stage tags for scientific transparency
+        detailed_logs_sequential, stage_options = self._prepare_logs_for_sequential_view(state.logs)
 
         return {
-            'summary': summary,
-            'technologies': technologies,
-            'steps': steps,
-            'provenance': provenance,
-            'user_interactions': user_interactions if user_interactions else None,
-            'metadata_provenance': metadata_provenance_dict,
-            'detailed_logs': detailed_logs,
-            'log_file_path': state.log_file_path,
+            "summary": summary,
+            "technologies": technologies,
+            "steps": steps,
+            "provenance": provenance,
+            "user_interactions": user_interactions if user_interactions else None,
+            "metadata_provenance": metadata_provenance_dict,
+            "detailed_logs_sequential": detailed_logs_sequential,  # New: chronological logs with stage tags
+            "stage_options": stage_options,  # New: options for the stage filter dropdown
+            "log_file_path": state.log_file_path,
         }
 
-    def _add_metadata_provenance(
-        self,
-        file_info: Dict[str, Any],
-        state: GlobalState
-    ) -> Dict[str, Any]:
+    def _add_metadata_provenance(self, file_info: dict[str, Any], state: GlobalState) -> dict[str, Any]:
         """
         Add provenance information to metadata fields for transparency and reproducibility.
 
@@ -1561,30 +1685,47 @@ Focus on the most critical issues first."""
             Dictionary with provenance information added for each field
         """
         # Get provenance tracking from state metadata (if available)
-        metadata_provenance = state.metadata.get('_provenance', {})
+        metadata_provenance = state.metadata.get("_provenance", {})
 
         # Get source file information from state
-        source_files = state.metadata.get('_source_files', {})
-        primary_source_file = state.metadata.get('primary_data_file', '')
+        source_files = state.metadata.get("_source_files", {})
+        primary_source_file = state.metadata.get("primary_data_file", "")
 
         # Create a copy with provenance information
         file_info_with_prov = dict(file_info)
 
         # Define which fields to track provenance for
         tracked_fields = [
-            'experimenter', 'institution', 'lab', 'session_description',
-            'experiment_description', 'session_id', 'subject_id', 'species',
-            'sex', 'age', 'description', 'genotype', 'strain', 'date_of_birth',
-            'weight', 'keywords', 'pharmacology', 'protocol',
-            'surgery', 'virus', 'stimulus_notes', 'data_collection'
+            "experimenter",
+            "institution",
+            "lab",
+            "session_description",
+            "experiment_description",
+            "session_id",
+            "subject_id",
+            "species",
+            "sex",
+            "age",
+            "description",
+            "genotype",
+            "strain",
+            "date_of_birth",
+            "weight",
+            "keywords",
+            "pharmacology",
+            "protocol",
+            "surgery",
+            "virus",
+            "stimulus_notes",
+            "data_collection",
         ]
 
         # Add provenance dict if not exists
-        if '_provenance' not in file_info_with_prov:
-            file_info_with_prov['_provenance'] = {}
+        if "_provenance" not in file_info_with_prov:
+            file_info_with_prov["_provenance"] = {}
 
-        if '_source_files' not in file_info_with_prov:
-            file_info_with_prov['_source_files'] = {}
+        if "_source_files" not in file_info_with_prov:
+            file_info_with_prov["_source_files"] = {}
 
         for field in tracked_fields:
             value = file_info.get(field)
@@ -1596,54 +1737,50 @@ Focus on the most critical issues first."""
                 prov_type = metadata_provenance[field]
 
                 # Map old provenance types to new system
-                if prov_type == 'user-provided':
-                    provenance_info['type'] = 'user-specified'
-                elif prov_type == 'ai-parsed':
-                    provenance_info['type'] = 'ai-parsed'
-                elif prov_type == 'ai-inferred':
-                    provenance_info['type'] = 'ai-inferred'
-                elif prov_type == 'file-extracted':
-                    provenance_info['type'] = 'file-extracted'
+                if prov_type == "user-provided":
+                    provenance_info["type"] = "user-specified"
+                elif prov_type == "ai-parsed":
+                    provenance_info["type"] = "ai-parsed"
+                elif prov_type == "ai-inferred":
+                    provenance_info["type"] = "ai-inferred"
+                elif prov_type == "file-extracted":
+                    provenance_info["type"] = "file-extracted"
                     # Add source filename if available
                     if field in source_files:
-                        provenance_info['source_file'] = source_files[field]
+                        provenance_info["source_file"] = source_files[field]
                     elif primary_source_file:
-                        provenance_info['source_file'] = os.path.basename(primary_source_file)
-                elif prov_type == 'default':
+                        provenance_info["source_file"] = os.path.basename(primary_source_file)
+                elif prov_type == "default":
                     # Distinguish between schema defaults and system defaults
-                    if value in ['N/A', 'Unknown', 'Not specified', '']:
-                        provenance_info['type'] = 'system-default'
+                    if value in ["N/A", "Unknown", "Not specified", ""]:
+                        provenance_info["type"] = "system-default"
                     else:
-                        provenance_info['type'] = 'schema-default'
+                        provenance_info["type"] = "schema-default"
                 else:
-                    provenance_info['type'] = prov_type
+                    provenance_info["type"] = prov_type
 
-            elif value and value not in ['N/A', 'Unknown', 'Not specified', [], '', None]:
+            elif value and value not in ["N/A", "Unknown", "Not specified", [], "", None]:
                 # Has a real value but no tracking
                 # Check if it matches NWB schema defaults
-                nwb_defaults = {
-                    'species': 'Mus musculus',
-                    'genotype': 'Wild-type',
-                    'strain': 'C57BL/6J'
-                }
+                nwb_defaults = {"species": "Mus musculus", "genotype": "Wild-type", "strain": "C57BL/6J"}
 
                 if field in nwb_defaults and value == nwb_defaults[field]:
-                    provenance_info['type'] = 'schema-default'
+                    provenance_info["type"] = "schema-default"
                 else:
                     # Assume file-extracted with primary source file
-                    provenance_info['type'] = 'file-extracted'
+                    provenance_info["type"] = "file-extracted"
                     if primary_source_file:
-                        provenance_info['source_file'] = os.path.basename(primary_source_file)
+                        provenance_info["source_file"] = os.path.basename(primary_source_file)
             else:
                 # System default value
-                provenance_info['type'] = 'system-default'
+                provenance_info["type"] = "system-default"
 
             # Store provenance information
-            file_info_with_prov['_provenance'][field] = provenance_info['type']
+            file_info_with_prov["_provenance"][field] = provenance_info["type"]
 
             # Store source file information if available
-            if 'source_file' in provenance_info:
-                file_info_with_prov['_source_files'][field] = provenance_info['source_file']
+            if "source_file" in provenance_info:
+                file_info_with_prov["_source_files"][field] = provenance_info["source_file"]
 
         state.add_log(
             LogLevel.DEBUG,
@@ -1652,7 +1789,7 @@ Focus on the most critical issues first."""
 
         return file_info_with_prov
 
-    async def _generate_quality_assessment(self, validation_result: Dict[str, Any]) -> Dict[str, Any]:
+    async def _generate_quality_assessment(self, validation_result: dict[str, Any]) -> dict[str, Any]:
         """
         Generate LLM-powered quality assessment for PASSED/PASSED_WITH_ISSUES files.
 
@@ -1663,25 +1800,25 @@ Focus on the most critical issues first."""
 
         # Create prompt using template
         prompt_data = self._prompt_service.create_llm_prompt(
-            'evaluation_passed',
+            "evaluation_passed",
             {
-                'file_info': validation_result.get('file_info', {}),
-                'overall_status': validation_result.get('overall_status', 'UNKNOWN'),
-                'issues': validation_result.get('issues', []),
-                'issue_counts': validation_result.get('issue_counts', {}),
-            }
+                "file_info": validation_result.get("file_info", {}),
+                "overall_status": validation_result.get("overall_status", "UNKNOWN"),
+                "issues": validation_result.get("issues", []),
+                "issue_counts": validation_result.get("issue_counts", {}),
+            },
         )
 
         # Call LLM with structured output
         result = await self._llm_service.generate_structured_output(
-            prompt=prompt_data['prompt'],
-            output_schema=prompt_data['output_schema'],
-            system_prompt=prompt_data['system_role'],
+            prompt=prompt_data["prompt"],
+            output_schema=prompt_data["output_schema"],
+            system_prompt=prompt_data["system_role"],
         )
 
         return result
 
-    async def _generate_correction_guidance(self, validation_result: Dict[str, Any]) -> Dict[str, Any]:
+    async def _generate_correction_guidance(self, validation_result: dict[str, Any]) -> dict[str, Any]:
         """
         Generate LLM-powered correction guidance for FAILED files.
 
@@ -1692,21 +1829,21 @@ Focus on the most critical issues first."""
 
         # Create prompt using template
         prompt_data = self._prompt_service.create_llm_prompt(
-            'evaluation_failed',
+            "evaluation_failed",
             {
-                'nwb_file_path': validation_result.get('nwb_file_path', 'unknown'),
-                'issues': validation_result.get('issues', []),
-                'issue_counts': validation_result.get('issue_counts', {}),
-                'input_metadata': {},  # Could be passed from context
-                'conversion_parameters': {},  # Could be passed from context
-            }
+                "nwb_file_path": validation_result.get("nwb_file_path", "unknown"),
+                "issues": validation_result.get("issues", []),
+                "issue_counts": validation_result.get("issue_counts", {}),
+                "input_metadata": {},  # Could be passed from context
+                "conversion_parameters": {},  # Could be passed from context
+            },
         )
 
         # Call LLM with structured output
         result = await self._llm_service.generate_structured_output(
-            prompt=prompt_data['prompt'],
-            output_schema=prompt_data['output_schema'],
-            system_prompt=prompt_data['system_role'],
+            prompt=prompt_data["prompt"],
+            output_schema=prompt_data["output_schema"],
+            system_prompt=prompt_data["system_role"],
         )
 
         return result

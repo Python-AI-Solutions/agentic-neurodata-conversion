@@ -4,15 +4,16 @@ Conversational Handler for intelligent LLM-driven interactions.
 This module enables natural, adaptive conversations with users
 instead of rigid predefined workflows.
 """
-from typing import Any, Dict, List, Optional
-import json
 
+import json
+from typing import Any, Optional
+
+from agents.context_manager import ConversationContextManager
+from agents.intelligent_metadata_parser import IntelligentMetadataParser
+from agents.metadata_strategy import MetadataRequestStrategy
+from agents.nwb_dandi_schema import NWBDANDISchema
 from models import GlobalState, LogLevel, MetadataRequestPolicy
 from services import LLMService
-from agents.metadata_strategy import MetadataRequestStrategy
-from agents.context_manager import ConversationContextManager
-from agents.nwb_dandi_schema import NWBDANDISchema
-from agents.intelligent_metadata_parser import IntelligentMetadataParser, ParsedField
 
 
 class ConversationalHandler:
@@ -85,10 +86,10 @@ class ConversationalHandler:
 
     async def analyze_validation_and_respond(
         self,
-        validation_result: Dict[str, Any],
+        validation_result: dict[str, Any],
         nwb_file_path: str,
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Analyze validation results and generate intelligent response.
 
@@ -108,15 +109,15 @@ class ConversationalHandler:
         # WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Use MetadataRequestPolicy enum
         # Check if user declined or we've already asked
         should_skip = (
-            state.metadata_policy in [MetadataRequestPolicy.USER_DECLINED, MetadataRequestPolicy.PROCEEDING_MINIMAL] or
-            state.metadata_policy == MetadataRequestPolicy.ASKED_ONCE
+            state.metadata_policy in [MetadataRequestPolicy.USER_DECLINED, MetadataRequestPolicy.PROCEEDING_MINIMAL]
+            or state.metadata_policy == MetadataRequestPolicy.ASKED_ONCE
         )
 
         if should_skip:
             state.add_log(
                 LogLevel.INFO,
                 "User wants minimal metadata or exceeded request limit - proceeding without asking",
-                {"metadata_policy": state.metadata_policy.value}
+                {"metadata_policy": state.metadata_policy.value},
             )
             return {
                 "type": "proceed_minimal",
@@ -168,7 +169,7 @@ Format your response as JSON with this structure:
 File: {nwb_file_path}
 
 Validation Summary:
-{json.dumps(validation_result.get('summary', {}), indent=2)}
+{json.dumps(validation_result.get("summary", {}), indent=2)}
 
 Issues Found:
 {issues_summary}
@@ -195,13 +196,13 @@ Respond in JSON format as specified."""
                             "properties": {
                                 "field": {"type": "string"},
                                 "description": {"type": "string"},
-                                "example": {"type": "string"}
-                            }
-                        }
+                                "example": {"type": "string"},
+                            },
+                        },
                     },
-                    "severity": {"type": "string", "enum": ["low", "medium", "high"]}
+                    "severity": {"type": "string", "enum": ["low", "medium", "high"]},
                 },
-                "required": ["message", "needs_user_input", "severity"]
+                "required": ["message", "needs_user_input", "severity"],
             }
 
             response_data = await self.llm_service.generate_structured_output(
@@ -300,7 +301,7 @@ Respond in JSON format as specified."""
         state: GlobalState,
         mode: str = "batch",  # "batch" or "single"
         field_name: Optional[str] = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Parse user metadata input and generate confirmation message.
 
@@ -330,9 +331,20 @@ Respond in JSON format as specified."""
 
         # Auto-apply phrases (user wants system to decide)
         auto_apply_phrases = [
-            "do it on your own", "do it yourself", "just do it", "apply it",
-            "auto apply", "use your best", "go ahead", "proceed", "continue",
-            "don't ask", "decide for me", "you choose", "up to you", "just apply"
+            "do it on your own",
+            "do it yourself",
+            "just do it",
+            "apply it",
+            "auto apply",
+            "use your best",
+            "go ahead",
+            "proceed",
+            "continue",
+            "don't ask",
+            "decide for me",
+            "you choose",
+            "up to you",
+            "just apply",
         ]
 
         user_lower = user_message.lower().strip()
@@ -341,25 +353,30 @@ Respond in JSON format as specified."""
             LogLevel.DEBUG,
             f"parse_and_confirm_metadata called with message: '{user_message[:50]}'",
             {
-                "has_pending_fields": hasattr(state, 'pending_parsed_fields') and bool(state.pending_parsed_fields),
-                "pending_field_count": len(state.pending_parsed_fields) if hasattr(state, 'pending_parsed_fields') and state.pending_parsed_fields else 0,
-            }
+                "has_pending_fields": hasattr(state, "pending_parsed_fields") and bool(state.pending_parsed_fields),
+                "pending_field_count": (
+                    len(state.pending_parsed_fields)
+                    if hasattr(state, "pending_parsed_fields") and state.pending_parsed_fields
+                    else 0
+                ),
+            },
         )
 
         # BUG FIX: Use word boundary matching to prevent false positives
         # e.g., "y" should not match "by" or "laboratory"
         import re
+
         def contains_keyword(text: str, keywords: list) -> bool:
             """Check if text contains any keyword using word boundaries."""
             for keyword in keywords:
                 # Use word boundaries for single-word keywords, substring for phrases
-                if ' ' in keyword:
+                if " " in keyword:
                     # Multi-word phrase - use substring matching
                     if keyword in text:
                         return True
                 else:
                     # Single word - use word boundary matching
-                    if re.search(r'\b' + re.escape(keyword) + r'\b', text):
+                    if re.search(r"\b" + re.escape(keyword) + r"\b", text):
                         return True
             return False
 
@@ -371,11 +388,11 @@ Respond in JSON format as specified."""
             )
 
             # Retrieve the pending_parsed_fields that were stored earlier
-            if hasattr(state, 'pending_parsed_fields') and state.pending_parsed_fields:
+            if hasattr(state, "pending_parsed_fields") and state.pending_parsed_fields:
                 state.add_log(
                     LogLevel.INFO,
                     f"Retrieving {len(state.pending_parsed_fields)} pending fields from previous parse",
-                    {"fields": list(state.pending_parsed_fields.keys())}
+                    {"fields": list(state.pending_parsed_fields.keys())},
                 )
                 confirmed = state.pending_parsed_fields.copy()
                 # Clear pending fields after confirmation
@@ -384,7 +401,7 @@ Respond in JSON format as specified."""
                 state.add_log(
                     LogLevel.INFO,
                     f"User confirmed {len(confirmed)} metadata fields - RETURNING confirmed result",
-                    {"confirmed_fields": list(confirmed.keys())}
+                    {"confirmed_fields": list(confirmed.keys())},
                 )
 
                 return {
@@ -414,15 +431,15 @@ Respond in JSON format as specified."""
                 "type": "needs_edit",
                 "parsed_fields": [],
                 "confirmation_message": "No problem! Please provide the correct information. "
-                                       "You can say the field name and value (e.g., 'age: P90D') "
-                                       "or describe it naturally.",
+                "You can say the field name and value (e.g., 'age: P90D') "
+                "or describe it naturally.",
                 "needs_confirmation": True,
             }
 
         # Scenario 3: User skipped or wants auto-apply
         if user_lower in skip_keywords or not user_message.strip() or contains_keyword(user_lower, auto_apply_phrases):
             # For skip/auto-apply, we need parsed fields, but only if we have pending ones
-            if hasattr(state, 'pending_parsed_fields') and state.pending_parsed_fields:
+            if hasattr(state, "pending_parsed_fields") and state.pending_parsed_fields:
                 # Auto-apply the pending fields
                 state.add_log(
                     LogLevel.INFO,
@@ -446,15 +463,11 @@ Respond in JSON format as specified."""
         )
 
         if mode == "batch":
-            parsed_fields = await self.metadata_parser.parse_natural_language_batch(
-                user_message, state
-            )
+            parsed_fields = await self.metadata_parser.parse_natural_language_batch(user_message, state)
         else:
             if not field_name:
                 raise ValueError("field_name required for single mode")
-            parsed_field = await self.metadata_parser.parse_single_field(
-                field_name, user_message, state
-            )
+            parsed_field = await self.metadata_parser.parse_single_field(field_name, user_message, state)
             parsed_fields = [parsed_field]
 
         # Generate confirmation message and wait for response
@@ -462,16 +475,20 @@ Respond in JSON format as specified."""
         confirmation_msg = self.metadata_parser.generate_confirmation_message(parsed_fields, state)
 
         # Store parsed fields in state so they can be retrieved when user confirms
-        if not hasattr(state, 'pending_parsed_fields'):
+        if not hasattr(state, "pending_parsed_fields"):
             state.pending_parsed_fields = {}
 
         for field in parsed_fields:
             state.pending_parsed_fields[field.field_name] = field.parsed_value
 
+            # PROVENANCE FIX: Store provenance immediately so it's preserved when user confirms
+            # This prevents the generic "User provided: 'yes i accept all'" message
+            state.metadata_provenance[field.field_name] = field.to_provenance_info()
+
         state.add_log(
             LogLevel.DEBUG,
-            f"Stored {len(parsed_fields)} pending parsed fields awaiting user confirmation",
-            {"fields": list(state.pending_parsed_fields.keys())}
+            f"Stored {len(parsed_fields)} pending parsed fields awaiting user confirmation (with provenance)",
+            {"fields": list(state.pending_parsed_fields.keys())},
         )
 
         return {
@@ -484,9 +501,9 @@ Respond in JSON format as specified."""
     async def process_user_response(
         self,
         user_message: str,
-        context: Dict[str, Any],
+        context: dict[str, Any],
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Process user's conversational response using LLM with intelligent parsing and confirmation.
 
@@ -567,14 +584,11 @@ Respond in JSON format as specified."""
 
         except Exception as e:
             import traceback
+
             state.add_log(
                 LogLevel.ERROR,
                 f"Intelligent parser failed, using fallback extraction: {e}",
-                {
-                    "exception_type": type(e).__name__,
-                    "exception_message": str(e),
-                    "traceback": traceback.format_exc()
-                }
+                {"exception_type": type(e).__name__, "exception_message": str(e), "traceback": traceback.format_exc()},
             )
 
             # CRITICAL FIX: Before falling back, check if user was confirming pending metadata
@@ -584,24 +598,27 @@ Respond in JSON format as specified."""
 
             # BUG FIX: Use word boundary matching to prevent false positives
             import re
+
             def contains_keyword_fallback(text: str, keywords: list) -> bool:
                 """Check if text contains any keyword using word boundaries."""
                 for keyword in keywords:
-                    if ' ' in keyword:
+                    if " " in keyword:
                         if keyword in text:
                             return True
                     else:
-                        if re.search(r'\b' + re.escape(keyword) + r'\b', text):
+                        if re.search(r"\b" + re.escape(keyword) + r"\b", text):
                             return True
                 return False
 
-            if (contains_keyword_fallback(user_lower, confirmation_keywords) and
-                hasattr(state, 'pending_parsed_fields') and state.pending_parsed_fields):
-
+            if (
+                contains_keyword_fallback(user_lower, confirmation_keywords)
+                and hasattr(state, "pending_parsed_fields")
+                and state.pending_parsed_fields
+            ):
                 state.add_log(
                     LogLevel.INFO,
-                    f"Parser failed but detected confirmation - using pending fields from state",
-                    {"fields": list(state.pending_parsed_fields.keys())}
+                    "Parser failed but detected confirmation - using pending fields from state",
+                    {"fields": list(state.pending_parsed_fields.keys())},
                 )
 
                 confirmed_metadata = state.pending_parsed_fields.copy()
@@ -624,7 +641,7 @@ Respond in JSON format as specified."""
         system_prompt = NWBDANDISchema.generate_llm_extraction_prompt()
 
         # Build context from previous conversation
-        validation_info = context.get("validation_result", {})
+        context.get("validation_result", {})
         previous_messages = context.get("conversation_history", [])
 
         # Use context manager to intelligently manage conversation history
@@ -634,20 +651,16 @@ Respond in JSON format as specified."""
                 state=state,
             )
             # Use managed context for better LLM understanding
-            conversation_history = "\n".join([
-                f"{msg['role']}: {msg['content']}"
-                for msg in managed_messages
-            ])
+            conversation_history = "\n".join([f"{msg['role']}: {msg['content']}" for msg in managed_messages])
         except Exception as e:
             # Fallback to simple truncation if context management fails
             state.add_log(
                 LogLevel.WARNING,
                 f"Context management failed, using fallback: {e}",
             )
-            conversation_history = "\n".join([
-                f"{msg['role']}: {msg['content']}"
-                for msg in previous_messages[-5:]  # Last 5 messages for context
-            ])
+            conversation_history = "\n".join(
+                [f"{msg['role']}: {msg['content']}" for msg in previous_messages[-5:]]  # Last 5 messages for context
+            )
 
         # Build context about already-provided metadata to help LLM understand state
         already_provided = []
@@ -662,7 +675,7 @@ Respond in JSON format as specified."""
 {conversation_history}
 
 Missing metadata issues:
-{json.dumps(context.get('issues', []), indent=2)}
+{json.dumps(context.get("issues", []), indent=2)}
 {already_provided_str}
 
 User's response:
@@ -679,26 +692,26 @@ and metadata was already provided in previous messages (shown above), set ready_
                 "properties": {
                     "extracted_metadata": {
                         "type": "object",
-                        "description": "Structured metadata extracted from user response"
+                        "description": "Structured metadata extracted from user response",
                     },
                     "needs_more_info": {
                         "type": "boolean",
-                        "description": "Whether more information is needed from user"
+                        "description": "Whether more information is needed from user",
                     },
                     "follow_up_message": {
                         "type": "string",
-                        "description": "Conversational follow-up message or confirmation"
+                        "description": "Conversational follow-up message or confirmation",
                     },
                     "ready_to_proceed": {
                         "type": "boolean",
-                        "description": "Whether we have enough info to proceed with conversion"
+                        "description": "Whether we have enough info to proceed with conversion",
                     },
                     "confidence": {
                         "type": "number",
-                        "description": "Confidence score 0-100 for the extraction quality"
-                    }
+                        "description": "Confidence score 0-100 for the extraction quality",
+                    },
                 },
-                "required": ["extracted_metadata", "needs_more_info", "ready_to_proceed", "follow_up_message"]
+                "required": ["extracted_metadata", "needs_more_info", "ready_to_proceed", "follow_up_message"],
             }
 
             response_data = await self.llm_service.generate_structured_output(
@@ -735,7 +748,7 @@ and metadata was already provided in previous messages (shown above), set ready_
                 "ready_to_proceed": False,
             }
 
-    def _format_validation_issues(self, validation_result: Dict[str, Any]) -> str:
+    def _format_validation_issues(self, validation_result: dict[str, Any]) -> str:
         """
         Format validation issues into readable text for LLM.
 
@@ -766,10 +779,10 @@ and metadata was already provided in previous messages (shown above), set ready_
 
     async def generate_smart_metadata_requests(
         self,
-        validation_result: Dict[str, Any],
+        validation_result: dict[str, Any],
         nwb_file_path: str,
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Use LLM to generate contextual, intelligent metadata requests.
 
@@ -869,7 +882,7 @@ Be specific about what the file reveals (recording type, data characteristics, e
 
             return response
 
-        except Exception as e:
+        except Exception:
             # Fallback to basic request if LLM fails
             return {
                 "message": "I found some missing metadata in your NWB file. Could you provide the following information?",
@@ -884,7 +897,7 @@ Be specific about what the file reveals (recording type, data characteristics, e
         self,
         nwb_file_path: str,
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Extract contextual information from NWB file for intelligent metadata requests.
 
@@ -895,8 +908,9 @@ Be specific about what the file reveals (recording type, data characteristics, e
         Returns:
             Dictionary with file context (format, data types, sizes, etc.)
         """
-        import h5py
         from pathlib import Path
+
+        import h5py
 
         context = {
             "file_size_mb": 0,
@@ -949,8 +963,8 @@ Be specific about what the file reveals (recording type, data characteristics, e
 
     def _extract_basic_required_fields(
         self,
-        validation_result: Dict[str, Any],
-    ) -> List[Dict[str, Any]]:
+        validation_result: dict[str, Any],
+    ) -> list[dict[str, Any]]:
         """
         Fallback method to extract basic required fields from validation issues.
 

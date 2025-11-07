@@ -5,18 +5,19 @@ This module allows users to input arbitrary metadata in natural language
 and intelligently maps it to appropriate NWB schema fields or custom extensions.
 """
 
-from typing import Any, Dict, List, Optional, Tuple
-from enum import Enum
-from pydantic import BaseModel, Field
 import json
 import re
+from enum import Enum
+from typing import Any, Optional
 
 from models import GlobalState, LogLevel
+from pydantic import BaseModel, Field
 from services import LLMService
 
 
 class MetadataCategory(Enum):
     """Categories for organizing metadata."""
+
     EXPERIMENTAL = "experimental"  # Experiment design, protocols
     SUBJECT = "subject"  # Animal/human subject info
     RECORDING = "recording"  # Recording setup, equipment
@@ -29,6 +30,7 @@ class MetadataCategory(Enum):
 
 class MappedField(BaseModel):
     """Represents a mapped metadata field."""
+
     original_input: str = Field(description="Original user input")
     field_name: str = Field(description="Standardized field name")
     nwb_path: str = Field(description="Path in NWB schema (e.g., /general/experimenter)")
@@ -47,137 +49,156 @@ class IntelligentMetadataMapper:
     # Standard NWB field mappings with variations
     NWB_FIELD_MAPPINGS = {
         # Experimental metadata
-        'experimenter': {
-            'paths': ['/general/experimenter'],
-            'aliases': ['investigator', 'researcher', 'pi', 'principal investigator',
-                       'scientist', 'lab member', 'author', 'recorded by'],
-            'type': 'string_list',
-            'category': MetadataCategory.EXPERIMENTAL
+        "experimenter": {
+            "paths": ["/general/experimenter"],
+            "aliases": [
+                "investigator",
+                "researcher",
+                "pi",
+                "principal investigator",
+                "scientist",
+                "lab member",
+                "author",
+                "recorded by",
+            ],
+            "type": "string_list",
+            "category": MetadataCategory.EXPERIMENTAL,
         },
-        'institution': {
-            'paths': ['/general/institution'],
-            'aliases': ['university', 'institute', 'organization', 'affiliation',
-                       'research center', 'facility', 'school'],
-            'type': 'string',
-            'category': MetadataCategory.EXPERIMENTAL
+        "institution": {
+            "paths": ["/general/institution"],
+            "aliases": [
+                "university",
+                "institute",
+                "organization",
+                "affiliation",
+                "research center",
+                "facility",
+                "school",
+            ],
+            "type": "string",
+            "category": MetadataCategory.EXPERIMENTAL,
         },
-        'lab': {
-            'paths': ['/general/lab'],
-            'aliases': ['laboratory', 'research group', 'department', 'unit'],
-            'type': 'string',
-            'category': MetadataCategory.EXPERIMENTAL
+        "lab": {
+            "paths": ["/general/lab"],
+            "aliases": ["laboratory", "research group", "department", "unit"],
+            "type": "string",
+            "category": MetadataCategory.EXPERIMENTAL,
         },
-        'experiment_description': {
-            'paths': ['/general/experiment_description'],
-            'aliases': ['experiment', 'study description', 'research description',
-                       'experimental paradigm', 'protocol description'],
-            'type': 'string',
-            'category': MetadataCategory.EXPERIMENTAL
+        "experiment_description": {
+            "paths": ["/general/experiment_description"],
+            "aliases": [
+                "experiment",
+                "study description",
+                "research description",
+                "experimental paradigm",
+                "protocol description",
+            ],
+            "type": "string",
+            "category": MetadataCategory.EXPERIMENTAL,
         },
-
         # Subject metadata
-        'subject_id': {
-            'paths': ['/general/subject/subject_id'],
-            'aliases': ['animal id', 'mouse id', 'rat id', 'patient id',
-                       'participant', 'subject number', 'animal number'],
-            'type': 'string',
-            'category': MetadataCategory.SUBJECT
+        "subject_id": {
+            "paths": ["/general/subject/subject_id"],
+            "aliases": [
+                "animal id",
+                "mouse id",
+                "rat id",
+                "patient id",
+                "participant",
+                "subject number",
+                "animal number",
+            ],
+            "type": "string",
+            "category": MetadataCategory.SUBJECT,
         },
-        'species': {
-            'paths': ['/general/subject/species'],
-            'aliases': ['organism', 'animal type', 'animal species'],
-            'type': 'string',
-            'category': MetadataCategory.SUBJECT
+        "species": {
+            "paths": ["/general/subject/species"],
+            "aliases": ["organism", "animal type", "animal species"],
+            "type": "string",
+            "category": MetadataCategory.SUBJECT,
         },
-        'strain': {
-            'paths': ['/general/subject/strain'],
-            'aliases': ['genetic strain', 'mouse strain', 'rat strain', 'genotype'],
-            'type': 'string',
-            'category': MetadataCategory.SUBJECT
+        "strain": {
+            "paths": ["/general/subject/strain"],
+            "aliases": ["genetic strain", "mouse strain", "rat strain", "genotype"],
+            "type": "string",
+            "category": MetadataCategory.SUBJECT,
         },
-        'sex': {
-            'paths': ['/general/subject/sex'],
-            'aliases': ['gender', 'biological sex', 'mouse sex', 'animal sex'],
-            'type': 'string',
-            'category': MetadataCategory.SUBJECT
+        "sex": {
+            "paths": ["/general/subject/sex"],
+            "aliases": ["gender", "biological sex", "mouse sex", "animal sex"],
+            "type": "string",
+            "category": MetadataCategory.SUBJECT,
         },
-        'age': {
-            'paths': ['/general/subject/age'],
-            'aliases': ['animal age', 'subject age', 'age at recording',
-                       'postnatal day', 'developmental stage'],
-            'type': 'string',
-            'category': MetadataCategory.SUBJECT
+        "age": {
+            "paths": ["/general/subject/age"],
+            "aliases": ["animal age", "subject age", "age at recording", "postnatal day", "developmental stage"],
+            "type": "string",
+            "category": MetadataCategory.SUBJECT,
         },
-        'weight': {
-            'paths': ['/general/subject/weight'],
-            'aliases': ['body weight', 'animal weight', 'subject weight', 'mass'],
-            'type': 'string',
-            'category': MetadataCategory.SUBJECT
+        "weight": {
+            "paths": ["/general/subject/weight"],
+            "aliases": ["body weight", "animal weight", "subject weight", "mass"],
+            "type": "string",
+            "category": MetadataCategory.SUBJECT,
         },
-
         # Recording metadata
-        'session_description': {
-            'paths': ['/general/session_description'],
-            'aliases': ['recording description', 'session notes', 'recording notes',
-                       'experimental session', 'recording session'],
-            'type': 'string',
-            'category': MetadataCategory.RECORDING
+        "session_description": {
+            "paths": ["/general/session_description"],
+            "aliases": [
+                "recording description",
+                "session notes",
+                "recording notes",
+                "experimental session",
+                "recording session",
+            ],
+            "type": "string",
+            "category": MetadataCategory.RECORDING,
         },
-        'session_id': {
-            'paths': ['/session_id'],
-            'aliases': ['recording id', 'session number', 'experiment id',
-                       'recording number', 'session identifier'],
-            'type': 'string',
-            'category': MetadataCategory.RECORDING
+        "session_id": {
+            "paths": ["/session_id"],
+            "aliases": ["recording id", "session number", "experiment id", "recording number", "session identifier"],
+            "type": "string",
+            "category": MetadataCategory.RECORDING,
         },
-        'devices': {
-            'paths': ['/general/devices'],
-            'aliases': ['equipment', 'recording equipment', 'hardware',
-                       'recording device', 'amplifier', 'microscope'],
-            'type': 'object',
-            'category': MetadataCategory.RECORDING
+        "devices": {
+            "paths": ["/general/devices"],
+            "aliases": ["equipment", "recording equipment", "hardware", "recording device", "amplifier", "microscope"],
+            "type": "object",
+            "category": MetadataCategory.RECORDING,
         },
-
         # Behavioral metadata
-        'stimulus': {
-            'paths': ['/general/stimulus'],
-            'aliases': ['stimulation', 'stimulus type', 'stimulus protocol',
-                       'visual stimulus', 'auditory stimulus'],
-            'type': 'string',
-            'category': MetadataCategory.BEHAVIORAL
+        "stimulus": {
+            "paths": ["/general/stimulus"],
+            "aliases": ["stimulation", "stimulus type", "stimulus protocol", "visual stimulus", "auditory stimulus"],
+            "type": "string",
+            "category": MetadataCategory.BEHAVIORAL,
         },
-        'protocol': {
-            'paths': ['/general/protocol'],
-            'aliases': ['behavioral protocol', 'task', 'paradigm',
-                       'experimental protocol', 'procedure'],
-            'type': 'string',
-            'category': MetadataCategory.BEHAVIORAL
+        "protocol": {
+            "paths": ["/general/protocol"],
+            "aliases": ["behavioral protocol", "task", "paradigm", "experimental protocol", "procedure"],
+            "type": "string",
+            "category": MetadataCategory.BEHAVIORAL,
         },
-
         # Pharmacology
-        'pharmacology': {
-            'paths': ['/general/pharmacology'],
-            'aliases': ['drugs', 'drug treatment', 'medication', 'anesthesia',
-                       'pharmaceutical', 'chemical treatment'],
-            'type': 'string',
-            'category': MetadataCategory.PHARMACOLOGY
+        "pharmacology": {
+            "paths": ["/general/pharmacology"],
+            "aliases": ["drugs", "drug treatment", "medication", "anesthesia", "pharmaceutical", "chemical treatment"],
+            "type": "string",
+            "category": MetadataCategory.PHARMACOLOGY,
         },
-
         # Histology
-        'surgery': {
-            'paths': ['/general/surgery'],
-            'aliases': ['surgical procedure', 'surgery notes', 'implantation',
-                       'surgical protocol', 'operation'],
-            'type': 'string',
-            'category': MetadataCategory.HISTOLOGY
+        "surgery": {
+            "paths": ["/general/surgery"],
+            "aliases": ["surgical procedure", "surgery notes", "implantation", "surgical protocol", "operation"],
+            "type": "string",
+            "category": MetadataCategory.HISTOLOGY,
         },
-        'virus': {
-            'paths': ['/general/virus'],
-            'aliases': ['viral injection', 'virus type', 'viral vector',
-                       'optogenetics virus', 'AAV'],
-            'type': 'string',
-            'category': MetadataCategory.HISTOLOGY
-        }
+        "virus": {
+            "paths": ["/general/virus"],
+            "aliases": ["viral injection", "virus type", "viral vector", "optogenetics virus", "AAV"],
+            "type": "string",
+            "category": MetadataCategory.HISTOLOGY,
+        },
     }
 
     def __init__(self, llm_service: Optional[LLMService] = None):
@@ -185,11 +206,8 @@ class IntelligentMetadataMapper:
         self.llm_service = llm_service
 
     async def parse_custom_metadata(
-        self,
-        user_input: str,
-        existing_metadata: Dict[str, Any],
-        state: GlobalState
-    ) -> Dict[str, Any]:
+        self, user_input: str, existing_metadata: dict[str, Any], state: GlobalState
+    ) -> dict[str, Any]:
         """
         Parse free-form user input into structured metadata.
 
@@ -244,26 +262,21 @@ Use descriptive field names."""
                             "suggested_name": {"type": "string"},
                             "value": {"type": "string"},
                             "category": {"type": "string"},
-                            "confidence": {"type": "number"}
-                        }
-                    }
+                            "confidence": {"type": "number"},
+                        },
+                    },
                 },
-                "interpretation_notes": {"type": "string"}
-            }
+                "interpretation_notes": {"type": "string"},
+            },
         }
 
         try:
             result = await self.llm_service.generate_structured_output(
-                prompt=user_prompt,
-                output_schema=output_schema,
-                system_prompt=system_prompt
+                prompt=user_prompt, output_schema=output_schema, system_prompt=system_prompt
             )
 
             # Map extracted fields to NWB schema
-            mapped_metadata = await self._map_to_nwb_schema(
-                result.get('extracted_fields', []),
-                state
-            )
+            mapped_metadata = await self._map_to_nwb_schema(result.get("extracted_fields", []), state)
 
             return mapped_metadata
 
@@ -271,11 +284,7 @@ Use descriptive field names."""
             state.add_log(LogLevel.ERROR, f"LLM parsing failed: {str(e)}")
             return self._parse_without_llm(user_input)
 
-    async def _map_to_nwb_schema(
-        self,
-        extracted_fields: List[Dict],
-        state: GlobalState
-    ) -> Dict[str, Any]:
+    async def _map_to_nwb_schema(self, extracted_fields: list[dict], state: GlobalState) -> dict[str, Any]:
         """
         Map extracted fields to NWB schema paths.
 
@@ -289,33 +298,35 @@ Use descriptive field names."""
         mapping_report = []
 
         for field in extracted_fields:
-            field_name = field.get('suggested_name', '').lower()
-            value = field.get('value')
-            category = field.get('category', 'custom')
+            field_name = field.get("suggested_name", "").lower()
+            value = field.get("value")
+            field.get("category", "custom")
 
             # Try to match to standard NWB field
             matched = False
             for nwb_field, config in self.NWB_FIELD_MAPPINGS.items():
                 # Check if field name or description matches aliases
-                if (field_name in config['aliases'] or
-                    nwb_field in field_name or
-                    any(alias in field.get('field_description', '').lower()
-                        for alias in config['aliases'])):
-
+                if (
+                    field_name in config["aliases"]
+                    or nwb_field in field_name
+                    or any(alias in field.get("field_description", "").lower() for alias in config["aliases"])
+                ):
                     # Map to standard field
                     standard_fields[nwb_field] = value
-                    mapping_report.append(MappedField(
-                        original_input=field.get('field_description', ''),
-                        field_name=nwb_field,
-                        nwb_path=config['paths'][0],
-                        value=value,
-                        data_type=config['type'],
-                        category=config['category'],
-                        confidence=field.get('confidence', 0.8),
-                        is_standard=True,
-                        requires_review=field.get('confidence', 1.0) < 0.7,
-                        provenance='user-custom'
-                    ))
+                    mapping_report.append(
+                        MappedField(
+                            original_input=field.get("field_description", ""),
+                            field_name=nwb_field,
+                            nwb_path=config["paths"][0],
+                            value=value,
+                            data_type=config["type"],
+                            category=config["category"],
+                            confidence=field.get("confidence", 0.8),
+                            is_standard=True,
+                            requires_review=field.get("confidence", 1.0) < 0.7,
+                            provenance="user-custom",
+                        )
+                    )
                     matched = True
                     break
 
@@ -323,40 +334,41 @@ Use descriptive field names."""
                 # Store as custom field
                 clean_name = self._clean_field_name(field_name)
                 custom_fields[clean_name] = value
-                mapping_report.append(MappedField(
-                    original_input=field.get('field_description', ''),
-                    field_name=clean_name,
-                    nwb_path=f'/general/custom/{clean_name}',
-                    value=value,
-                    data_type='string',
-                    category=MetadataCategory.CUSTOM,
-                    confidence=field.get('confidence', 0.9),
-                    is_standard=False,
-                    requires_review=False,
-                    provenance='user-custom'
-                ))
+                mapping_report.append(
+                    MappedField(
+                        original_input=field.get("field_description", ""),
+                        field_name=clean_name,
+                        nwb_path=f"/general/custom/{clean_name}",
+                        value=value,
+                        data_type="string",
+                        category=MetadataCategory.CUSTOM,
+                        confidence=field.get("confidence", 0.9),
+                        is_standard=False,
+                        requires_review=False,
+                        provenance="user-custom",
+                    )
+                )
 
         state.add_log(
-            LogLevel.INFO,
-            f"Mapped {len(standard_fields)} standard fields, {len(custom_fields)} custom fields"
+            LogLevel.INFO, f"Mapped {len(standard_fields)} standard fields, {len(custom_fields)} custom fields"
         )
 
         return {
-            'standard_fields': standard_fields,
-            'custom_fields': custom_fields,
-            'mapping_report': [m.model_dump() for m in mapping_report],
-            '_provenance': {k: 'user-custom' for k in {**standard_fields, **custom_fields}.keys()}
+            "standard_fields": standard_fields,
+            "custom_fields": custom_fields,
+            "mapping_report": [m.model_dump() for m in mapping_report],
+            "_provenance": dict.fromkeys({**standard_fields, **custom_fields}.keys(), "user-custom"),
         }
 
-    def _parse_without_llm(self, user_input: str) -> Dict[str, Any]:
+    def _parse_without_llm(self, user_input: str) -> dict[str, Any]:
         """Fallback parsing using regex when LLM is not available."""
         metadata = {}
 
         # Common patterns for key-value pairs
         patterns = [
-            r'(\w+):\s*([^,\n]+)',  # key: value
-            r'(\w+)\s*=\s*([^,\n]+)',  # key = value
-            r'(\w+)\s+is\s+([^,\n]+)',  # key is value
+            r"(\w+):\s*([^,\n]+)",  # key: value
+            r"(\w+)\s*=\s*([^,\n]+)",  # key = value
+            r"(\w+)\s+is\s+([^,\n]+)",  # key is value
         ]
 
         for pattern in patterns:
@@ -366,24 +378,20 @@ Use descriptive field names."""
                 metadata[clean_key] = value.strip()
 
         return {
-            'standard_fields': {},
-            'custom_fields': metadata,
-            'mapping_report': [],
-            '_provenance': {k: 'user-custom' for k in metadata.keys()}
+            "standard_fields": {},
+            "custom_fields": metadata,
+            "mapping_report": [],
+            "_provenance": dict.fromkeys(metadata.keys(), "user-custom"),
         }
 
     def _clean_field_name(self, name: str) -> str:
         """Clean field name for use as identifier."""
         # Remove special characters, replace spaces with underscores
-        clean = re.sub(r'[^a-zA-Z0-9_\s]', '', name)
-        clean = re.sub(r'\s+', '_', clean)
+        clean = re.sub(r"[^a-zA-Z0-9_\s]", "", name)
+        clean = re.sub(r"\s+", "_", clean)
         return clean.lower()
 
-    async def suggest_missing_metadata(
-        self,
-        existing_metadata: Dict[str, Any],
-        file_type: str
-    ) -> List[str]:
+    async def suggest_missing_metadata(self, existing_metadata: dict[str, Any], file_type: str) -> list[str]:
         """
         Suggest additional metadata fields based on file type and existing data.
 
@@ -392,33 +400,33 @@ Use descriptive field names."""
         suggestions = []
 
         # Check which standard fields are missing
-        for field in self.NWB_FIELD_MAPPINGS.keys():
+        for field in self.NWB_FIELD_MAPPINGS:
             if field not in existing_metadata or not existing_metadata.get(field):
                 suggestions.append(field)
 
         # File-type specific suggestions
-        if 'ephys' in file_type.lower() or 'spike' in file_type.lower():
-            ephys_fields = ['sampling_rate', 'filter_settings', 'probe_type',
-                           'recording_duration', 'channel_count']
+        if "ephys" in file_type.lower() or "spike" in file_type.lower():
+            ephys_fields = ["sampling_rate", "filter_settings", "probe_type", "recording_duration", "channel_count"]
             suggestions.extend([f for f in ephys_fields if f not in existing_metadata])
 
-        elif 'imaging' in file_type.lower() or 'tiff' in file_type.lower():
-            imaging_fields = ['imaging_rate', 'imaging_depth', 'laser_power',
-                            'objective', 'pixel_size', 'field_of_view']
+        elif "imaging" in file_type.lower() or "tiff" in file_type.lower():
+            imaging_fields = [
+                "imaging_rate",
+                "imaging_depth",
+                "laser_power",
+                "objective",
+                "pixel_size",
+                "field_of_view",
+            ]
             suggestions.extend([f for f in imaging_fields if f not in existing_metadata])
 
-        elif 'behavior' in file_type.lower():
-            behavior_fields = ['task_name', 'reward_type', 'trial_count',
-                             'session_duration', 'performance_metric']
+        elif "behavior" in file_type.lower():
+            behavior_fields = ["task_name", "reward_type", "trial_count", "session_duration", "performance_metric"]
             suggestions.extend([f for f in behavior_fields if f not in existing_metadata])
 
         return suggestions[:10]  # Return top 10 suggestions
 
-    def format_metadata_for_display(
-        self,
-        metadata: Dict[str, Any],
-        mapping_report: List[Dict]
-    ) -> str:
+    def format_metadata_for_display(self, metadata: dict[str, Any], mapping_report: list[dict]) -> str:
         """Format metadata and mappings for user review."""
         output = []
         output.append("📋 **Metadata Mapping Summary**\n")
@@ -426,7 +434,7 @@ Use descriptive field names."""
         # Group by category
         by_category = {}
         for report in mapping_report:
-            category = report.get('category', 'custom')
+            category = report.get("category", "custom")
             if category not in by_category:
                 by_category[category] = []
             by_category[category].append(report)
@@ -434,17 +442,17 @@ Use descriptive field names."""
         for category, fields in by_category.items():
             output.append(f"\n**{category.upper()} Fields:**")
             for field in fields:
-                confidence = field.get('confidence', 0)
+                confidence = field.get("confidence", 0)
                 status = "✅" if confidence > 0.8 else "⚠️" if confidence > 0.5 else "❓"
-                standard = "📋" if field.get('is_standard') else "🔧"
+                standard = "📋" if field.get("is_standard") else "🔧"
 
                 output.append(
                     f"  {status} {standard} {field['field_name']}: {field['value'][:50]}..."
-                    if len(str(field['value'])) > 50 else
-                    f"  {status} {standard} {field['field_name']}: {field['value']}"
+                    if len(str(field["value"])) > 50
+                    else f"  {status} {standard} {field['field_name']}: {field['value']}"
                 )
 
-                if field.get('requires_review'):
-                    output.append(f"     ⚠️ Please review this mapping")
+                if field.get("requires_review"):
+                    output.append("     ⚠️ Please review this mapping")
 
         return "\n".join(output)

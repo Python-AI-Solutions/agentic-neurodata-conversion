@@ -4,22 +4,24 @@ Intelligent Metadata Parser with Natural Language Understanding
 Accepts user input in natural language and converts to NWB/DANDI-compliant formats
 with confidence-based auto-application when user skips confirmation.
 """
-from typing import Any, Dict, List, Optional, Tuple
-from enum import Enum
-from datetime import datetime
-import re
-from dateutil import parser as date_parser
 
+import re
+from datetime import datetime
+from enum import Enum
+from typing import Any, Optional
+
+from agents.nwb_dandi_schema import MetadataFieldSchema, NWBDANDISchema
+from dateutil import parser as date_parser
 from models import GlobalState, LogLevel
 from services import LLMService
-from agents.nwb_dandi_schema import NWBDANDISchema, MetadataFieldSchema
 
 
 class ConfidenceLevel(str, Enum):
     """Confidence level for parsed metadata."""
-    HIGH = "high"      # ≥80% - Auto-apply silently
+
+    HIGH = "high"  # ≥80% - Auto-apply silently
     MEDIUM = "medium"  # 50-79% - Auto-apply with note
-    LOW = "low"        # <50% - Auto-apply with warning flag
+    LOW = "low"  # <50% - Auto-apply with warning flag
 
 
 class ParsedField:
@@ -34,7 +36,8 @@ class ParsedField:
         reasoning: str,
         nwb_compliant: bool,
         needs_review: bool = False,
-        alternatives: Optional[List[str]] = None,
+        was_explicit: bool = True,
+        alternatives: Optional[list[str]] = None,
     ):
         self.field_name = field_name
         self.raw_input = raw_input
@@ -43,6 +46,7 @@ class ParsedField:
         self.reasoning = reasoning
         self.nwb_compliant = nwb_compliant
         self.needs_review = needs_review
+        self.was_explicit = was_explicit
         self.alternatives = alternatives or []
 
     @property
@@ -55,7 +59,7 @@ class ParsedField:
         else:
             return ConfidenceLevel.LOW
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
         return {
             "field_name": self.field_name,
@@ -66,6 +70,7 @@ class ParsedField:
             "reasoning": self.reasoning,
             "nwb_compliant": self.nwb_compliant,
             "needs_review": self.needs_review,
+            "was_explicit": self.was_explicit,
             "alternatives": self.alternatives,
         }
 
@@ -73,15 +78,24 @@ class ParsedField:
         """
         Convert to ProvenanceInfo for metadata provenance tracking.
 
-        Returns ProvenanceInfo with AI_PARSED provenance type.
+        Returns ProvenanceInfo with provenance type based on whether value
+        was explicitly stated or inferred from context.
         """
-        from models import ProvenanceInfo, MetadataProvenance
+        from models import MetadataProvenance, ProvenanceInfo
+
+        # Use semantic distinction: explicit vs inferred
+        if self.was_explicit:
+            provenance = MetadataProvenance.AI_PARSED
+            source_prefix = "AI parsed from"
+        else:
+            provenance = MetadataProvenance.AI_INFERRED
+            source_prefix = "AI inferred from"
 
         return ProvenanceInfo(
             value=self.parsed_value,
-            provenance=MetadataProvenance.AI_PARSED,
+            provenance=provenance,
             confidence=self.confidence,
-            source=f"Parsed from user input: '{self.raw_input[:100]}'",
+            source=f"{source_prefix}: '{self.raw_input[:100]}'",
             needs_review=self.needs_review,
             raw_input=self.raw_input,
         )
@@ -102,16 +116,13 @@ class IntelligentMetadataParser:
     def __init__(self, llm_service: Optional[LLMService] = None):
         self.llm_service = llm_service
         self.schema = NWBDANDISchema()
-        self.field_schemas = {
-            field.name: field
-            for field in self.schema.get_all_fields()
-        }
+        self.field_schemas = {field.name: field for field in self.schema.get_all_fields()}
 
     async def parse_natural_language_batch(
         self,
         user_input: str,
         state: GlobalState,
-    ) -> List[ParsedField]:
+    ) -> list[ParsedField]:
         """
         Parse natural language input containing multiple metadata fields.
 
@@ -145,6 +156,7 @@ Your job is to:
 2. Extract their values
 3. Normalize to NWB/DANDI-compliant formats
 4. Provide confidence scores (0-100)
+5. Classify each extraction as "explicit" or "inferred"
 
 Available fields and their formats:
 {schema_context}
@@ -158,6 +170,21 @@ Important normalization rules:
 - Session Start Time: ISO 8601 datetime format (e.g., "2025-08-15T10:00:00" for "August 15th, 2025 at 10:00 AM")
   IMPORTANT: For dates like "15th august 2025 around 10 am", convert to "2025-08-15T10:00:00"
   For dates without time, use 00:00:00 (e.g., "2025-08-15T00:00:00")
+
+Extraction Type Classification:
+- "explicit": User directly stated this value in their text
+  Examples:
+  * "I'm from MIT" → institution: "MIT" (explicit)
+  * "8 week old mice" → age: "P56D" (explicit)
+  * "Dr. Jane Smith" → experimenter: "Smith, Jane" (explicit)
+  * "January 15, 2024" → session_start_time: "2024-01-15T00:00:00" (explicit)
+
+- "inferred": You deduced this value from context or related information
+  Examples:
+  * "studying mice" → species: "Mus musculus" (inferred - not explicitly stated as "Mus musculus")
+  * "visual cortex responses" → experiment_description: "Visual cortex study" (inferred summary)
+  * "electrophysiology" → keywords: ["electrophysiology", "neuroscience"] (inferred keywords)
+  * "investigating neural activity" → session_description: "Neural activity investigation" (inferred summary)
 
 Be conservative with confidence:
 - High (80-100): Explicitly stated, clear format
@@ -176,6 +203,7 @@ For each field found, provide:
 4. Confidence score (0-100)
 5. Reasoning for your interpretation
 6. Whether review is needed
+7. Extraction type: "explicit" (user directly stated) or "inferred" (you deduced from context)
 """
 
         output_schema = {
@@ -192,22 +220,27 @@ For each field found, provide:
                                 "oneOf": [
                                     {"type": "string"},
                                     {"type": "array", "items": {"type": "string"}},
-                                    {"type": "number"}
+                                    {"type": "number"},
                                 ]
                             },
                             "confidence": {"type": "number"},
                             "reasoning": {"type": "string"},
                             "needs_review": {"type": "boolean"},
-                            "alternatives": {
-                                "type": "array",
-                                "items": {"type": "string"}
-                            }
+                            "extraction_type": {"type": "string", "enum": ["explicit", "inferred"]},
+                            "alternatives": {"type": "array", "items": {"type": "string"}},
                         },
-                        "required": ["field_name", "raw_value", "normalized_value", "confidence", "reasoning"]
-                    }
+                        "required": [
+                            "field_name",
+                            "raw_value",
+                            "normalized_value",
+                            "confidence",
+                            "reasoning",
+                            "extraction_type",
+                        ],
+                    },
                 }
             },
-            "required": ["fields"]
+            "required": ["fields"],
         }
 
         try:
@@ -221,10 +254,12 @@ For each field found, provide:
             for field_data in response.get("fields", []):
                 # Post-process date fields to ensure ISO format
                 normalized_value = self._post_process_date_field(
-                    field_data["field_name"],
-                    field_data["normalized_value"],
-                    state
+                    field_data["field_name"], field_data["normalized_value"], state
                 )
+
+                # Extract the extraction_type and convert to was_explicit boolean
+                extraction_type = field_data.get("extraction_type", "explicit")
+                was_explicit = extraction_type == "explicit"
 
                 parsed_field = ParsedField(
                     field_name=field_data["field_name"],
@@ -234,6 +269,7 @@ For each field found, provide:
                     reasoning=field_data["reasoning"],
                     nwb_compliant=True,  # LLM should provide compliant values
                     needs_review=field_data.get("needs_review", False),
+                    was_explicit=was_explicit,
                     alternatives=field_data.get("alternatives", []),
                 )
                 parsed_fields.append(parsed_field)
@@ -328,21 +364,14 @@ Provide:
             "type": "object",
             "properties": {
                 "normalized_value": {
-                    "oneOf": [
-                        {"type": "string"},
-                        {"type": "array", "items": {"type": "string"}},
-                        {"type": "number"}
-                    ]
+                    "oneOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}, {"type": "number"}]
                 },
                 "confidence": {"type": "number"},
                 "reasoning": {"type": "string"},
                 "needs_review": {"type": "boolean"},
-                "alternatives": {
-                    "type": "array",
-                    "items": {"type": "string"}
-                }
+                "alternatives": {"type": "array", "items": {"type": "string"}},
             },
-            "required": ["normalized_value", "confidence", "reasoning"]
+            "required": ["normalized_value", "confidence", "reasoning"],
         }
 
         try:
@@ -353,11 +382,7 @@ Provide:
             )
 
             # Post-process date fields to ensure ISO format
-            normalized_value = self._post_process_date_field(
-                field_name,
-                response["normalized_value"],
-                state
-            )
+            normalized_value = self._post_process_date_field(field_name, response["normalized_value"], state)
 
             parsed_field = ParsedField(
                 field_name=field_name,
@@ -387,7 +412,7 @@ Provide:
 
     def generate_confirmation_message(
         self,
-        parsed_fields: List[ParsedField],
+        parsed_fields: list[ParsedField],
         state=None,  # Add state parameter to check missing fields
     ) -> str:
         """
@@ -411,13 +436,10 @@ Provide:
             else:
                 indicator = "❓"
 
-            # Determine provenance type based on confidence
-            if field.confidence >= 80:
+            # Determine provenance type based on explicit vs inferred (semantic)
+            if field.was_explicit:
                 provenance_type = "ai-parsed"
                 provenance_label = "AI"
-            elif field.confidence >= 50:
-                provenance_type = "ai-inferred"
-                provenance_label = "Inferred"
             else:
                 provenance_type = "ai-inferred"
                 provenance_label = "Inferred"
@@ -427,10 +449,10 @@ Provide:
             needs_review_class = "needs-review" if needs_review else ""
 
             # Escape quotes in source text for HTML attribute
-            source_escaped = field.reasoning.replace('"', '&quot;').replace("'", '&#39;') if field.reasoning else ""
-            raw_input_escaped = field.raw_input.replace('"', '&quot;').replace("'", '&#39;') if field.raw_input else ""
+            field.reasoning.replace('"', "&quot;").replace("'", "&#39;") if field.reasoning else ""
+            raw_input_escaped = field.raw_input.replace('"', "&quot;").replace("'", "&#39;") if field.raw_input else ""
 
-            provenance_badge = f'''<span class="provenance-badge {provenance_type} {needs_review_class}" title="Source: {provenance_type} | Confidence: {field.confidence}% | From: {raw_input_escaped}">{provenance_label}<div class="provenance-tooltip"><div class="provenance-tooltip-header">{provenance_label} Metadata</div><div class="provenance-tooltip-item"><span class="provenance-tooltip-label">Source:</span>{provenance_type}</div><div class="provenance-tooltip-item"><span class="provenance-tooltip-label">Confidence:</span>{field.confidence}%</div><div class="provenance-tooltip-item"><span class="provenance-tooltip-label">Origin:</span>AI parsed from: '{raw_input_escaped[:100]}'</div>{f'<div class="provenance-tooltip-item" style="color: #fbbf24;">⚠️ Needs Review</div>' if needs_review else ''}</div></span>'''
+            provenance_badge = f"""<span class="provenance-badge {provenance_type} {needs_review_class}" title="Source: {provenance_type} | Confidence: {field.confidence}% | From: {raw_input_escaped}">{provenance_label}<div class="provenance-tooltip"><div class="provenance-tooltip-header">{provenance_label} Metadata</div><div class="provenance-tooltip-item"><span class="provenance-tooltip-label">Source:</span>{provenance_type}</div><div class="provenance-tooltip-item"><span class="provenance-tooltip-label">Confidence:</span>{field.confidence}%</div><div class="provenance-tooltip-item"><span class="provenance-tooltip-label">Origin:</span>AI parsed from: '{raw_input_escaped[:100]}'</div>{'<div class="provenance-tooltip-item" style="color: #fbbf24;">⚠️ Needs Review</div>' if needs_review else ""}</div></span>"""
 
             # Format the field with provenance badge
             lines.append(
@@ -439,7 +461,7 @@ Provide:
 
             # Show original if different
             if str(field.parsed_value) != field.raw_input:
-                lines.append(f"   (from: \"{field.raw_input}\")")
+                lines.append(f'   (from: "{field.raw_input}")')
 
             # Show confidence and reasoning for non-high confidence
             if field.confidence < 80:
@@ -460,17 +482,17 @@ Provide:
                 parsed_field_names = {field.field_name for field in parsed_fields}
 
                 # Get existing CONFIRMED metadata from state
-                existing_metadata = getattr(state, 'metadata', {}) or {}
+                existing_metadata = getattr(state, "metadata", {}) or {}
 
                 # CRITICAL: Also include PENDING fields from previous parsing rounds
-                pending_fields = getattr(state, 'pending_parsed_fields', {}) or {}
+                pending_fields = getattr(state, "pending_parsed_fields", {}) or {}
                 pending_field_names = set(pending_fields.keys())
 
                 # Combine all three sources: confirmed + pending + current
                 all_fields = set(existing_metadata.keys()) | pending_field_names | parsed_field_names
 
                 # Import NWBDANDISchema to check all fields
-                from agents.nwb_dandi_schema import NWBDANDISchema, FieldRequirementLevel
+                from agents.nwb_dandi_schema import FieldRequirementLevel, NWBDANDISchema
 
                 # Get all NWB fields
                 all_nwb_fields = NWBDANDISchema.get_all_fields()
@@ -513,6 +535,7 @@ Provide:
             except Exception as e:
                 print(f"ERROR: Failed to check missing fields: {e}")
                 import traceback
+
                 traceback.print_exc()
 
         # Add instructions
@@ -549,27 +572,34 @@ Provide:
         Returns:
             The value to apply
         """
-        from models import ProvenanceInfo, MetadataProvenance
-        from datetime import datetime
+        from models import MetadataProvenance, ProvenanceInfo
 
         field_name = parsed_field.field_name
         value = parsed_field.parsed_value
         confidence = parsed_field.confidence
 
-        # High confidence: Silent auto-apply with AI_PARSED provenance
+        # Determine provenance type based on semantic distinction (explicit vs inferred)
+        if parsed_field.was_explicit:
+            provenance_type = MetadataProvenance.AI_PARSED
+            provenance_label = "AI parsed"
+        else:
+            provenance_type = MetadataProvenance.AI_INFERRED
+            provenance_label = "AI inferred"
+
+        # High confidence: Silent auto-apply
         if confidence >= 80:
             state.add_log(
                 LogLevel.INFO,
                 f"✓ Auto-applied {field_name} = {self._format_value(value)} "
-                f"(high confidence: {confidence}%)",
+                f"({provenance_label}, high confidence: {confidence}%)",
             )
 
-            # PROVENANCE TRACKING: High confidence AI parsing
+            # PROVENANCE TRACKING: Use semantic provenance type
             state.metadata_provenance[field_name] = ProvenanceInfo(
                 value=value,
-                provenance=MetadataProvenance.AI_PARSED,
+                provenance=provenance_type,
                 confidence=confidence,
-                source=f"AI parsed from: '{parsed_field.raw_input[:100]}'",
+                source=f"{provenance_label} from: '{parsed_field.raw_input[:100]}'",
                 timestamp=datetime.now(),
                 needs_review=False,
                 raw_input=parsed_field.raw_input,
@@ -577,21 +607,21 @@ Provide:
 
             return value
 
-        # Medium confidence: Apply with note and AI_INFERRED provenance
+        # Medium confidence: Apply with note
         elif confidence >= 50:
             state.add_log(
                 LogLevel.WARNING,
                 f"⚠️ Auto-applied {field_name} = {self._format_value(value)} "
-                f"(medium confidence: {confidence}% - best guess)",
+                f"({provenance_label}, medium confidence: {confidence}% - best guess)",
                 {"confidence": confidence, "reasoning": parsed_field.reasoning},
             )
 
-            # PROVENANCE TRACKING: Medium confidence AI inference
+            # PROVENANCE TRACKING: Use semantic provenance type
             state.metadata_provenance[field_name] = ProvenanceInfo(
                 value=value,
-                provenance=MetadataProvenance.AI_INFERRED,
+                provenance=provenance_type,
                 confidence=confidence,
-                source=f"AI inferred from: '{parsed_field.raw_input[:100]}' | Reasoning: {parsed_field.reasoning[:100]}",
+                source=f"{provenance_label} from: '{parsed_field.raw_input[:100]}' | Reasoning: {parsed_field.reasoning[:100]}",
                 timestamp=datetime.now(),
                 needs_review=True,  # Medium confidence should be reviewed
                 raw_input=parsed_field.raw_input,
@@ -599,28 +629,28 @@ Provide:
 
             return value
 
-        # Low confidence: Apply with warning flag and AI_INFERRED provenance (high review priority)
+        # Low confidence: Apply with warning flag (high review priority)
         else:
             state.add_log(
                 LogLevel.WARNING,
                 f"❓ Auto-applied {field_name} = {self._format_value(value)} "
-                f"(LOW confidence: {confidence}% - NEEDS REVIEW)",
+                f"({provenance_label}, LOW confidence: {confidence}% - NEEDS REVIEW)",
                 {"needs_review": True, "confidence": confidence},
             )
 
-            # PROVENANCE TRACKING: Low confidence AI inference - definitely needs review
+            # PROVENANCE TRACKING: Use semantic provenance type
             state.metadata_provenance[field_name] = ProvenanceInfo(
                 value=value,
-                provenance=MetadataProvenance.AI_INFERRED,
+                provenance=provenance_type,
                 confidence=confidence,
-                source=f"AI inferred (LOW CONFIDENCE) from: '{parsed_field.raw_input[:100]}'",
+                source=f"{provenance_label} (LOW CONFIDENCE) from: '{parsed_field.raw_input[:100]}'",
                 timestamp=datetime.now(),
                 needs_review=True,
                 raw_input=parsed_field.raw_input,
             )
 
             # Add to metadata warnings for validation report
-            if not hasattr(state, 'metadata_warnings'):
+            if not hasattr(state, "metadata_warnings"):
                 state.metadata_warnings = {}
 
             state.metadata_warnings[field_name] = {
@@ -676,7 +706,7 @@ Provide:
             return value
 
         # If already in ISO format, return as is
-        if isinstance(value, str) and re.match(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}', value):
+        if isinstance(value, str) and re.match(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}", value):
             return value
 
         try:
@@ -697,18 +727,12 @@ Provide:
                 # Convert to ISO 8601 format
                 iso_format = parsed_date.strftime("%Y-%m-%dT%H:%M:%S")
 
-                state.add_log(
-                    LogLevel.INFO,
-                    f"Converted date '{value}' to ISO format: {iso_format}"
-                )
+                state.add_log(LogLevel.INFO, f"Converted date '{value}' to ISO format: {iso_format}")
 
                 return iso_format
 
         except Exception as e:
-            state.add_log(
-                LogLevel.WARNING,
-                f"Failed to parse date '{value}' for field {field_name}: {e}"
-            )
+            state.add_log(LogLevel.WARNING, f"Failed to parse date '{value}' for field {field_name}: {e}")
             # Return original value if parsing fails
             return value
 
@@ -718,12 +742,12 @@ Provide:
         self,
         user_input: str,
         state: GlobalState,
-    ) -> List[ParsedField]:
+    ) -> list[ParsedField]:
         """Fallback parser using regex patterns (no LLM)."""
         parsed_fields = []
 
         # Simple key:value pattern matching
-        pattern = r'(\w+)\s*[:=]\s*([^,\n]+)'
+        pattern = r"(\w+)\s*[:=]\s*([^,\n]+)"
         matches = re.findall(pattern, user_input)
 
         for field_name, value in matches:

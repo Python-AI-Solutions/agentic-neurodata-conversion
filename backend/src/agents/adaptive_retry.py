@@ -7,9 +7,10 @@ This module implements smart retry logic that:
 3. Suggests different approaches based on failure types
 4. Determines when to ask user for help vs. retry automatically
 """
+
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from models import GlobalState, LogLevel
 from services import LLMService
@@ -40,8 +41,8 @@ class AdaptiveRetryStrategy:
     async def analyze_and_recommend_strategy(
         self,
         state: GlobalState,
-        current_validation_result: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        current_validation_result: dict[str, Any],
+    ) -> dict[str, Any]:
         """
         Analyze failure pattern and recommend next retry strategy.
 
@@ -105,7 +106,7 @@ class AdaptiveRetryStrategy:
             )
 
         except Exception as e:
-            logger.error(f"Adaptive retry analysis failed: {e}")
+            logger.exception(f"Adaptive retry analysis failed: {e}")
             # Safe fallback
             return {
                 "should_retry": state.correction_attempt < 3,
@@ -115,7 +116,7 @@ class AdaptiveRetryStrategy:
                 "ask_user": False,
             }
 
-    def _extract_previous_issues(self, state: GlobalState) -> List[Dict[str, Any]]:
+    def _extract_previous_issues(self, state: GlobalState) -> list[dict[str, Any]]:
         """Extract issues from previous validation attempts."""
         # Look for previous validation results in logs or state
         previous_issues = []
@@ -129,9 +130,9 @@ class AdaptiveRetryStrategy:
 
     def _analyze_progress(
         self,
-        previous_issues: List[Dict[str, Any]],
-        current_issues: List[Dict[str, Any]],
-    ) -> Dict[str, Any]:
+        previous_issues: list[dict[str, Any]],
+        current_issues: list[dict[str, Any]],
+    ) -> dict[str, Any]:
         """
         Analyze whether we're making progress across retries.
 
@@ -156,16 +157,15 @@ class AdaptiveRetryStrategy:
         curr_count = len(current_issues)
 
         # Extract issue types
-        prev_types = set(issue.get("check_function_name") for issue in previous_issues)
-        curr_types = set(issue.get("check_function_name") for issue in current_issues)
+        prev_types = {issue.get("check_function_name") for issue in previous_issues}
+        curr_types = {issue.get("check_function_name") for issue in current_issues}
 
         issues_fixed = len(prev_types - curr_types)
         new_issues = len(curr_types - prev_types)
         persistent = len(prev_types & curr_types)
 
         making_progress = (
-            curr_count < prev_count or  # Fewer total issues
-            issues_fixed > new_issues  # Fixed more than introduced
+            curr_count < prev_count or issues_fixed > new_issues  # Fewer total issues  # Fixed more than introduced
         )
 
         return {
@@ -179,10 +179,10 @@ class AdaptiveRetryStrategy:
     async def _llm_powered_analysis(
         self,
         state: GlobalState,
-        previous_issues: List[Dict[str, Any]],
-        current_issues: List[Dict[str, Any]],
-        progress_analysis: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        previous_issues: list[dict[str, Any]],
+        current_issues: list[dict[str, Any]],
+        progress_analysis: dict[str, Any],
+    ) -> dict[str, Any]:
         """
         Use LLM to intelligently analyze failure pattern and recommend strategy.
 
@@ -292,13 +292,13 @@ Recommend a specific strategy."""
                     "strategy": response.get("strategy"),
                     "approach": response.get("approach"),
                     "should_retry": response.get("should_retry"),
-                }
+                },
             )
 
             return response
 
         except Exception as e:
-            logger.error(f"LLM retry analysis failed: {e}")
+            logger.exception(f"LLM retry analysis failed: {e}")
             # Fallback to heuristic
             return self._heuristic_strategy(
                 state.correction_attempt,
@@ -309,9 +309,9 @@ Recommend a specific strategy."""
     def _heuristic_strategy(
         self,
         attempt_num: int,
-        current_issues: List[Dict[str, Any]],
-        progress_analysis: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        current_issues: list[dict[str, Any]],
+        progress_analysis: dict[str, Any],
+    ) -> dict[str, Any]:
         """
         Fallback heuristic strategy when LLM unavailable.
 
@@ -343,10 +343,7 @@ Recommend a specific strategy."""
             }
 
         # Check issue types
-        has_metadata_issues = any(
-            "metadata" in str(issue.get("message", "")).lower()
-            for issue in current_issues
-        )
+        has_metadata_issues = any("metadata" in str(issue.get("message", "")).lower() for issue in current_issues)
 
         if has_metadata_issues:
             return {
@@ -366,7 +363,7 @@ Recommend a specific strategy."""
             "ask_user": False,
         }
 
-    def _format_issues_summary(self, issues: List[Dict[str, Any]]) -> str:
+    def _format_issues_summary(self, issues: list[dict[str, Any]]) -> str:
         """Format issues into readable summary for LLM."""
         if not issues:
             return "No issues"

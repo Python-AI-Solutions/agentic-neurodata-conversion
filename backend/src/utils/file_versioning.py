@@ -3,9 +3,9 @@ File versioning utility with SHA256 checksums.
 
 Implements Story 8.7 requirement for versioned NWB files during correction loop.
 """
+
 import hashlib
 from pathlib import Path
-from typing import Tuple
 
 
 def compute_sha256(file_path: Path) -> str:
@@ -60,11 +60,7 @@ def get_versioned_filename(original_path: Path, attempt_number: int, checksum: s
     return parent / versioned_name
 
 
-def create_versioned_file(
-    original_path: Path,
-    attempt_number: int,
-    compute_checksum: bool = True
-) -> Tuple[Path, str]:
+def create_versioned_file(original_path: Path, attempt_number: int, compute_checksum: bool = True) -> tuple[Path, str]:
     """
     Create a versioned copy of an NWB file.
 
@@ -90,6 +86,7 @@ def create_versioned_file(
 
     # Copy file to versioned path
     import shutil
+
     shutil.copy2(original_path, versioned_path)
 
     return versioned_path, checksum

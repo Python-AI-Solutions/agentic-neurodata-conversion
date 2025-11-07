@@ -3,19 +3,14 @@ API request/response models.
 
 Models for FastAPI endpoints following OpenAPI specification.
 """
+
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
-from .state import (
-    ConversionStatus,
-    ValidationStatus,
-    ValidationOutcome,
-    ConversationPhase,
-    MetadataRequestPolicy,
-)
+from .state import ConversionStatus, ValidationStatus
 from .validation import ValidationIssue
 
 
@@ -27,7 +22,7 @@ class UploadResponse(BaseModel):
     input_path: str = Field(description="Path to uploaded file")
     checksum: str = Field(default="", description="SHA256 checksum of uploaded file")
     status: Optional[str] = Field(default=None, description="Upload status")
-    uploaded_files: Optional[List[str]] = Field(default=None, description="List of uploaded files")
+    uploaded_files: Optional[list[str]] = Field(default=None, description="List of uploaded files")
     conversation_active: Optional[bool] = Field(default=None, description="Whether conversation is active")
 
 
@@ -82,8 +77,8 @@ class UserDecision(str, Enum):
     """
 
     APPROVE = "approve"  # Start improvement/retry
-    REJECT = "reject"    # Decline retry
-    ACCEPT = "accept"    # Accept as-is (PASSED_WITH_ISSUES only)
+    REJECT = "reject"  # Decline retry
+    ACCEPT = "accept"  # Accept as-is (PASSED_WITH_ISSUES only)
 
 
 class RetryApprovalRequest(BaseModel):
@@ -109,7 +104,7 @@ class RetryApprovalResponse(BaseModel):
 class UserInputRequest(BaseModel):
     """Request for user input submission endpoint."""
 
-    input_data: Dict[str, Any] = Field(
+    input_data: dict[str, Any] = Field(
         description="User-provided correction data",
     )
 
@@ -128,11 +123,11 @@ class ValidationResponse(BaseModel):
     """Response for validation results endpoint."""
 
     is_valid: bool = Field(description="Overall validation status")
-    issues: List[ValidationIssue] = Field(
+    issues: list[ValidationIssue] = Field(
         default_factory=list,
         description="Validation issues found",
     )
-    summary: Dict[str, int] = Field(
+    summary: dict[str, int] = Field(
         default_factory=dict,
         description="Issue counts by severity",
     )
@@ -141,7 +136,7 @@ class ValidationResponse(BaseModel):
 class LogsResponse(BaseModel):
     """Response for logs endpoint."""
 
-    logs: List[Dict[str, Any]] = Field(
+    logs: list[dict[str, Any]] = Field(
         description="List of log entries",
     )
     total_count: int = Field(
@@ -158,9 +153,7 @@ class DownloadInfo(BaseModel):
     created_at: datetime = Field(description="File creation timestamp")
 
     # Pydantic V2 configuration
-    model_config = ConfigDict(
-        json_encoders={datetime: lambda v: v.isoformat()}
-    )
+    model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
 
 
 class ErrorResponse(BaseModel):
@@ -168,7 +161,7 @@ class ErrorResponse(BaseModel):
 
     error_code: str = Field(description="Machine-readable error code")
     message: str = Field(description="Human-readable error message")
-    details: Optional[Dict[str, Any]] = Field(
+    details: Optional[dict[str, Any]] = Field(
         default=None,
         description="Additional error context",
     )
@@ -178,25 +171,21 @@ class ErrorResponse(BaseModel):
     )
 
     # Pydantic V2 configuration
-    model_config = ConfigDict(
-        json_encoders={datetime: lambda v: v.isoformat()}
-    )
+    model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
 
 
 class WebSocketMessage(BaseModel):
     """WebSocket message format."""
 
     event_type: str = Field(description="Event type")
-    data: Dict[str, Any] = Field(description="Event payload")
+    data: dict[str, Any] = Field(description="Event payload")
     timestamp: datetime = Field(
         default_factory=datetime.now,
         description="Event timestamp",
     )
 
     # Pydantic V2 configuration
-    model_config = ConfigDict(
-        json_encoders={datetime: lambda v: v.isoformat()}
-    )
+    model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
 
 
 class StartConversionResponse(BaseModel):
@@ -236,7 +225,7 @@ class HealthResponse(BaseModel):
     status: str = Field(description="Service health status", default="healthy")
     version: str = Field(description="API version")
     timestamp: datetime = Field(default_factory=datetime.now, description="Check timestamp")
+    agents: dict[str, str] = Field(default_factory=dict, description="Registered agents status")
+    handlers: dict[str, str] = Field(default_factory=dict, description="Registered handlers status")
 
-    model_config = ConfigDict(
-        json_encoders={datetime: lambda v: v.isoformat()}
-    )
+    model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})

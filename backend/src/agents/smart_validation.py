@@ -4,8 +4,8 @@ Smart Validation Analysis with LLM.
 This module uses LLM to intelligently analyze validation results and provide
 context-aware guidance on how to fix issues.
 """
-from typing import Any, Dict, List, Optional
-import json
+
+from typing import Any, Optional
 
 from models import GlobalState, LogLevel
 from services import LLMService
@@ -33,10 +33,10 @@ class SmartValidationAnalyzer:
 
     async def analyze_validation_results(
         self,
-        validation_result: Dict[str, Any],
-        file_context: Dict[str, Any],
+        validation_result: dict[str, Any],
+        file_context: dict[str, Any],
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Intelligently analyze validation results and provide actionable guidance.
 
@@ -66,7 +66,7 @@ class SmartValidationAnalyzer:
                     "quick_fixes": [],
                     "user_actions_needed": [],
                     "severity_assessment": "success",
-                    "suggested_workflow": "No issues found - file is valid!"
+                    "suggested_workflow": "No issues found - file is valid!",
                 }
 
             system_prompt = """You are an expert NWB data validator with deep knowledge of:
@@ -85,24 +85,26 @@ Your job is to analyze NWB validation results and provide intelligent guidance:
 
 Be specific, actionable, and educational."""
 
-            issues_summary = "\n".join([
-                f"- [{issue.get('severity', 'INFO')}] {issue.get('message', 'Unknown issue')}"
-                for issue in issues[:20]  # Limit to 20 issues
-            ])
+            issues_summary = "\n".join(
+                [
+                    f"- [{issue.get('severity', 'INFO')}] {issue.get('message', 'Unknown issue')}"
+                    for issue in issues[:20]  # Limit to 20 issues
+                ]
+            )
 
             user_prompt = f"""Analyze these NWB validation results and provide intelligent guidance.
 
 **File Context:**
-- Format: {file_context.get('format', 'unknown')}
-- Size: {file_context.get('size_mb', 0):.1f} MB
+- Format: {file_context.get("format", "unknown")}
+- Size: {file_context.get("size_mb", 0):.1f} MB
 - Conversion attempt: {state.correction_attempt}
 
 **Validation Summary:**
 - Total issues: {len(issues)}
-- Critical: {sum(1 for i in issues if i.get('severity') == 'CRITICAL')}
-- Errors: {sum(1 for i in issues if i.get('severity') == 'ERROR')}
-- Warnings: {sum(1 for i in issues if i.get('severity') == 'WARNING')}
-- Info: {sum(1 for i in issues if i.get('severity') == 'INFO')}
+- Critical: {sum(1 for i in issues if i.get("severity") == "CRITICAL")}
+- Errors: {sum(1 for i in issues if i.get("severity") == "ERROR")}
+- Warnings: {sum(1 for i in issues if i.get("severity") == "WARNING")}
+- Info: {sum(1 for i in issues if i.get("severity") == "INFO")}
 
 **Issues Found:**
 {issues_summary}
@@ -136,10 +138,7 @@ Return detailed analysis in JSON format."""
                     "grouped_issues": {
                         "type": "object",
                         "description": "Issues grouped by category",
-                        "additionalProperties": {
-                            "type": "array",
-                            "items": {"type": "object"}
-                        }
+                        "additionalProperties": {"type": "array", "items": {"type": "object"}},
                     },
                     "priority_order": {
                         "type": "array",
@@ -148,10 +147,10 @@ Return detailed analysis in JSON format."""
                             "properties": {
                                 "issue": {"type": "string"},
                                 "priority": {"type": "string", "enum": ["P0", "P1", "P2"]},
-                                "reason": {"type": "string"}
-                            }
+                                "reason": {"type": "string"},
+                            },
                         },
-                        "description": "Issues sorted by priority"
+                        "description": "Issues sorted by priority",
                     },
                     "quick_fixes": {
                         "type": "array",
@@ -160,10 +159,10 @@ Return detailed analysis in JSON format."""
                             "properties": {
                                 "issue": {"type": "string"},
                                 "fix": {"type": "string"},
-                                "auto_correctable": {"type": "boolean"}
-                            }
+                                "auto_correctable": {"type": "boolean"},
+                            },
                         },
-                        "description": "Issues that can be quickly fixed"
+                        "description": "Issues that can be quickly fixed",
                     },
                     "user_actions_needed": {
                         "type": "array",
@@ -172,26 +171,20 @@ Return detailed analysis in JSON format."""
                             "properties": {
                                 "issue": {"type": "string"},
                                 "required_info": {"type": "string"},
-                                "example": {"type": "string"}
-                            }
+                                "example": {"type": "string"},
+                            },
                         },
-                        "description": "Issues requiring user input"
+                        "description": "Issues requiring user input",
                     },
                     "severity_assessment": {
                         "type": "string",
                         "enum": ["critical", "high", "medium", "low", "success"],
-                        "description": "Overall severity"
+                        "description": "Overall severity",
                     },
-                    "suggested_workflow": {
-                        "type": "string",
-                        "description": "Step-by-step recommended fix workflow"
-                    },
-                    "estimated_fix_time": {
-                        "type": "string",
-                        "description": "Estimated time to fix all issues"
-                    }
+                    "suggested_workflow": {"type": "string", "description": "Step-by-step recommended fix workflow"},
+                    "estimated_fix_time": {"type": "string", "description": "Estimated time to fix all issues"},
                 },
-                "required": ["grouped_issues", "priority_order", "severity_assessment", "suggested_workflow"]
+                "required": ["grouped_issues", "priority_order", "severity_assessment", "suggested_workflow"],
             }
 
             response = await self.llm_service.generate_structured_output(
@@ -207,7 +200,7 @@ Return detailed analysis in JSON format."""
                     "priority_issues": len(response.get("priority_order", [])),
                     "quick_fixes": len(response.get("quick_fixes", [])),
                     "user_actions": len(response.get("user_actions_needed", [])),
-                }
+                },
             )
 
             return response
@@ -221,8 +214,8 @@ Return detailed analysis in JSON format."""
 
     def _basic_validation_analysis(
         self,
-        validation_result: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        validation_result: dict[str, Any],
+    ) -> dict[str, Any]:
         """Fallback validation analysis without LLM."""
         issues = validation_result.get("issues", [])
 
@@ -247,8 +240,7 @@ Return detailed analysis in JSON format."""
         return {
             "grouped_issues": grouped,
             "priority_order": [
-                {"issue": i.get("message"), "priority": "P0", "reason": "Validation issue"}
-                for i in issues[:10]
+                {"issue": i.get("message"), "priority": "P0", "reason": "Validation issue"} for i in issues[:10]
             ],
             "quick_fixes": [],
             "user_actions_needed": [],

@@ -83,10 +83,56 @@
         </footer>
     </div>
 
-    {# Inject report data as JSON for JavaScript access #}
+    {# Inject comprehensive report data as JSON for JavaScript access #}
     <script>
-        // Make report data available to JavaScript
-        const reportData = {{ report_data | tojson | safe }};
+        // Make comprehensive report data available to JavaScript
+        const reportData = {
+            // Report metadata
+            report_metadata: {
+                version: "2.0",
+                session_id: {{ report_data.session_id | tojson | safe }},
+                generated_at: {{ report_data.timestamp | tojson | safe }},
+                system_version: {{ report_data.system_version | tojson | safe }}
+            },
+
+            // Evaluation summary
+            evaluation_summary: {
+                status: {{ report_data.status | tojson | safe }},
+                file_name: {{ report_data.file_name | tojson | safe }},
+                file_format: {{ report_data.file_format | tojson | safe }},
+                summary: {{ report_data.summary | tojson | safe }}
+            },
+
+            // Complete file information with provenance tracking
+            file_information: {{ file_info | tojson | safe }},
+
+            // Validation results and issues
+            validation_results: {{ validation_results | tojson | safe }},
+            issues: {{ issues | tojson | safe }},
+            issues_by_severity: {{ issues_by_severity | tojson | safe }},
+
+            // Quality metrics and assessment
+            quality_metrics: {{ quality_metrics | tojson | safe }},
+            metadata_completeness: {{ metadata_completeness | tojson | safe }},
+
+            // Missing fields analysis
+            missing_fields: {{ missing_fields | tojson | safe }},
+            missing_critical_fields: {{ missing_critical_fields | tojson | safe }},
+
+            // Recommendations for improvement
+            recommendations: {{ recommendations | tojson | safe }},
+            total_estimated_time: {{ total_estimated_time | tojson | safe }},
+
+            // Workflow trace and audit trail
+            workflow_trace: {{ workflow_trace | tojson | safe }},
+
+            // Detailed process logs for scientific transparency
+            detailed_logs: {
+                logs: {{ detailed_logs_sequential | tojson | safe }},
+                log_file_path: {{ log_file_path | tojson | safe }},
+                stage_options: {{ stage_options | tojson | safe }}
+            }
+        };
     </script>
 
     {# Embedded JavaScript - No external dependencies #}

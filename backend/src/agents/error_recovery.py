@@ -4,8 +4,8 @@ Intelligent Error Recovery and Handling.
 This module uses LLM to intelligently handle errors and suggest recovery actions.
 Instead of generic error messages, it provides context-aware guidance.
 """
-from typing import Any, Dict, List, Optional
-import json
+
+from typing import Any, Optional
 
 from models import GlobalState, LogLevel
 from services import LLMService
@@ -35,9 +35,9 @@ class IntelligentErrorRecovery:
     async def analyze_error(
         self,
         error: Exception,
-        context: Dict[str, Any],
+        context: dict[str, Any],
         state: GlobalState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Analyze an error and provide intelligent recovery suggestions.
 
@@ -55,12 +55,14 @@ class IntelligentErrorRecovery:
             - is_recoverable: Whether this can be recovered
         """
         # Record error for pattern analysis
-        self.error_history.append({
-            "error_type": type(error).__name__,
-            "error_message": str(error),
-            "context": context,
-            "timestamp": state.updated_at.isoformat(),
-        })
+        self.error_history.append(
+            {
+                "error_type": type(error).__name__,
+                "error_message": str(error),
+                "context": context,
+                "timestamp": state.updated_at.isoformat(),
+            }
+        )
 
         if not self.llm_service:
             # Fallback to basic error handling
@@ -107,18 +109,18 @@ Be helpful, specific, and actionable."""
 
 **Error Details:**
 ```
-Type: {error_context['error_type']}
-Message: {error_context['error_message']}
+Type: {error_context["error_type"]}
+Message: {error_context["error_message"]}
 ```
 
 **Operation Context:**
-- What was happening: {error_context['operation']}
-- File: {error_context.get('file_path', 'unknown')}
-- Format: {error_context.get('format', 'unknown')}
-- Current status: {error_context['status']}
+- What was happening: {error_context["operation"]}
+- File: {error_context.get("file_path", "unknown")}
+- Format: {error_context.get("format", "unknown")}
+- Current status: {error_context["status"]}
 
 **Recent Activity:**
-{chr(10).join(f"- {log}" for log in error_context['recent_activity'])}
+{chr(10).join(f"- {log}" for log in error_context["recent_activity"])}
 
 **Previous Errors (if any):**
 {self._get_error_patterns()}
@@ -137,12 +139,9 @@ Be specific and actionable."""
                 "properties": {
                     "user_message": {
                         "type": "string",
-                        "description": "Clear, user-friendly explanation of what went wrong"
+                        "description": "Clear, user-friendly explanation of what went wrong",
                     },
-                    "likely_cause": {
-                        "type": "string",
-                        "description": "What probably caused this error"
-                    },
+                    "likely_cause": {"type": "string", "description": "What probably caused this error"},
                     "recovery_actions": {
                         "type": "array",
                         "items": {
@@ -152,27 +151,24 @@ Be specific and actionable."""
                                 "description": {"type": "string"},
                                 "type": {
                                     "type": "string",
-                                    "enum": ["user_action", "system_retry", "manual_fix", "skip", "abort"]
-                                }
-                            }
+                                    "enum": ["user_action", "system_retry", "manual_fix", "skip", "abort"],
+                                },
+                            },
                         },
-                        "description": "Ordered list of recovery actions to try"
+                        "description": "Ordered list of recovery actions to try",
                     },
                     "severity": {
                         "type": "string",
                         "enum": ["low", "medium", "high", "critical"],
-                        "description": "Error severity level"
+                        "description": "Error severity level",
                     },
-                    "is_recoverable": {
-                        "type": "boolean",
-                        "description": "Whether this error can be recovered from"
-                    },
+                    "is_recoverable": {"type": "boolean", "description": "Whether this error can be recovered from"},
                     "technical_details": {
                         "type": "string",
-                        "description": "Technical details for debugging (optional)"
-                    }
+                        "description": "Technical details for debugging (optional)",
+                    },
                 },
-                "required": ["user_message", "likely_cause", "recovery_actions", "severity", "is_recoverable"]
+                "required": ["user_message", "likely_cause", "recovery_actions", "severity", "is_recoverable"],
             }
 
             response = await self.llm_service.generate_structured_output(
@@ -187,7 +183,7 @@ Be specific and actionable."""
                 {
                     "error_type": type(error).__name__,
                     "recovery_actions_count": len(response.get("recovery_actions", [])),
-                }
+                },
             )
 
             return response
@@ -202,8 +198,8 @@ Be specific and actionable."""
     def _basic_error_analysis(
         self,
         error: Exception,
-        context: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        context: dict[str, Any],
+    ) -> dict[str, Any]:
         """Fallback error analysis without LLM."""
         error_type = type(error).__name__
         error_msg = str(error)
@@ -223,7 +219,7 @@ Be specific and actionable."""
                 {
                     "action": "Check the error details and try again",
                     "description": "Review the error message and attempt the operation again",
-                    "type": "user_action"
+                    "type": "user_action",
                 }
             ],
             "severity": severity,
@@ -254,7 +250,7 @@ Be specific and actionable."""
     async def suggest_proactive_fix(
         self,
         state: GlobalState,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> Optional[dict[str, Any]]:
         """
         Proactively suggest fixes based on error patterns.
 
@@ -279,7 +275,7 @@ Be specific and actionable."""
                 state.add_log(
                     LogLevel.WARNING,
                     f"Detected repeated error pattern: {err_type}",
-                    {"occurrences": error_types.count(err_type)}
+                    {"occurrences": error_types.count(err_type)},
                 )
 
                 return {

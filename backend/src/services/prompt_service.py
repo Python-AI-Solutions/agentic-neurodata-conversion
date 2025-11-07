@@ -3,10 +3,12 @@ Prompt Service for loading and rendering YAML prompt templates.
 
 Implements Task T018: PromptService with YAML loading and Jinja2 rendering.
 """
-import yaml
+
 from pathlib import Path
-from jinja2 import Template, Environment, FileSystemLoader
-from typing import Dict, Any, Optional
+from typing import Any, Optional
+
+import yaml
+from jinja2 import Environment, FileSystemLoader, Template
 
 
 class PromptService:
@@ -39,17 +41,17 @@ class PromptService:
         )
 
         # Add custom filters
-        self.jinja_env.filters['filesizeformat'] = self._filesizeformat
+        self.jinja_env.filters["filesizeformat"] = self._filesizeformat
 
     def _filesizeformat(self, bytes_value: int) -> str:
         """Custom Jinja2 filter for formatting file sizes."""
-        for unit in ['B', 'KB', 'MB', 'GB']:
+        for unit in ["B", "KB", "MB", "GB"]:
             if bytes_value < 1024.0:
                 return f"{bytes_value:.1f} {unit}"
             bytes_value /= 1024.0
         return f"{bytes_value:.1f} TB"
 
-    def load_template(self, template_name: str) -> Dict[str, Any]:
+    def load_template(self, template_name: str) -> dict[str, Any]:
         """
         Load a YAML prompt template.
 
@@ -64,7 +66,7 @@ class PromptService:
             yaml.YAMLError: If template is invalid YAML
         """
         # Ensure .yaml extension
-        if not template_name.endswith('.yaml'):
+        if not template_name.endswith(".yaml"):
             template_name = f"{template_name}.yaml"
 
         template_path = self.prompts_dir / template_name
@@ -72,16 +74,12 @@ class PromptService:
         if not template_path.exists():
             raise FileNotFoundError(f"Template not found: {template_path}")
 
-        with open(template_path, 'r') as f:
+        with open(template_path) as f:
             template_data = yaml.safe_load(f)
 
         return template_data
 
-    def render_prompt(
-        self,
-        template_name: str,
-        context: Dict[str, Any]
-    ) -> str:
+    def render_prompt(self, template_name: str, context: dict[str, Any]) -> str:
         """
         Render a prompt template with context data.
 
@@ -99,7 +97,7 @@ class PromptService:
         template_data = self.load_template(template_name)
 
         # Get the template string
-        template_str = template_data.get('template', '')
+        template_str = template_data.get("template", "")
 
         # Create Jinja2 template
         template = Template(template_str)
@@ -120,9 +118,9 @@ class PromptService:
             System role string
         """
         template_data = self.load_template(template_name)
-        return template_data.get('system_role', '').strip()
+        return template_data.get("system_role", "").strip()
 
-    def get_output_schema(self, template_name: str) -> Optional[Dict[str, Any]]:
+    def get_output_schema(self, template_name: str) -> Optional[dict[str, Any]]:
         """
         Get output schema from template.
 
@@ -133,13 +131,9 @@ class PromptService:
             Output schema dictionary or None
         """
         template_data = self.load_template(template_name)
-        return template_data.get('output_schema')
+        return template_data.get("output_schema")
 
-    def create_llm_prompt(
-        self,
-        template_name: str,
-        context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def create_llm_prompt(self, template_name: str, context: dict[str, Any]) -> dict[str, Any]:
         """
         Create complete LLM prompt with system role, rendered template, and schema.
 
@@ -151,7 +145,7 @@ class PromptService:
             Dictionary with 'system_role', 'prompt', and 'output_schema'
         """
         return {
-            'system_role': self.get_system_role(template_name),
-            'prompt': self.render_prompt(template_name, context),
-            'output_schema': self.get_output_schema(template_name),
+            "system_role": self.get_system_role(template_name),
+            "prompt": self.render_prompt(template_name, context),
+            "output_schema": self.get_output_schema(template_name),
         }
