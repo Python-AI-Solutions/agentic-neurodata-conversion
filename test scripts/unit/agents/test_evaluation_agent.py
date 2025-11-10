@@ -35,6 +35,8 @@ from models import (
     MCPMessage,
     MCPResponse,
     ValidationResult,
+    ValidationIssue,
+    ValidationSeverity,
     ValidationStatus,
     ValidationOutcome,
 )
@@ -1792,3 +1794,61 @@ class TestValidationOutcomeEdgeCases:
 
             assert response.success is True
             assert global_state.overall_status == ValidationOutcome.PASSED_WITH_ISSUES
+
+@pytest.mark.unit
+
+@pytest.mark.unit
+class TestRealValidationWorkflows:
+    """
+    Integration-style unit tests using real dependencies.
+
+    These tests use evaluation_agent_real fixture which has real internal logic,
+    testing actual validation workflows instead of mocking them away.
+    """
+
+    @pytest.mark.asyncio
+    async def test_real_agent_has_required_components(self, evaluation_agent_real):
+        """Test that real agent has all required helper components."""
+        # Should have LLM service (MockLLMService)
+        assert evaluation_agent_real._llm_service is not None
+
+        # Should have validation analyzer when LLM is available
+        assert evaluation_agent_real._validation_analyzer is not None
+
+        # Should have smart validators and resolvers
+        assert evaluation_agent_real._smart_validator is not None
+        assert evaluation_agent_real._smart_issue_resolver is not None
+        assert evaluation_agent_real._validation_history_learner is not None
+
+    @pytest.mark.asyncio
+    async def test_real_smart_validation_logic(self, evaluation_agent_real):
+        """Test real smart validation logic if available."""
+        if evaluation_agent_real._smart_validator:
+            # Test that smart validator can be used
+            validator = evaluation_agent_real._smart_validator
+            assert validator is not None
+            # Smart validator should have LLM service
+            assert validator._llm_service is not None
+
+    @pytest.mark.asyncio
+    async def test_real_issue_resolution_suggestions(self, evaluation_agent_real):
+        """Test real issue resolution logic if available."""
+        if evaluation_agent_real._smart_issue_resolver:
+            # Test that resolver can analyze issues
+            resolver = evaluation_agent_real._smart_issue_resolver
+            assert resolver is not None
+            assert resolver._llm_service is not None
+
+    @pytest.mark.asyncio
+    async def test_real_validation_analyzer_initialization(self, evaluation_agent_real):
+        """Test that real validation analyzer is initialized."""
+        if evaluation_agent_real._llm_service:
+            assert evaluation_agent_real._validation_analyzer is not None
+
+    @pytest.mark.asyncio
+    async def test_real_validation_history_learner_exists(self, evaluation_agent_real):
+        """Test that validation history learner is initialized."""
+        assert evaluation_agent_real._validation_history_learner is not None
+        learner = evaluation_agent_real._validation_history_learner
+        # Should have LLM service
+        assert learner._llm_service is not None

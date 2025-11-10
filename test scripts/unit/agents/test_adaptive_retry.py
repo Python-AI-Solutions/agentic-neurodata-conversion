@@ -604,3 +604,69 @@ class TestAdaptiveRetryStrategyIntegration:
         assert result["strategy"] == "stop"
         assert result["ask_user"] is True
         assert "5 attempts" in result["message"]
+
+
+@pytest.mark.unit
+class TestRealAdaptiveRetryWorkflows:
+    """
+    Integration-style unit tests using real AdaptiveRetryStrategy logic.
+    
+    Tests real retry decision logic instead of mocking.
+    """
+
+    @pytest.mark.asyncio
+    async def test_real_retry_strategy_initialization(self, mock_llm_api_only):
+        """Test real adaptive retry strategy initialization."""
+        from agents.adaptive_retry import AdaptiveRetryStrategy
+        
+        strategy = AdaptiveRetryStrategy(llm_service=mock_llm_api_only)
+        
+        # Verify real initialization
+        assert strategy.llm_service is not None
+
+    @pytest.mark.asyncio
+    async def test_real_should_retry_decision(self, global_state):
+        """Test real should_retry decision logic."""
+        from agents.adaptive_retry import AdaptiveRetryStrategy
+        
+        strategy = AdaptiveRetryStrategy(llm_service=None)
+        
+        # Test with real decision logic
+        global_state.correction_attempts = 2
+        should_retry = strategy.should_retry_correction(global_state)
+        
+        # Should return a boolean
+        assert isinstance(should_retry, bool)
+
+    @pytest.mark.asyncio
+    async def test_real_max_attempts_logic(self, global_state):
+        """Test real max attempts enforcement."""
+        from agents.adaptive_retry import AdaptiveRetryStrategy
+        from agents.conversation_agent import MAX_CORRECTION_ATTEMPTS
+        
+        strategy = AdaptiveRetryStrategy(llm_service=None)
+        
+        # Test at max attempts
+        global_state.correction_attempts = MAX_CORRECTION_ATTEMPTS
+        should_retry = strategy.should_retry_correction(global_state)
+        
+        # Should not retry when at max
+        assert should_retry is False
+
+    @pytest.mark.asyncio
+    async def test_real_analyze_and_recommend(self, mock_llm_api_only, global_state):
+        """Test real analyze and recommend strategy."""
+        from agents.adaptive_retry import AdaptiveRetryStrategy
+        
+        strategy = AdaptiveRetryStrategy(llm_service=mock_llm_api_only)
+        
+        # Set up state with validation result
+        global_state.correction_attempts = 1
+        global_state.validation_result = {"issues": []}
+        
+        # Test real analysis
+        recommendation = await strategy.analyze_and_recommend_strategy(global_state)
+        
+        # Should return a recommendation
+        assert recommendation is not None
+        assert "action" in recommendation
