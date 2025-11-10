@@ -5831,3 +5831,151 @@ class TestRunConversion:
         assert "required_fields" in response.result
         assert "session_start_time" in response.result["required_fields"]
         assert global_state.status == ConversionStatus.AWAITING_USER_INPUT
+
+
+@pytest.mark.unit
+class TestRealConversationWorkflows:
+    """
+    Integration-style unit tests using real dependencies.
+
+    These tests use conversation_agent_real fixture which has real internal logic,
+    testing actual conversation workflows instead of mocking them away.
+    """
+
+    @pytest.mark.asyncio
+    async def test_real_metadata_provenance_tracking(self, conversation_agent_real, global_state):
+        """Test real metadata provenance tracking logic."""
+        # Track user-provided metadata
+        conversation_agent_real._track_user_provided_metadata(
+            global_state,
+            field_name="experimenter",
+            value=["Jane Doe"],
+            raw_input="experimenter: Jane Doe"
+        )
+
+        # Verify real tracking logic executed
+        assert "experimenter" in global_state.metadata_provenance
+        assert global_state.metadata_provenance["experimenter"].provenance == MetadataProvenance.USER_SPECIFIED
+        assert global_state.metadata_provenance["experimenter"].value == ["Jane Doe"]
+        assert global_state.metadata_provenance["experimenter"].confidence == 100.0
+
+    @pytest.mark.asyncio
+    async def test_real_ai_parsed_metadata_tracking(self, conversation_agent_real, global_state):
+        """Test real AI-parsed metadata tracking with confidence."""
+        conversation_agent_real._track_ai_parsed_metadata(
+            global_state,
+            field_name="institution",
+            value="MIT",
+            confidence=85.0,
+            raw_input="We did the experiment at MIT"
+        )
+
+        # Verify real tracking logic
+        assert "institution" in global_state.metadata_provenance
+        assert global_state.metadata_provenance["institution"].provenance == MetadataProvenance.AI_PARSED
+        assert global_state.metadata_provenance["institution"].confidence == 85.0
+        assert global_state.metadata_provenance["institution"].needs_review is False
+
+    @pytest.mark.asyncio
+    async def test_real_low_confidence_metadata_flagging(self, conversation_agent_real, global_state):
+        """Test real logic for flagging low-confidence metadata."""
+        conversation_agent_real._track_ai_parsed_metadata(
+            global_state,
+            field_name="keywords",
+            value=["neuroscience"],
+            confidence=60.0,
+            raw_input="neuroscience study"
+        )
+
+        # Should flag for review when confidence < 70%
+        assert global_state.metadata_provenance["keywords"].needs_review is True
+
+    @pytest.mark.asyncio
+    async def test_real_metadata_validation_logic(self, conversation_agent_real, global_state):
+        """Test real metadata validation logic."""
+        # Set up metadata
+        global_state.metadata = {
+            "experimenter": ["Jane Doe"],
+            "institution": "MIT",
+            "session_description": "Neural recording in V1"
+        }
+
+        # Test real validation
+        is_valid, missing = conversation_agent_real._validate_required_nwb_metadata(global_state)
+
+        # Should use real NWBDANDISchema validation
+        assert isinstance(is_valid, bool)
+        assert isinstance(missing, list)
+
+    @pytest.mark.asyncio
+    async def test_real_user_intent_detection_positive(self, conversation_agent_real):
+        """Test real user intent detection for adding metadata."""
+        test_inputs = [
+            "yes I want to add more",
+            "sure let me add some",
+            "can i add more"
+        ]
+
+        for user_input in test_inputs:
+            result = conversation_agent_real._user_expresses_intent_to_add_more(user_input)
+            assert result is True, f"Failed for: {user_input}"
+
+    @pytest.mark.asyncio
+    async def test_real_user_intent_detection_negative(self, conversation_agent_real):
+        """Test real user intent detection for declining metadata."""
+        test_inputs = [
+            "no thanks",
+            "that's all",
+            "I don't want to add anything"
+        ]
+
+        for user_input in test_inputs:
+            result = conversation_agent_real._user_expresses_intent_to_add_more(user_input)
+            assert result is False, f"Failed for: {user_input}"
+
+    @pytest.mark.asyncio
+    async def test_real_agent_has_all_helpers(self, conversation_agent_real):
+        """Test that real agent has all helper components initialized."""
+        # Should have MCP server
+        assert conversation_agent_real._mcp_server is not None
+
+        # Should have LLM service (MockLLMService)
+        assert conversation_agent_real._llm_service is not None
+
+        # Should have all helper agents when LLM is available
+        assert conversation_agent_real._conversational_handler is not None
+        assert conversation_agent_real._metadata_inference_engine is not None
+        assert conversation_agent_real._adaptive_retry_strategy is not None
+        assert conversation_agent_real._error_recovery is not None
+        assert conversation_agent_real._predictive_metadata is not None
+        assert conversation_agent_real._smart_autocorrect is not None
+        assert conversation_agent_real._metadata_mapper is not None
+
+    @pytest.mark.asyncio
+    async def test_real_conversational_handler_interaction(self, conversation_agent_real, global_state):
+        """Test real conversational handler processes messages."""
+        if conversation_agent_real._conversational_handler:
+            handler = conversation_agent_real._conversational_handler
+            # Handler should have LLM service
+            assert handler._llm_service is not None
+
+    @pytest.mark.asyncio
+    async def test_real_metadata_inference_engine(self, conversation_agent_real):
+        """Test real metadata inference engine is functional."""
+        if conversation_agent_real._metadata_inference_engine:
+            engine = conversation_agent_real._metadata_inference_engine
+            # Engine should have LLM service
+            assert engine._llm_service is not None
+
+    @pytest.mark.asyncio
+    async def test_real_adaptive_retry_strategy(self, conversation_agent_real, global_state):
+        """Test real adaptive retry strategy logic."""
+        if conversation_agent_real._adaptive_retry_strategy:
+            strategy = conversation_agent_real._adaptive_retry_strategy
+            # Strategy should be functional
+            assert strategy is not None
+            
+            # Test real retry decision logic
+            global_state.correction_attempts = 2
+            should_retry = strategy.should_retry_correction(global_state)
+            assert isinstance(should_retry, bool)

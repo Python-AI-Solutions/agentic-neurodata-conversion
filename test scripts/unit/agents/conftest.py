@@ -35,6 +35,8 @@ def conversation_agent(mock_mcp_server, mock_llm_conversational):
     """
     Create ConversationAgent with mocked dependencies for testing.
 
+    NOTE: This fixture is deprecated. Use conversation_agent_real for better test coverage.
+
     Args:
         mock_mcp_server: Mock MCP server from root conftest.py
         mock_llm_conversational: Mock LLM for conversations from root conftest.py
@@ -54,9 +56,39 @@ def conversation_agent(mock_mcp_server, mock_llm_conversational):
 
 
 @pytest.fixture
+def conversation_agent_real(real_mcp_server, mock_llm_api_only):
+    """
+    Create ConversationAgent with real dependencies for better test coverage.
+
+    This fixture uses real MCPServer and MockLLMService (which only mocks API calls),
+    allowing tests to verify actual agent logic and message passing.
+
+    Args:
+        real_mcp_server: Real MCP server from root conftest.py
+        mock_llm_api_only: Real MockLLMService from root conftest.py
+
+    Returns:
+        ConversationAgent: Agent instance with real internal logic
+
+    Example:
+        @pytest.mark.asyncio
+        async def test_agent(conversation_agent_real, global_state):
+            # Tests real agent logic
+            await conversation_agent_real.handle_user_input("hello", global_state)
+            assert len(global_state.logs) > 0
+    """
+    return ConversationAgent(
+        mcp_server=real_mcp_server,
+        llm_service=mock_llm_api_only
+    )
+
+
+@pytest.fixture
 def conversion_agent(mock_mcp_server, mock_llm_format_detector):
     """
     Create ConversionAgent with mocked dependencies for testing.
+
+    NOTE: This fixture is deprecated. Use conversion_agent_real for better test coverage.
 
     Args:
         mock_mcp_server: Mock MCP server from root conftest.py
@@ -71,8 +103,33 @@ def conversion_agent(mock_mcp_server, mock_llm_format_detector):
             assert result["format"] == "NWB"
     """
     return ConversionAgent(
-        mcp_server=mock_mcp_server,
         llm_service=mock_llm_format_detector
+    )
+
+
+@pytest.fixture
+def conversion_agent_real(mock_llm_api_only):
+    """
+    Create ConversionAgent with real dependencies for better test coverage.
+
+    This fixture uses MockLLMService (which only mocks API calls), allowing tests
+    to verify actual format detection and conversion logic.
+
+    Args:
+        mock_llm_api_only: Real MockLLMService from root conftest.py
+
+    Returns:
+        ConversionAgent: Agent instance with real internal logic
+
+    Example:
+        @pytest.mark.asyncio
+        async def test_conversion(conversion_agent_real, tmp_path, global_state):
+            # Tests real conversion logic
+            result = await conversion_agent_real._detect_format(str(tmp_path), global_state)
+            assert result is not None
+    """
+    return ConversionAgent(
+        llm_service=mock_llm_api_only
     )
 
 
@@ -80,6 +137,8 @@ def conversion_agent(mock_mcp_server, mock_llm_format_detector):
 def evaluation_agent(mock_llm_quality_assessor):
     """
     Create EvaluationAgent with mocked dependencies for testing.
+
+    NOTE: This fixture is deprecated. Use evaluation_agent_real for better test coverage.
 
     Args:
         mock_llm_quality_assessor: Mock LLM for quality assessment from root conftest.py
@@ -94,6 +153,34 @@ def evaluation_agent(mock_llm_quality_assessor):
     """
     return EvaluationAgent(
         llm_service=mock_llm_quality_assessor
+    )
+
+
+@pytest.fixture
+def evaluation_agent_real(mock_llm_api_only):
+    """
+    Create EvaluationAgent with real dependencies for better test coverage.
+
+    This fixture uses MockLLMService (which only mocks API calls), allowing tests
+    to verify actual validation and quality assessment logic.
+
+    Args:
+        mock_llm_api_only: Real MockLLMService from root conftest.py
+
+    Returns:
+        EvaluationAgent: Agent instance with real internal logic
+
+    Example:
+        @pytest.mark.asyncio
+        async def test_evaluation(evaluation_agent_real, tmp_path, global_state):
+            # Tests real evaluation logic
+            nwb_file = tmp_path / "test.nwb"
+            nwb_file.write_bytes(b"mock nwb")
+            result = await evaluation_agent_real.validate_nwb(str(nwb_file), global_state)
+            assert result is not None
+    """
+    return EvaluationAgent(
+        llm_service=mock_llm_api_only
     )
 
 

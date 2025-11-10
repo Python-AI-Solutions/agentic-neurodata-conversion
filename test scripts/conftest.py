@@ -374,6 +374,35 @@ def mock_llm_conversational():
     return service
 
 
+@pytest.fixture
+def mock_llm_api_only():
+    """
+    Create a MockLLMService that only mocks the API calls, not the service logic.
+
+    This fixture uses the real MockLLMService class which implements the full
+    LLM service interface but returns mock responses without making actual API calls.
+    This allows testing the actual service logic while avoiding API costs.
+
+    Returns:
+        MockLLMService: Real service class with mocked API responses
+
+    Example:
+        @pytest.mark.asyncio
+        async def test_with_real_service(mock_llm_api_only):
+            # Tests real service logic
+            response = await mock_llm_api_only.generate_response("test prompt")
+            assert isinstance(response, str)
+            assert len(response) > 0
+
+    See also:
+        - mock_llm_service: Fully mocked version (deprecated for unit tests)
+        - MockLLMService: The actual mock service class
+    """
+    from services.llm_service import MockLLMService
+
+    return MockLLMService()
+
+
 # ============================================================================
 # Infrastructure Mock Fixtures
 # ============================================================================
@@ -384,6 +413,7 @@ def mock_mcp_server():
     """
     Create a mock MCP server for inter-agent communication testing.
 
+    NOTE: This fixture is deprecated for unit tests. Use real_mcp_server instead.
     This mock simulates the MCP (Multi-agent Communication Protocol) server
     used for agent-to-agent messaging without requiring actual server setup.
 
@@ -406,6 +436,7 @@ def mock_mcp_server():
             assert response.success
 
     See also:
+        - real_mcp_server: Real MCP server for better test coverage
         - conversation_agent: Agent fixture using MCP server
         - sample_mcp_message: Sample MCP message fixture
     """
@@ -420,6 +451,47 @@ def mock_mcp_server():
         context={}
     ))
     server.register_agent = Mock()
+    return server
+
+
+@pytest.fixture
+def real_mcp_server():
+    """
+    Create a real MCP server for inter-agent communication testing.
+
+    This fixture creates an actual MCPServer instance that can process real
+    messages in-memory, allowing tests to verify actual message passing logic
+    instead of mocking it away.
+
+    Returns:
+        MCPServer: Real MCP server instance for in-memory message passing
+
+    Example:
+        @pytest.mark.asyncio
+        async def test_agent_communication(real_mcp_server):
+            from models import MCPMessage
+
+            # Register agents
+            real_mcp_server.register_agent("agent_a", mock_handler)
+            real_mcp_server.register_agent("agent_b", mock_handler)
+
+            # Send real message
+            message = MCPMessage(
+                target_agent="agent_b",
+                action="test_action",
+                context={"data": "test"}
+            )
+            response = await real_mcp_server.send_message(message)
+            assert response.success
+
+    See also:
+        - mock_mcp_server: Fully mocked version (deprecated for unit tests)
+        - conversation_agent_real: Agent using real MCP server
+    """
+    from services import MCPServer
+
+    # Create real MCP server instance
+    server = MCPServer()
     return server
 
 

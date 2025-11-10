@@ -932,3 +932,124 @@ class TestErrorExplanation:
         assert explanation is None
         # Should log warning
         assert any("failed to generate error explanation" in log.message.lower() for log in state.logs)
+
+
+@pytest.mark.unit
+class TestRealWorkflows:
+    """
+    Integration-style unit tests using real dependencies.
+
+    These tests use conversion_agent_real fixture which has real internal logic,
+    testing actual code paths instead of mocking them away.
+    """
+
+    @pytest.mark.asyncio
+    async def test_real_spikeglx_detection_workflow(self, conversion_agent_real, tmp_path, global_state):
+        """Test real SpikeGLX format detection with pattern matching."""
+        # Create real SpikeGLX files
+        spikeglx_dir = tmp_path / "spikeglx_data"
+        spikeglx_dir.mkdir()
+        (spikeglx_dir / "recording_g0_t0.imec0.ap.bin").write_bytes(b"mock data" * 100)
+        (spikeglx_dir / "recording_g0_t0.imec0.ap.meta").write_text("imSampRate=30000\n")
+
+        # Test real detection logic
+        detected_format = await conversion_agent_real._detect_format(str(spikeglx_dir), global_state)
+
+        # Verify real code executed
+        assert detected_format == "SpikeGLX"
+        assert len(global_state.logs) > 0
+        assert any("SpikeGLX" in log.message for log in global_state.logs)
+
+    @pytest.mark.asyncio
+    async def test_real_openephys_detection_workflow(self, conversion_agent_real, tmp_path, global_state):
+        """Test real OpenEphys format detection."""
+        openephys_dir = tmp_path / "openephys_data"
+        openephys_dir.mkdir()
+        (openephys_dir / "structure.oebin").write_text('{"format": "openephys"}')
+
+        detected_format = await conversion_agent_real._detect_format(str(openephys_dir), global_state)
+
+        assert detected_format == "OpenEphys"
+        assert any("OpenEphys" in log.message for log in global_state.logs)
+
+    @pytest.mark.asyncio
+    async def test_real_format_detection_unknown_file(self, conversion_agent_real, tmp_path, global_state):
+        """Test real format detection with unknown file."""
+        unknown_file = tmp_path / "unknown.dat"
+        unknown_file.write_bytes(b"unknown data")
+
+        detected_format = await conversion_agent_real._detect_format(str(unknown_file), global_state)
+
+        # Should return None for unknown format
+        assert detected_format is None
+
+    @pytest.mark.asyncio
+    async def test_real_format_detector_initialization(self, conversion_agent_real):
+        """Test that real format detector is initialized when LLM is available."""
+        # conversion_agent_real uses mock_llm_api_only (MockLLMService)
+        assert conversion_agent_real._llm_service is not None
+        assert conversion_agent_real._format_detector is not None
+
+    @pytest.mark.asyncio
+    async def test_real_supported_formats_loading(self, conversion_agent_real):
+        """Test that real supported formats list is loaded."""
+        # Agent should have real supported formats from NeuroConv
+        assert len(conversion_agent_real._supported_formats) > 0
+        # Check for common format interfaces (real names from NeuroConv)
+        common_formats = ["SpikeGLXRecordingInterface", "OpenEphysRecordingInterface"]
+        for fmt in common_formats:
+            assert fmt in conversion_agent_real._supported_formats
+
+    def test_real_is_spikeglx_helper_with_various_patterns(self, conversion_agent_real, tmp_path):
+        """Test real _is_spikeglx helper with various file patterns."""
+        test_cases = [
+            ("recording.ap.bin", True),
+            ("recording.lf.bin", True),
+            ("recording.nidq.bin", True),
+            ("recording.bin", False),
+            ("recording.ap.txt", False),
+        ]
+
+        for filename, expected in test_cases:
+            test_file = tmp_path / filename
+            test_file.touch()
+            result = conversion_agent_real._is_spikeglx(test_file)
+            assert result == expected, f"Failed for {filename}: expected {expected}, got {result}"
+
+    def test_real_is_openephys_helper_with_various_files(self, conversion_agent_real, tmp_path):
+        """Test real _is_openephys helper with various file patterns."""
+        test_dir = tmp_path / "test_dir"
+        test_dir.mkdir()
+
+        # Test with structure.oebin
+        (test_dir / "structure.oebin").touch()
+        assert conversion_agent_real._is_openephys(test_dir) is True
+
+        # Clean up and test with settings.xml
+        (test_dir / "structure.oebin").unlink()
+        (test_dir / "settings.xml").touch()
+        assert conversion_agent_real._is_openephys(test_dir) is True
+
+    def test_real_is_neuropixels_helper(self, conversion_agent_real, tmp_path):
+        """Test real _is_neuropixels helper."""
+        # Neuropixels file
+        neuropixels_file = tmp_path / "recording.nidq.bin"
+        neuropixels_file.touch()
+        assert conversion_agent_real._is_neuropixels(neuropixels_file) is True
+
+        # Non-neuropixels file
+        other_file = tmp_path / "recording.dat"
+        other_file.touch()
+        assert conversion_agent_real._is_neuropixels(other_file) is False
+
+    @pytest.mark.asyncio
+    async def test_real_error_handling_for_missing_path(self, conversion_agent_real, global_state):
+        """Test real error handling when path doesn't exist."""
+        non_existent_path = "/tmp/non_existent_path_12345"
+
+        detected_format = await conversion_agent_real._detect_format(non_existent_path, global_state)
+
+        # Should handle error gracefully
+        assert detected_format is None
+        # Should have logged something (may be ERROR or WARNING depending on implementation)
+        assert len(global_state.logs) > 0
