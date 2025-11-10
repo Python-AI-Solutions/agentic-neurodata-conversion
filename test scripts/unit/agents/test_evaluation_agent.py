@@ -1815,29 +1815,28 @@ class TestRealValidationWorkflows:
         # Should have validation analyzer when LLM is available
         assert evaluation_agent_real._validation_analyzer is not None
 
-        # Should have smart validators and resolvers
-        assert evaluation_agent_real._smart_validator is not None
-        assert evaluation_agent_real._smart_issue_resolver is not None
-        assert evaluation_agent_real._validation_history_learner is not None
+        # Should have intelligent evaluation modules
+        assert evaluation_agent_real._issue_resolution is not None
+        assert evaluation_agent_real._history_learner is not None
 
     @pytest.mark.asyncio
     async def test_real_smart_validation_logic(self, evaluation_agent_real):
         """Test real smart validation logic if available."""
-        if evaluation_agent_real._smart_validator:
-            # Test that smart validator can be used
-            validator = evaluation_agent_real._smart_validator
-            assert validator is not None
-            # Smart validator should have LLM service
-            assert validator._llm_service is not None
+        if evaluation_agent_real._validation_analyzer:
+            # Test that validation analyzer can be used
+            analyzer = evaluation_agent_real._validation_analyzer
+            assert analyzer is not None
+            # Analyzer should have LLM service
+            assert analyzer.llm_service is not None
 
     @pytest.mark.asyncio
     async def test_real_issue_resolution_suggestions(self, evaluation_agent_real):
         """Test real issue resolution logic if available."""
-        if evaluation_agent_real._smart_issue_resolver:
+        if evaluation_agent_real._issue_resolution:
             # Test that resolver can analyze issues
-            resolver = evaluation_agent_real._smart_issue_resolver
+            resolver = evaluation_agent_real._issue_resolution
             assert resolver is not None
-            assert resolver._llm_service is not None
+            assert resolver.llm_service is not None
 
     @pytest.mark.asyncio
     async def test_real_validation_analyzer_initialization(self, evaluation_agent_real):
@@ -1848,7 +1847,7 @@ class TestRealValidationWorkflows:
     @pytest.mark.asyncio
     async def test_real_validation_history_learner_exists(self, evaluation_agent_real):
         """Test that validation history learner is initialized."""
-        assert evaluation_agent_real._validation_history_learner is not None
-        learner = evaluation_agent_real._validation_history_learner
+        assert evaluation_agent_real._history_learner is not None
+        learner = evaluation_agent_real._history_learner
         # Should have LLM service
-        assert learner._llm_service is not None
+        assert learner.llm_service is not None

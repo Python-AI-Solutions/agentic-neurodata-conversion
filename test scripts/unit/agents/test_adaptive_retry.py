@@ -631,42 +631,65 @@ class TestRealAdaptiveRetryWorkflows:
 
         strategy = AdaptiveRetryStrategy(llm_service=None)
 
-        # Test with real decision logic
-        global_state.correction_attempts = 2
-        should_retry = strategy.should_retry_correction(global_state)
+        # Test with real decision logic at attempt 2
+        global_state.correction_attempt = 2
+        validation_result = {"issues": [{"message": "Some error", "check_function_name": "check1"}]}
 
-        # Should return a boolean
-        assert isinstance(should_retry, bool)
+        result = await strategy.analyze_and_recommend_strategy(global_state, validation_result)
+
+        # Should return a recommendation with should_retry field
+        assert isinstance(result, dict)
+        assert "should_retry" in result
+        assert isinstance(result["should_retry"], bool)
 
     @pytest.mark.asyncio
     async def test_real_max_attempts_logic(self, global_state):
         """Test real max attempts enforcement."""
         from agents.adaptive_retry import AdaptiveRetryStrategy
-        from agents.conversation_agent import MAX_CORRECTION_ATTEMPTS
 
         strategy = AdaptiveRetryStrategy(llm_service=None)
 
-        # Test at max attempts
-        global_state.correction_attempts = MAX_CORRECTION_ATTEMPTS
-        should_retry = strategy.should_retry_correction(global_state)
+        # Test at max attempts (5)
+        global_state.correction_attempt = 5
+        validation_result = {"issues": [{"message": "Persistent error"}]}
 
-        # Should not retry when at max
-        assert should_retry is False
+        result = await strategy.analyze_and_recommend_strategy(global_state, validation_result)
+
+        # Should not retry when at max attempts
+        assert result["should_retry"] is False
+        assert result["strategy"] == "stop"
 
     @pytest.mark.asyncio
     async def test_real_analyze_and_recommend(self, mock_llm_api_only, global_state):
         """Test real analyze and recommend strategy."""
         from agents.adaptive_retry import AdaptiveRetryStrategy
 
+        # Configure mock LLM to return proper structured output
+        mock_llm_api_only.generate_structured_output = AsyncMock(
+            return_value={
+                "should_retry": True,
+                "strategy": "retry_with_changes",
+                "approach": "focus_on_metadata",
+                "root_cause": "Minor validation issue",
+                "message": "Retrying with improved approach",
+                "ask_user": False,
+                "reasoning": "Issues can be resolved automatically",
+            }
+        )
+
         strategy = AdaptiveRetryStrategy(llm_service=mock_llm_api_only)
 
         # Set up state with validation result
-        global_state.correction_attempts = 1
-        global_state.validation_result = {"issues": []}
+        global_state.correction_attempt = 1
+        validation_result = {"issues": [{"message": "Minor error", "check_function_name": "check1"}]}
 
         # Test real analysis
-        recommendation = await strategy.analyze_and_recommend_strategy(global_state)
+        result = await strategy.analyze_and_recommend_strategy(global_state, validation_result)
 
-        # Should return a recommendation
-        assert recommendation is not None
-        assert "action" in recommendation
+        # Should return a recommendation with expected fields
+        assert result is not None
+        assert "should_retry" in result
+        assert result["should_retry"] is True
+        assert "strategy" in result
+        assert result["strategy"] == "retry_with_changes"
+        assert "message" in result

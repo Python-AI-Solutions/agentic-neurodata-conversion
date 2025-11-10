@@ -404,6 +404,49 @@ def mock_llm_api_only():
 
 
 # ============================================================================
+# Real Agent Instance Fixtures
+# ============================================================================
+
+
+@pytest.fixture
+def real_conversational_handler(mock_llm_service):
+    """
+    Create a real ConversationalHandler instance with MockLLMService.
+
+    This fixture provides a fully functional ConversationalHandler that uses
+    real helper agents (MetadataRequestStrategy, MetadataParser, ContextManager)
+    but mocked LLM service, allowing tests to validate actual interaction logic
+    without making real API calls.
+
+    Use this instead of mocking the conversational_handler or its helper agents
+    to test real conversation flow and metadata handling logic.
+
+    Returns:
+        ConversationalHandler: Real instance with:
+            - Real MetadataRequestStrategy
+            - Real MetadataParser (with MockLLMService)
+            - Real ContextManager
+            - MockLLMService for LLM calls
+
+    Example:
+        def test_conversation_flow(real_conversational_handler, global_state):
+            result = await real_conversational_handler.process_user_response(
+                "The experimenter is Dr. Smith",
+                global_state
+            )
+            assert result["type"] == "metadata_provided"
+            assert "experimenter" in result["extracted_metadata"]
+
+    See also:
+        - mock_llm_service: Used internally by this fixture
+        - global_state: Use with this fixture for state management
+    """
+    from agents.conversational_handler import ConversationalHandler
+
+    return ConversationalHandler(llm_service=mock_llm_service)
+
+
+# ============================================================================
 # Infrastructure Mock Fixtures
 # ============================================================================
 
