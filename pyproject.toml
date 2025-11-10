@@ -136,7 +136,7 @@ exclude = ["tests*", "test scripts*"]
 # ============================================================================
 [tool.black]
 line-length = 120
-target-version = ['py39', 'py310', 'py311', 'py312']
+target-version = ['py39', 'py310', 'py311', 'py312', 'py313']
 include = '\.pyi?$'
 extend-exclude = '''
 /(
@@ -176,7 +176,7 @@ skip_glob = [
 # ============================================================================
 [tool.ruff]
 line-length = 120
-target-version = "py39"
+target-version = "py313"
 
 # Enable specific rule sets
 select = [
@@ -283,6 +283,7 @@ markers = [
     "unit: Unit tests for individual components (fast, no external dependencies)",
     "integration: Integration tests between multiple components",
     "e2e: End-to-end tests for complete workflows",
+    "property: Property-based tests using Hypothesis for robust validation",
     "slow: Tests that take more than 5 seconds to run",
     "llm: Tests that involve LLM API calls (may incur costs)",
     "api: Tests for REST API endpoints",
