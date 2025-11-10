@@ -654,7 +654,7 @@ class TestExtractFileContext:
 class TestRealConversationalHandlerWorkflows:
     """
     Integration-style unit tests using real ConversationalHandler with MockLLMService.
-    
+
     Tests real conversation logic instead of mocking it away.
     """
 
@@ -662,9 +662,9 @@ class TestRealConversationalHandlerWorkflows:
     async def test_real_handler_initialization(self, mock_llm_api_only):
         """Test real handler initialization with LLM service."""
         from agents.conversational_handler import ConversationalHandler
-        
+
         handler = ConversationalHandler(llm_service=mock_llm_api_only)
-        
+
         # Verify real initialization
         assert handler._llm_service is not None
         assert handler._llm_service == mock_llm_api_only
@@ -673,15 +673,15 @@ class TestRealConversationalHandlerWorkflows:
     async def test_real_message_processing(self, mock_llm_api_only, global_state):
         """Test real message processing logic."""
         from agents.conversational_handler import ConversationalHandler
-        
+
         handler = ConversationalHandler(llm_service=mock_llm_api_only)
-        
+
         # Test with real handler
         user_message = "What file formats do you support?"
-        
+
         # Process with real logic
         response = await handler.generate_response(user_message, global_state)
-        
+
         # Verify real processing happened
         assert isinstance(response, str)
         assert len(response) > 0
@@ -690,15 +690,15 @@ class TestRealConversationalHandlerWorkflows:
     async def test_real_context_management(self, mock_llm_api_only, global_state):
         """Test that handler manages conversation context."""
         from agents.conversational_handler import ConversationalHandler
-        
+
         handler = ConversationalHandler(llm_service=mock_llm_api_only)
-        
+
         # Verify handler can access state
         assert global_state is not None
-        
+
         # Process multiple messages to test context
         response1 = await handler.generate_response("Hello", global_state)
         response2 = await handler.generate_response("What can you do?", global_state)
-        
+
         assert isinstance(response1, str)
         assert isinstance(response2, str)

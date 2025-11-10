@@ -478,7 +478,7 @@ class TestIntelligentErrorRecoveryIntegration:
 class TestRealErrorRecoveryWorkflows:
     """
     Integration-style unit tests using real ErrorRecovery logic.
-    
+
     Tests real error analysis and recovery strategies.
     """
 
@@ -486,9 +486,9 @@ class TestRealErrorRecoveryWorkflows:
     async def test_real_error_recovery_initialization(self, mock_llm_api_only):
         """Test real error recovery initialization."""
         from agents.error_recovery import ErrorRecovery
-        
+
         recovery = ErrorRecovery(llm_service=mock_llm_api_only)
-        
+
         # Verify real initialization
         assert recovery._llm_service is not None
 
@@ -496,13 +496,13 @@ class TestRealErrorRecoveryWorkflows:
     async def test_real_error_analysis_without_llm(self, global_state):
         """Test real error analysis fallback logic."""
         from agents.error_recovery import ErrorRecovery
-        
+
         recovery = ErrorRecovery(llm_service=None)
-        
+
         # Test with real fallback logic
         error = Exception("Test error")
         suggestion = recovery.suggest_recovery(error, global_state)
-        
+
         # Should return a string suggestion
         assert isinstance(suggestion, str) or suggestion is None
 
@@ -510,12 +510,12 @@ class TestRealErrorRecoveryWorkflows:
     async def test_real_error_categorization(self, mock_llm_api_only):
         """Test real error categorization logic."""
         from agents.error_recovery import ErrorRecovery
-        
+
         recovery = ErrorRecovery(llm_service=mock_llm_api_only)
-        
+
         # Test categorization with real logic
         error = ValueError("Missing required field")
         category = recovery.categorize_error(error)
-        
+
         # Should return a category
         assert isinstance(category, str)

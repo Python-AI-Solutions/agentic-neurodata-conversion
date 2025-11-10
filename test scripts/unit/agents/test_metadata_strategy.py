@@ -599,7 +599,7 @@ class TestOfferOptionalBatch:
 class TestRealMetadataStrategyWorkflows:
     """
     Integration-style unit tests using real MetadataStrategy logic.
-    
+
     Tests real metadata strategy decisions instead of mocking.
     """
 
@@ -607,9 +607,9 @@ class TestRealMetadataStrategyWorkflows:
     async def test_real_strategy_initialization(self, mock_llm_api_only):
         """Test real metadata strategy initialization."""
         from agents.metadata_strategy import MetadataStrategy
-        
+
         strategy = MetadataStrategy(llm_service=mock_llm_api_only)
-        
+
         # Verify real initialization
         assert strategy._llm_service is not None
 
@@ -618,12 +618,12 @@ class TestRealMetadataStrategyWorkflows:
         """Test real metadata request policy logic."""
         from agents.metadata_strategy import MetadataStrategy
         from models import MetadataRequestPolicy
-        
+
         strategy = MetadataStrategy(llm_service=None)
-        
+
         # Test without LLM (rule-based decision)
         policy = strategy.determine_metadata_request_policy(global_state)
-        
+
         # Should return a valid policy
         assert isinstance(policy, MetadataRequestPolicy)
 
@@ -631,11 +631,11 @@ class TestRealMetadataStrategyWorkflows:
     async def test_real_strategy_with_llm(self, mock_llm_api_only, global_state):
         """Test real strategy decision with LLM."""
         from agents.metadata_strategy import MetadataStrategy
-        
+
         strategy = MetadataStrategy(llm_service=mock_llm_api_only)
-        
+
         # Test with real LLM service
         policy = strategy.determine_metadata_request_policy(global_state)
-        
+
         # Should return a valid policy from real logic
         assert policy is not None

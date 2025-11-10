@@ -5974,7 +5974,7 @@ class TestRealConversationWorkflows:
             strategy = conversation_agent_real._adaptive_retry_strategy
             # Strategy should be functional
             assert strategy is not None
-            
+
             # Test real retry decision logic
             global_state.correction_attempts = 2
             should_retry = strategy.should_retry_correction(global_state)
