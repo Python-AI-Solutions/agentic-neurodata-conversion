@@ -176,7 +176,7 @@ skip_glob = [
 # ============================================================================
 [tool.ruff]
 line-length = 120
-target-version = "py313"
+target-version = "py312"
 
 # Enable specific rule sets
 select = [
