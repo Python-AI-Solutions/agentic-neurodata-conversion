@@ -52,6 +52,7 @@ def validation_result():
     }
 
 
+@pytest.mark.unit
 class TestAdaptiveRetryStrategy:
     """Test suite for AdaptiveRetryStrategy."""
 

@@ -39,6 +39,7 @@ def state():
     return GlobalState()
 
 
+@pytest.mark.unit
 class TestConversationContextManager:
     """Test suite for ConversationContextManager."""
 
