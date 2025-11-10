@@ -6,7 +6,7 @@ and manages the global state.
 """
 
 import asyncio
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from models.mcp import MCPEvent, MCPMessage, MCPResponse
 from models.state import GlobalState, LogLevel
@@ -209,7 +209,7 @@ class MCPServer:
 
 
 # Global MCP server instance
-_mcp_server: Optional[MCPServer] = None
+_mcp_server: MCPServer | None = None
 
 
 def get_mcp_server() -> MCPServer:

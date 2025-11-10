@@ -15,7 +15,8 @@ import asyncio
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
 from anthropic import AsyncAnthropic
 
@@ -29,7 +30,7 @@ async def call_with_retry(
     base_delay: float = 1.0,
     max_delay: float = 10.0,
     exponential_base: float = 2.0,
-    fallback: Optional[Callable] = None,
+    fallback: Callable | None = None,
 ) -> Any:
     """
     Call async function with exponential backoff retry.
@@ -103,7 +104,7 @@ class LLMService(ABC):
     async def generate_completion(
         self,
         prompt: str,
-        system_prompt: Optional[str] = None,
+        system_prompt: str | None = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
     ) -> str:
@@ -129,7 +130,7 @@ class LLMService(ABC):
         self,
         prompt: str,
         output_schema: dict[str, Any],
-        system_prompt: Optional[str] = None,
+        system_prompt: str | None = None,
     ) -> dict[str, Any]:
         """
         Generate structured output matching a schema.
@@ -151,7 +152,7 @@ class LLMService(ABC):
 class LLMServiceError(Exception):
     """Base exception for LLM service errors."""
 
-    def __init__(self, message: str, provider: str, details: Optional[dict[str, Any]] = None):
+    def __init__(self, message: str, provider: str, details: dict[str, Any] | None = None):
         super().__init__(message)
         self.provider = provider
         self.details = details or {}
@@ -182,7 +183,7 @@ class AnthropicLLMService(LLMService):
     async def generate_completion(
         self,
         prompt: str,
-        system_prompt: Optional[str] = None,
+        system_prompt: str | None = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
         enable_retry: bool = True,
@@ -264,7 +265,7 @@ class AnthropicLLMService(LLMService):
         self,
         prompt: str,
         output_schema: dict[str, Any],
-        system_prompt: Optional[str] = None,
+        system_prompt: str | None = None,
     ) -> dict[str, Any]:
         """
         Generate structured output using Claude with prompt engineering.
@@ -388,7 +389,7 @@ class MockLLMService(LLMService):
     Returns predefined responses without making API calls.
     """
 
-    def __init__(self, responses: Optional[dict[str, str]] = None):
+    def __init__(self, responses: dict[str, str] | None = None):
         """
         Initialize mock LLM service.
 
@@ -401,7 +402,7 @@ class MockLLMService(LLMService):
     async def generate_completion(
         self,
         prompt: str,
-        system_prompt: Optional[str] = None,
+        system_prompt: str | None = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
     ) -> str:
@@ -412,7 +413,7 @@ class MockLLMService(LLMService):
         self,
         prompt: str,
         output_schema: dict[str, Any],
-        system_prompt: Optional[str] = None,
+        system_prompt: str | None = None,
     ) -> dict[str, Any]:
         """Return mock structured output."""
         # Return a minimal valid object based on schema
@@ -426,8 +427,8 @@ class MockLLMService(LLMService):
 # Factory function for creating LLM services
 def create_llm_service(
     provider: str = "anthropic",
-    api_key: Optional[str] = None,
-    model: Optional[str] = None,
+    api_key: str | None = None,
+    model: str | None = None,
     **kwargs,
 ) -> LLMService:
     """
