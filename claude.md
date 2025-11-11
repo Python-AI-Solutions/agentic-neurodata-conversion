@@ -43,10 +43,9 @@
 
 **Commands**: `pixi run lint` | `pixi run format` | `pixi run typecheck`
 
-**Pre-commit**: `pre-commit install` - Runs Black, Ruff, MyPy, Bandit before commit. Override: `git commit --no-verify`
+**Pre-commit**: `pre-commit install` - Runs Ruff (lint & format), MyPy, Bandit before commit. Override: `git commit --no-verify`
 
 **Full check**: `pixi run lint && pixi run format && pixi run typecheck && pixi run test`
-
 
 ### Testing
 
@@ -62,7 +61,6 @@
 - ✅ `@pytest.mark.asyncio` for async tests | `AsyncMock` for async methods
 - ❌ NO `if __name__ == "__main__"` blocks | NO hardcoded paths | NO shared mutable state
 
-**See [TESTING.md](TESTING.md) for comprehensive guide with examples**
 
 ### Running Services
 
@@ -139,7 +137,7 @@
 
 **Don't commit**: `.env`, `outputs/`, `logs/`, `test_data/`, `__pycache__/`, `.pixi/`, `htmlcov/`
 
-**Pre-commit**: Enforced automatically (Black, Ruff, MyPy, Bandit)
+**Pre-commit**: Enforced automatically (Ruff, MyPy, Bandit)
 
 ---
 
@@ -147,6 +145,6 @@
 
 **Constitution**: [.specify/memory/constitution.md](.specify/memory/constitution.md) - supersedes all docs
 
-**Config Files**: [pixi.toml](pixi.toml) | [pyproject.toml](pyproject.toml) | [pytest.ini](pytest.ini)
+**Config Files**: [pixi.toml](pixi.toml) | [pyproject.toml](pyproject.toml)
 
 **Version**: 2.0.0 | Python 3.13+ | Claude Sonnet 4.5

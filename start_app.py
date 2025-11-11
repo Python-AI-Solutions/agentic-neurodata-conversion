@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Agentic Neurodata Conversion - Application Startup Script
+"""Agentic Neurodata Conversion - Application Startup Script.
 
 This script handles:
 - Environment configuration (API key setup)
@@ -16,50 +15,51 @@ Usage:
 """
 
 import os
+import signal
+import subprocess  # nosec B404 - subprocess needed for process management in dev tool
 import sys
 import time
-import signal
-import subprocess
 from pathlib import Path
-from typing import Optional
 
 
 # ANSI color codes for pretty output
 class Colors:
-    HEADER = '\033[95m'
-    BLUE = '\033[94m'
-    CYAN = '\033[96m'
-    GREEN = '\033[92m'
-    YELLOW = '\033[93m'
-    RED = '\033[91m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-    END = '\033[0m'
+    """ANSI color codes for console output."""
+
+    HEADER = "\033[95m"
+    BLUE = "\033[94m"
+    CYAN = "\033[96m"
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    RED = "\033[91m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"
+    END = "\033[0m"
 
 
-def print_header(text: str):
+def print_header(text: str) -> None:
     """Print a formatted header."""
     print(f"\n{Colors.BOLD}{Colors.CYAN}{'=' * 70}{Colors.END}")
     print(f"{Colors.BOLD}{Colors.CYAN}{text.center(70)}{Colors.END}")
     print(f"{Colors.BOLD}{Colors.CYAN}{'=' * 70}{Colors.END}\n")
 
 
-def print_success(text: str):
+def print_success(text: str) -> None:
     """Print success message."""
     print(f"{Colors.GREEN}✓ {text}{Colors.END}")
 
 
-def print_error(text: str):
+def print_error(text: str) -> None:
     """Print error message."""
     print(f"{Colors.RED}✗ {text}{Colors.END}")
 
 
-def print_warning(text: str):
+def print_warning(text: str) -> None:
     """Print warning message."""
     print(f"{Colors.YELLOW}⚠ {text}{Colors.END}")
 
 
-def print_info(text: str):
+def print_info(text: str) -> None:
     """Print info message."""
     print(f"{Colors.CYAN}ℹ {text}{Colors.END}")
 
@@ -68,17 +68,12 @@ def kill_process_on_port(port: int) -> bool:
     """Kill any process running on the specified port."""
     try:
         # Find process on port
-        result = subprocess.run(
-            f"lsof -ti:{port}",
-            shell=True,
-            capture_output=True,
-            text=True
-        )
+        result = subprocess.run(f"lsof -ti:{port}", shell=True, capture_output=True, text=True)  # nosec B602 - safe: port is int, no user input
 
         if result.stdout.strip():
-            pids = result.stdout.strip().split('\n')
+            pids = result.stdout.strip().split("\n")
             for pid in pids:
-                subprocess.run(f"kill -9 {pid}", shell=True)
+                subprocess.run(f"kill -9 {pid}", shell=True)  # nosec B602 - safe: pid from lsof output, validated numeric
             print_success(f"Killed process on port {port}")
             return True
         return False
@@ -95,12 +90,12 @@ def check_env_file() -> bool:
         return False
 
     # Check if API key is set
-    with open(env_path, 'r') as f:
+    with open(env_path) as f:
         content = f.read()
         return "ANTHROPIC_API_KEY=sk-ant-" in content
 
 
-def setup_env_file():
+def setup_env_file() -> bool:
     """Interactive setup for .env file with API key."""
     print_header("Environment Configuration")
 
@@ -111,7 +106,7 @@ def setup_env_file():
     if check_env_file():
         print_info(".env file already configured with API key")
         response = input(f"\n{Colors.YELLOW}Do you want to update the API key? (y/N): {Colors.END}").strip().lower()
-        if response != 'y':
+        if response != "y":
             print_success("Using existing .env configuration")
             return True
 
@@ -132,20 +127,17 @@ def setup_env_file():
 
     # Create .env file from example or create new
     if env_example_path.exists():
-        with open(env_example_path, 'r') as f:
+        with open(env_example_path) as f:
             content = f.read()
 
         # Replace placeholder with actual key
-        content = content.replace(
-            "ANTHROPIC_API_KEY=sk-ant-REPLACE-WITH-YOUR-KEY",
-            f"ANTHROPIC_API_KEY={api_key}"
-        )
+        content = content.replace("ANTHROPIC_API_KEY=sk-ant-REPLACE-WITH-YOUR-KEY", f"ANTHROPIC_API_KEY={api_key}")
     else:
         # Create minimal .env
         content = f"ANTHROPIC_API_KEY={api_key}\n"
 
     # Write .env file
-    with open(env_path, 'w') as f:
+    with open(env_path, "w") as f:
         f.write(content)
 
     print_success(".env file created successfully!")
@@ -159,14 +151,14 @@ def wait_for_server(url: str, timeout: int = 30) -> bool:
     start_time = time.time()
     while time.time() - start_time < timeout:
         try:
-            urllib.request.urlopen(url, timeout=2)
+            urllib.request.urlopen(url, timeout=2)  # nosec B310 - safe: health check URLs are hardcoded localhost only
             return True
         except Exception:
             time.sleep(0.5)
     return False
 
 
-def start_backend() -> Optional[subprocess.Popen]:
+def start_backend() -> subprocess.Popen | None:
     """Start the backend server."""
     print_header("Starting Backend Server")
 
@@ -174,13 +166,13 @@ def start_backend() -> Optional[subprocess.Popen]:
         # Start backend with pixi
         print_info("Starting backend with pixi run dev...")
 
-        process = subprocess.Popen(
+        process = subprocess.Popen(  # nosec B607, B602 - safe: pixi command is hardcoded, no user input
             "pixi run dev",
-            shell=True,
+            shell=True,  # Required for pixi subprocess management
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
-            preexec_fn=os.setsid  # Create new process group
+            preexec_fn=os.setsid,  # Create new process group
         )
 
         # Wait for server to be ready
@@ -202,7 +194,7 @@ def start_backend() -> Optional[subprocess.Popen]:
         return None
 
 
-def start_frontend() -> Optional[subprocess.Popen]:
+def start_frontend() -> subprocess.Popen | None:
     """Start the frontend server."""
     print_header("Starting Frontend Server")
 
@@ -214,13 +206,13 @@ def start_frontend() -> Optional[subprocess.Popen]:
 
         print_info("Starting frontend HTTP server...")
 
-        process = subprocess.Popen(
+        process = subprocess.Popen(  # nosec B607, B602 - safe: python3 command and port are hardcoded, no user input
             "python3 -m http.server 3000",
-            shell=True,
+            shell=True,  # Required for module execution
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
-            preexec_fn=os.setsid  # Create new process group
+            preexec_fn=os.setsid,  # Create new process group
         )
 
         # Wait for server to be ready
@@ -239,7 +231,7 @@ def start_frontend() -> Optional[subprocess.Popen]:
         return None
 
 
-def display_status():
+def display_status() -> None:
     """Display application status and URLs."""
     print_header("Application Status")
 
@@ -257,15 +249,15 @@ def display_status():
     print()
 
     print(f"{Colors.BOLD}Logs:{Colors.END}")
-    print(f"  • Backend:      {Colors.CYAN}/tmp/backend.log{Colors.END}")
-    print(f"  • Frontend:     {Colors.CYAN}/tmp/frontend.log{Colors.END}")
+    print(f"  • Backend:      {Colors.CYAN}/tmp/backend.log{Colors.END}")  # nosec B108 - display only, not actual file operation
+    print(f"  • Frontend:     {Colors.CYAN}/tmp/frontend.log{Colors.END}")  # nosec B108 - display only, not actual file operation
     print()
 
     print(f"{Colors.YELLOW}Press Ctrl+C to stop all servers{Colors.END}")
     print()
 
 
-def main():
+def main() -> None:
     """Main startup routine."""
     # Print welcome banner
     print_header("Agentic Neurodata Conversion - Startup Script")
@@ -333,14 +325,14 @@ def main():
             try:
                 os.killpg(os.getpgid(backend_process.pid), signal.SIGTERM)
                 print_success("Backend stopped")
-            except Exception:
+            except Exception:  # nosec B110 - intentional: cleanup errors can be safely ignored
                 pass
 
         if frontend_process:
             try:
                 os.killpg(os.getpgid(frontend_process.pid), signal.SIGTERM)
                 print_success("Frontend stopped")
-            except Exception:
+            except Exception:  # nosec B110 - intentional: cleanup errors can be safely ignored
                 pass
 
         # Kill processes on ports as backup

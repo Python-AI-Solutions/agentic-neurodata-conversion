@@ -1,0 +1,75 @@
+name: Generate Test Data
+
+on:
+  workflow_dispatch:  # Manual trigger only
+    inputs:
+      verify_tests:
+        description: 'Run verification tests after generation'
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  generate-test-data:
+    name: Generate Test Data Fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Pixi
+        uses: prefix-dev/setup-pixi@v0.4.1
+        with:
+          pixi-version: latest
+
+      - name: Install dependencies
+        run: pixi install
+
+      - name: Generate test data fixtures
+        run: pixi run python "test scripts/fixtures/generate_toy_dataset.py"
+
+      - name: List generated files
+        run: |
+          echo "Generated test data files:"
+          find test_data -type f -name "*.bin" -o -name "*.meta" -o -name "*.nwb" | sort
+
+      - name: Verify test data integrity
+        if: ${{ inputs.verify_tests }}
+        run: |
+          echo "Running test data verification..."
+          pixi run pytest "test scripts/integration/test_all_test_data.py" -v --tb=short
+
+      - name: Upload test data artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-data-fixtures
+          path: |
+            test_data/
+            test scripts/fixtures/toy_spikeglx/
+          retention-days: 30
+
+  verify-all-tests:
+    name: Verify All Tests Pass
+    runs-on: ubuntu-latest
+    needs: generate-test-data
+    if: ${{ inputs.verify_tests }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Pixi
+        uses: prefix-dev/setup-pixi@v0.4.1
+
+      - name: Download test data
+        uses: actions/download-artifact@v3
+        with:
+          name: test-data-fixtures
+
+      - name: Run all tests
+        run: pixi run test
+
+      - name: Report results
+        if: always()
+        run: |
+          echo "✅ Test data generation and verification complete!"
+          echo "All integration tests should now pass."

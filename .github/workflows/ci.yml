@@ -1,0 +1,128 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, try2_full_prj_adi_v2]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-format:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Pixi
+        uses: prefix-dev/setup-pixi@v0.4.1
+        with:
+          pixi-version: latest
+
+      - name: Run pre-commit checks
+        run: pixi run exec pre-commit run --all-files
+        continue-on-error: false
+
+      - name: Run Ruff linting
+        run: pixi run lint
+        continue-on-error: false
+
+      - name: Check Ruff formatting
+        run: pixi run exec ruff format --check backend/ "test scripts/"
+        continue-on-error: false
+
+      - name: Run type checking with MyPy
+        run: pixi run typecheck
+        continue-on-error: true  # MyPy warnings shouldn't block CI initially
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.13']
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Pixi
+        uses: prefix-dev/setup-pixi@v0.4.1
+        with:
+          pixi-version: latest
+
+      - name: Install dependencies
+        run: pixi install
+
+      - name: Run unit tests
+        run: pixi run test-unit
+        continue-on-error: false
+
+      - name: Run integration tests
+        run: pixi run test-integration
+        continue-on-error: true  # Integration tests may need test data
+
+      - name: Generate coverage report
+        run: pixi run exec pytest "test scripts" --cov=backend/src --cov-report=xml --cov-report=term-missing
+        continue-on-error: false
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false
+          flags: unittests
+          name: codecov-${{ matrix.python-version }}
+
+      - name: Check coverage threshold (60%)
+        run: pixi run exec coverage report --fail-under=60
+        continue-on-error: false
+
+  security:
+    name: Security Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Pixi
+        uses: prefix-dev/setup-pixi@v0.4.1
+        with:
+          pixi-version: latest
+
+      - name: Run Bandit security checks
+        run: |
+          pixi run exec bandit -r backend/src -f json -o bandit-report.json || true
+          pixi run exec bandit -r backend/src
+        continue-on-error: true
+
+      - name: Upload security report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-report
+          path: bandit-report.json
+
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [lint-and-format, test, security]
+    if: always()
+    steps:
+      - name: Check job statuses
+        run: |
+          echo "Lint and Format: ${{ needs.lint-and-format.result }}"
+          echo "Tests: ${{ needs.test.result }}"
+          echo "Security: ${{ needs.security.result }}"
+
+          if [ "${{ needs.lint-and-format.result }}" != "success" ]; then
+            echo "❌ Code quality checks failed"
+            exit 1
+          fi
+
+          if [ "${{ needs.test.result }}" != "success" ]; then
+            echo "❌ Tests failed"
+            exit 1
+          fi
+
+          echo "✅ All checks passed!"
