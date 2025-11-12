@@ -11,6 +11,7 @@ Tests the LLM service abstraction layer including:
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+from anthropic.types import TextBlock
 from services.llm_service import (
     AnthropicLLMService,
     LLMServiceError,
@@ -103,7 +104,7 @@ class TestAnthropicLLMService:
     async def test_generate_completion_success(self):
         """Test successful text generation."""
         mock_response = Mock()
-        mock_content = Mock()
+        mock_content = Mock(spec=TextBlock)
         mock_content.text = "Generated response"
         mock_response.content = [mock_content]
 
@@ -122,7 +123,7 @@ class TestAnthropicLLMService:
     async def test_generate_completion_with_temperature(self):
         """Test generation with custom temperature."""
         mock_response = Mock()
-        mock_content = Mock()
+        mock_content = Mock(spec=TextBlock)
         mock_content.text = "Response"
         mock_response.content = [mock_content]
 
@@ -170,7 +171,7 @@ class TestAnthropicLLMService:
     async def test_generate_structured_output_json_response(self):
         """Test structured output with clean JSON response."""
         mock_response = Mock()
-        mock_content = Mock()
+        mock_content = Mock(spec=TextBlock)
         mock_content.text = '{"name": "Alice", "age": 30}'
         mock_response.content = [mock_content]
 
@@ -196,7 +197,7 @@ class TestAnthropicLLMService:
     async def test_generate_structured_output_markdown_wrapped(self):
         """Test structured output wrapped in markdown code blocks."""
         mock_response = Mock()
-        mock_content = Mock()
+        mock_content = Mock(spec=TextBlock)
         mock_content.text = '```json\n{"key": "value"}\n```'
         mock_response.content = [mock_content]
 
@@ -214,7 +215,7 @@ class TestAnthropicLLMService:
     async def test_generate_structured_output_generic_code_block(self):
         """Test structured output in generic code blocks."""
         mock_response = Mock()
-        mock_content = Mock()
+        mock_content = Mock(spec=TextBlock)
         mock_content.text = '```\n{"data": 123}\n```'
         mock_response.content = [mock_content]
 
@@ -232,7 +233,7 @@ class TestAnthropicLLMService:
     async def test_generate_structured_output_invalid_json(self):
         """Test handling of invalid JSON in response."""
         mock_response = Mock()
-        mock_content = Mock()
+        mock_content = Mock(spec=TextBlock)
         mock_content.text = "Not valid JSON {broken"
         mock_response.content = [mock_content]
 
@@ -252,7 +253,7 @@ class TestAnthropicLLMService:
     async def test_generate_structured_output_uses_lower_temperature(self):
         """Test that structured output uses lower temperature."""
         mock_response = Mock()
-        mock_content = Mock()
+        mock_content = Mock(spec=TextBlock)
         mock_content.text = '{"test": true}'
         mock_response.content = [mock_content]
 

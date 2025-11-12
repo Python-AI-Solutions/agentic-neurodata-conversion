@@ -18,6 +18,7 @@ from collections.abc import Callable
 from typing import Any
 
 from anthropic import AsyncAnthropic
+from anthropic.types import MessageParam, TextBlock
 
 # Configure logger for LLM performance monitoring
 logger = logging.getLogger(__name__)
@@ -198,17 +199,7 @@ class AnthropicLLMService(LLMService):
         """
 
         async def _api_call():
-            messages = [{"role": "user", "content": prompt}]
-
-            kwargs = {
-                "model": self._model,
-                "messages": messages,
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-            }
-
-            if system_prompt:
-                kwargs["system"] = system_prompt
+            messages: list[MessageParam] = [{"role": "user", "content": prompt}]
 
             # Start performance monitoring
             start_time = time.time()
@@ -217,7 +208,22 @@ class AnthropicLLMService(LLMService):
             )
 
             try:
-                response = await self._client.messages.create(**kwargs)
+                # Call API with explicit parameters for type safety
+                if system_prompt:
+                    response = await self._client.messages.create(
+                        model=self._model,
+                        messages=messages,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        system=system_prompt,
+                    )
+                else:
+                    response = await self._client.messages.create(
+                        model=self._model,
+                        messages=messages,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                    )
 
                 # Log performance metrics
                 duration = time.time() - start_time
@@ -230,7 +236,15 @@ class AnthropicLLMService(LLMService):
 
                 # Extract text from response
                 if response.content and len(response.content) > 0:
-                    return response.content[0].text
+                    first_block = response.content[0]
+                    if isinstance(first_block, TextBlock):
+                        return first_block.text
+                    else:
+                        raise LLMServiceError(
+                            f"Unexpected content block type: {type(first_block).__name__}",
+                            provider="anthropic",
+                            details={"model": self._model, "duration": duration},
+                        )
                 else:
                     raise LLMServiceError(
                         "Empty response from API",
