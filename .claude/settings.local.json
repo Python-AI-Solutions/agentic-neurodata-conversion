@@ -14,7 +14,8 @@
       "Read(//private/var/folders/ks/g26dg74n6l9djm0hbp0dz_cm0000gn/T/nwb_conversions/**)",
       "Bash(/dev/null)",
       "Bash(lsof -ti:300)",
-      "Bash(node -c chat-ui.html)"
+      "Bash(node -c chat-ui.html)",
+      "Bash(pixi run ruff:*)"
     ],
     "deny": [],
     "ask": []
