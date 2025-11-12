@@ -29,10 +29,10 @@ repos:
       - id: ruff
         name: Lint code with Ruff
         args: [--fix, --exit-non-zero-on-fix]
-        files: ^(backend/|start_app\.py)
+        files: ^(backend/|test scripts/|start_app\.py)
       - id: ruff-format
         name: Format code with Ruff
-        files: ^(backend/|start_app\.py)
+        files: ^(backend/|test scripts/|start_app\.py)
 
   # Type checking with mypy
   - repo: https://github.com/pre-commit/mirrors-mypy

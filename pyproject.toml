@@ -195,7 +195,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401", "D"]  # Allow unused imports and skip docstrings in __init__.py
-"test scripts/**/*.py" = ["ARG", "S101", "D"]  # Allow unused args, assert, and skip docstrings in tests
+"test scripts/**/*.py" = ["ARG", "S101", "D", "SIM"]  # Allow unused args, assert, skip docstrings and simplify rules in tests
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"  # Enforce Google-style docstrings
