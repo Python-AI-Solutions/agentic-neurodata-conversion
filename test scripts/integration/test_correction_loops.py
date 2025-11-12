@@ -27,6 +27,7 @@ def mock_agents(mock_llm_service):
 
 
 @pytest.mark.integration
+@pytest.mark.agent_conversation
 class TestRetryLoopWorkflows:
     """Test various retry/improvement scenarios."""
 
@@ -127,6 +128,7 @@ class TestRetryLoopWorkflows:
 
 
 @pytest.mark.integration
+@pytest.mark.agent_conversation
 class TestUnlimitedRetries:
     """Test unlimited retry capability (Epic 8, Story 8.5)."""
 
@@ -180,6 +182,7 @@ class TestUnlimitedRetries:
 
 
 @pytest.mark.integration
+@pytest.mark.agent_conversation
 class TestRetryStateManagement:
     """Test state management during retry loops."""
 
@@ -237,6 +240,7 @@ class TestRetryStateManagement:
 
 
 @pytest.mark.integration
+@pytest.mark.agent_conversation
 class TestRetryErrorHandling:
     """Test error handling during retry loops."""
 
@@ -269,6 +273,7 @@ class TestRetryErrorHandling:
 
 
 @pytest.mark.integration
+@pytest.mark.agent_conversation
 class TestRetryApprovalWorkflow:
     """Test user approval workflow for retries (Epic 8, Story 8.3)."""
 
@@ -326,6 +331,7 @@ class TestRetryApprovalWorkflow:
 
 
 @pytest.mark.integration
+@pytest.mark.agent_conversation
 class TestRetryNotificationMessages:
     """Test retry notification messages (Epic 8, Story 8.2)."""
 

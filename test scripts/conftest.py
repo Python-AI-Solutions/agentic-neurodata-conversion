@@ -35,16 +35,7 @@ from services import LLMService
 # ============================================================================
 # Pytest Configuration
 # ============================================================================
-
-
-def pytest_configure(config):
-    """Configure pytest with custom markers."""
-    config.addinivalue_line("markers", "unit: Unit tests (fast, isolated)")
-    config.addinivalue_line("markers", "integration: Integration tests")
-    config.addinivalue_line("markers", "e2e: End-to-end tests")
-    config.addinivalue_line("markers", "slow: Tests that take >5 seconds")
-    config.addinivalue_line("markers", "llm: Tests involving LLM calls")
-    config.addinivalue_line("markers", "api: API endpoint tests")
+# Note: Markers are now defined in pyproject.toml only (no duplication)
 
 
 # ============================================================================
@@ -849,20 +840,29 @@ def cleanup_test_artifacts(request, tmp_path):
 
 
 def pytest_collection_modifyitems(config, items):
-    """Automatically mark tests based on their names and location."""
+    """Automatically mark tests based on their names and location.
+
+    Auto-marking strategy:
+    - Directory-based: /unit/, /integration/, /property_based/ -> primary scope markers
+    - Keyword-based: slow, e2e, api, websocket -> characteristic markers
+    """
     for item in items:
-        # Mark slow tests
-        if "slow" in item.nodeid.lower():
-            item.add_marker(pytest.mark.slow)
+        nodeid = item.nodeid.lower()
 
-        # Mark LLM tests
-        if "llm" in item.nodeid.lower():
-            item.add_marker(pytest.mark.llm)
-
-        # Mark integration tests
-        if "integration" in item.nodeid.lower():
+        # Directory-based marking (PRIMARY CATEGORIES)
+        if "/unit/" in nodeid:
+            item.add_marker(pytest.mark.unit)
+        if "/integration/" in nodeid:
             item.add_marker(pytest.mark.integration)
+        if "/property_based/" in nodeid:
+            item.add_marker(pytest.mark.property)
 
-        # Mark E2E tests
-        if "e2e" in item.nodeid.lower() or "end_to_end" in item.nodeid.lower():
+        # Keyword-based marking (SECONDARY ATTRIBUTES)
+        if "slow" in nodeid:
+            item.add_marker(pytest.mark.slow)
+        if "e2e" in nodeid or "end_to_end" in nodeid:
             item.add_marker(pytest.mark.e2e)
+        if "api" in nodeid or "/test_api" in nodeid:
+            item.add_marker(pytest.mark.api)
+        if "websocket" in nodeid or "/test_ws" in nodeid:
+            item.add_marker(pytest.mark.websocket)

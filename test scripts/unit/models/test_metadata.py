@@ -12,6 +12,7 @@ from pydantic import ValidationError
 
 
 @pytest.mark.unit
+@pytest.mark.model
 class TestNWBMetadataBasicValidation:
     """Tests for basic NWBMetadata model validation."""
 
@@ -66,6 +67,7 @@ class TestNWBMetadataBasicValidation:
 
 
 @pytest.mark.unit
+@pytest.mark.model
 class TestExperimenterValidator:
     """Tests for experimenter field validator."""
 
@@ -124,6 +126,7 @@ class TestExperimenterValidator:
 
 
 @pytest.mark.unit
+@pytest.mark.model
 class TestSpeciesValidator:
     """Tests for species field validator."""
 
@@ -179,6 +182,7 @@ class TestSpeciesValidator:
 
 
 @pytest.mark.unit
+@pytest.mark.model
 class TestAgeValidator:
     """Tests for age field validator."""
 
@@ -228,6 +232,7 @@ class TestAgeValidator:
 
 
 @pytest.mark.unit
+@pytest.mark.model
 class TestSessionDescriptionValidator:
     """Tests for session_description field validator."""
 
@@ -273,6 +278,7 @@ class TestSessionDescriptionValidator:
 
 
 @pytest.mark.unit
+@pytest.mark.model
 class TestKeywordsValidator:
     """Tests for keywords field validator."""
 
@@ -322,6 +328,7 @@ class TestKeywordsValidator:
 
 
 @pytest.mark.unit
+@pytest.mark.model
 class TestSexValidator:
     """Tests for sex field validator."""
 
@@ -356,6 +363,7 @@ class TestSexValidator:
 
 
 @pytest.mark.unit
+@pytest.mark.model
 class TestWeightValidator:
     """Tests for weight field validator."""
 
@@ -419,6 +427,7 @@ class TestWeightValidator:
 
 
 @pytest.mark.unit
+@pytest.mark.model
 class TestSubjectIdValidator:
     """Tests for subject_id field validation."""
 
@@ -452,6 +461,7 @@ class TestSubjectIdValidator:
 
 
 @pytest.mark.unit
+@pytest.mark.model
 class TestStringLengthValidation:
     """Tests for string length constraints."""
 
@@ -483,6 +493,7 @@ class TestStringLengthValidation:
 
 
 @pytest.mark.unit
+@pytest.mark.model
 class TestWhitespaceStripping:
     """Tests for whitespace stripping configuration."""
 
@@ -500,6 +511,7 @@ class TestWhitespaceStripping:
 
 
 @pytest.mark.unit
+@pytest.mark.model
 class TestNWBMetadataIntegration:
     """Integration tests for complete metadata validation."""
 

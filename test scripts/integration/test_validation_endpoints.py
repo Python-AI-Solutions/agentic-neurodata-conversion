@@ -28,6 +28,7 @@ def patch_llm_service(mock_llm_quality_assessor):
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestValidationEndpoint:
     """Test GET /api/validation endpoint."""
 
@@ -115,6 +116,7 @@ class TestValidationEndpoint:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestCorrectionContextEndpoint:
     """Test GET /api/correction-context endpoint."""
 
@@ -200,6 +202,7 @@ class TestCorrectionContextEndpoint:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestValidationAndCorrectionIntegration:
     """Test integration between validation and correction context endpoints."""
 
@@ -225,6 +228,7 @@ class TestValidationAndCorrectionIntegration:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestEndpointsWithAllValidationStatuses:
     """Test endpoints work with all validation status values."""
 
@@ -256,6 +260,7 @@ class TestEndpointsWithAllValidationStatuses:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestEndpointsErrorHandling:
     """Test error handling for validation endpoints."""
 
@@ -291,6 +296,7 @@ class TestEndpointsErrorHandling:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestConcurrentRequests:
     """Test concurrent requests to validation endpoints."""
 

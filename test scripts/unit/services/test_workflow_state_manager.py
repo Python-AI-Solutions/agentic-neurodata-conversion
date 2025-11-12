@@ -19,6 +19,7 @@ from models.workflow_state_manager import WorkflowStateManager
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestWorkflowStateManager:
     """Test suite for WorkflowStateManager functionality."""
 

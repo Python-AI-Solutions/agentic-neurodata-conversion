@@ -50,6 +50,8 @@ def test_file():
     return str(test_data_path)
 
 
+@pytest.mark.integration
+@pytest.mark.agent_conversation
 @pytest.mark.asyncio
 async def test_upload_skip_for_now_conversion(mcp_server_with_agents, test_file):
     """
@@ -116,6 +118,8 @@ async def test_upload_skip_for_now_conversion(mcp_server_with_agents, test_file)
     assert len(critical_errors) == 0, f"Found critical errors: {critical_errors}"
 
 
+@pytest.mark.integration
+@pytest.mark.agent_conversation
 @pytest.mark.asyncio
 async def test_upload_skip_this_one_next_field(mcp_server_with_agents, test_file):
     """
@@ -163,6 +167,8 @@ async def test_upload_skip_this_one_next_field(mcp_server_with_agents, test_file
     assert len(critical_errors) == 0
 
 
+@pytest.mark.integration
+@pytest.mark.agent_conversation
 @pytest.mark.asyncio
 async def test_upload_ask_one_by_one_sequential(mcp_server_with_agents, test_file):
     """
@@ -213,6 +219,8 @@ async def test_upload_ask_one_by_one_sequential(mcp_server_with_agents, test_fil
     assert len(critical_errors) == 0
 
 
+@pytest.mark.integration
+@pytest.mark.agent_conversation
 @pytest.mark.asyncio
 async def test_pending_path_fallback_to_input_path(mcp_server_with_agents, test_file):
     """
@@ -249,6 +257,8 @@ async def test_pending_path_fallback_to_input_path(mcp_server_with_agents, test_
     assert len(critical_errors) == 0
 
 
+@pytest.mark.integration
+@pytest.mark.agent_conversation
 @pytest.mark.asyncio
 async def test_missing_both_paths_returns_error(mcp_server_with_agents):
     """
@@ -288,6 +298,8 @@ async def test_missing_both_paths_returns_error(mcp_server_with_agents):
     # The important thing is no crash occurred
 
 
+@pytest.mark.integration
+@pytest.mark.agent_conversation
 @pytest.mark.asyncio
 async def test_none_string_path_returns_error(mcp_server_with_agents):
     """

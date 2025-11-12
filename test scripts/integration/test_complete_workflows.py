@@ -38,6 +38,7 @@ from services.report_service import ReportService
 
 @pytest.mark.e2e
 @pytest.mark.integration
+@pytest.mark.agent_evaluation
 class TestCompleteSuccessfulWorkflow:
     """Test complete successful conversion workflow."""
 
@@ -137,6 +138,7 @@ class TestCompleteSuccessfulWorkflow:
 
 @pytest.mark.e2e
 @pytest.mark.integration
+@pytest.mark.agent_conversion
 class TestWorkflowWithMetadata:
     """Test workflow including metadata collection and mapping."""
 
@@ -208,6 +210,7 @@ class TestWorkflowWithMetadata:
 
 @pytest.mark.e2e
 @pytest.mark.integration
+@pytest.mark.service
 class TestWorkflowWithReportGeneration:
     """Test complete workflow including report generation."""
 
@@ -308,6 +311,7 @@ class TestWorkflowWithReportGeneration:
 
 @pytest.mark.e2e
 @pytest.mark.integration
+@pytest.mark.agent_conversion
 class TestErrorRecoveryWorkflows:
     """Test workflow error recovery and fallback mechanisms."""
 
@@ -384,6 +388,7 @@ class TestErrorRecoveryWorkflows:
 
 @pytest.mark.e2e
 @pytest.mark.integration
+@pytest.mark.agent_conversation
 class TestMultiAgentCoordination:
     """Test coordination between multiple agents."""
 
@@ -422,6 +427,7 @@ class TestMultiAgentCoordination:
 @pytest.mark.e2e
 @pytest.mark.integration
 @pytest.mark.slow
+@pytest.mark.agent_evaluation
 class TestRealWorldScenarios:
     """Test real-world usage scenarios."""
 
@@ -511,6 +517,7 @@ class TestRealWorldScenarios:
 
 @pytest.mark.e2e
 @pytest.mark.integration
+@pytest.mark.model
 class TestStateManagement:
     """Test state management across workflow stages."""
 

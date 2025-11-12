@@ -5,9 +5,12 @@ Tests the bug fix where system now properly stores and uses
 pending_conversion_input_path to resume conversion after metadata skip.
 """
 
+import pytest
 from models.state import GlobalState
 
 
+@pytest.mark.unit
+@pytest.mark.model
 def test_pending_conversion_input_path_field_exists():
     """Test that pending_conversion_input_path field exists in GlobalState."""
     state = GlobalState()
@@ -15,6 +18,8 @@ def test_pending_conversion_input_path_field_exists():
     assert state.pending_conversion_input_path is None
 
 
+@pytest.mark.unit
+@pytest.mark.model
 def test_pending_conversion_input_path_can_be_set():
     """Test that pending_conversion_input_path can be set and retrieved."""
     state = GlobalState()
@@ -25,6 +30,8 @@ def test_pending_conversion_input_path_can_be_set():
     assert state.pending_conversion_input_path == test_path
 
 
+@pytest.mark.unit
+@pytest.mark.model
 def test_pending_conversion_input_path_resets():
     """Test that pending_conversion_input_path is reset when state resets."""
     state = GlobalState()
@@ -39,6 +46,8 @@ def test_pending_conversion_input_path_resets():
     assert state.input_path is None
 
 
+@pytest.mark.unit
+@pytest.mark.model
 def test_fallback_logic_when_pending_path_is_none():
     """
     Test fallback logic: conversion_path = state.pending_conversion_input_path or state.input_path
@@ -55,6 +64,8 @@ def test_fallback_logic_when_pending_path_is_none():
     assert conversion_path == "/fallback/path.bin"
 
 
+@pytest.mark.unit
+@pytest.mark.model
 def test_pending_path_takes_priority_over_input_path():
     """
     Test that pending_conversion_input_path takes priority when both are set.
@@ -71,6 +82,8 @@ def test_pending_path_takes_priority_over_input_path():
     assert conversion_path == "/new/pending/path.bin"
 
 
+@pytest.mark.unit
+@pytest.mark.model
 def test_both_paths_none_returns_none():
     """
     Test that when both paths are None, fallback returns None.
@@ -87,6 +100,8 @@ def test_both_paths_none_returns_none():
     assert conversion_path is None
 
 
+@pytest.mark.unit
+@pytest.mark.model
 def test_string_none_detection():
     """
     Test detection of string "None" (the original bug).
@@ -105,6 +120,8 @@ def test_string_none_detection():
     assert is_invalid is True
 
 
+@pytest.mark.unit
+@pytest.mark.model
 def test_valid_path_passes_validation():
     """
     Test that a valid path passes validation.
@@ -121,6 +138,8 @@ def test_valid_path_passes_validation():
     assert conversion_path == "/valid/path/to/file.bin"
 
 
+@pytest.mark.unit
+@pytest.mark.model
 def test_empty_string_path_is_invalid():
     """
     Test that empty string path is detected as invalid.

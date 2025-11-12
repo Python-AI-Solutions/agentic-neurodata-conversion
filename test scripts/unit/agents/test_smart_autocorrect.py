@@ -16,6 +16,7 @@ from services.llm_service import MockLLMService
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestSmartAutoCorrectionSystemInitialization:
     """Tests for SmartAutoCorrectionSystem initialization."""
 
@@ -37,6 +38,7 @@ class TestSmartAutoCorrectionSystemInitialization:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestAnalyzeAndCorrect:
     """Tests for analyze_and_correct method."""
 
@@ -176,6 +178,7 @@ class TestAnalyzeAndCorrect:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestLLMSmartCorrections:
     """Tests for _llm_smart_corrections method."""
 
@@ -238,6 +241,7 @@ class TestLLMSmartCorrections:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestBasicAutoCorrections:
     """Tests for _basic_auto_corrections fallback method."""
 
@@ -306,6 +310,7 @@ class TestBasicAutoCorrections:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestApplySafeCorrections:
     """Tests for apply_safe_corrections method."""
 
@@ -493,6 +498,7 @@ class TestApplySafeCorrections:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestGetCorrectionSummary:
     """Tests for get_correction_summary method."""
 
@@ -546,6 +552,7 @@ class TestGetCorrectionSummary:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestSmartAutoCorrectionIntegration:
     """Integration tests for complete auto-correction workflow."""
 

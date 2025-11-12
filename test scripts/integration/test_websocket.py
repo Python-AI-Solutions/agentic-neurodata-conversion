@@ -16,9 +16,11 @@ def client():
 
 
 @pytest.mark.integration
+@pytest.mark.websocket
 class TestWebSocketConnection:
     """Test WebSocket connection handling."""
 
+    @pytest.mark.smoke
     def test_websocket_connect(self, client):
         """Test WebSocket connection establishment."""
         with client.websocket_connect("/ws") as websocket:
@@ -45,6 +47,7 @@ class TestWebSocketConnection:
 
 
 @pytest.mark.integration
+@pytest.mark.websocket
 class TestWebSocketStatusBroadcasts:
     """Test WebSocket status update broadcasts."""
 
@@ -68,6 +71,7 @@ class TestWebSocketStatusBroadcasts:
 
 
 @pytest.mark.integration
+@pytest.mark.websocket
 class TestWebSocketRealtimeUpdates:
     """Test real-time updates for various scenarios."""
 
@@ -105,6 +109,7 @@ class TestWebSocketRealtimeUpdates:
 
 
 @pytest.mark.integration
+@pytest.mark.websocket
 class TestWebSocketErrorHandling:
     """Test WebSocket error handling."""
 
@@ -132,6 +137,7 @@ class TestWebSocketErrorHandling:
 
 
 @pytest.mark.integration
+@pytest.mark.websocket
 class TestWebSocketConcurrency:
     """Test WebSocket with concurrent operations."""
 

@@ -18,6 +18,7 @@ from services.llm_service import MockLLMService
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestFieldPriority:
     """Tests for FieldPriority enum."""
 
@@ -29,6 +30,7 @@ class TestFieldPriority:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestMetadataField:
     """Tests for MetadataField class."""
 
@@ -64,6 +66,7 @@ class TestMetadataField:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestMetadataFieldsDefinitions:
     """Tests for METADATA_FIELDS dictionary."""
 
@@ -115,6 +118,7 @@ class TestMetadataFieldsDefinitions:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestMetadataRequestStrategyInitialization:
     """Tests for MetadataRequestStrategy initialization."""
 
@@ -137,6 +141,7 @@ class TestMetadataRequestStrategyInitialization:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestExtractMissingFields:
     """Tests for _extract_missing_fields method."""
 
@@ -202,6 +207,7 @@ class TestExtractMissingFields:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestFilterByPriority:
     """Tests for _filter_by_priority method."""
 
@@ -253,6 +259,7 @@ class TestFilterByPriority:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestDetectSkipType:
     """Tests for detect_skip_type (keyword-based) method."""
 
@@ -335,6 +342,7 @@ class TestDetectSkipType:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestDetectSkipTypeWithLLM:
     """Tests for detect_skip_type_with_llm (LLM-based) method."""
 
@@ -399,6 +407,7 @@ class TestDetectSkipTypeWithLLM:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestGetNextRequest:
     """Tests for get_next_request method."""
 
@@ -527,6 +536,7 @@ class TestGetNextRequest:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestRequestCriticalBatch:
     """Tests for _request_critical_batch method."""
 
@@ -551,6 +561,7 @@ class TestRequestCriticalBatch:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestRequestNextRecommended:
     """Tests for _request_next_recommended method."""
 
@@ -576,6 +587,7 @@ class TestRequestNextRecommended:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestOfferOptionalBatch:
     """Tests for _offer_optional_batch method."""
 
@@ -593,6 +605,7 @@ class TestOfferOptionalBatch:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestRealMetadataStrategyWorkflows:
     """
     Integration-style unit tests using real MetadataStrategy logic.

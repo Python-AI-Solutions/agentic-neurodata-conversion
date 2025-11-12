@@ -29,6 +29,7 @@ def patch_llm_service(mock_llm_conversational):
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestBasicChatEndpoint:
     """Test POST /api/chat endpoint."""
 
@@ -79,6 +80,7 @@ class TestBasicChatEndpoint:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestSmartChatEndpoint:
     """Test POST /api/chat/smart endpoint (LLM-powered)."""
 
@@ -210,6 +212,7 @@ class TestSmartChatEndpoint:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestChatContextHandling:
     """Test chat endpoints with conversation context."""
 
@@ -238,6 +241,7 @@ class TestChatContextHandling:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestChatErrorHandling:
     """Test error handling for chat endpoints."""
 
@@ -273,6 +277,7 @@ class TestChatErrorHandling:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestChatConcurrency:
     """Test concurrent chat requests."""
 

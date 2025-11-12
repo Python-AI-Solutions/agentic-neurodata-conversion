@@ -13,6 +13,7 @@ from services.llm_service import MockLLMService
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestConversationalHandlerInitialization:
     """Tests for ConversationalHandler initialization."""
 
@@ -28,6 +29,7 @@ class TestConversationalHandlerInitialization:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestDetectUserDecline:
     """Tests for detect_user_decline method."""
 
@@ -54,6 +56,7 @@ class TestDetectUserDecline:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestDetectSkipTypeWithLLM:
     """Tests for detect_skip_type_with_llm method."""
 
@@ -72,6 +75,7 @@ class TestDetectSkipTypeWithLLM:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestDetectSkipType:
     """Tests for detect_skip_type method."""
 
@@ -89,6 +93,7 @@ class TestDetectSkipType:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestAnalyzeValidationAndRespond:
     """Tests for analyze_validation_and_respond method."""
 
@@ -223,6 +228,7 @@ class TestAnalyzeValidationAndRespond:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestFormatValidationIssues:
     """Tests for _format_validation_issues method."""
 
@@ -256,6 +262,7 @@ class TestFormatValidationIssues:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestExtractBasicRequiredFields:
     """Tests for _extract_basic_required_fields method."""
 
@@ -289,6 +296,7 @@ class TestExtractBasicRequiredFields:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestParseAndConfirmMetadata:
     """Tests for parse_and_confirm_metadata method."""
 
@@ -372,6 +380,7 @@ class TestParseAndConfirmMetadata:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestAnalyzeValidationLLMFailure:
     """Tests for LLM failure handling in analyze_validation_and_respond."""
 
@@ -391,6 +400,7 @@ class TestAnalyzeValidationLLMFailure:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestProcessUserResponse:
     """Tests for process_user_response method."""
 
@@ -473,6 +483,7 @@ class TestProcessUserResponse:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestGenerateSmartMetadataRequests:
     """Tests for generate_smart_metadata_requests method."""
 
@@ -534,6 +545,7 @@ class TestGenerateSmartMetadataRequests:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestExtractFileContext:
     """Tests for _extract_file_context method."""
 
@@ -587,6 +599,7 @@ class TestExtractFileContext:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestRealConversationalHandlerWorkflows:
     """
     Integration-style unit tests using real ConversationalHandler with MockLLMService.

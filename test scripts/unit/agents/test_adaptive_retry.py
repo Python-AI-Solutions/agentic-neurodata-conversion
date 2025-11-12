@@ -16,6 +16,7 @@ from services.llm_service import MockLLMService
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestAdaptiveRetryStrategyInitialization:
     """Tests for AdaptiveRetryStrategy initialization."""
 
@@ -34,6 +35,7 @@ class TestAdaptiveRetryStrategyInitialization:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestAnalyzeAndRecommendStrategy:
     """Tests for analyze_and_recommend_strategy method."""
 
@@ -133,6 +135,7 @@ class TestAnalyzeAndRecommendStrategy:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestExtractPreviousIssues:
     """Tests for _extract_previous_issues method."""
 
@@ -159,6 +162,7 @@ class TestExtractPreviousIssues:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestAnalyzeProgress:
     """Tests for _analyze_progress method."""
 
@@ -267,6 +271,7 @@ class TestAnalyzeProgress:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestHeuristicStrategy:
     """Tests for _heuristic_strategy fallback method."""
 
@@ -329,6 +334,7 @@ class TestHeuristicStrategy:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestFormatIssuesSummary:
     """Tests for _format_issues_summary method."""
 
@@ -397,6 +403,7 @@ class TestFormatIssuesSummary:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestLLMPoweredAnalysis:
     """Tests for _llm_powered_analysis method."""
 
@@ -489,6 +496,7 @@ class TestLLMPoweredAnalysis:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestAdaptiveRetryStrategyIntegration:
     """Integration tests for complete adaptive retry workflow."""
 
@@ -563,6 +571,7 @@ class TestAdaptiveRetryStrategyIntegration:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestRealAdaptiveRetryWorkflows:
     """
     Integration-style unit tests using real AdaptiveRetryStrategy logic.

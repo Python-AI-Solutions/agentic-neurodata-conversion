@@ -37,9 +37,11 @@ def state():
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestMetadataInferenceEngine:
     """Test suite for MetadataInferenceEngine."""
 
+    @pytest.mark.smoke
     def test_initialization(self, mock_llm_service):
         """Test engine initialization."""
         engine = MetadataInferenceEngine(llm_service=mock_llm_service)

@@ -16,6 +16,7 @@ from backend.src.agents.conversion_agent import ConversionAgent
 
 
 @pytest.mark.integration
+@pytest.mark.agent_conversion
 class TestAllNWBFiles:
     """Validate all NWB files in test_data."""
 
@@ -104,6 +105,7 @@ class TestAllNWBFiles:
 
 
 @pytest.mark.integration
+@pytest.mark.agent_conversion
 class TestAllRawDataFormats:
     """Test format detection for all raw data in test_data."""
 
@@ -230,6 +232,7 @@ class TestAllRawDataFormats:
 
 
 @pytest.mark.integration
+@pytest.mark.agent_conversion
 class TestDataIntegrity:
     """Verify integrity and consistency of test data."""
 

@@ -69,6 +69,7 @@ def mock_json_report():
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestDownloadNWBEndpoint:
     """Test GET /api/download/nwb endpoint."""
 
@@ -124,6 +125,7 @@ class TestDownloadNWBEndpoint:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestDownloadReportEndpoint:
     """Test GET /api/download/report endpoint."""
 
@@ -219,6 +221,7 @@ class TestDownloadReportEndpoint:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestDownloadEndpointsWithVersionedFiles:
     """Test download endpoints with versioned files (v2, v3, etc.)."""
 
@@ -255,6 +258,7 @@ class TestDownloadEndpointsWithVersionedFiles:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestDownloadEndpointsErrorHandling:
     """Test error handling for download endpoints."""
 
@@ -290,6 +294,7 @@ class TestDownloadEndpointsErrorHandling:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestDownloadEndpointsWithAllValidationStatuses:
     """Test downloads work with all validation status values."""
 
@@ -321,6 +326,7 @@ class TestDownloadEndpointsWithAllValidationStatuses:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestConcurrentDownloads:
     """Test concurrent download requests."""
 

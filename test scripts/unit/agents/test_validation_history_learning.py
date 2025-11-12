@@ -21,6 +21,7 @@ from services.llm_service import MockLLMService
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestValidationHistoryLearnerInitialization:
     """Tests for ValidationHistoryLearner initialization."""
 
@@ -60,6 +61,7 @@ class TestValidationHistoryLearnerInitialization:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestRecordValidationSession:
     """Tests for record_validation_session method."""
 
@@ -188,6 +190,7 @@ class TestRecordValidationSession:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestLoadHistory:
     """Tests for _load_history method."""
 
@@ -239,6 +242,7 @@ class TestLoadHistory:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestNormalizeIssueMessage:
     """Tests for _normalize_issue_message method."""
 
@@ -284,6 +288,7 @@ class TestNormalizeIssueMessage:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestIdentifyCommonIssues:
     """Tests for _identify_common_issues method."""
 
@@ -345,6 +350,7 @@ class TestIdentifyCommonIssues:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestAnalyzeFormatSpecificIssues:
     """Tests for _analyze_format_specific_issues method."""
 
@@ -389,6 +395,7 @@ class TestAnalyzeFormatSpecificIssues:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestAnalyzeSuccessPatterns:
     """Tests for _analyze_success_patterns method."""
 
@@ -440,6 +447,7 @@ class TestAnalyzeSuccessPatterns:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestBasicRecommendations:
     """Tests for _basic_recommendations method."""
 
@@ -468,6 +476,7 @@ class TestBasicRecommendations:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestAnalyzePatterns:
     """Tests for analyze_patterns method."""
 
@@ -549,6 +558,7 @@ class TestAnalyzePatterns:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestFindSimilarSessions:
     """Tests for _find_similar_sessions method."""
 
@@ -588,6 +598,7 @@ class TestFindSimilarSessions:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestExtractCommonIssuesFromSimilar:
     """Tests for _extract_common_issues_from_similar method."""
 
@@ -616,6 +627,7 @@ class TestExtractCommonIssuesFromSimilar:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestPredictIssues:
     """Tests for predict_issues method."""
 
@@ -703,6 +715,7 @@ class TestPredictIssues:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestValidationHistoryLearnerIntegration:
     """Integration tests for complete validation history learning workflow."""
 

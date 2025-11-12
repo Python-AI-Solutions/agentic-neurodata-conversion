@@ -38,6 +38,7 @@ def mcp_server_with_agents(mock_llm_service):
 
 
 @pytest.mark.integration
+@pytest.mark.agent_conversation
 class TestConversationToConversionFlow:
     """Test Conversation Agent → Conversion Agent coordination."""
 
@@ -97,6 +98,7 @@ class TestConversationToConversionFlow:
 
 
 @pytest.mark.integration
+@pytest.mark.agent_conversion
 class TestConversionToEvaluationFlow:
     """Test Conversion Agent → Evaluation Agent coordination."""
 
@@ -153,6 +155,7 @@ class TestConversionToEvaluationFlow:
 
 
 @pytest.mark.integration
+@pytest.mark.agent_evaluation
 class TestEvaluationToConversationFlow:
     """Test Evaluation Agent → Conversation Agent coordination."""
 
@@ -197,6 +200,7 @@ class TestEvaluationToConversationFlow:
 
 
 @pytest.mark.integration
+@pytest.mark.agent_conversation
 class TestMultiAgentWorkflowChain:
     """Test complete agent chain: Conversation → Conversion → Evaluation."""
 
@@ -257,6 +261,7 @@ class TestMultiAgentWorkflowChain:
 
 
 @pytest.mark.integration
+@pytest.mark.service
 class TestMCPMessageValidation:
     """Test MCP message format and validation."""
 
@@ -281,6 +286,7 @@ class TestMCPMessageValidation:
 
 
 @pytest.mark.integration
+@pytest.mark.service
 class TestAgentIsolation:
     """Test agents are properly isolated via MCP protocol."""
 
@@ -323,6 +329,7 @@ class TestAgentIsolation:
 
 
 @pytest.mark.integration
+@pytest.mark.agent_conversation
 class TestRetryLoopCoordination:
     """Test agent coordination during retry loops."""
 

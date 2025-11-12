@@ -44,10 +44,12 @@ def mcp_server_with_agents():
 
 
 @pytest.mark.integration
+@pytest.mark.agent_conversion
 class TestConversionAgentIntegration:
     """Test conversion agent integration."""
 
     @pytest.mark.asyncio
+    @pytest.mark.smoke
     async def test_detect_spikeglx_format(self, mcp_server_with_agents, toy_dataset_path):
         """Test detecting SpikeGLX format."""
         message = MCPMessage(
@@ -81,6 +83,7 @@ class TestConversionAgentIntegration:
 
 
 @pytest.mark.integration
+@pytest.mark.agent_evaluation
 class TestEvaluationAgentIntegration:
     """Test evaluation agent integration."""
 
@@ -103,6 +106,7 @@ class TestEvaluationAgentIntegration:
 
 
 @pytest.mark.integration
+@pytest.mark.agent_conversation
 class TestWorkflowIntegration:
     """Test complete workflow integration."""
 
@@ -210,10 +214,12 @@ class TestWorkflowIntegration:
 
 
 @pytest.mark.integration
+@pytest.mark.model
 class TestStateManagement:
     """Test global state management during workflow."""
 
     @pytest.mark.asyncio
+    @pytest.mark.smoke
     async def test_state_logging(self, mcp_server_with_agents, toy_dataset_path):
         """Test that state is logged throughout workflow."""
         server = mcp_server_with_agents
@@ -261,6 +267,7 @@ class TestStateManagement:
 
 
 @pytest.mark.integration
+@pytest.mark.agent_conversation
 class TestCorrectionLoopIntegration:
     """Test correction loop and LLM-powered fixes."""
 
@@ -338,6 +345,7 @@ class TestCorrectionLoopIntegration:
 
 
 @pytest.mark.integration
+@pytest.mark.service
 class TestReportGeneration:
     """Test report generation for different validation outcomes."""
 
@@ -413,6 +421,7 @@ class TestReportGeneration:
 
 
 @pytest.mark.integration
+@pytest.mark.agent_conversation
 class TestEndToEndWorkflow:
     """Complete end-to-end workflow tests."""
 

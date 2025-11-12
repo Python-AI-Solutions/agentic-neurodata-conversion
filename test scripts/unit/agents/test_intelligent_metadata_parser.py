@@ -77,6 +77,7 @@ def sample_user_responses():
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestParsedFieldClass:
     """Test suite for ParsedField class."""
 
@@ -151,6 +152,7 @@ class TestParsedFieldClass:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestIntelligentMetadataParserInitialization:
     """Test suite for IntelligentMetadataParser initialization."""
 
@@ -173,6 +175,7 @@ class TestIntelligentMetadataParserInitialization:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestBatchParsing:
     """Test suite for natural language batch parsing."""
 
@@ -255,6 +258,7 @@ class TestBatchParsing:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestSingleFieldParsing:
     """Test suite for single field parsing."""
 
@@ -308,6 +312,7 @@ class TestSingleFieldParsing:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestValueFormatting:
     """Test suite for value formatting."""
 
@@ -344,6 +349,7 @@ class TestValueFormatting:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestDateFieldPostProcessing:
     """Test suite for date field post-processing."""
 
@@ -386,6 +392,7 @@ class TestDateFieldPostProcessing:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestSchemaContextBuilding:
     """Test suite for schema context building."""
 
@@ -413,6 +420,7 @@ class TestSchemaContextBuilding:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestNormalizationRules:
     """Test suite for normalization rules."""
 
@@ -462,6 +470,7 @@ class TestNormalizationRules:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestFallbackParsing:
     """Test suite for fallback parsing mechanisms."""
 
@@ -499,6 +508,7 @@ class TestFallbackParsing:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestConfirmationMessageGeneration:
     """Test suite for confirmation message generation."""
 
@@ -558,7 +568,7 @@ class TestConfirmationMessageGeneration:
 
 
 @pytest.mark.unit
-@pytest.mark.llm
+@pytest.mark.agent_conversion
 class TestApplyWithBestKnowledge:
     """Test suite for apply_with_best_knowledge method."""
 
@@ -587,6 +597,7 @@ class TestApplyWithBestKnowledge:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestEdgeCases:
     """Test suite for edge cases and error handling."""
 

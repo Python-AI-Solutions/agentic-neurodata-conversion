@@ -109,6 +109,7 @@ def sample_mcp_message():
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestEvaluationAgentInitialization:
     """Test suite for EvaluationAgent initialization."""
 
@@ -141,6 +142,7 @@ class TestEvaluationAgentInitialization:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestFileValidation:
     """Test suite for NWB file validation."""
 
@@ -218,6 +220,7 @@ class TestFileValidation:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestFileInfoExtraction:
     """Test suite for file information extraction."""
 
@@ -247,6 +250,7 @@ class TestFileInfoExtraction:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestQualityAssessment:
     """Test suite for NWB quality assessment."""
 
@@ -279,6 +283,7 @@ class TestQualityAssessment:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestIssuePrioritization:
     """Test suite for issue prioritization and explanation."""
 
@@ -308,6 +313,7 @@ class TestIssuePrioritization:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestNWBInspectorIntegration:
     """Test suite for NWB Inspector integration."""
 
@@ -365,6 +371,7 @@ class TestNWBInspectorIntegration:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestCorrectionAnalysis:
     """Test suite for correction analysis."""
 
@@ -417,7 +424,7 @@ class TestCorrectionAnalysis:
 
 
 @pytest.mark.unit
-@pytest.mark.llm
+@pytest.mark.agent_evaluation
 class TestLLMAnalysis:
     """Test suite for LLM-based analysis."""
 
@@ -466,6 +473,7 @@ class TestLLMAnalysis:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestPromptBuilding:
     """Test suite for correction prompt building."""
 
@@ -504,6 +512,7 @@ class TestPromptBuilding:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestReportGeneration:
     """Test suite for report generation."""
 
@@ -583,6 +592,7 @@ class TestReportGeneration:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestLogProcessing:
     """Test suite for log processing and categorization."""
 
@@ -653,6 +663,7 @@ class TestLogProcessing:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestWorkflowTrace:
     """Test suite for workflow trace building."""
 
@@ -687,6 +698,7 @@ class TestWorkflowTrace:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestMetadataProvenance:
     """Test suite for metadata provenance tracking."""
 
@@ -716,7 +728,7 @@ class TestMetadataProvenance:
 
 
 @pytest.mark.unit
-@pytest.mark.llm
+@pytest.mark.agent_evaluation
 class TestQualityAssessmentGeneration:
     """Test suite for quality assessment generation."""
 
@@ -743,7 +755,7 @@ class TestQualityAssessmentGeneration:
 
 
 @pytest.mark.unit
-@pytest.mark.llm
+@pytest.mark.agent_evaluation
 class TestCorrectionGuidanceGeneration:
     """Test suite for correction guidance generation."""
 
@@ -847,6 +859,7 @@ class TestIntegrationScenarios:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestEdgeCasesAndErrorHandling:
     """Test suite for edge cases and error handling."""
 
@@ -896,6 +909,7 @@ class TestEdgeCasesAndErrorHandling:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestFileInfoExtractionH5py:
     """Test suite for _extract_file_info method with h5py."""
 
@@ -1025,6 +1039,7 @@ class TestFileInfoExtractionH5py:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestPassedWithIssuesReporting:
     """Test suite for PASSED_WITH_ISSUES report generation."""
 
@@ -1134,6 +1149,7 @@ class TestPassedWithIssuesReporting:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestRegisterEvaluationAgent:
     """Test suite for register_evaluation_agent function."""
 
@@ -1178,6 +1194,7 @@ class TestRegisterEvaluationAgent:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestLLMExceptionHandling:
     """Test suite for exception handling in LLM-powered features."""
 
@@ -1246,6 +1263,7 @@ class TestLLMExceptionHandling:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestAnalyzeCorrectionsEdgeCases:
     """Test suite for edge cases in handle_analyze_corrections."""
 
@@ -1324,6 +1342,7 @@ class TestAnalyzeCorrectionsEdgeCases:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestFailedReportGeneration:
     """Test suite for FAILED validation report generation."""
 
@@ -1420,6 +1439,7 @@ class TestFailedReportGeneration:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestAnalyzeQualityEdgeCases:
     """Test suite for _analyze_quality edge cases."""
 
@@ -1472,6 +1492,7 @@ class TestAnalyzeQualityEdgeCases:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestBuildWorkflowTraceDetailed:
     """Test suite for detailed workflow trace building."""
 
@@ -1508,6 +1529,7 @@ class TestBuildWorkflowTraceDetailed:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestGenerateCorrectionGuidanceDetailed:
     """Test suite for correction guidance generation."""
 
@@ -1549,6 +1571,7 @@ class TestGenerateCorrectionGuidanceDetailed:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestValidationVariants:
     """Test suite for validation variants."""
 
@@ -1602,6 +1625,7 @@ class TestValidationVariants:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestReportGenerationExceptionHandling:
     """Test suite for report generation error handling."""
 
@@ -1642,6 +1666,7 @@ class TestReportGenerationExceptionHandling:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestValidationOutcomeEdgeCases:
     """Test suite for validation outcome determination."""
 
@@ -1679,6 +1704,7 @@ class TestValidationOutcomeEdgeCases:
 
 @pytest.mark.unit
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestRealValidationWorkflows:
     """
     Integration-style unit tests using real dependencies.

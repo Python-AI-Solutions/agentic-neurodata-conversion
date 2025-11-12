@@ -11,6 +11,7 @@ from backend.src.agents.conversion_agent import ConversionAgent
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestMetadataMapping:
     """Test suite for metadata structure mapping."""
 

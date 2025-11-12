@@ -25,9 +25,11 @@ from models.state import (
 
 
 @pytest.mark.unit
+@pytest.mark.model
 class TestEnums:
     """Tests for state enums."""
 
+    @pytest.mark.smoke
     def test_conversion_status_values(self):
         """Test ConversionStatus enum values."""
         assert ConversionStatus.IDLE == "idle"
@@ -86,9 +88,11 @@ class TestEnums:
 
 
 @pytest.mark.unit
+@pytest.mark.model
 class TestLogEntry:
     """Tests for LogEntry model."""
 
+    @pytest.mark.smoke
     def test_create_log_entry(self):
         """Test creating a log entry."""
         entry = LogEntry(level=LogLevel.INFO, message="Test message")
@@ -107,9 +111,11 @@ class TestLogEntry:
 
 
 @pytest.mark.unit
+@pytest.mark.model
 class TestProvenanceInfo:
     """Tests for ProvenanceInfo model."""
 
+    @pytest.mark.smoke
     def test_create_provenance_info(self):
         """Test creating provenance info."""
         provenance = ProvenanceInfo(
@@ -143,6 +149,7 @@ class TestProvenanceInfo:
 
 
 @pytest.mark.unit
+@pytest.mark.model
 class TestGlobalStateInitialization:
     """Tests for GlobalState initialization."""
 
@@ -178,6 +185,7 @@ class TestGlobalStateInitialization:
 
 
 @pytest.mark.unit
+@pytest.mark.model
 class TestGlobalStateLogs:
     """Tests for log management."""
 
@@ -215,6 +223,7 @@ class TestGlobalStateLogs:
 
 
 @pytest.mark.unit
+@pytest.mark.model
 class TestConversationHistory:
     """Tests for conversation history management."""
 
@@ -283,6 +292,7 @@ class TestConversationHistory:
 
 
 @pytest.mark.unit
+@pytest.mark.model
 class TestStateReset:
     """Tests for state reset functionality."""
 
@@ -310,6 +320,7 @@ class TestStateReset:
 
 
 @pytest.mark.unit
+@pytest.mark.model
 class TestProgressTracking:
     """Tests for progress tracking."""
 
@@ -333,6 +344,7 @@ class TestProgressTracking:
 
 
 @pytest.mark.unit
+@pytest.mark.model
 class TestRetryManagement:
     """Tests for retry and correction management."""
 
@@ -384,6 +396,7 @@ class TestRetryManagement:
 
 
 @pytest.mark.unit
+@pytest.mark.model
 class TestDetectNoProgress:
     """Tests for no-progress detection."""
 
@@ -446,6 +459,7 @@ class TestDetectNoProgress:
 
 
 @pytest.mark.unit
+@pytest.mark.model
 class TestStatusUpdates:
     """Tests for status update methods."""
 
@@ -477,6 +491,7 @@ class TestStatusUpdates:
 
 
 @pytest.mark.unit
+@pytest.mark.model
 class TestValidationResults:
     """Tests for validation result management."""
 
@@ -537,6 +552,7 @@ class TestValidationResults:
 
 
 @pytest.mark.unit
+@pytest.mark.model
 class TestMetadataProvenance:
     """Tests for metadata provenance tracking."""
 
@@ -577,6 +593,7 @@ class TestMetadataProvenance:
 
 
 @pytest.mark.unit
+@pytest.mark.model
 class TestThreadSafety:
     """Tests for thread-safe operations."""
 
@@ -617,6 +634,7 @@ class TestThreadSafety:
 
 
 @pytest.mark.unit
+@pytest.mark.model
 class TestMCPIntegration:
     """Tests for MCP server integration."""
 
@@ -632,6 +650,7 @@ class TestMCPIntegration:
 
 
 @pytest.mark.unit
+@pytest.mark.model
 class TestChecksums:
     """Tests for file checksum tracking."""
 
@@ -655,6 +674,7 @@ class TestChecksums:
 
 
 @pytest.mark.unit
+@pytest.mark.model
 class TestDeprecatedFields:
     """Tests for backward compatibility with deprecated fields."""
 

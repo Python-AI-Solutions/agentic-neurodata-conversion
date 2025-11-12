@@ -34,9 +34,11 @@ def sample_message():
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestMCPServerInitialization:
     """Test MCP server initialization."""
 
+    @pytest.mark.smoke
     def test_initialization(self, mcp_server):
         """Test that MCP server initializes with correct default state."""
         assert mcp_server.global_state.status == ConversionStatus.IDLE
@@ -50,6 +52,7 @@ class TestMCPServerInitialization:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestHandlerRegistration:
     """Test handler registration functionality."""
 
@@ -90,6 +93,7 @@ class TestHandlerRegistration:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestMessageSending:
     """Test message sending and routing."""
 
@@ -160,6 +164,7 @@ class TestMessageSending:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestEventBroadcasting:
     """Test event broadcasting functionality."""
 
@@ -209,6 +214,7 @@ class TestEventBroadcasting:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestStateManagement:
     """Test global state management."""
 
@@ -250,6 +256,7 @@ class TestStateManagement:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestGlobalServerInstance:
     """Test global server instance management."""
 

@@ -12,6 +12,7 @@ from services.llm_service import MockLLMService
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestSmartIssueResolutionInitialization:
     """Tests for SmartIssueResolution initialization."""
 
@@ -30,6 +31,7 @@ class TestSmartIssueResolutionInitialization:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestBasicResolutionPlan:
     """Tests for _basic_resolution_plan method."""
 
@@ -93,6 +95,7 @@ class TestBasicResolutionPlan:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestGenerateResolutionPlan:
     """Tests for generate_resolution_plan method."""
 
@@ -249,6 +252,7 @@ class TestGenerateResolutionPlan:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestLLMResolutionPlanning:
     """Tests for _llm_resolution_planning method."""
 
@@ -320,6 +324,7 @@ class TestLLMResolutionPlanning:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestAddCodeExamples:
     """Tests for _add_code_examples method."""
 
@@ -447,6 +452,7 @@ class TestAddCodeExamples:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestGenerateInteractiveDecisionTree:
     """Tests for generate_interactive_decision_tree method."""
 
@@ -536,6 +542,7 @@ class TestGenerateInteractiveDecisionTree:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestSmartIssueResolutionIntegration:
     """Integration tests for complete resolution workflows."""
 

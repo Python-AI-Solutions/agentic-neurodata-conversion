@@ -139,6 +139,7 @@ def sample_file_context():
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestIntelligentValidationAnalyzerInitialization:
     """Test suite for IntelligentValidationAnalyzer initialization."""
 
@@ -163,6 +164,7 @@ class TestIntelligentValidationAnalyzerInitialization:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestValidationResultAnalysis:
     """Test suite for validation result analysis."""
 
@@ -244,6 +246,7 @@ class TestValidationResultAnalysis:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestBasicAnalysis:
     """Test suite for basic analysis without LLM."""
 
@@ -285,6 +288,7 @@ class TestBasicAnalysis:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestIssueGrouping:
     """Test suite for grouping related issues."""
 
@@ -335,7 +339,7 @@ class TestIssueGrouping:
 
 
 @pytest.mark.unit
-@pytest.mark.llm
+@pytest.mark.agent_evaluation
 class TestRootCauseIdentification:
     """Test suite for root cause identification."""
 
@@ -407,7 +411,7 @@ class TestRootCauseIdentification:
 
 
 @pytest.mark.unit
-@pytest.mark.llm
+@pytest.mark.agent_evaluation
 class TestFixOrderDetermination:
     """Test suite for determining fix order."""
 
@@ -457,7 +461,7 @@ class TestFixOrderDetermination:
 
 
 @pytest.mark.unit
-@pytest.mark.llm
+@pytest.mark.agent_evaluation
 class TestImpactAssessment:
     """Test suite for issue impact assessment."""
 
@@ -506,6 +510,7 @@ class TestImpactAssessment:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestQuickWinsIdentification:
     """Test suite for identifying quick wins."""
 
@@ -558,6 +563,7 @@ class TestQuickWinsIdentification:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestSummaryGeneration:
     """Test suite for summary generation."""
 
@@ -653,6 +659,7 @@ class TestIntegrationScenarios:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestEdgeCasesAndErrorHandling:
     """Test suite for edge cases and error handling."""
 

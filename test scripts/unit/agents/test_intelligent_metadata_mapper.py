@@ -87,6 +87,7 @@ def global_state():
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestIntelligentMetadataMapperInitialization:
     """Test suite for IntelligentMetadataMapper initialization."""
 
@@ -109,6 +110,7 @@ class TestIntelligentMetadataMapperInitialization:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestCustomMetadataParsing:
     """Test suite for custom metadata parsing."""
 
@@ -166,6 +168,7 @@ class TestCustomMetadataParsing:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestNWBSchemaMapping:
     """Test suite for NWB schema mapping."""
 
@@ -233,6 +236,7 @@ class TestNWBSchemaMapping:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestParsingWithoutLLM:
     """Test suite for fallback parsing without LLM."""
 
@@ -271,6 +275,7 @@ class TestParsingWithoutLLM:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestFieldNameCleaning:
     """Test suite for field name cleaning."""
 
@@ -304,6 +309,7 @@ class TestFieldNameCleaning:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestMissingMetadataSuggestions:
     """Test suite for missing metadata suggestions."""
 
@@ -355,6 +361,7 @@ class TestMissingMetadataSuggestions:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestDisplayFormatting:
     """Test suite for metadata display formatting."""
 
@@ -397,6 +404,7 @@ class TestDisplayFormatting:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestEdgeCasesAndErrorHandling:
     """Test suite for edge cases and error handling."""
 

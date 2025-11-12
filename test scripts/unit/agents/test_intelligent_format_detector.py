@@ -81,6 +81,7 @@ def sample_intan_files(tmp_path):
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestIntelligentFormatDetectorInitialization:
     """Test suite for IntelligentFormatDetector initialization."""
 
@@ -119,6 +120,7 @@ class TestIntelligentFormatDetectorInitialization:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestNWBFormatDetection:
     """Test suite for NWB format detection."""
 
@@ -163,6 +165,7 @@ class TestNWBFormatDetection:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestSpikeGLXFormatDetection:
     """Test suite for SpikeGLX format detection."""
 
@@ -196,6 +199,7 @@ class TestSpikeGLXFormatDetection:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestIntanFormatDetection:
     """Test suite for Intan format detection."""
 
@@ -227,6 +231,7 @@ class TestIntanFormatDetection:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestFileStructureAnalysis:
     """Test suite for file structure analysis."""
 
@@ -269,6 +274,7 @@ class TestFileStructureAnalysis:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestHeuristicBasedDetection:
     """Test suite for heuristic-based format detection."""
 
@@ -321,7 +327,7 @@ class TestHeuristicBasedDetection:
 
 
 @pytest.mark.unit
-@pytest.mark.llm
+@pytest.mark.agent_conversion
 class TestLLMAssistedDetection:
     """Test suite for LLM-assisted format detection."""
 
@@ -392,6 +398,7 @@ class TestLLMAssistedDetection:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestSuggestionGeneration:
     """Test suite for format suggestion generation."""
 
@@ -427,6 +434,7 @@ class TestSuggestionGeneration:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestEdgeCasesAndErrorHandling:
     """Test suite for edge cases and error handling."""
 
@@ -560,6 +568,7 @@ class TestIntegrationScenarios:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestConfidenceScoring:
     """Test suite for confidence scoring in format detection."""
 

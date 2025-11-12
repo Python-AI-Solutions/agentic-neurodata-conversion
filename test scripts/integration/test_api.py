@@ -39,9 +39,11 @@ def toy_dataset_path():
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestBasicEndpoints:
     """Test basic API endpoints."""
 
+    @pytest.mark.smoke
     def test_root_endpoint(self, api_test_client):
         """Test root endpoint."""
         response = api_test_client.get("/")
@@ -50,6 +52,7 @@ class TestBasicEndpoints:
         assert data["name"] == "Agentic Neurodata Conversion API"
         assert data["status"] == "running"
 
+    @pytest.mark.smoke
     def test_health_check(self, api_test_client):
         """Test health check endpoint."""
         response = api_test_client.get("/api/health")
@@ -61,6 +64,7 @@ class TestBasicEndpoints:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestUploadEndpoint:
     """Test file upload endpoint."""
 
@@ -173,6 +177,7 @@ class TestUploadEndpoint:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestStatusEndpoint:
     """Test status endpoint."""
 
@@ -234,6 +239,7 @@ class TestStatusEndpoint:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestRetryEndpoint:
     """Test retry approval endpoint."""
 
@@ -254,6 +260,7 @@ class TestRetryEndpoint:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestLogsEndpoint:
     """Test logs endpoint."""
 
@@ -275,6 +282,7 @@ class TestLogsEndpoint:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestResetEndpoint:
     """Test reset endpoint."""
 
@@ -292,6 +300,7 @@ class TestResetEndpoint:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestUserInputEndpoint:
     """Test user input endpoint."""
 

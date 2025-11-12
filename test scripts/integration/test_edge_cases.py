@@ -30,6 +30,7 @@ def patch_llm_service(mock_llm_conversational):
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestSystemBusyScenarios:
     """Test system busy (409 Conflict) scenarios."""
 
@@ -78,6 +79,7 @@ class TestSystemBusyScenarios:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestInvalidInputs:
     """Test handling of invalid inputs."""
 
@@ -124,6 +126,7 @@ class TestInvalidInputs:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestLargeFileHandling:
     """Test handling of large files."""
 
@@ -154,6 +157,7 @@ class TestLargeFileHandling:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestMissingLLMService:
     """Test behavior when LLM service is not available."""
 
@@ -179,6 +183,7 @@ class TestMissingLLMService:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestNeuroConvErrors:
     """Test handling of NeuroConv conversion errors."""
 
@@ -195,6 +200,7 @@ class TestNeuroConvErrors:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestNWBInspectorErrors:
     """Test handling of NWB Inspector validation errors."""
 
@@ -210,6 +216,7 @@ class TestNWBInspectorErrors:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestNetworkErrors:
     """Test handling of network-related errors."""
 
@@ -225,6 +232,7 @@ class TestNetworkErrors:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestStateTransitions:
     """Test invalid state transitions."""
 
@@ -259,6 +267,7 @@ class TestStateTransitions:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestSpecialCharacters:
     """Test handling of special characters and unicode."""
 
@@ -292,6 +301,7 @@ class TestSpecialCharacters:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestFileSystemErrors:
     """Test handling of file system errors."""
 
@@ -307,6 +317,7 @@ class TestFileSystemErrors:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestRaceConditions:
     """Test potential race conditions."""
 
@@ -335,6 +346,7 @@ class TestRaceConditions:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestMemoryLeaks:
     """Test for potential memory leaks."""
 
@@ -354,6 +366,7 @@ class TestMemoryLeaks:
 
 
 @pytest.mark.integration
+@pytest.mark.api
 class TestEdgeCaseMetadata:
     """Test edge cases in metadata handling."""
 

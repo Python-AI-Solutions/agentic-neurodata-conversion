@@ -16,6 +16,7 @@ from services.llm_service import MockLLMService
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestIntelligentErrorRecoveryInitialization:
     """Tests for IntelligentErrorRecovery initialization."""
 
@@ -37,6 +38,7 @@ class TestIntelligentErrorRecoveryInitialization:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestAnalyzeError:
     """Tests for analyze_error method."""
 
@@ -150,6 +152,7 @@ class TestAnalyzeError:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestBasicErrorAnalysis:
     """Tests for _basic_error_analysis fallback method."""
 
@@ -205,6 +208,7 @@ class TestBasicErrorAnalysis:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestGetErrorPatterns:
     """Tests for _get_error_patterns method."""
 
@@ -281,6 +285,7 @@ class TestGetErrorPatterns:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestSuggestProactiveFix:
     """Tests for suggest_proactive_fix method."""
 
@@ -368,6 +373,7 @@ class TestSuggestProactiveFix:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestIntelligentErrorRecoveryIntegration:
     """Integration tests for complete error recovery workflow."""
 
@@ -466,6 +472,7 @@ class TestIntelligentErrorRecoveryIntegration:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestRealErrorRecoveryWorkflows:
     """
     Integration-style unit tests using real ErrorRecovery logic.

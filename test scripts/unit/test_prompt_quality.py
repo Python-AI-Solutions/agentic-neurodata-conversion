@@ -35,13 +35,12 @@ def handler_no_llm():
 
 
 @pytest.mark.unit
-@pytest.mark.skip(
-    reason="Tests aspirational API - generate_metadata_prompt() and similar methods not yet implemented on ConversationalHandler"
-)
+@pytest.mark.aspirational
 class TestMetadataPromptQuality:
     """Test metadata request prompts are clear and helpful."""
 
     @pytest.mark.asyncio
+    @pytest.mark.xfail(reason="Aspirational - generate_smart_metadata_requests API not yet implemented")
     async def test_metadata_prompt_includes_examples(self, handler_with_llm, global_state):
         """Test prompts include examples and explanations."""
 
@@ -59,6 +58,7 @@ class TestMetadataPromptQuality:
         assert result is not None
 
     @pytest.mark.asyncio
+    @pytest.mark.xfail(reason="Aspirational - generate_smart_metadata_requests API not yet implemented")
     async def test_metadata_prompt_avoids_technical_jargon(self, handler_with_llm, global_state):
         """Test prompts use plain language."""
 
@@ -87,6 +87,7 @@ class TestMetadataPromptQuality:
         assert isinstance(result, bool)
 
     @pytest.mark.asyncio
+    @pytest.mark.xfail(reason="Aspirational - parse_and_confirm_metadata API not yet implemented")
     async def test_metadata_prompt_for_complex_fields(self, handler_with_llm, global_state):
         """Test handler can process complex metadata."""
 
@@ -105,11 +106,12 @@ class TestMetadataPromptQuality:
 
 
 @pytest.mark.unit
-@pytest.mark.skip(reason="Tests aspirational API - explain_error() method not yet implemented on ConversationalHandler")
+@pytest.mark.aspirational
 class TestErrorExplanationQuality:
     """Test LLM error explanations are clear and actionable."""
 
     @pytest.mark.asyncio
+    @pytest.mark.xfail(reason="Aspirational - analyze_validation_and_respond API not yet implemented")
     async def test_error_explanation_is_clear(self, handler_with_llm, global_state):
         """Test handler can analyze validation errors."""
 
@@ -137,19 +139,28 @@ class TestErrorExplanationQuality:
         """Test explanations provide contextual information."""
 
         # Mock LLM to provide helpful response
-        handler_with_llm.llm_service.generate_completion = AsyncMock(
-            return_value='{"action": "request_metadata", "fields": ["session_start_time"]}'
+        handler_with_llm.llm_service.generate_structured_output = AsyncMock(
+            return_value={
+                "extracted_metadata": {},
+                "needs_more_info": True,
+                "ready_to_proceed": False,
+                "follow_up_message": "Please provide more details",
+            }
         )
 
-        # Test processing user response
+        # Test processing user response with required context parameter
         result = await handler_with_llm.process_user_response(
-            user_message="I don't have the start time", state=global_state
+            user_message="I don't have the start time",
+            context={"issues": [], "conversation_history": []},
+            state=global_state,
         )
 
         # Should successfully process the response
         assert result is not None
+        assert result["type"] == "user_response_processed"
 
     @pytest.mark.asyncio
+    @pytest.mark.xfail(reason="Aspirational - explain_error method not yet implemented")
     async def test_error_explanation_without_llm(self, handler_no_llm, global_state):
         """Test error explanation fallback without LLM."""
 
@@ -162,16 +173,17 @@ class TestErrorExplanationQuality:
 
 
 @pytest.mark.unit
-@pytest.mark.skip(reason="Tests aspirational API - validation issue explanation methods not yet implemented")
+@pytest.mark.aspirational
 class TestValidationIssueExplanation:
     """Test validation issue explanations are helpful."""
 
     @pytest.mark.asyncio
+    @pytest.mark.xfail(reason="Aspirational - explain_validation_issues method not yet implemented")
     async def test_issue_categorization_is_clear(self, handler_with_llm, global_state):
         """Test issues are categorized clearly."""
 
         # Mock LLM to categorize issues
-        handler_with_llm._llm_service.generate_completion = AsyncMock(
+        handler_with_llm.llm_service.generate_completion = AsyncMock(
             return_value="Critical issues that must be fixed:\n1. Missing session_description\n\nRecommended improvements:\n1. Add subject age for better metadata"
         )
 
@@ -187,11 +199,12 @@ class TestValidationIssueExplanation:
         assert "recommend" in explanation.lower() or "optional" in explanation.lower()
 
     @pytest.mark.asyncio
+    @pytest.mark.xfail(reason="Aspirational - explain_validation_issues method not yet implemented")
     async def test_auto_fixable_issues_identified(self, handler_with_llm, global_state):
         """Test auto-fixable issues are identified."""
 
         # Mock LLM to identify fixable issues
-        handler_with_llm._llm_service.generate_completion = AsyncMock(
+        handler_with_llm.llm_service.generate_completion = AsyncMock(
             return_value="I can automatically fix:\n- Invalid timestamp format\n\nYou need to provide:\n- Session description"
         )
 
@@ -210,15 +223,16 @@ class TestValidationIssueExplanation:
 
 
 @pytest.mark.unit
-@pytest.mark.skip(reason="Tests aspirational API - prompt generation methods not yet implemented")
+@pytest.mark.aspirational
 class TestPromptLength:
     """Test prompts are appropriate length - not too short or too long."""
 
     @pytest.mark.asyncio
+    @pytest.mark.xfail(reason="Aspirational - generate_metadata_prompt method not yet implemented")
     async def test_metadata_prompt_not_too_short(self, handler_with_llm, global_state):
         """Test prompts are detailed enough."""
 
-        handler_with_llm._llm_service.generate_completion = AsyncMock(
+        handler_with_llm.llm_service.generate_completion = AsyncMock(
             return_value="Please provide the session description - a brief summary of what was done in this recording. For example: 'Electrophysiology recording of mouse V1 cortex during visual stimulation with drifting gratings.'"
         )
 
@@ -228,10 +242,11 @@ class TestPromptLength:
         assert len(prompt) >= 50
 
     @pytest.mark.asyncio
+    @pytest.mark.xfail(reason="Aspirational - generate_metadata_prompt method not yet implemented")
     async def test_metadata_prompt_not_too_long(self, handler_with_llm, global_state):
         """Test prompts are concise."""
 
-        handler_with_llm._llm_service.generate_completion = AsyncMock(
+        handler_with_llm.llm_service.generate_completion = AsyncMock(
             return_value="Please provide session description. Example: 'Recording of V1 during visual stim.'"
         )
 
@@ -241,10 +256,11 @@ class TestPromptLength:
         assert len(prompt) <= 500
 
     @pytest.mark.asyncio
+    @pytest.mark.xfail(reason="Aspirational - explain_error method not yet implemented")
     async def test_error_explanation_reasonable_length(self, handler_with_llm, global_state):
         """Test error explanations are digestible."""
 
-        handler_with_llm._llm_service.generate_completion = AsyncMock(
+        handler_with_llm.llm_service.generate_completion = AsyncMock(
             return_value="The probe geometry file is missing. Check for a .imRoFile in your recording directory."
         )
 
@@ -256,17 +272,18 @@ class TestPromptLength:
 
 
 @pytest.mark.unit
-@pytest.mark.skip(reason="Tests aspirational API - prompt personalization methods not yet implemented")
+@pytest.mark.aspirational
 class TestPromptPersonalization:
     """Test prompts are personalized based on context."""
 
     @pytest.mark.asyncio
+    @pytest.mark.xfail(reason="Aspirational - generate_metadata_prompt method not yet implemented")
     async def test_prompt_uses_detected_format(self, handler_with_llm, global_state):
         """Test prompts reference the detected format."""
 
         global_state.detected_format = "SpikeGLX"
 
-        handler_with_llm._llm_service.generate_completion = AsyncMock(
+        handler_with_llm.llm_service.generate_completion = AsyncMock(
             return_value="For SpikeGLX recordings, please provide the probe configuration file (.imRo file)."
         )
 
@@ -276,13 +293,14 @@ class TestPromptPersonalization:
         assert "spikeglx" in prompt.lower()
 
     @pytest.mark.asyncio
+    @pytest.mark.xfail(reason="Aspirational - generate_metadata_prompt method not yet implemented")
     async def test_prompt_adapts_to_user_input_history(self, handler_with_llm, global_state):
         """Test prompts adapt based on previous user responses."""
 
         # User has already provided some metadata
         global_state.metadata = {"experimenter": "Jane Doe", "subject": {"species": "Mus musculus"}}
 
-        handler_with_llm._llm_service.generate_completion = AsyncMock(
+        handler_with_llm.llm_service.generate_completion = AsyncMock(
             return_value="Great! You've provided the experimenter (Jane Doe) and species (mouse). Now please provide the session description."
         )
 

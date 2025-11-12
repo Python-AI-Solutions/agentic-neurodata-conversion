@@ -79,6 +79,7 @@ async def simulate_chat(agent, message: str, state: GlobalState):
 
 
 @pytest.mark.integration
+@pytest.mark.agent_conversation
 class TestRealisticMetadataConversation:
     """Test metadata collection with realistic user behavior."""
 
@@ -149,6 +150,7 @@ class TestRealisticMetadataConversation:
 
 
 @pytest.mark.integration
+@pytest.mark.agent_conversation
 class TestRetryLoopConversations:
     """Test retry approval and correction conversations."""
 
@@ -184,6 +186,7 @@ class TestRetryLoopConversations:
 
 
 @pytest.mark.integration
+@pytest.mark.agent_conversation
 class TestNaturalLanguageVariations:
     """Test system handles various ways users express intent."""
 
@@ -238,6 +241,7 @@ class TestNaturalLanguageVariations:
 
 
 @pytest.mark.integration
+@pytest.mark.agent_conversation
 class TestMultiTurnWorkflows:
     """Test complete multi-turn conversation workflows."""
 
@@ -296,6 +300,7 @@ class TestMultiTurnWorkflows:
 
 
 @pytest.mark.integration
+@pytest.mark.agent_conversation
 class TestConversationStateManagement:
     """Test conversation state persists across turns."""
 
@@ -331,6 +336,7 @@ class TestConversationStateManagement:
 
 
 @pytest.mark.integration
+@pytest.mark.agent_conversation
 class TestAmbiguousUserInput:
     """Test handling of unclear or ambiguous user responses."""
 

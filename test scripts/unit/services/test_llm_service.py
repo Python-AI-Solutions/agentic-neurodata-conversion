@@ -21,6 +21,7 @@ from services.llm_service import (
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestMockLLMService:
     """Tests for the mock LLM service used in testing."""
 
@@ -81,6 +82,7 @@ class TestMockLLMService:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestAnthropicLLMService:
     """Tests for the Anthropic Claude implementation."""
 
@@ -271,6 +273,7 @@ class TestAnthropicLLMService:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestLLMServiceFactory:
     """Tests for the LLM service factory function."""
 
@@ -302,6 +305,7 @@ class TestLLMServiceFactory:
 
         assert "api_key is required" in str(exc_info.value)
 
+    @pytest.mark.smoke
     def test_create_mock_service(self):
         """Test creating mock service."""
         service = create_llm_service(provider="mock")
@@ -328,6 +332,7 @@ class TestLLMServiceFactory:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestLLMServiceError:
     """Tests for the LLMServiceError exception."""
 

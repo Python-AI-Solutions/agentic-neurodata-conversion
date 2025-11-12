@@ -20,6 +20,7 @@ from services.llm_service import MockLLMService
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestConversionAgentInitialization:
     """Tests for ConversionAgent initialization."""
 
@@ -57,6 +58,7 @@ class TestConversionAgentInitialization:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestFormatDetection:
     """Tests for format detection (LLM-first approach)."""
 
@@ -262,6 +264,7 @@ class TestFormatDetection:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestParameterOptimization:
     """Tests for LLM-powered parameter optimization."""
 
@@ -339,6 +342,7 @@ class TestParameterOptimization:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestProgressNarration:
     """Tests for LLM-powered progress narration."""
 
@@ -454,6 +458,7 @@ class TestProgressNarration:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestHandleDetectFormat:
     """Tests for handle_detect_format MCP handler."""
 
@@ -539,6 +544,7 @@ class TestHandleDetectFormat:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestHandleRunConversion:
     """Tests for handle_run_conversion MCP handler."""
 
@@ -594,6 +600,7 @@ class TestHandleRunConversion:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestChecksumCalculation:
     """Tests for checksum calculation."""
 
@@ -627,6 +634,7 @@ class TestChecksumCalculation:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestFileSizeFormatting:
     """Tests for file size formatting logic."""
 
@@ -727,6 +735,7 @@ class TestFileSizeFormatting:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestDurationFormatting:
     """Tests for duration formatting logic."""
 
@@ -798,6 +807,7 @@ class TestDurationFormatting:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestCompressionRatioCalculation:
     """Tests for compression ratio calculation."""
 
@@ -864,6 +874,7 @@ class TestCompressionRatioCalculation:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestErrorExplanation:
     """Tests for LLM-powered error explanation."""
 
@@ -940,6 +951,7 @@ class TestErrorExplanation:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversion
 class TestRealWorkflows:
     """
     Integration-style unit tests using real dependencies.

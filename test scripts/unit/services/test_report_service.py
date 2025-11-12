@@ -177,6 +177,7 @@ def sample_workflow_trace():
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestReportServiceInitialization:
     """Test suite for ReportService initialization."""
 
@@ -212,6 +213,7 @@ class TestReportServiceInitialization:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestPDFReportGeneration:
     """Test suite for PDF report generation."""
 
@@ -262,6 +264,7 @@ class TestPDFReportGeneration:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestHTMLReportGeneration:
     """Test suite for HTML report generation."""
 
@@ -322,6 +325,7 @@ class TestHTMLReportGeneration:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestJSONReportGeneration:
     """Test suite for JSON report generation."""
 
@@ -383,6 +387,7 @@ class TestJSONReportGeneration:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestTextReportGeneration:
     """Test suite for text report generation."""
 
@@ -423,6 +428,7 @@ class TestTextReportGeneration:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestTemplateDataPreparation:
     """Test suite for template data preparation."""
 
@@ -474,6 +480,7 @@ class TestTemplateDataPreparation:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestFileInfoPreparation:
     """Test suite for file information preparation."""
 
@@ -503,6 +510,7 @@ class TestFileInfoPreparation:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestIssuePreparation:
     """Test suite for issue preparation and categorization."""
 
@@ -551,6 +559,7 @@ class TestIssuePreparation:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestRecommendationsGeneration:
     """Test suite for recommendations generation."""
 
@@ -596,6 +605,7 @@ class TestRecommendationsGeneration:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestQualityMetricsCalculation:
     """Test suite for quality metrics calculation."""
 
@@ -643,6 +653,7 @@ class TestQualityMetricsCalculation:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestMetadataCompletenessCalculation:
     """Test suite for metadata completeness calculation."""
 
@@ -690,6 +701,7 @@ class TestMetadataCompletenessCalculation:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestMissingCriticalFieldsIdentification:
     """Test suite for identifying missing critical fields."""
 
@@ -739,6 +751,7 @@ class TestMissingCriticalFieldsIdentification:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestFormattingUtilities:
     """Test suite for formatting utility methods."""
 
@@ -783,6 +796,7 @@ class TestFormattingUtilities:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestJinja2CustomFilters:
     """Test suite for custom Jinja2 filters."""
 
@@ -844,6 +858,7 @@ class TestJinja2CustomFilters:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestWorkflowTracePreparation:
     """Test suite for workflow trace preparation."""
 
@@ -876,6 +891,7 @@ class TestWorkflowTracePreparation:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestBestPracticesExtraction:
     """Test suite for best practices extraction."""
 
@@ -905,6 +921,7 @@ class TestBestPracticesExtraction:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestSummaryGeneration:
     """Test suite for summary generation."""
 
@@ -947,6 +964,7 @@ class TestSummaryGeneration:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestTimeEstimation:
     """Test suite for fix time estimation."""
 
@@ -979,6 +997,7 @@ class TestTimeEstimation:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestEdgeCasesAndErrorHandling:
     """Test suite for edge cases and error handling."""
 

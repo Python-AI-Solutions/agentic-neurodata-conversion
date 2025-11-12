@@ -9,10 +9,12 @@ import pytest
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestRealValidationWorkflows:
     """Integration-style unit tests using real dependencies."""
 
     @pytest.mark.asyncio
+    @pytest.mark.smoke
     async def test_real_agent_initialization(self, evaluation_agent_real):
         """Test that real agent is properly initialized."""
         # Should have LLM service (MockLLMService)

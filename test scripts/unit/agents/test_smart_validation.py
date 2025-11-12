@@ -16,6 +16,7 @@ from models import LogLevel
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestSmartValidationAnalyzerInitialization:
     """Test SmartValidationAnalyzer initialization."""
 
@@ -34,6 +35,7 @@ class TestSmartValidationAnalyzerInitialization:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestAnalyzeValidationResultsWithoutLLM:
     """Test analyze_validation_results without LLM (fallback mode)."""
 
@@ -138,6 +140,7 @@ class TestAnalyzeValidationResultsWithoutLLM:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestAnalyzeValidationResultsWithLLM:
     """Test analyze_validation_results with LLM service."""
 
@@ -297,6 +300,7 @@ class TestAnalyzeValidationResultsWithLLM:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestAnalyzeValidationResultsErrorHandling:
     """Test error handling in validation analysis."""
 
@@ -354,6 +358,7 @@ class TestAnalyzeValidationResultsErrorHandling:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestAnalyzeValidationResultsLogging:
     """Test logging in validation analysis."""
 
@@ -396,6 +401,7 @@ class TestAnalyzeValidationResultsLogging:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestSmartValidationAnalyzerIntegration:
     """Integration tests for complete validation analysis workflow."""
 

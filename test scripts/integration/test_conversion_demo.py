@@ -8,6 +8,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 # Add backend/src to path
 sys.path.insert(0, str(Path(__file__).parent / "backend" / "src"))
 
@@ -20,7 +22,10 @@ from services import MCPServer
 from services.llm_service import MockLLMService
 
 
-async def run_conversion_demo():
+@pytest.mark.integration
+@pytest.mark.e2e
+@pytest.mark.asyncio
+async def test_conversion_demo():
     """Run complete conversion with auto-apply metadata."""
 
     print("=" * 80)
@@ -42,8 +47,8 @@ async def run_conversion_demo():
     register_conversation_agent(mcp_server, llm_service=llm_service)
     print("✅ All agents registered\n")
 
-    # Prepare test data path
-    test_data_path = Path(__file__).parent / "test_data" / "spikeglx"
+    # Prepare test data path - use toy fixtures for fast testing
+    test_data_path = Path(__file__).parent.parent / "fixtures" / "toy_spikeglx"
     print(f"📁 Test data: {test_data_path}")
     print(f"   Files: {list(test_data_path.glob('*'))}\n")
 
@@ -78,7 +83,13 @@ async def run_conversion_demo():
         context={"input_path": str(test_data_path)},
     )
 
-    detect_response = await mcp_server.route_message(detect_msg, mcp_server.global_state)
+    detect_response = await mcp_server.send_message(detect_msg)
+
+    # Handle None result
+    if detect_response.result is None:
+        print("❌ Format detection failed - result is None")
+        return
+
     detected_format = detect_response.result.get("format")
     print(f"✅ Detected format: {detected_format}")
     print(f"   Confidence: {detect_response.result.get('confidence', 'N/A')}")
@@ -102,7 +113,12 @@ async def run_conversion_demo():
         },
     )
 
-    convert_response = await mcp_server.route_message(convert_msg, mcp_server.global_state)
+    convert_response = await mcp_server.send_message(convert_msg)
+
+    # Handle None result
+    if convert_response.result is None:
+        print("❌ Conversion failed - result is None")
+        return
 
     if convert_response.result.get("status") == "completed":
         output_path = convert_response.result.get("output_path")
@@ -126,7 +142,7 @@ async def run_conversion_demo():
         },
     )
 
-    validate_response = await mcp_server.route_message(validate_msg, mcp_server.global_state)
+    validate_response = await mcp_server.send_message(validate_msg)
     validation_result = validate_response.result.get("validation_result", {})
 
     print("✅ Validation complete")
@@ -153,7 +169,7 @@ async def run_conversion_demo():
         },
     )
 
-    report_response = await mcp_server.route_message(report_msg, mcp_server.global_state)
+    report_response = await mcp_server.send_message(report_msg)
 
     pdf_report = report_response.result.get("pdf_report")
     json_report = report_response.result.get("json_report")

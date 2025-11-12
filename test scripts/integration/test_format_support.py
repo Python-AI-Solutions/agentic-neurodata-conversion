@@ -14,6 +14,7 @@ from backend.src.models import GlobalState, MCPMessage
 
 
 @pytest.mark.integration
+@pytest.mark.agent_conversion
 class TestFormatDetection:
     """Test format auto-detection for various neuroscience data formats."""
 
@@ -369,6 +370,7 @@ class TestProgressTracking:
 
 
 @pytest.mark.integration
+@pytest.mark.agent_conversion
 class TestMetadataMapping:
     """Test that metadata is correctly mapped during conversion."""
 

@@ -21,6 +21,7 @@ from services.llm_service import MockLLMService
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestConversationAgentInitialization:
     """Tests for ConversationAgent initialization."""
 
@@ -63,6 +64,7 @@ class TestConversationAgentInitialization:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestMetadataProvenanceTracking:
     """Tests for metadata provenance tracking."""
 
@@ -160,6 +162,7 @@ class TestMetadataProvenanceTracking:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestValidateRequiredMetadata:
     """Tests for _validate_required_nwb_metadata method."""
 
@@ -212,6 +215,7 @@ class TestValidateRequiredMetadata:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestUserIntentDetection:
     """Tests for user intent detection."""
 
@@ -272,6 +276,7 @@ class TestUserIntentDetection:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestConstants:
     """Tests for module constants."""
 
@@ -287,6 +292,7 @@ class TestConstants:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestGenerateDynamicMetadataRequest:
     """Tests for _generate_dynamic_metadata_request method."""
 
@@ -370,6 +376,7 @@ class TestGenerateDynamicMetadataRequest:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestExplainErrorToUser:
     """Tests for _explain_error_to_user method."""
 
@@ -440,6 +447,7 @@ class TestExplainErrorToUser:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestDecideNextAction:
     """Tests for _decide_next_action method."""
 
@@ -512,6 +520,7 @@ class TestDecideNextAction:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestGenerateStatusMessage:
     """Tests for _generate_status_message method."""
 
@@ -577,6 +586,7 @@ class TestGenerateStatusMessage:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestHandleStartConversion:
     """Tests for handle_start_conversion method."""
 
@@ -707,6 +717,7 @@ class TestHandleStartConversion:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestHandleUserFormatSelection:
     """Tests for handle_user_format_selection method."""
 
@@ -753,6 +764,7 @@ class TestHandleUserFormatSelection:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestHandleRetryDecision:
     """Tests for handle_retry_decision method."""
 
@@ -871,6 +883,7 @@ class TestHandleRetryDecision:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestHandleConversationalResponse:
     """Tests for handle_conversational_response method."""
 
@@ -1220,6 +1233,7 @@ class TestHandleConversationalResponse:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestGenerateFallbackMissingMetadataMessage:
     """Tests for _generate_fallback_missing_metadata_message method."""
 
@@ -1257,6 +1271,7 @@ class TestGenerateFallbackMissingMetadataMessage:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestContinueConversionWorkflow:
     """Tests for _continue_conversion_workflow method."""
 
@@ -1323,6 +1338,7 @@ class TestContinueConversionWorkflow:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestHandleGeneralQuery:
     """Tests for handle_general_query method."""
 
@@ -1375,6 +1391,7 @@ class TestHandleGeneralQuery:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestGenerateMissingMetadataMessageWithLLM:
     """Tests for _generate_missing_metadata_message with LLM."""
 
@@ -1423,6 +1440,7 @@ class TestGenerateMissingMetadataMessageWithLLM:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestGenerateCustomMetadataPrompt:
     """Tests for _generate_custom_metadata_prompt method."""
 
@@ -1481,6 +1499,7 @@ class TestGenerateCustomMetadataPrompt:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestHandleCustomMetadataResponse:
     """Tests for _handle_custom_metadata_response method."""
 
@@ -1543,6 +1562,7 @@ class TestHandleCustomMetadataResponse:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestFinalizeWithMinimalMetadata:
     """Tests for _finalize_with_minimal_metadata method."""
 
@@ -1627,6 +1647,7 @@ class TestFinalizeWithMinimalMetadata:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestGenerateMetadataReviewMessage:
     """Tests for _generate_metadata_review_message method."""
 
@@ -1709,6 +1730,7 @@ class TestGenerateMetadataReviewMessage:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestProactiveIssueDetection:
     """Tests for _proactive_issue_detection method."""
 
@@ -1773,6 +1795,7 @@ class TestProactiveIssueDetection:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestInferFixFromIssue:
     """Tests for _infer_fix_from_issue method."""
 
@@ -1827,6 +1850,7 @@ class TestInferFixFromIssue:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestExtractFixesFromIssues:
     """Tests for _extract_fixes_from_issues method."""
 
@@ -1845,6 +1869,7 @@ class TestExtractFixesFromIssues:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestExtractMetadataFromMessage:
     """Tests for _extract_metadata_from_message method."""
 
@@ -1890,6 +1915,7 @@ class TestExtractMetadataFromMessage:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestValidateMetadataFormat:
     """Tests for _validate_metadata_format method."""
 
@@ -1945,6 +1971,7 @@ class TestValidateMetadataFormat:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestIsValidDateFormat:
     """Tests for _is_valid_date_format method."""
 
@@ -1973,6 +2000,7 @@ class TestIsValidDateFormat:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestGenerateBasicCorrectionPrompts:
     """Tests for _generate_basic_correction_prompts method."""
 
@@ -2022,6 +2050,7 @@ class TestGenerateBasicCorrectionPrompts:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestGenerateCorrectionPrompts:
     """Tests for _generate_correction_prompts method."""
 
@@ -2078,6 +2107,7 @@ class TestGenerateCorrectionPrompts:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestGenerateAutoFixSummary:
     """Tests for _generate_auto_fix_summary method."""
 
@@ -2142,6 +2172,7 @@ class TestGenerateAutoFixSummary:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestUserExpressesIntentToAddMore:
     """Tests for _user_expresses_intent_to_add_more method."""
 
@@ -2188,6 +2219,7 @@ class TestUserExpressesIntentToAddMore:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestIdentifyUserInputRequired:
     """Tests for _identify_user_input_required method."""
 
@@ -2289,6 +2321,7 @@ class TestIdentifyUserInputRequired:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestExtractAutoFixes:
     """Tests for _extract_auto_fixes method."""
 
@@ -2352,6 +2385,7 @@ class TestExtractAutoFixes:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestValidateRequiredNwbMetadata:
     """Tests for _validate_required_nwb_metadata method."""
 
@@ -2410,6 +2444,7 @@ class TestValidateRequiredNwbMetadata:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestHandleImprovementDecision:
     """Tests for handle_improvement_decision method."""
 
@@ -2600,6 +2635,7 @@ class TestHandleImprovementDecision:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestUserInteractionScenarios:
     """Tests for various user interaction scenarios in handle_conversational_response."""
 
@@ -2881,6 +2917,7 @@ class TestUserInteractionScenarios:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestAgentMCPInteractions:
     """Tests for conversation agent interactions with other agents via MCP."""
 
@@ -3085,6 +3122,7 @@ class TestAgentMCPInteractions:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestEdgeCases:
     """Tests for edge case scenarios in conversation agent."""
 
@@ -3377,6 +3415,7 @@ class TestEdgeCases:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestMetadataAutoFillFromInference:
     """Tests for auto-filling metadata from AI inference."""
 
@@ -3566,6 +3605,7 @@ class TestMetadataAutoFillFromInference:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestRetryWorkflowWithNoProgress:
     """Tests for retry workflow with no-progress detection."""
 
@@ -3762,6 +3802,7 @@ class TestRetryWorkflowWithNoProgress:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestMissingMetadataWarnings:
     """Tests for missing metadata field warnings."""
 
@@ -3864,6 +3905,7 @@ class TestMissingMetadataWarnings:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestImprovementDecisionWorkflow:
     """Tests for improvement decision workflow (PASSED_WITH_ISSUES)."""
 
@@ -3894,6 +3936,7 @@ class TestImprovementDecisionWorkflow:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestLLMResponseHandling:
     """Test LLM-powered conversation features."""
 
@@ -4021,6 +4064,7 @@ class TestLLMResponseHandling:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestUserResponsePatterns:
     """Test various user interaction patterns."""
 
@@ -4153,6 +4197,7 @@ class TestUserResponsePatterns:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestAgentMCPMessageExchanges:
     """Test complex multi-agent MCP communication workflows."""
 
@@ -4360,6 +4405,7 @@ class TestAgentMCPMessageExchanges:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestUncoveredWorkflows:
     """Test previously uncovered workflow sections to improve coverage."""
 
@@ -4605,6 +4651,7 @@ class TestUncoveredWorkflows:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestCompleteMetadataWorkflows:
     """Test complete metadata collection and integration workflows."""
 
@@ -4710,6 +4757,7 @@ class TestCompleteMetadataWorkflows:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestCompleteCorrectionWorkflows:
     """Test complete correction loop workflows."""
 
@@ -4807,6 +4855,7 @@ class TestCompleteCorrectionWorkflows:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestCompleteConversationalFlows:
     """Test complete conversational interaction flows."""
 
@@ -4905,6 +4954,7 @@ class TestCompleteConversationalFlows:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestValidationAndRecoveryWorkflows:
     """Test validation failure and recovery workflows."""
 
@@ -4975,6 +5025,7 @@ class TestValidationAndRecoveryWorkflows:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestMixedWorkflowScenarios:
     """Test mixed/complex workflow scenarios."""
 
@@ -5055,6 +5106,7 @@ class TestMixedWorkflowScenarios:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestErrorRecoveryScenarios:
     """Test error recovery and graceful degradation scenarios."""
 
@@ -5132,6 +5184,7 @@ class TestErrorRecoveryScenarios:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestRunConversion:
     """Direct tests for _run_conversion method (lines 1761-2189)."""
 
@@ -5601,6 +5654,7 @@ class TestRunConversion:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestRealConversationWorkflows:
     """
     Integration-style unit tests using real dependencies.

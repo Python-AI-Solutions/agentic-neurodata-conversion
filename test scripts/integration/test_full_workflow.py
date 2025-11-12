@@ -13,6 +13,8 @@ This tests:
 import sys
 from pathlib import Path
 
+import pytest
+
 # Add backend to path
 sys.path.insert(0, str(Path(__file__).parent / "backend" / "src"))
 
@@ -22,6 +24,9 @@ from services.llm_service import MockLLMService
 from services.mcp_server import MCPServer
 
 
+@pytest.mark.integration
+@pytest.mark.e2e
+@pytest.mark.asyncio
 async def test_full_workflow():
     """Test the full conversion workflow."""
     print("=" * 80)

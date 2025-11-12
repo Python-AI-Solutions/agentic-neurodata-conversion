@@ -16,6 +16,7 @@ from services.log_manager import LogFileManager
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestLogFileManagerInitialization:
     """Test LogFileManager initialization."""
 
@@ -49,6 +50,7 @@ class TestLogFileManagerInitialization:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestSessionLogFileCreation:
     """Test session log file creation."""
 
@@ -110,6 +112,7 @@ class TestSessionLogFileCreation:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestWriteLogEntry:
     """Test writing individual log entries."""
 
@@ -200,6 +203,7 @@ class TestWriteLogEntry:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestWriteLogEntriesBatch:
     """Test batch writing of log entries."""
 
@@ -250,6 +254,7 @@ class TestWriteLogEntriesBatch:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestCloseSessionLog:
     """Test closing session log files."""
 
@@ -307,6 +312,7 @@ class TestCloseSessionLog:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestGetCurrentLogFilePath:
     """Test getting current log file path."""
 
@@ -329,6 +335,7 @@ class TestGetCurrentLogFilePath:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestWriteStageHeader:
     """Test writing stage headers to log file."""
 
@@ -373,6 +380,7 @@ class TestWriteStageHeader:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestLogFileManagerIntegration:
     """Integration tests for complete log file lifecycle."""
 

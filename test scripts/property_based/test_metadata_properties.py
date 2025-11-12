@@ -12,6 +12,8 @@ Note: The `hypothesis` package is installed via pixi.toml dependencies.
 import re
 from datetime import datetime
 
+import pytest
+
 # Conditional import of hypothesis - skip tests if not installed
 try:
     from hypothesis import HealthCheck, assume, given, settings
@@ -69,6 +71,8 @@ except ImportError:
 # ========================================
 
 
+@pytest.mark.property
+@pytest.mark.model
 @given(
     session_description=st.text(min_size=1, max_size=500),
     identifier=st.text(
@@ -103,6 +107,8 @@ def test_minimal_metadata_always_valid(session_description, identifier):
     assert len(metadata["identifier"]) > 0
 
 
+@pytest.mark.property
+@pytest.mark.model
 @given(
     age_days=st.integers(min_value=0, max_value=365 * 10)  # 0 to 10 years
 )
@@ -124,6 +130,8 @@ def test_age_iso8601_format_always_valid(age_days):
     assert extracted_days == age_days
 
 
+@pytest.mark.property
+@pytest.mark.model
 @given(
     experimenter_list=st.lists(
         st.text(
@@ -155,6 +163,8 @@ def test_experimenter_list_preserves_order(experimenter_list):
 # ========================================
 
 
+@pytest.mark.property
+@pytest.mark.agent_evaluation
 @given(critical_count=st.integers(min_value=0, max_value=100), warning_count=st.integers(min_value=0, max_value=100))
 @settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
 def test_validation_severity_ordering(critical_count, warning_count):
@@ -180,6 +190,8 @@ def test_validation_severity_ordering(critical_count, warning_count):
     assert len(critical_issues) == critical_count
 
 
+@pytest.mark.property
+@pytest.mark.agent_evaluation
 @given(is_valid=st.booleans(), has_issues=st.booleans())
 @settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
 def test_validation_consistency(is_valid, has_issues):
@@ -214,6 +226,8 @@ def test_validation_consistency(is_valid, has_issues):
 # ========================================
 
 
+@pytest.mark.property
+@pytest.mark.service
 @given(
     filename=st.text(
         min_size=1,
@@ -246,6 +260,8 @@ def test_filename_sanitization_removes_path_traversal(filename, extension):
     assert sanitized.endswith(extension)
 
 
+@pytest.mark.property
+@pytest.mark.service
 @given(
     file_size_bytes=st.integers(min_value=0, max_value=10**12)  # Up to 1TB
 )
@@ -283,6 +299,8 @@ def test_file_size_formatting_monotonic(file_size_bytes):
 # ========================================
 
 
+@pytest.mark.property
+@pytest.mark.service
 @given(retry_count=st.integers(min_value=0, max_value=1000))
 @settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
 def test_retry_count_never_negative(retry_count):
@@ -299,6 +317,8 @@ def test_retry_count_never_negative(retry_count):
     assert next_retry >= 0
 
 
+@pytest.mark.property
+@pytest.mark.service
 @given(retry_count=st.integers(min_value=0, max_value=100))
 @settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
 def test_unlimited_retries_property(retry_count):

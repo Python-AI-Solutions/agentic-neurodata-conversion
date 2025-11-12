@@ -14,6 +14,7 @@ from agents.nwb_dandi_schema import (
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestFieldRequirementLevel:
     """Tests for FieldRequirementLevel enum."""
 
@@ -31,6 +32,7 @@ class TestFieldRequirementLevel:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestFieldType:
     """Tests for FieldType enum."""
 
@@ -64,6 +66,7 @@ class TestFieldType:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestMetadataFieldSchema:
     """Tests for MetadataFieldSchema Pydantic model."""
 
@@ -128,6 +131,7 @@ class TestMetadataFieldSchema:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestGetAllFields:
     """Tests for get_all_fields method."""
 
@@ -209,6 +213,7 @@ class TestGetAllFields:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestGetRequiredFields:
     """Tests for get_required_fields method."""
 
@@ -243,6 +248,7 @@ class TestGetRequiredFields:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestGetRecommendedFields:
     """Tests for get_recommended_fields method."""
 
@@ -271,6 +277,7 @@ class TestGetRecommendedFields:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestGetFieldByName:
     """Tests for get_field_by_name method."""
 
@@ -305,6 +312,7 @@ class TestGetFieldByName:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestGenerateLLMExtractionPrompt:
     """Tests for generate_llm_extraction_prompt method."""
 
@@ -378,6 +386,7 @@ class TestGenerateLLMExtractionPrompt:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestValidateMetadata:
     """Tests for validate_metadata method."""
 
@@ -480,6 +489,7 @@ class TestValidateMetadata:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestGetFieldDisplayInfo:
     """Tests for get_field_display_info method."""
 
@@ -515,6 +525,7 @@ class TestGetFieldDisplayInfo:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_evaluation
 class TestNWBDANDISchemaIntegration:
     """Integration tests for NWBDANDISchema."""
 

@@ -17,6 +17,7 @@ from services.llm_service import MockLLMService
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestPredictiveMetadataSystemInitialization:
     """Tests for PredictiveMetadataSystem initialization."""
 
@@ -38,6 +39,7 @@ class TestPredictiveMetadataSystemInitialization:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestFilenameParsing:
     """Tests for filename parsing and pattern extraction."""
 
@@ -134,6 +136,7 @@ class TestFilenameParsing:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestBasicPredictions:
     """Tests for basic prediction fallback (no LLM)."""
 
@@ -181,6 +184,7 @@ class TestBasicPredictions:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestPredictionStorage:
     """Tests for prediction history storage and pattern learning."""
 
@@ -219,6 +223,7 @@ class TestPredictionStorage:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestPatternMatching:
     """Tests for finding similar file patterns."""
 
@@ -297,6 +302,7 @@ class TestPatternMatching:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestSpikeGLXAnalysis:
     """Tests for SpikeGLX deep file analysis."""
 
@@ -355,6 +361,7 @@ class TestSpikeGLXAnalysis:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestOpenEphysAnalysis:
     """Tests for OpenEphys file analysis."""
 
@@ -373,6 +380,7 @@ class TestOpenEphysAnalysis:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestDeepFileAnalysis:
     """Tests for deep file analysis dispatcher."""
 
@@ -420,6 +428,7 @@ class TestDeepFileAnalysis:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestPredictMetadata:
     """Tests for main predict_metadata method."""
 
@@ -543,6 +552,7 @@ class TestPredictMetadata:
 
 
 @pytest.mark.unit
+@pytest.mark.agent_conversation
 class TestLLMPredictMetadata:
     """Tests for LLM-based metadata prediction."""
 

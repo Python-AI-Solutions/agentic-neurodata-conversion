@@ -16,6 +16,7 @@ from services.metadata_cache import (
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestCacheEntry:
     """Tests for CacheEntry dataclass."""
 
@@ -49,6 +50,7 @@ class TestCacheEntry:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestMetadataCacheInitialization:
     """Tests for MetadataCache initialization."""
 
@@ -85,6 +87,7 @@ class TestMetadataCacheInitialization:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestGenerateCacheKey:
     """Tests for _generate_cache_key method."""
 
@@ -142,6 +145,7 @@ class TestGenerateCacheKey:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestGetMethod:
     """Tests for get method."""
 
@@ -231,6 +235,7 @@ class TestGetMethod:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestSetMethod:
     """Tests for set method."""
 
@@ -310,6 +315,7 @@ class TestSetMethod:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestInvalidateMethod:
     """Tests for invalidate method."""
 
@@ -365,6 +371,7 @@ class TestInvalidateMethod:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestGetStats:
     """Tests for get_stats method."""
 
@@ -410,6 +417,7 @@ class TestGetStats:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestCleanupExpired:
     """Tests for cleanup_expired method."""
 
@@ -465,6 +473,7 @@ class TestCleanupExpired:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestGlobalCacheInstance:
     """Tests for global cache singleton."""
 
@@ -491,6 +500,7 @@ class TestGlobalCacheInstance:
 
 
 @pytest.mark.unit
+@pytest.mark.service
 class TestMetadataCacheIntegration:
     """Integration tests for complete cache workflows."""
 

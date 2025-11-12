@@ -19,9 +19,11 @@ def api_client():
 
 
 @pytest.mark.integration
+@pytest.mark.websocket
 class TestWebSocketProgressBroadcasting:
     """Test WebSocket broadcasts all conversion stages."""
 
+    @pytest.mark.smoke
     def test_websocket_connection_established(self, api_client):
         """Test WebSocket connection can be established."""
         with api_client.websocket_connect("/ws") as websocket:
@@ -67,6 +69,7 @@ class TestWebSocketProgressBroadcasting:
 
 
 @pytest.mark.integration
+@pytest.mark.websocket
 class TestWebSocketMessageFormat:
     """Test WebSocket message format and content."""
 
@@ -87,6 +90,7 @@ class TestWebSocketMessageFormat:
 
 
 @pytest.mark.integration
+@pytest.mark.websocket
 class TestWebSocketProgressSequencing:
     """Test WebSocket messages arrive in correct sequence."""
 
@@ -124,6 +128,7 @@ class TestWebSocketProgressSequencing:
 
 
 @pytest.mark.integration
+@pytest.mark.websocket
 class TestWebSocketRetryUpdates:
     """Test WebSocket updates during retry loops."""
 
@@ -157,6 +162,7 @@ class TestWebSocketRetryUpdates:
 
 
 @pytest.mark.integration
+@pytest.mark.websocket
 class TestWebSocketErrorNotifications:
     """Test WebSocket broadcasts error notifications."""
 
@@ -196,6 +202,7 @@ class TestWebSocketErrorNotifications:
 
 
 @pytest.mark.integration
+@pytest.mark.websocket
 class TestWebSocketConcurrency:
     """Test WebSocket with concurrent operations."""
 
@@ -240,6 +247,7 @@ class TestWebSocketConcurrency:
 
 
 @pytest.mark.integration
+@pytest.mark.websocket
 class TestWebSocketUserInputRequests:
     """Test WebSocket notifications for user input requests."""
 
