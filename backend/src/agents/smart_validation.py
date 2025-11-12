@@ -1,19 +1,17 @@
-"""
-Smart Validation Analysis with LLM.
+"""Smart Validation Analysis with LLM.
 
 This module uses LLM to intelligently analyze validation results and provide
 context-aware guidance on how to fix issues.
 """
 
-from typing import Any, Optional
+from typing import Any
 
 from models import GlobalState, LogLevel
 from services import LLMService
 
 
 class SmartValidationAnalyzer:
-    """
-    Intelligent validation result analyzer.
+    """Intelligent validation result analyzer.
 
     Instead of just listing validation errors, this analyzer:
     - Groups related issues
@@ -22,9 +20,8 @@ class SmartValidationAnalyzer:
     - Provides context-aware guidance
     """
 
-    def __init__(self, llm_service: Optional[LLMService] = None):
-        """
-        Initialize the smart validation analyzer.
+    def __init__(self, llm_service: LLMService | None = None):
+        """Initialize the smart validation analyzer.
 
         Args:
             llm_service: Optional LLM service for intelligent analysis
@@ -37,8 +34,7 @@ class SmartValidationAnalyzer:
         file_context: dict[str, Any],
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Intelligently analyze validation results and provide actionable guidance.
+        """Intelligently analyze validation results and provide actionable guidance.
 
         Args:
             validation_result: Raw validation result from NWB Inspector
@@ -203,7 +199,7 @@ Return detailed analysis in JSON format."""
                 },
             )
 
-            return response
+            return dict(response)  # Cast Any to dict
 
         except Exception as e:
             state.add_log(

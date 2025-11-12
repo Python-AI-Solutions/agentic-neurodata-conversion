@@ -1,11 +1,10 @@
-"""
-Validation result models.
+"""Validation result models.
 
 Models for NWB Inspector validation results and correction contexts.
 """
 
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -24,20 +23,18 @@ class ValidationIssue(BaseModel):
 
     severity: ValidationSeverity
     message: str
-    location: Optional[str] = Field(
+    location: str | None = Field(
         default=None,
         description="Path to the issue location in the NWB file",
     )
-    check_name: Optional[str] = Field(
+    check_name: str | None = Field(
         default=None,
         description="Name of the validation check that found this issue",
     )
 
 
 class ValidationResult(BaseModel):
-    """
-    Complete validation result from NWB Inspector.
-    """
+    """Complete validation result from NWB Inspector."""
 
     is_valid: bool = Field(
         description="Overall validation status",
@@ -50,7 +47,7 @@ class ValidationResult(BaseModel):
         default_factory=dict,
         description="Count of issues by severity",
     )
-    inspector_version: Optional[str] = Field(
+    inspector_version: str | None = Field(
         default=None,
         description="Version of NWB Inspector used",
     )
@@ -61,8 +58,7 @@ class ValidationResult(BaseModel):
         inspector_results: list[dict[str, Any]],
         inspector_version: str,
     ) -> "ValidationResult":
-        """
-        Create ValidationResult from NWB Inspector output.
+        """Create ValidationResult from NWB Inspector output.
 
         Args:
             inspector_results: List of check results from NWB Inspector
@@ -107,8 +103,7 @@ class ValidationResult(BaseModel):
 
 
 class CorrectionContext(BaseModel):
-    """
-    Context for LLM-assisted correction analysis.
+    """Context for LLM-assisted correction analysis.
 
     Contains the validation issues and relevant metadata for the LLM
     to analyze and suggest corrections.
@@ -129,8 +124,7 @@ class CorrectionContext(BaseModel):
     )
 
     def add_attempt(self, attempt_data: dict[str, Any]) -> None:
-        """
-        Record a correction attempt.
+        """Record a correction attempt.
 
         Args:
             attempt_data: Details of the correction attempt

@@ -1,5 +1,4 @@
-"""
-Metadata Caching Service
+"""Metadata Caching Service.
 
 Provides intelligent caching for LLM-inferred metadata to:
 - Reduce API costs (80% reduction on retries)
@@ -16,7 +15,7 @@ import logging
 import threading
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +33,7 @@ class CacheEntry:
 
 
 class MetadataCache:
-    """
-    Intelligent cache for metadata inference results.
+    """Intelligent cache for metadata inference results.
 
     Features:
     - TTL (Time To Live) based expiration
@@ -50,8 +48,7 @@ class MetadataCache:
         min_confidence: float = 70.0,  # Only cache results with 70%+ confidence
         max_entries: int = 1000,  # Prevent unlimited memory growth
     ):
-        """
-        Initialize metadata cache.
+        """Initialize metadata cache.
 
         Args:
             ttl_seconds: Time to live for cache entries (default 1 hour)
@@ -74,8 +71,7 @@ class MetadataCache:
         }
 
     def _get_lock(self) -> asyncio.Lock:
-        """
-        Get or create asyncio.Lock for the current event loop.
+        """Get or create asyncio.Lock for the current event loop.
 
         This ensures locks are properly bound to their event loop,
         preventing issues when the cache is used across multiple loops.
@@ -101,8 +97,7 @@ class MetadataCache:
         return self._locks[loop_id]
 
     def _generate_cache_key(self, field_name: str, input_context: dict[str, Any]) -> str:
-        """
-        Generate cache key based on field name and input context.
+        """Generate cache key based on field name and input context.
 
         Args:
             field_name: Name of metadata field (e.g., "species", "institution")
@@ -119,9 +114,8 @@ class MetadataCache:
 
         return f"{field_name}:{context_hash}"
 
-    async def get(self, field_name: str, input_context: dict[str, Any]) -> Optional[dict[str, Any]]:
-        """
-        Get cached inference result if available and valid.
+    async def get(self, field_name: str, input_context: dict[str, Any]) -> dict[str, Any] | None:
+        """Get cached inference result if available and valid.
 
         Args:
             field_name: Metadata field name
@@ -166,8 +160,7 @@ class MetadataCache:
         confidence: float,
         source: str = "llm_inference",
     ) -> bool:
-        """
-        Store inference result in cache if it meets criteria.
+        """Store inference result in cache if it meets criteria.
 
         Args:
             field_name: Metadata field name
@@ -205,9 +198,8 @@ class MetadataCache:
 
             return True
 
-    async def invalidate(self, field_name: Optional[str] = None) -> int:
-        """
-        Invalidate cache entries.
+    async def invalidate(self, field_name: str | None = None) -> int:
+        """Invalidate cache entries.
 
         Args:
             field_name: If provided, only invalidate entries for this field.
@@ -232,8 +224,7 @@ class MetadataCache:
             return len(keys_to_delete)
 
     def get_stats(self) -> dict[str, Any]:
-        """
-        Get cache statistics.
+        """Get cache statistics.
 
         Returns:
             Dict with cache performance metrics
@@ -249,8 +240,7 @@ class MetadataCache:
         }
 
     async def cleanup_expired(self) -> int:
-        """
-        Remove expired entries from cache.
+        """Remove expired entries from cache.
 
         Returns:
             Number of entries removed
@@ -267,13 +257,12 @@ class MetadataCache:
 
 
 # Global cache instance
-_global_cache: Optional[MetadataCache] = None
+_global_cache: MetadataCache | None = None
 _global_cache_lock = threading.Lock()
 
 
 def get_metadata_cache() -> MetadataCache:
-    """
-    Get or create global metadata cache instance (thread-safe).
+    """Get or create global metadata cache instance (thread-safe).
 
     Returns:
         Global MetadataCache instance
@@ -294,8 +283,8 @@ def get_metadata_cache() -> MetadataCache:
 
 
 async def start_cache_cleanup_task():
-    """
-    Background task to periodically clean up expired cache entries.
+    """Background task to periodically clean up expired cache entries.
+
     Run this as an asyncio task in your application startup.
     """
     cache = get_metadata_cache()

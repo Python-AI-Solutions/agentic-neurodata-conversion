@@ -1,5 +1,4 @@
-"""
-Strict Pydantic validation for NWB metadata.
+"""Strict Pydantic validation for NWB metadata.
 
 This module provides strict validation for all metadata fields before conversion,
 catching errors immediately with helpful messages instead of failing during conversion.
@@ -7,14 +6,12 @@ catching errors immediately with helpful messages instead of failing during conv
 
 import re
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class NWBMetadata(BaseModel):
-    """
-    Strict validation for NWB metadata fields.
+    """Strict validation for NWB metadata fields.
 
     Ensures all metadata meets NWB specification and DANDI requirements
     BEFORE conversion starts, providing immediate, helpful error messages.
@@ -26,7 +23,7 @@ class NWBMetadata(BaseModel):
     # Full validation happens before conversion in conversation_agent
     # ============================================================
 
-    session_description: Optional[str] = Field(
+    session_description: str | None = Field(
         None,
         min_length=10,
         max_length=1000,
@@ -34,14 +31,14 @@ class NWBMetadata(BaseModel):
         examples=["Recording of V1 neurons during visual stimulation with oriented gratings"],
     )
 
-    experimenter: Optional[list[str]] = Field(
+    experimenter: list[str] | None = Field(
         None,
         min_length=1,
         max_length=10,
         description="Names of people who performed the experiment (required before conversion)",
     )
 
-    institution: Optional[str] = Field(
+    institution: str | None = Field(
         None,
         min_length=2,
         max_length=200,
@@ -53,25 +50,25 @@ class NWBMetadata(BaseModel):
     # OPTIONAL BUT RECOMMENDED FIELDS
     # ============================================================
 
-    lab: Optional[str] = Field(
+    lab: str | None = Field(
         None,
         max_length=200,
         description="Lab where experiment was performed",
         examples=["Smith Lab", "Neural Systems Lab"],
     )
 
-    session_start_time: Optional[datetime] = Field(
+    session_start_time: datetime | None = Field(
         None, description="When the session started (ISO 8601 format)", examples=["2024-03-15T14:30:00-05:00"]
     )
 
-    experiment_description: Optional[str] = Field(
+    experiment_description: str | None = Field(
         None,
         max_length=2000,
         description="General description of the experiment",
         examples=["Investigation of orientation selectivity in mouse V1"],
     )
 
-    session_id: Optional[str] = Field(None, max_length=100, description="Unique identifier for this session")
+    session_id: str | None = Field(None, max_length=100, description="Unique identifier for this session")
 
     keywords: list[str] = Field(default_factory=list, max_length=20, description="Keywords describing the experiment")
 
@@ -79,15 +76,15 @@ class NWBMetadata(BaseModel):
         default_factory=list, max_length=10, description="DOIs or URLs of related publications"
     )
 
-    protocol: Optional[str] = Field(None, max_length=500, description="Experimental protocol")
+    protocol: str | None = Field(None, max_length=500, description="Experimental protocol")
 
-    notes: Optional[str] = Field(None, max_length=2000, description="Additional notes about the session")
+    notes: str | None = Field(None, max_length=2000, description="Additional notes about the session")
 
     # ============================================================
     # SUBJECT METADATA
     # ============================================================
 
-    subject_id: Optional[str] = Field(
+    subject_id: str | None = Field(
         None,
         min_length=1,
         max_length=50,
@@ -96,35 +93,33 @@ class NWBMetadata(BaseModel):
         examples=["mouse001", "rat-123", "subject_A1"],
     )
 
-    species: Optional[str] = Field(
+    species: str | None = Field(
         None,
         max_length=100,
         description="Species in binomial nomenclature (Genus species)",
         examples=["Mus musculus", "Rattus norvegicus", "Homo sapiens"],
     )
 
-    age: Optional[str] = Field(
+    age: str | None = Field(
         None,
         pattern=r"^P(\d+[DWMY])+$",
         description="Age in ISO 8601 duration format",
         examples=["P90D", "P3M", "P2Y6M"],
     )
 
-    sex: Optional[str] = Field(
-        None, pattern=r"^[MFUO]$", description="Sex: M (male), F (female), U (unknown), O (other)"
-    )
+    sex: str | None = Field(None, pattern=r"^[MFUO]$", description="Sex: M (male), F (female), U (unknown), O (other)")
 
-    weight: Optional[str] = Field(
+    weight: str | None = Field(
         None, pattern=r"^\d+(\.\d+)?\s*(g|kg)$", description="Weight with units", examples=["25.5 g", "0.5 kg"]
     )
 
-    description: Optional[str] = Field(None, max_length=500, description="Additional description of the subject")
+    description: str | None = Field(None, max_length=500, description="Additional description of the subject")
 
-    strain: Optional[str] = Field(
+    strain: str | None = Field(
         None, max_length=100, description="Strain of the subject", examples=["C57BL/6J", "Sprague Dawley"]
     )
 
-    genotype: Optional[str] = Field(None, max_length=200, description="Genotype of the subject")
+    genotype: str | None = Field(None, max_length=200, description="Genotype of the subject")
 
     # ============================================================
     # CUSTOM VALIDATORS

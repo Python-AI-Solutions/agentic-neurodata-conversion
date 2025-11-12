@@ -1,5 +1,4 @@
-"""
-Intelligent Validation Result Analyzer.
+"""Intelligent Validation Result Analyzer.
 
 Deep analysis of NWB validation results to understand relationships between issues,
 identify root causes, and provide actionable insights beyond simple issue listing.
@@ -14,7 +13,7 @@ Features:
 
 import json
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from models import GlobalState, LogLevel, ValidationResult
 from services import LLMService
@@ -23,8 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 class IntelligentValidationAnalyzer:
-    """
-    Analyzes validation results with deep reasoning to uncover insights.
+    """Analyzes validation results with deep reasoning to uncover insights.
 
     Goes beyond simple issue listing to provide:
     - Root cause identification
@@ -33,9 +31,8 @@ class IntelligentValidationAnalyzer:
     - Impact prediction
     """
 
-    def __init__(self, llm_service: Optional[LLMService] = None):
-        """
-        Initialize the validation analyzer.
+    def __init__(self, llm_service: LLMService | None = None):
+        """Initialize the validation analyzer.
 
         Args:
             llm_service: Optional LLM service for intelligent analysis
@@ -48,8 +45,7 @@ class IntelligentValidationAnalyzer:
         file_context: dict[str, Any],
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Deep analysis of validation results.
+        """Deep analysis of validation results.
 
         Args:
             validation_result: Validation results from NWB Inspector
@@ -114,13 +110,12 @@ class IntelligentValidationAnalyzer:
         validation_result: ValidationResult,
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Basic analysis when LLM is not available.
+        """Basic analysis when LLM is not available.
 
         Uses heuristics and pattern matching.
         """
         # Simple grouping by severity
-        issue_groups = {}
+        issue_groups: dict[str, list[Any]] = {}
         for issue in validation_result.issues:
             severity = issue.severity.value if hasattr(issue, "severity") else "unknown"
             if severity not in issue_groups:
@@ -143,8 +138,7 @@ class IntelligentValidationAnalyzer:
         issues: list[Any],
         state: GlobalState,
     ) -> list[dict[str, Any]]:
-        """
-        Group related issues together using LLM understanding.
+        """Group related issues together using LLM understanding.
 
         For example:
         - All issues related to missing subject metadata
@@ -264,8 +258,7 @@ Provide clear group names and explanations."""
         file_context: dict[str, Any],
         state: GlobalState,
     ) -> list[dict[str, Any]]:
-        """
-        Identify root causes that explain multiple validation issues.
+        """Identify root causes that explain multiple validation issues.
 
         Uses LLM reasoning to detect patterns like:
         - "Missing metadata template during conversion"
@@ -364,7 +357,7 @@ Identify 3-5 root causes that explain most issues. Focus on actionable, fixable 
             # Sort by impact score (highest first)
             root_causes.sort(key=lambda x: x.get("impact_score", 0), reverse=True)
 
-            return root_causes
+            return list(root_causes)  # Cast Any to list
 
         except Exception as e:
             logger.exception(f"Root cause identification failed: {e}")
@@ -377,8 +370,7 @@ Identify 3-5 root causes that explain most issues. Focus on actionable, fixable 
         issue_groups: list[dict[str, Any]],
         state: GlobalState,
     ) -> list[dict[str, Any]]:
-        """
-        Determine optimal order to fix issues for maximum impact.
+        """Determine optimal order to fix issues for maximum impact.
 
         Considers:
         - Dependencies (fix A before B)
@@ -446,7 +438,7 @@ Provide step-by-step fix order with rationale."""
                 system_prompt=system_prompt,
             )
 
-            return response.get("fix_steps", [])
+            return list(response.get("fix_steps", []))  # Cast Any to list
 
         except Exception as e:
             logger.exception(f"Fix order determination failed: {e}")
@@ -459,12 +451,12 @@ Provide step-by-step fix order with rationale."""
         root_causes: list[dict[str, Any]],
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Assess the impact of each issue on:
+        """Assess the impact of each issue.
+
         - DANDI submission readiness
         - Data usability
         - Scientific validity
-        - Community standards compliance
+        - Community standards compliance.
         """
         # Count issues by type
         dandi_blocking = 0
@@ -501,8 +493,7 @@ Provide step-by-step fix order with rationale."""
         issues: list[Any],
         impact_analysis: dict[str, Any],
     ) -> list[dict[str, Any]]:
-        """
-        Identify "quick win" issues - easy to fix with significant impact.
+        """Identify "quick win" issues - easy to fix with significant impact.
 
         These are prioritized for user action.
         """

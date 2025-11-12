@@ -1,5 +1,4 @@
-"""
-Intelligent File Format Detection using LLM.
+"""Intelligent File Format Detection using LLM.
 
 This module uses LLM + heuristics to intelligently detect neuroscience data formats,
 going beyond simple file extension matching.
@@ -7,15 +6,14 @@ going beyond simple file extension matching.
 
 import json
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from models import GlobalState, LogLevel
 from services import LLMService
 
 
 class IntelligentFormatDetector:
-    """
-    LLM-powered format detection for neuroscience data files.
+    """LLM-powered format detection for neuroscience data files.
 
     Features:
     - Analyzes file structure beyond extensions
@@ -25,9 +23,8 @@ class IntelligentFormatDetector:
     - Suggests missing files
     """
 
-    def __init__(self, llm_service: Optional[LLMService] = None):
-        """
-        Initialize the intelligent format detector.
+    def __init__(self, llm_service: LLMService | None = None):
+        """Initialize the intelligent format detector.
 
         Args:
             llm_service: Optional LLM service for intelligent analysis
@@ -35,7 +32,7 @@ class IntelligentFormatDetector:
         self.llm_service = llm_service
 
         # Known format patterns
-        self.format_patterns = {
+        self.format_patterns: dict[str, dict[str, Any]] = {
             "NWB": {
                 "extensions": [".nwb", ".nwb.h5"],
                 "patterns": ["nwb", "neurodata"],
@@ -80,8 +77,7 @@ class IntelligentFormatDetector:
         file_path: str,
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Intelligently detect the format of a neuroscience data file.
+        """Intelligently detect the format of a neuroscience data file.
 
         Args:
             file_path: Path to the file or directory
@@ -320,7 +316,7 @@ Be decisive but honest about uncertainty."""
                 },
             )
 
-            return response
+            return dict(response)  # Cast Any to dict
 
         except Exception as e:
             state.add_log(

@@ -1,5 +1,4 @@
-"""
-File versioning utility with SHA256 checksums.
+"""File versioning utility with SHA256 checksums.
 
 Implements Story 8.7 requirement for versioned NWB files during correction loop.
 """
@@ -9,8 +8,7 @@ from pathlib import Path
 
 
 def compute_sha256(file_path: Path) -> str:
-    """
-    Compute SHA256 checksum of a file.
+    """Compute SHA256 checksum of a file.
 
     Args:
         file_path: Path to file
@@ -27,8 +25,7 @@ def compute_sha256(file_path: Path) -> str:
 
 
 def get_versioned_filename(original_path: Path, attempt_number: int, checksum: str = None) -> Path:
-    """
-    Generate versioned filename for correction attempts.
+    """Generate versioned filename for correction attempts.
 
     Format: original_v{N}_{checksum_prefix}.nwb
     Example: mouse_001_v2_a3f9d1c8.nwb
@@ -61,8 +58,7 @@ def get_versioned_filename(original_path: Path, attempt_number: int, checksum: s
 
 
 def create_versioned_file(original_path: Path, attempt_number: int, compute_checksum: bool = True) -> tuple[Path, str]:
-    """
-    Create a versioned copy of an NWB file.
+    """Create a versioned copy of an NWB file.
 
     Args:
         original_path: Path to file to version
@@ -93,8 +89,7 @@ def create_versioned_file(original_path: Path, attempt_number: int, compute_chec
 
 
 def verify_file_integrity(file_path: Path, expected_checksum: str) -> bool:
-    """
-    Verify file integrity using SHA256 checksum.
+    """Verify file integrity using SHA256 checksum.
 
     Args:
         file_path: Path to file
@@ -111,8 +106,7 @@ def verify_file_integrity(file_path: Path, expected_checksum: str) -> bool:
 
 
 def get_all_versions(base_path: Path) -> list[Path]:
-    """
-    Get all version files for a base NWB file.
+    """Get all version files for a base NWB file.
 
     Args:
         base_path: Path to original NWB file

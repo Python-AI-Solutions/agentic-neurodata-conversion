@@ -1,5 +1,4 @@
-"""
-Global state management for conversion pipeline.
+"""Global state management for conversion pipeline.
 
 This module defines the GlobalState model that tracks the entire conversion
 lifecycle, from upload through validation to final output.
@@ -9,7 +8,7 @@ import asyncio
 import threading
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -37,8 +36,7 @@ class ConversionStatus(str, Enum):
 
 
 class ValidationStatus(str, Enum):
-    """
-    Final session outcome status tracking user decisions.
+    """Final session outcome status tracking user decisions.
 
     This is distinct from overall_status (PASSED/PASSED_WITH_ISSUES/FAILED)
     which comes from NWB Inspector. ValidationStatus tracks the final outcome
@@ -55,8 +53,7 @@ class ValidationStatus(str, Enum):
 
 
 class ValidationOutcome(str, Enum):
-    """
-    NWB Inspector validation outcome.
+    """NWB Inspector validation outcome.
 
     WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Replace string-based overall_status
     with type-safe enum (Recommendation 6.2)
@@ -68,8 +65,7 @@ class ValidationOutcome(str, Enum):
 
 
 class ConversationPhase(str, Enum):
-    """
-    Current phase of user conversation.
+    """Current phase of user conversation.
 
     WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Replace string-based conversation_type
     with type-safe enum (Recommendation 6.2, Breaking Point #3)
@@ -82,8 +78,7 @@ class ConversationPhase(str, Enum):
 
 
 class MetadataRequestPolicy(str, Enum):
-    """
-    Policy for metadata requests.
+    """Policy for metadata requests.
 
     WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Unify metadata_requests_count and
     user_wants_minimal into single enum (Recommendation 6.4, Breaking Point #5)
@@ -107,8 +102,7 @@ class LogLevel(str, Enum):
 
 
 class MetadataProvenance(str, Enum):
-    """
-    Tracks the source and origin of metadata fields.
+    """Tracks the source and origin of metadata fields.
 
     Essential for scientific transparency, DANDI compliance, and user trust.
     Allows users to understand reliability and review requirements for each field.
@@ -136,8 +130,7 @@ class LogEntry(BaseModel):
 
 
 class ProvenanceInfo(BaseModel):
-    """
-    Tracks the source, confidence, and origin of a metadata field.
+    """Tracks the source, confidence, and origin of a metadata field.
 
     Provides complete audit trail for scientific reproducibility and DANDI compliance.
     """
@@ -150,7 +143,7 @@ class ProvenanceInfo(BaseModel):
     source: str = Field(description="Human-readable description of where this value came from")
     timestamp: datetime = Field(default_factory=datetime.now, description="When this provenance was recorded")
     needs_review: bool = Field(default=False, description="Flag indicating low-confidence field requiring user review")
-    raw_input: Optional[str] = Field(
+    raw_input: str | None = Field(
         default=None, description="Original user input or file content that led to this value"
     )
 
@@ -164,27 +157,27 @@ MAX_RETRY_ATTEMPTS = 5
 
 
 class GlobalState(BaseModel):
-    """
-    Central state object tracking the entire conversion pipeline.
+    """Central state object tracking the entire conversion pipeline.
 
     This state is shared across all agents and updated via MCP messages.
     """
 
     # Status tracking
     status: ConversionStatus = Field(default=ConversionStatus.IDLE)
-    validation_status: Optional[ValidationStatus] = Field(
+    validation_status: ValidationStatus | None = Field(
         default=None, description="Final session outcome including user decisions (Story 2.1, 8.8)"
     )
     # WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Use ValidationOutcome enum instead of string
-    overall_status: Optional[ValidationOutcome] = Field(
+    overall_status: ValidationOutcome | None = Field(
         default=None, description="NWB Inspector evaluation result: PASSED, PASSED_WITH_ISSUES, or FAILED (Story 7.2)"
     )
 
     # Thread safety - not serialized by Pydantic (Pydantic V2: private field)
-    _status_lock: Optional[asyncio.Lock] = None
-    _conversation_lock: Optional[asyncio.Lock] = None
-    _llm_lock: Optional[asyncio.Lock] = None
-    _mcp_server: Optional[Any] = None  # Reference to MCP server for event broadcasting
+    _status_lock: asyncio.Lock | None = None
+    _conversation_lock: asyncio.Lock | None = None
+    _llm_lock: asyncio.Lock | None = None
+    _lock_init_lock: threading.Lock | None = None  # Thread-safe lock for initializing async locks
+    _mcp_server: Any | None = None  # Reference to MCP server for event broadcasting
 
     # LLM processing state
     llm_processing: bool = Field(
@@ -193,13 +186,13 @@ class GlobalState(BaseModel):
     )
 
     # File paths
-    input_path: Optional[str] = Field(default=None)
-    output_path: Optional[str] = Field(default=None)
-    pending_conversion_input_path: Optional[str] = Field(
+    input_path: str | None = Field(default=None)
+    output_path: str | None = Field(default=None)
+    pending_conversion_input_path: str | None = Field(
         default=None,
         description="Stores original input_path when metadata conversation starts, used to resume conversion after skip",
     )
-    detected_format: Optional[str] = Field(
+    detected_format: str | None = Field(
         default=None, description="Auto-detected data format (e.g., SpikeGLX, OpenEphys)"
     )
 
@@ -222,8 +215,8 @@ class GlobalState(BaseModel):
 
     # Progress tracking
     progress_percent: float = Field(default=0.0, ge=0.0, le=100.0)
-    progress_message: Optional[str] = Field(default=None)
-    current_stage: Optional[str] = Field(default=None)
+    progress_message: str | None = Field(default=None)
+    current_stage: str | None = Field(default=None)
 
     # Conversational state
     # WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Use ConversationPhase enum instead of string
@@ -231,8 +224,8 @@ class GlobalState(BaseModel):
         default=ConversationPhase.IDLE, description="Current phase of user conversation"
     )
     # Deprecated: kept for backward compatibility during migration, use conversation_phase instead
-    conversation_type: Optional[str] = Field(default=None, description="DEPRECATED: Use conversation_phase instead")
-    llm_message: Optional[str] = Field(default=None)
+    conversation_type: str | None = Field(default=None, description="DEPRECATED: Use conversation_phase instead")
+    llm_message: str | None = Field(default=None)
     conversation_history: list[dict[str, Any]] = Field(
         default_factory=list, description="Conversation history for LLM context (rolling window of last 50 messages)"
     )
@@ -269,7 +262,7 @@ class GlobalState(BaseModel):
 
     # Logs and history
     logs: list[LogEntry] = Field(default_factory=list)
-    log_file_path: Optional[str] = Field(
+    log_file_path: str | None = Field(
         default=None, description="Path to persistent log file for this conversion session"
     )
 
@@ -278,7 +271,7 @@ class GlobalState(BaseModel):
     correction_attempt: int = Field(default=0, ge=0, le=MAX_RETRY_ATTEMPTS)
 
     # Bug #11 fix: Track previous validation issues for "no progress" detection (Story 4.7 lines 461-466)
-    previous_validation_issues: Optional[list[dict[str, Any]]] = Field(
+    previous_validation_issues: list[dict[str, Any]] | None = Field(
         default=None, description="Validation issues from previous attempt for detecting 'no progress'"
     )
     user_provided_input_this_attempt: bool = Field(
@@ -315,17 +308,15 @@ class GlobalState(BaseModel):
         object.__setattr__(self, "_lock_init_lock", threading.Lock())  # Thread-safe lock initialization
 
     def set_mcp_server(self, mcp_server: Any) -> None:
-        """
-        Set MCP server reference for event broadcasting.
+        """Set MCP server reference for event broadcasting.
 
         Args:
             mcp_server: MCP server instance
         """
         object.__setattr__(self, "_mcp_server", mcp_server)
 
-    def add_log(self, level: LogLevel, message: str, context: Optional[dict[str, Any]] = None) -> None:
-        """
-        Add a log entry to the state.
+    def add_log(self, level: LogLevel, message: str, context: dict[str, Any] | None = None) -> None:
+        """Add a log entry to the state.
 
         Args:
             level: Log severity level
@@ -340,9 +331,8 @@ class GlobalState(BaseModel):
         self.logs.append(log_entry)
         self.updated_at = datetime.now()
 
-    def add_conversation_message(self, role: str, content: str, context: Optional[dict[str, Any]] = None) -> None:
-        """
-        Add a message to conversation history with rolling window (SYNCHRONOUS VERSION - for backward compatibility).
+    def add_conversation_message(self, role: str, content: str, context: dict[str, Any] | None = None) -> None:
+        """Add a message to conversation history with rolling window (SYNCHRONOUS VERSION - for backward compatibility).
 
         DEPRECATED: Use add_conversation_message_safe() for thread-safe async operations.
         This method is kept for backward compatibility but is NOT thread-safe.
@@ -354,7 +344,7 @@ class GlobalState(BaseModel):
             content: Message content
             context: Optional context data
         """
-        message = {
+        message: dict[str, Any] = {
             "role": role,
             "content": content,
             "timestamp": datetime.now().isoformat(),
@@ -371,10 +361,9 @@ class GlobalState(BaseModel):
         self.updated_at = datetime.now()
 
     async def add_conversation_message_safe(
-        self, role: str, content: str, context: Optional[dict[str, Any]] = None
+        self, role: str, content: str, context: dict[str, Any] | None = None
     ) -> None:
-        """
-        Add a message to conversation history with rolling window (THREAD-SAFE ASYNC VERSION).
+        """Add a message to conversation history with rolling window (THREAD-SAFE ASYNC VERSION).
 
         BUG FIX #1: Prevents race conditions in concurrent access to conversation_history.
         Use this method instead of add_conversation_message() in async contexts.
@@ -393,7 +382,7 @@ class GlobalState(BaseModel):
                 if self._conversation_lock is None:
                     object.__setattr__(self, "_conversation_lock", asyncio.Lock())
 
-        message = {
+        message: dict[str, Any] = {
             "role": role,
             "content": content,
             "timestamp": datetime.now().isoformat(),
@@ -411,8 +400,7 @@ class GlobalState(BaseModel):
         self.updated_at = datetime.now()
 
     async def get_conversation_history_snapshot(self) -> list[dict[str, Any]]:
-        """
-        Get an immutable snapshot of conversation history (THREAD-SAFE).
+        """Get an immutable snapshot of conversation history (THREAD-SAFE).
 
         BUG FIX #1: Safe to iterate without race conditions even if history is being modified.
 
@@ -430,8 +418,7 @@ class GlobalState(BaseModel):
             return list(self.conversation_history)  # Return copy
 
     async def clear_conversation_history_safe(self) -> None:
-        """
-        Clear conversation history (THREAD-SAFE).
+        """Clear conversation history (THREAD-SAFE).
 
         BUG FIX #1: Prevents race conditions when clearing history.
         """
@@ -446,8 +433,7 @@ class GlobalState(BaseModel):
             self.conversation_history.clear()
 
     def reset(self) -> None:
-        """
-        Reset state to initial values for a new conversion.
+        """Reset state to initial values for a new conversion.
 
         WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Complete state reset (Breaking Point #6)
         """
@@ -488,9 +474,8 @@ class GlobalState(BaseModel):
         self.conversation_type = None
         self.updated_at = datetime.now()
 
-    def update_progress(self, percent: float, message: Optional[str] = None, stage: Optional[str] = None) -> None:
-        """
-        Update conversion progress and emit WebSocket event.
+    def update_progress(self, percent: float, message: str | None = None, stage: str | None = None) -> None:
+        """Update conversion progress and emit WebSocket event.
 
         Args:
             percent: Progress percentage (0-100)
@@ -547,8 +532,7 @@ class GlobalState(BaseModel):
     # No programmatic limit on retry attempts (Story 8.7 line 933, Story 8.8 line 953)
 
     def detect_no_progress(self, current_issues: list[dict[str, Any]]) -> bool:
-        """
-        Bug #11 fix: Detect if retry attempt is making no progress (Story 4.7 lines 461-466).
+        """Bug #11 fix: Detect if retry attempt is making no progress (Story 4.7 lines 461-466).
 
         No progress is detected when ALL of the following are true:
         - Same exact validation errors between attempts (error codes + locations match)
@@ -591,8 +575,7 @@ class GlobalState(BaseModel):
         self.increment_retry()
 
     async def update_status(self, status: ConversionStatus) -> None:
-        """
-        Update the conversion status with thread safety.
+        """Update the conversion status with thread safety.
 
         Args:
             status: New status
@@ -614,8 +597,8 @@ class GlobalState(BaseModel):
             )
 
     def update_status_sync(self, status: ConversionStatus) -> None:
-        """
-        Synchronous version of update_status for backward compatibility.
+        """Synchronous version of update_status for backward compatibility.
+
         Use update_status() (async) when possible.
 
         Args:
@@ -630,8 +613,7 @@ class GlobalState(BaseModel):
         )
 
     async def update_validation_status(self, validation_status: ValidationStatus) -> None:
-        """
-        Update the validation status with thread safety.
+        """Update the validation status with thread safety.
 
         Args:
             validation_status: New validation status
@@ -655,8 +637,7 @@ class GlobalState(BaseModel):
     async def finalize_validation(
         self, conversion_status: ConversionStatus, validation_status: ValidationStatus
     ) -> None:
-        """
-        Atomically update both conversion and validation statuses.
+        """Atomically update both conversion and validation statuses.
 
         Args:
             conversion_status: New conversion status
@@ -683,10 +664,9 @@ class GlobalState(BaseModel):
         self,
         overall_status: ValidationOutcome,
         requires_user_decision: bool = False,
-        conversation_phase: Optional[ConversationPhase] = None,
+        conversation_phase: ConversationPhase | None = None,
     ) -> None:
-        """
-        Atomically update validation result and related state.
+        """Atomically update validation result and related state.
 
         WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Atomic state updates (Recommendation 6.3, Breaking Point #2)
 
@@ -728,8 +708,7 @@ class GlobalState(BaseModel):
             )
 
     def get_llm_lock(self) -> asyncio.Lock:
-        """
-        Get the LLM lock, initializing it lazily if needed (THREAD-SAFE).
+        """Get the LLM lock, initializing it lazily if needed (THREAD-SAFE).
 
         Returns:
             The asyncio.Lock for LLM operations
@@ -743,8 +722,7 @@ class GlobalState(BaseModel):
 
     @property
     def can_retry(self) -> bool:
-        """
-        Check if more retry attempts are allowed.
+        """Check if more retry attempts are allowed.
 
         Prevents infinite loops and protects API budget.
 
@@ -755,8 +733,7 @@ class GlobalState(BaseModel):
 
     @property
     def retry_attempts_remaining(self) -> int:
-        """
-        Get number of retry attempts remaining.
+        """Get number of retry attempts remaining.
 
         Returns:
             Number of retries left

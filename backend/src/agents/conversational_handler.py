@@ -1,12 +1,11 @@
-"""
-Conversational Handler for intelligent LLM-driven interactions.
+"""Conversational Handler for intelligent LLM-driven interactions.
 
 This module enables natural, adaptive conversations with users
 instead of rigid predefined workflows.
 """
 
 import json
-from typing import Any, Optional
+from typing import Any
 
 from agents.context_manager import ConversationContextManager
 from agents.intelligent_metadata_parser import IntelligentMetadataParser
@@ -17,8 +16,7 @@ from services import LLMService
 
 
 class ConversationalHandler:
-    """
-    Handles intelligent, LLM-driven conversations about NWB conversion.
+    """Handles intelligent, LLM-driven conversations about NWB conversion.
 
     Instead of hardcoded workflows, this uses the LLM to:
     - Analyze validation results
@@ -28,8 +26,7 @@ class ConversationalHandler:
     """
 
     def __init__(self, llm_service: LLMService):
-        """
-        Initialize the conversational handler.
+        """Initialize the conversational handler.
 
         Args:
             llm_service: LLM service for generating responses
@@ -43,8 +40,7 @@ class ConversationalHandler:
         self.metadata_parser = IntelligentMetadataParser(llm_service=llm_service)
 
     def detect_user_decline(self, user_message: str) -> bool:
-        """
-        Detect if user is declining to provide information.
+        """Detect if user is declining to provide information.
 
         Looks for common decline patterns like "skip", "no", "don't ask", etc.
 
@@ -58,8 +54,7 @@ class ConversationalHandler:
         return skip_type in ["field", "global"]
 
     async def detect_skip_type_with_llm(self, user_message: str, conversation_context: str = "") -> str:
-        """
-        Intelligently detect user's skip intent using LLM.
+        """Intelligently detect user's skip intent using LLM.
 
         This understands natural language variations and context better than keyword matching.
 
@@ -70,11 +65,11 @@ class ConversationalHandler:
         Returns:
             "field", "global", "sequential", or "none"
         """
-        return await self.metadata_strategy.detect_skip_type_with_llm(user_message, conversation_context)
+        result = await self.metadata_strategy.detect_skip_type_with_llm(user_message, conversation_context)
+        return str(result)
 
     def detect_skip_type(self, user_message: str) -> str:
-        """
-        Keyword-based skip detection (fallback method).
+        """Keyword-based skip detection (fallback method).
 
         Args:
             user_message: User's message text
@@ -82,7 +77,8 @@ class ConversationalHandler:
         Returns:
             "field", "global", "sequential", or "none"
         """
-        return self.metadata_strategy.detect_skip_type(user_message)
+        result = self.metadata_strategy.detect_skip_type(user_message)
+        return str(result)
 
     async def analyze_validation_and_respond(
         self,
@@ -90,8 +86,7 @@ class ConversationalHandler:
         nwb_file_path: str,
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Analyze validation results and generate intelligent response.
+        """Analyze validation results and generate intelligent response.
 
         Uses LLM to understand validation issues and determine next steps:
         - Can these be auto-fixed?
@@ -300,10 +295,9 @@ Respond in JSON format as specified."""
         user_message: str,
         state: GlobalState,
         mode: str = "batch",  # "batch" or "single"
-        field_name: Optional[str] = None,
+        field_name: str | None = None,
     ) -> dict[str, Any]:
-        """
-        Parse user metadata input and generate confirmation message.
+        """Parse user metadata input and generate confirmation message.
 
         This implements the three-scenario system:
         1. User confirms → apply
@@ -504,8 +498,7 @@ Respond in JSON format as specified."""
         context: dict[str, Any],
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Process user's conversational response using LLM with intelligent parsing and confirmation.
+        """Process user's conversational response using LLM with intelligent parsing and confirmation.
 
         NEW: Uses IntelligentMetadataParser for:
         - Natural language understanding
@@ -749,8 +742,7 @@ and metadata was already provided in previous messages (shown above), set ready_
             }
 
     def _format_validation_issues(self, validation_result: dict[str, Any]) -> str:
-        """
-        Format validation issues into readable text for LLM.
+        """Format validation issues into readable text for LLM.
 
         Args:
             validation_result: Validation result dictionary
@@ -783,8 +775,7 @@ and metadata was already provided in previous messages (shown above), set ready_
         nwb_file_path: str,
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Use LLM to generate contextual, intelligent metadata requests.
+        """Use LLM to generate contextual, intelligent metadata requests.
 
         Instead of hardcoded field detection, this analyzes the file and validation
         issues to ask smart, contextual questions that guide the user effectively.
@@ -880,7 +871,7 @@ Be specific about what the file reveals (recording type, data characteristics, e
                 system_prompt=system_prompt,
             )
 
-            return response
+            return dict(response)  # Cast Any to dict
 
         except Exception:
             # Fallback to basic request if LLM fails
@@ -898,8 +889,7 @@ Be specific about what the file reveals (recording type, data characteristics, e
         nwb_file_path: str,
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Extract contextual information from NWB file for intelligent metadata requests.
+        """Extract contextual information from NWB file for intelligent metadata requests.
 
         Args:
             nwb_file_path: Path to NWB file
@@ -955,7 +945,7 @@ Be specific about what the file reveals (recording type, data characteristics, e
                 if "general/optophysiology" in f:
                     context["data_interfaces"].append("optophysiology")
 
-        except Exception:
+        except Exception:  # nosec B110 - intentional: fallback to basic context if file read fails
             # If file reading fails, return basic context
             pass
 
@@ -965,8 +955,7 @@ Be specific about what the file reveals (recording type, data characteristics, e
         self,
         validation_result: dict[str, Any],
     ) -> list[dict[str, Any]]:
-        """
-        Fallback method to extract basic required fields from validation issues.
+        """Fallback method to extract basic required fields from validation issues.
 
         Used when LLM-based smart generation fails.
 

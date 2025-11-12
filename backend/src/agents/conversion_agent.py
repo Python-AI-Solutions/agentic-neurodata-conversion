@@ -1,5 +1,4 @@
-"""
-Conversion Agent implementation.
+"""Conversion Agent implementation.
 
 Responsible for:
 - Format detection
@@ -11,7 +10,10 @@ import logging
 import threading
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
+
+if TYPE_CHECKING:
+    from services.llm_service import LLMService
 
 logger = logging.getLogger(__name__)
 
@@ -21,15 +23,13 @@ from utils.file_versioning import compute_sha256, create_versioned_file
 
 
 class ConversionAgent:
-    """
-    Conversion agent for format detection and NWB conversion.
+    """Conversion agent for format detection and NWB conversion.
 
     This agent handles all technical conversion operations.
     """
 
     def __init__(self, llm_service: Optional["LLMService"] = None):
-        """
-        Initialize the conversion agent.
+        """Initialize the conversion agent.
 
         Args:
             llm_service: Optional LLM service for intelligent features
@@ -39,8 +39,7 @@ class ConversionAgent:
         self._format_detector = IntelligentFormatDetector(llm_service) if llm_service else None
 
     def _get_supported_formats(self) -> list[str]:
-        """
-        Get list of supported data formats from NeuroConv.
+        """Get list of supported data formats from NeuroConv.
 
         Returns:
             List of supported format names
@@ -164,8 +163,7 @@ class ConversionAgent:
         message: MCPMessage,
         state: GlobalState,
     ) -> MCPResponse:
-        """
-        Detect the data format of uploaded files.
+        """Detect the data format of uploaded files.
 
         Args:
             message: MCP message with context containing 'input_path'
@@ -242,9 +240,8 @@ class ConversionAgent:
                 error_context={"exception": str(e)},
             )
 
-    async def _detect_format(self, input_path: str, state: GlobalState) -> Optional[str]:
-        """
-        Detect data format based on file structure and content.
+    async def _detect_format(self, input_path: str, state: GlobalState) -> str | None:
+        """Detect data format based on file structure and content.
 
         🎯 PRIORITY 4: LLM-First Format Detection
         First tries LLM-based intelligent detection (more accurate).
@@ -287,7 +284,7 @@ class ConversionAgent:
                         LogLevel.INFO,
                         f"LLM detected format: {detected_format} (confidence: {confidence}%)",
                     )
-                    return detected_format
+                    return str(detected_format)
 
             confidence = llm_result.get("confidence", 0) if llm_result else 0
             state.add_log(
@@ -337,8 +334,7 @@ class ConversionAgent:
         return None
 
     def _is_spikeglx(self, path: Path) -> bool:
-        """
-        Check if data is SpikeGLX format.
+        """Check if data is SpikeGLX format.
 
         Improved detection that checks for:
         - AP (action potential) band files
@@ -372,8 +368,7 @@ class ConversionAgent:
         return False
 
     def _is_openephys(self, path: Path) -> bool:
-        """
-        Check if data is OpenEphys format.
+        """Check if data is OpenEphys format.
 
         Improved detection for both old and new OpenEphys formats:
         - New format: structure.oebin file
@@ -400,8 +395,7 @@ class ConversionAgent:
         return False
 
     def _is_neuropixels(self, path: Path) -> bool:
-        """
-        Check if data is Neuropixels format.
+        """Check if data is Neuropixels format.
 
         Neuropixels probes use SpikeGLX for acquisition, so we look for:
         - NIDQ (National Instruments) files
@@ -429,9 +423,8 @@ class ConversionAgent:
         self,
         input_path: str,
         state: GlobalState,
-    ) -> Optional[dict[str, Any]]:
-        """
-        Use LLM to intelligently detect data format when hardcoded patterns fail.
+    ) -> dict[str, Any] | None:
+        """Use LLM to intelligently detect data format when hardcoded patterns fail.
 
         Analyzes file structure, naming patterns, and content to determine format.
         Particularly useful for:
@@ -599,7 +592,7 @@ Be specific about the format name used by NeuroConv."""
             )
 
             # Return the full response dictionary so caller can check confidence
-            return response
+            return dict(response) if response else None
 
         except Exception as e:
             state.add_log(
@@ -613,8 +606,7 @@ Be specific about the format name used by NeuroConv."""
         message: MCPMessage,
         state: GlobalState,
     ) -> MCPResponse:
-        """
-        Run NWB conversion using NeuroConv.
+        """Run NWB conversion using NeuroConv.
 
         Args:
             message: MCP message with context containing conversion parameters
@@ -899,9 +891,8 @@ Be specific about the format name used by NeuroConv."""
         format_name: str,
         input_path: str,
         state: GlobalState,
-    ) -> Optional[str]:
-        """
-        Use LLM to generate user-friendly error explanations.
+    ) -> str | None:
+        """Use LLM to generate user-friendly error explanations.
 
         Transforms technical error messages into actionable guidance that
         helps users understand what went wrong and how to fix it.
@@ -924,7 +915,7 @@ Be specific about the format name used by NeuroConv."""
         error_message = str(error)
 
         # Gather context about the file
-        file_context = {}
+        file_context: dict[str, Any] = {}
         try:
             path = Path(input_path)
             if path.exists():
@@ -980,7 +971,7 @@ Please explain what went wrong and how to fix it in user-friendly language."""
                 "Generated user-friendly error explanation via LLM",
             )
 
-            return explanation.strip()
+            return str(explanation).strip()
 
         except Exception as e:
             state.add_log(
@@ -995,8 +986,7 @@ Please explain what went wrong and how to fix it in user-friendly language."""
         file_size_mb: float,
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Use LLM to determine optimal NWB conversion parameters.
+        """Use LLM to determine optimal NWB conversion parameters.
 
         Analyzes file characteristics to suggest best settings for:
         - Compression method and level
@@ -1102,8 +1092,8 @@ Suggest optimal settings and explain reasoning."""
         context: dict[str, Any],
         state: GlobalState,
     ) -> str:
-        """
-        🎯 PRIORITY 5: Progress Narration
+        """🎯 PRIORITY 5: Progress Narration.
+
         Use LLM to provide human-friendly progress updates during conversion.
 
         Args:
@@ -1148,7 +1138,7 @@ Provide a brief, friendly update about what's happening now."""
                 system_prompt=system_prompt,
             )
             state.add_log(LogLevel.INFO, f"Progress: {narration}")
-            return narration.strip()
+            return str(narration).strip()
         except Exception as e:
             state.add_log(LogLevel.WARNING, f"Progress narration failed: {e}")
             # Fallback
@@ -1162,8 +1152,7 @@ Provide a brief, friendly update about what's happening now."""
         metadata: dict[str, Any],
         state: GlobalState,
     ) -> None:
-        """
-        Run NeuroConv conversion.
+        """Run NeuroConv conversion.
 
         Args:
             input_path: Path to input data
@@ -1175,7 +1164,6 @@ Provide a brief, friendly update about what's happening now."""
         Raises:
             Exception: If conversion fails
         """
-
         # Comprehensive format-to-interface mapping for all 84 NeuroConv interfaces
         # Using dynamic imports to avoid loading all interfaces at startup
         format_to_interface_map = {
@@ -1524,8 +1512,7 @@ Provide a brief, friendly update about what's happening now."""
         base_progress: float = 50.0,
         max_progress: float = 90.0,
     ) -> None:
-        """
-        Monitor output file size growth during conversion and update progress.
+        """Monitor output file size growth during conversion and update progress.
 
         Runs in background thread. Updates progress from base_progress to max_progress
         based on estimated output file size.
@@ -1628,8 +1615,7 @@ Provide a brief, friendly update about what's happening now."""
             )
 
     def _map_flat_to_nested_metadata(self, flat_metadata: dict[str, Any]) -> dict[str, Any]:
-        """
-        Map flat user-provided metadata to NWB's nested structure.
+        """Map flat user-provided metadata to NWB's nested structure.
 
         User provides metadata like:
             {"experimenter": "Dr. Smith", "institution": "MIT", "subject_id": "mouse001"}
@@ -1681,7 +1667,7 @@ Provide a brief, friendly update about what's happening now."""
             "genotype",
         }
 
-        nested = {}
+        nested: dict[str, dict[str, Any]] = {}
 
         # Process standard fields
         for key, value in flat_metadata.items():
@@ -1756,8 +1742,7 @@ Provide a brief, friendly update about what's happening now."""
         return nested
 
     def _calculate_checksum(self, file_path: str) -> str:
-        """
-        Calculate SHA256 checksum of a file.
+        """Calculate SHA256 checksum of a file.
 
         Args:
             file_path: Path to file
@@ -1765,15 +1750,15 @@ Provide a brief, friendly update about what's happening now."""
         Returns:
             SHA256 hex digest
         """
-        return compute_sha256(Path(file_path))
+        result = compute_sha256(Path(file_path))
+        return str(result)
 
     async def handle_apply_corrections(
         self,
         message: MCPMessage,
         state: GlobalState,
     ) -> MCPResponse:
-        """
-        Apply corrections and reconvert NWB file.
+        """Apply corrections and reconvert NWB file.
 
         Implements Task T038 and Story 8.5: Automatic Issue Correction
         Implements Story 8.7: Reconversion Orchestration
@@ -1905,8 +1890,7 @@ Provide a brief, friendly update about what's happening now."""
 
 
 def register_conversion_agent(mcp_server, llm_service: Optional["LLMService"] = None) -> ConversionAgent:
-    """
-    Register Conversion Agent handlers with MCP server.
+    """Register Conversion Agent handlers with MCP server.
 
     Args:
         mcp_server: MCP server instance

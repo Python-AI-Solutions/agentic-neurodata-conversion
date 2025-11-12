@@ -1,5 +1,4 @@
-"""
-Command-line interface for Agentic Neurodata Conversion.
+"""Command-line interface for Agentic Neurodata Conversion.
 
 Usage:
     nwb-convert --help
@@ -30,7 +29,7 @@ def main():
     server_parser = subparsers.add_parser("server", help="Start the FastAPI server")
     server_parser.add_argument(
         "--host",
-        default="0.0.0.0",
+        default="0.0.0.0",  # nosec B104 - required for Docker/network access, configurable via CLI
         help="Host to bind the server (default: 0.0.0.0)",
     )
     server_parser.add_argument(

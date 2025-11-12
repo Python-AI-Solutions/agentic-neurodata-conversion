@@ -1,20 +1,18 @@
-"""
-Smart Auto-Correction System with LLM.
+"""Smart Auto-Correction System with LLM.
 
 This module intelligently fixes validation issues automatically
 by understanding the context and applying domain knowledge.
 """
 
 import json
-from typing import Any, Optional
+from typing import Any
 
 from models import GlobalState, LogLevel
 from services import LLMService
 
 
 class SmartAutoCorrectionSystem:
-    """
-    Intelligent auto-correction of validation issues.
+    """Intelligent auto-correction of validation issues.
 
     Features:
     - Context-aware correction strategies
@@ -24,15 +22,14 @@ class SmartAutoCorrectionSystem:
     - Confidence-based decision making
     """
 
-    def __init__(self, llm_service: Optional[LLMService] = None):
-        """
-        Initialize smart auto-correction system.
+    def __init__(self, llm_service: LLMService | None = None):
+        """Initialize smart auto-correction system.
 
         Args:
             llm_service: LLM service for intelligent corrections
         """
         self.llm_service = llm_service
-        self.correction_history = []
+        self.correction_history: list[dict[str, Any]] = []
 
     async def analyze_and_correct(
         self,
@@ -41,8 +38,7 @@ class SmartAutoCorrectionSystem:
         file_context: dict[str, Any],
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Analyze validation issues and generate smart corrections.
+        """Analyze validation issues and generate smart corrections.
 
         Args:
             validation_issues: List of validation issues
@@ -239,7 +235,7 @@ Estimate overall success probability."""
             system_prompt=system_prompt,
         )
 
-        return response
+        return dict(response)  # Cast Any to dict
 
     def _basic_auto_corrections(
         self,
@@ -288,8 +284,7 @@ Estimate overall success probability."""
         current_metadata: dict[str, Any],
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Apply safe corrections to metadata.
+        """Apply safe corrections to metadata.
 
         Args:
             safe_corrections: Dictionary of safe corrections to apply

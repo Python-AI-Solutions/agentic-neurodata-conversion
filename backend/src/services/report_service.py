@@ -1,5 +1,4 @@
-"""
-Report generation service for NWB evaluation results.
+"""Report generation service for NWB evaluation results.
 
 Implements Tasks T049, T050, T051: PDF and JSON report generation.
 """
@@ -7,7 +6,7 @@ Implements Tasks T049, T050, T051: PDF and JSON report generation.
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from reportlab.lib.colors import HexColor
 from reportlab.lib.enums import TA_CENTER
@@ -18,8 +17,7 @@ from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, 
 
 
 class ReportService:
-    """
-    Service for generating NWB evaluation reports.
+    """Service for generating NWB evaluation reports.
 
     Supports both PDF (for PASSED/PASSED_WITH_ISSUES) and JSON (for FAILED).
     """
@@ -260,11 +258,10 @@ class ReportService:
         self,
         output_path: Path,
         validation_result: dict[str, Any],
-        llm_analysis: Optional[dict[str, Any]] = None,
-        workflow_trace: Optional[dict[str, Any]] = None,
+        llm_analysis: dict[str, Any] | None = None,
+        workflow_trace: dict[str, Any] | None = None,
     ) -> Path:
-        """
-        Generate PDF report for PASSED or PASSED_WITH_ISSUES validation.
+        """Generate PDF report for PASSED or PASSED_WITH_ISSUES validation.
 
         Args:
             output_path: Path where PDF should be saved
@@ -827,7 +824,7 @@ class ReportService:
             metadata_provenance = workflow_trace["metadata_provenance"]
 
             # Count fields by provenance type
-            provenance_counts = {}
+            provenance_counts: dict[str, int] = {}
             needs_review_fields = []
 
             for field_name, prov_info in metadata_provenance.items():
@@ -1038,11 +1035,10 @@ class ReportService:
         self,
         output_path: Path,
         validation_result: dict[str, Any],
-        llm_guidance: Optional[dict[str, Any]] = None,
-        workflow_trace: Optional[dict[str, Any]] = None,
+        llm_guidance: dict[str, Any] | None = None,
+        workflow_trace: dict[str, Any] | None = None,
     ) -> Path:
-        """
-        Generate comprehensive JSON report for validation results.
+        """Generate comprehensive JSON report for validation results.
 
         Args:
             output_path: Path where JSON should be saved
@@ -1229,21 +1225,25 @@ class ReportService:
             # Calculate provenance breakdown and confidence distribution
             for field_name, prov_info in metadata_prov.items():
                 prov_type = prov_info.get("provenance", "unknown")
-                if prov_type not in report["metadata_provenance"]["summary"]["provenance_breakdown"]:
-                    report["metadata_provenance"]["summary"]["provenance_breakdown"][prov_type] = 0
-                report["metadata_provenance"]["summary"]["provenance_breakdown"][prov_type] += 1
+                # Type-safe nested dict access
+                prov_breakdown: dict[str, int] = report["metadata_provenance"]["summary"]["provenance_breakdown"]  # type: ignore[index]
+                if prov_type not in prov_breakdown:
+                    prov_breakdown[prov_type] = 0
+                prov_breakdown[prov_type] += 1
 
                 # Confidence distribution
                 confidence = prov_info.get("confidence", 0)
+                conf_dist: dict[str, int] = report["metadata_provenance"]["summary"]["confidence_distribution"]  # type: ignore[index]
                 if confidence >= 80:
-                    report["metadata_provenance"]["summary"]["confidence_distribution"]["high"] += 1
+                    conf_dist["high"] += 1
                 elif confidence >= 50:
-                    report["metadata_provenance"]["summary"]["confidence_distribution"]["medium"] += 1
+                    conf_dist["medium"] += 1
                 else:
-                    report["metadata_provenance"]["summary"]["confidence_distribution"]["low"] += 1
+                    conf_dist["low"] += 1
 
                 # Add field-level provenance
-                report["metadata_provenance"]["fields"][field_name] = {
+                fields_dict: dict[str, Any] = report["metadata_provenance"]["fields"]  # type: ignore[index]
+                fields_dict[field_name] = {
                     "value": file_info_raw.get(field_name),
                     "provenance": prov_type,
                     "confidence": confidence,
@@ -1285,11 +1285,10 @@ class ReportService:
         self,
         output_path: Path,
         validation_result: dict[str, Any],
-        llm_analysis: Optional[dict[str, Any]] = None,
-        workflow_trace: Optional[dict[str, Any]] = None,
+        llm_analysis: dict[str, Any] | None = None,
+        workflow_trace: dict[str, Any] | None = None,
     ) -> Path:
-        """
-        Generate text report in NWB Inspector style (clear and structured).
+        """Generate text report in NWB Inspector style (clear and structured).
 
         Args:
             output_path: Path where text report should be saved
@@ -1376,7 +1375,7 @@ class ReportService:
         lines.append("")
 
         # Group issues by severity
-        issues_by_severity = {}
+        issues_by_severity: dict[str, list[dict[str, Any]]] = {}
         for issue in issues:
             severity = issue.get("severity", "UNKNOWN")
             if severity not in issues_by_severity:
@@ -1656,11 +1655,10 @@ class ReportService:
         self,
         output_path: Path,
         validation_result: dict[str, Any],
-        llm_analysis: Optional[dict[str, Any]] = None,
-        workflow_trace: Optional[dict[str, Any]] = None,
+        llm_analysis: dict[str, Any] | None = None,
+        workflow_trace: dict[str, Any] | None = None,
     ) -> Path:
-        """
-        Generate standalone HTML report for NWB evaluation results.
+        """Generate standalone HTML report for NWB evaluation results.
 
         Args:
             output_path: Path where HTML should be saved
@@ -1673,7 +1671,6 @@ class ReportService:
 
         Implements interactive HTML reporting with embedded CSS/JS.
         """
-
         from jinja2 import Environment, FileSystemLoader, select_autoescape
 
         # Setup Jinja2 environment
@@ -1709,11 +1706,10 @@ class ReportService:
     def _prepare_template_data(
         self,
         validation_result: dict[str, Any],
-        llm_analysis: Optional[dict[str, Any]],
-        workflow_trace: Optional[dict[str, Any]],
+        llm_analysis: dict[str, Any] | None,
+        workflow_trace: dict[str, Any] | None,
     ) -> dict[str, Any]:
-        """
-        Prepare data for HTML template rendering.
+        """Prepare data for HTML template rendering.
 
         Args:
             validation_result: Validation result dictionary
@@ -1784,7 +1780,7 @@ class ReportService:
         metadata_completeness = self._calculate_metadata_completeness(file_info_raw)
 
         # Group issues by severity for quick actions
-        issues_by_severity = {}
+        issues_by_severity: dict[str, list[dict[str, Any]]] = {}
         for issue in enhanced_issues:
             severity = issue.get("severity", "UNKNOWN")
             if severity not in issues_by_severity:
@@ -1820,7 +1816,7 @@ class ReportService:
         }
 
     def _prepare_file_info(
-        self, file_info_raw: dict[str, Any], workflow_trace: Optional[dict[str, Any]]
+        self, file_info_raw: dict[str, Any], workflow_trace: dict[str, Any] | None
     ) -> dict[str, dict[str, Any]]:
         """Prepare file info with provenance badges."""
         provenance = file_info_raw.get("_provenance", {})
@@ -1881,9 +1877,7 @@ class ReportService:
             )
         return enhanced_issues
 
-    def _generate_recommendations(
-        self, validation_result: dict[str, Any], llm_analysis: Optional[dict[str, Any]]
-    ) -> list:
+    def _generate_recommendations(self, validation_result: dict[str, Any], llm_analysis: dict[str, Any] | None) -> list:
         """Generate recommendations based on validation results."""
         recommendations = []
         issue_counts = validation_result.get("issue_counts", {})
@@ -1933,7 +1927,7 @@ class ReportService:
 
         return recommendations
 
-    def _prepare_workflow_trace(self, workflow_trace: Optional[dict[str, Any]]) -> list:
+    def _prepare_workflow_trace(self, workflow_trace: dict[str, Any] | None) -> list:
         """Prepare workflow trace for timeline display."""
         if not workflow_trace or "steps" not in workflow_trace:
             return []
@@ -1985,7 +1979,7 @@ class ReportService:
         )
         score -= missing_metadata * 2
 
-        return max(0.0, min(100.0, score))
+        return float(max(0.0, min(100.0, score)))
 
     def _extract_best_practices(self, validation_result: dict[str, Any]) -> dict[str, str]:
         """Extract best practices compliance from validation results."""
@@ -2075,11 +2069,12 @@ class ReportService:
 
     def _format_filesize(self, bytes_value: int) -> str:
         """Format file size in human-readable format."""
+        size_float = float(bytes_value)
         for unit in ["B", "KB", "MB", "GB"]:
-            if bytes_value < 1024.0:
-                return f"{bytes_value:.1f} {unit}"
-            bytes_value /= 1024.0
-        return f"{bytes_value:.1f} TB"
+            if size_float < 1024.0:
+                return f"{size_float:.1f} {unit}"
+            size_float /= 1024.0
+        return f"{size_float:.1f} TB"
 
     # ===== ENHANCED REPORT HELPER METHODS =====
 
@@ -2116,7 +2111,6 @@ class ReportService:
         issue_counts: dict[str, int],
     ) -> dict[str, dict[str, Any]]:
         """Calculate quality metrics for the dashboard."""
-
         # Count filled vs total recommended metadata fields
         recommended_fields = [
             "experimenter",

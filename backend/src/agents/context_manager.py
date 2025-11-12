@@ -1,19 +1,17 @@
-"""
-Intelligent Conversation Context Management.
+"""Intelligent Conversation Context Management.
 
 Manages conversation history with smart summarization to prevent
 context overflow while preserving critical information.
 """
 
-from typing import Any, Optional
+from typing import Any
 
 from models import GlobalState, LogLevel
 from services import LLMService
 
 
 class ConversationContextManager:
-    """
-    Manages conversation context with intelligent summarization.
+    """Manages conversation context with intelligent summarization.
 
     Key features:
     - Rolling window with recent messages kept verbatim
@@ -24,13 +22,12 @@ class ConversationContextManager:
 
     def __init__(
         self,
-        llm_service: Optional[LLMService] = None,
+        llm_service: LLMService | None = None,
         max_messages: int = 50,
         keep_recent: int = 10,
         summarize_threshold: int = 15,
     ):
-        """
-        Initialize context manager.
+        """Initialize context manager.
 
         Args:
             llm_service: LLM service for summarization
@@ -48,8 +45,7 @@ class ConversationContextManager:
         conversation_history: list[dict[str, Any]],
         state: GlobalState,
     ) -> list[dict[str, Any]]:
-        """
-        Manage conversation context intelligently.
+        """Manage conversation context intelligently.
 
         Args:
             conversation_history: Current conversation history
@@ -78,8 +74,7 @@ class ConversationContextManager:
         conversation_history: list[dict[str, Any]],
         state: GlobalState,
     ) -> list[dict[str, Any]]:
-        """
-        Simple truncation fallback (no LLM needed).
+        """Simple truncation fallback (no LLM needed).
 
         Keeps most recent messages and critical system messages.
         """
@@ -104,9 +99,7 @@ class ConversationContextManager:
         return [summary_msg] + recent
 
     def _extract_critical_info(self, messages: list[dict[str, Any]]) -> str:
-        """
-        Extract critical information from messages (keyword-based).
-        """
+        """Extract critical information from messages (keyword-based)."""
         critical_parts = []
 
         for msg in messages:
@@ -127,8 +120,7 @@ class ConversationContextManager:
         conversation_history: list[dict[str, Any]],
         state: GlobalState,
     ) -> list[dict[str, Any]]:
-        """
-        LLM-powered smart summarization.
+        """LLM-powered smart summarization.
 
         Preserves critical information while reducing token count.
         """
@@ -215,9 +207,7 @@ Be concise but preserve ALL critical details."""
             raise
 
     def _format_messages_for_summary(self, messages: list[dict[str, Any]]) -> str:
-        """
-        Format messages for LLM summarization.
-        """
+        """Format messages for LLM summarization."""
         formatted_lines = []
 
         for i, msg in enumerate(messages, 1):
@@ -237,14 +227,11 @@ Be concise but preserve ALL critical details."""
         return "\n".join(formatted_lines)
 
     def should_summarize(self, conversation_history: list[dict[str, Any]]) -> bool:
-        """
-        Determine if summarization is needed.
-        """
+        """Determine if summarization is needed."""
         return len(conversation_history) > self.summarize_threshold
 
     def estimate_tokens(self, conversation_history: list[dict[str, Any]]) -> int:
-        """
-        Rough estimate of token count.
+        """Rough estimate of token count.
 
         Uses simple word count * 1.3 approximation.
         """

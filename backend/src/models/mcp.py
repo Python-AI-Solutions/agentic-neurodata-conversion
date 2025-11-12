@@ -1,20 +1,18 @@
-"""
-Model Context Protocol (MCP) message schemas.
+"""Model Context Protocol (MCP) message schemas.
 
 This module defines the message format for inter-agent communication
 following the JSON-RPC 2.0 protocol structure.
 """
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
 class MCPMessage(BaseModel):
-    """
-    MCP message for agent-to-agent communication.
+    """MCP message for agent-to-agent communication.
 
     Based on JSON-RPC 2.0 structure with additional fields for tracking.
     """
@@ -37,7 +35,7 @@ class MCPMessage(BaseModel):
         default_factory=datetime.now,
         description="Message creation timestamp",
     )
-    reply_to: Optional[str] = Field(
+    reply_to: str | None = Field(
         default=None,
         description="Message ID this is replying to",
     )
@@ -47,8 +45,7 @@ class MCPMessage(BaseModel):
 
 
 class MCPResponse(BaseModel):
-    """
-    Response to an MCP message.
+    """Response to an MCP message.
 
     Follows JSON-RPC 2.0 response structure.
     """
@@ -63,11 +60,11 @@ class MCPResponse(BaseModel):
     success: bool = Field(
         description="Whether the action succeeded",
     )
-    result: Optional[dict[str, Any]] = Field(
+    result: dict[str, Any] | None = Field(
         default=None,
         description="Action result data (if success=True)",
     )
-    error: Optional[dict[str, Any]] = Field(
+    error: dict[str, Any] | None = Field(
         default=None,
         description="Error details (if success=False)",
     )
@@ -85,8 +82,7 @@ class MCPResponse(BaseModel):
         reply_to: str,
         result: dict[str, Any],
     ) -> "MCPResponse":
-        """
-        Create a success response.
+        """Create a success response.
 
         Args:
             reply_to: Original message ID
@@ -107,10 +103,9 @@ class MCPResponse(BaseModel):
         reply_to: str,
         error_code: str,
         error_message: str,
-        error_context: Optional[dict[str, Any]] = None,
+        error_context: dict[str, Any] | None = None,
     ) -> "MCPResponse":
-        """
-        Create an error response.
+        """Create an error response.
 
         Args:
             reply_to: Original message ID
@@ -133,8 +128,7 @@ class MCPResponse(BaseModel):
 
 
 class MCPEvent(BaseModel):
-    """
-    Event notification (one-way, no response expected).
+    """Event notification (one-way, no response expected).
 
     Used for status updates, progress notifications, etc.
     """

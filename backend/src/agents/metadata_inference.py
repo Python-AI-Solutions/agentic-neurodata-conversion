@@ -1,5 +1,4 @@
-"""
-Intelligent Metadata Inference from Files.
+"""Intelligent Metadata Inference from Files.
 
 This module uses file analysis + LLM to automatically infer metadata
 from file structure and content, reducing user burden and improving
@@ -16,7 +15,7 @@ Features:
 import json
 import logging
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from models import GlobalState, LogLevel
 from services import LLMService
@@ -26,8 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class MetadataInferenceEngine:
-    """
-    Intelligent metadata inference from file analysis.
+    """Intelligent metadata inference from file analysis.
 
     Uses a combination of:
     1. Direct file metadata extraction (sampling rate, channels, duration)
@@ -35,9 +33,8 @@ class MetadataInferenceEngine:
     3. Heuristic rules (common patterns in neuroscience data)
     """
 
-    def __init__(self, llm_service: Optional[LLMService] = None):
-        """
-        Initialize the metadata inference engine.
+    def __init__(self, llm_service: LLMService | None = None):
+        """Initialize the metadata inference engine.
 
         Args:
             llm_service: Optional LLM service for intelligent inference
@@ -51,8 +48,7 @@ class MetadataInferenceEngine:
         input_path: str,
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Infer metadata from input file using analysis + LLM.
+        """Infer metadata from input file using analysis + LLM.
 
         Args:
             input_path: Path to input data file
@@ -120,8 +116,7 @@ class MetadataInferenceEngine:
         input_path: str,
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Extract technical metadata directly from file.
+        """Extract technical metadata directly from file.
 
         Args:
             input_path: Path to input file
@@ -143,7 +138,7 @@ class MetadataInferenceEngine:
         format_type = state.metadata.get("format", "").lower()
 
         if "spikeglx" in format_type:
-            metadata.update(self._extract_spikeglx_metadata(input_path))
+            metadata.update(self._extract_spikeglx_metadata(input_path, state))
         elif "openephys" in format_type:
             metadata.update(self._extract_openephys_metadata(input_path))
         elif "intan" in format_type:
@@ -151,9 +146,9 @@ class MetadataInferenceEngine:
 
         return metadata
 
-    def _extract_spikeglx_metadata(self, input_path: str) -> dict[str, Any]:
+    def _extract_spikeglx_metadata(self, input_path: str, state: GlobalState) -> dict[str, Any]:
         """Extract metadata from SpikeGLX files."""
-        meta = {"recording_type": "electrophysiology", "system": "SpikeGLX"}
+        meta: dict[str, Any] = {"recording_type": "electrophysiology", "system": "SpikeGLX"}
 
         # Parse filename for common patterns
         file_path = Path(input_path)
@@ -186,7 +181,7 @@ class MetadataInferenceEngine:
                                 meta["duration_seconds"] = float(value)
             except Exception as e:
                 # Log metadata extraction failure but continue - this is non-critical
-                self._state.add_log(LogLevel.WARNING, f"Failed to extract SpikeGLX metadata from .meta file: {e}")
+                state.add_log(LogLevel.WARNING, f"Failed to extract SpikeGLX metadata from .meta file: {e}")
 
         return meta
 
@@ -209,8 +204,7 @@ class MetadataInferenceEngine:
         file_meta: dict[str, Any],
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Apply heuristic rules to infer metadata.
+        """Apply heuristic rules to infer metadata.
 
         Args:
             file_meta: Extracted file metadata
@@ -271,8 +265,7 @@ class MetadataInferenceEngine:
         heuristic_inferences: dict[str, Any],
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Use LLM to infer additional metadata with reasoning.
+        """Use LLM to infer additional metadata with reasoning.
 
         Args:
             file_meta: Extracted file metadata
@@ -399,7 +392,7 @@ Return detailed JSON with your best inferences."""
                     "inferred_fields": list(cached_result.get("value", {}).get("inferred_metadata", {}).keys()),
                 },
             )
-            return cached_result["value"]
+            return dict(cached_result["value"])  # Cast Any to dict
 
         try:
             # Cache MISS - call LLM
@@ -441,7 +434,7 @@ Return detailed JSON with your best inferences."""
                     f"✓ Cached inference result (confidence: {avg_confidence:.1f}%)",
                 )
 
-            return response
+            return dict(response)  # Cast Any to dict
 
         except Exception as e:
             logger.exception(f"LLM inference failed: {e}")
@@ -461,8 +454,7 @@ Return detailed JSON with your best inferences."""
         heuristic_inferences: dict[str, Any],
         llm_inferences: dict[str, Any],
     ) -> dict[str, Any]:
-        """
-        Combine all inference sources with priority: LLM > Heuristic > File metadata.
+        """Combine all inference sources with priority: LLM > Heuristic > File metadata.
 
         Args:
             file_meta: Direct file metadata

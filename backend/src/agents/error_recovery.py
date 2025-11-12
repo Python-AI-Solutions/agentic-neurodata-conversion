@@ -1,19 +1,17 @@
-"""
-Intelligent Error Recovery and Handling.
+"""Intelligent Error Recovery and Handling.
 
 This module uses LLM to intelligently handle errors and suggest recovery actions.
 Instead of generic error messages, it provides context-aware guidance.
 """
 
-from typing import Any, Optional
+from typing import Any
 
 from models import GlobalState, LogLevel
 from services import LLMService
 
 
 class IntelligentErrorRecovery:
-    """
-    LLM-powered error analysis and recovery suggestions.
+    """LLM-powered error analysis and recovery suggestions.
 
     Features:
     - Analyzes errors in context
@@ -22,15 +20,14 @@ class IntelligentErrorRecovery:
     - Provides user-friendly explanations
     """
 
-    def __init__(self, llm_service: Optional[LLMService] = None):
-        """
-        Initialize the error recovery system.
+    def __init__(self, llm_service: LLMService | None = None):
+        """Initialize the error recovery system.
 
         Args:
             llm_service: Optional LLM service for intelligent analysis
         """
         self.llm_service = llm_service
-        self.error_history = []
+        self.error_history: list[dict[str, Any]] = []
 
     async def analyze_error(
         self,
@@ -38,8 +35,7 @@ class IntelligentErrorRecovery:
         context: dict[str, Any],
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Analyze an error and provide intelligent recovery suggestions.
+        """Analyze an error and provide intelligent recovery suggestions.
 
         Args:
             error: The exception that occurred
@@ -186,7 +182,7 @@ Be specific and actionable."""
                 },
             )
 
-            return response
+            return dict(response)  # Cast Any to dict
 
         except Exception as e:
             state.add_log(
@@ -236,7 +232,7 @@ Be specific and actionable."""
         recent = self.error_history[-5:]
 
         # Count error types
-        error_types = {}
+        error_types: dict[str, int] = {}
         for err in recent:
             err_type = err["error_type"]
             error_types[err_type] = error_types.get(err_type, 0) + 1
@@ -250,9 +246,8 @@ Be specific and actionable."""
     async def suggest_proactive_fix(
         self,
         state: GlobalState,
-    ) -> Optional[dict[str, Any]]:
-        """
-        Proactively suggest fixes based on error patterns.
+    ) -> dict[str, Any] | None:
+        """Proactively suggest fixes based on error patterns.
 
         If we see the same error multiple times, suggest a proactive fix.
 

@@ -1,26 +1,23 @@
-"""
-Prompt Service for loading and rendering YAML prompt templates.
+"""Prompt Service for loading and rendering YAML prompt templates.
 
 Implements Task T018: PromptService with YAML loading and Jinja2 rendering.
 """
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import yaml
 from jinja2 import Environment, FileSystemLoader, Template
 
 
 class PromptService:
-    """
-    Service for managing LLM prompt templates.
+    """Service for managing LLM prompt templates.
 
     Loads YAML prompt templates and renders them with Jinja2.
     """
 
-    def __init__(self, prompts_dir: Optional[Path] = None):
-        """
-        Initialize prompt service.
+    def __init__(self, prompts_dir: Path | None = None):
+        """Initialize prompt service.
 
         Args:
             prompts_dir: Directory containing prompt YAML files.
@@ -37,7 +34,7 @@ class PromptService:
         # Setup Jinja2 environment
         self.jinja_env = Environment(
             loader=FileSystemLoader(str(self.prompts_dir)),
-            autoescape=False,  # We're generating prompts, not HTML
+            autoescape=False,  # nosec B701 - safe: generating LLM prompts, not HTML - no XSS risk
         )
 
         # Add custom filters
@@ -45,15 +42,15 @@ class PromptService:
 
     def _filesizeformat(self, bytes_value: int) -> str:
         """Custom Jinja2 filter for formatting file sizes."""
+        size = float(bytes_value)
         for unit in ["B", "KB", "MB", "GB"]:
-            if bytes_value < 1024.0:
-                return f"{bytes_value:.1f} {unit}"
-            bytes_value /= 1024.0
-        return f"{bytes_value:.1f} TB"
+            if size < 1024.0:
+                return f"{size:.1f} {unit}"
+            size /= 1024.0
+        return f"{size:.1f} TB"
 
     def load_template(self, template_name: str) -> dict[str, Any]:
-        """
-        Load a YAML prompt template.
+        """Load a YAML prompt template.
 
         Args:
             template_name: Name of template file (with or without .yaml extension)
@@ -77,11 +74,10 @@ class PromptService:
         with open(template_path) as f:
             template_data = yaml.safe_load(f)
 
-        return template_data
+        return dict(template_data) if template_data else {}  # Cast Any to dict
 
     def render_prompt(self, template_name: str, context: dict[str, Any]) -> str:
-        """
-        Render a prompt template with context data.
+        """Render a prompt template with context data.
 
         Args:
             template_name: Name of template file
@@ -105,11 +101,10 @@ class PromptService:
         # Render with context
         rendered = template.render(**context)
 
-        return rendered.strip()
+        return str(rendered).strip()  # Cast Any to str
 
     def get_system_role(self, template_name: str) -> str:
-        """
-        Get system role from template.
+        """Get system role from template.
 
         Args:
             template_name: Name of template file
@@ -118,11 +113,10 @@ class PromptService:
             System role string
         """
         template_data = self.load_template(template_name)
-        return template_data.get("system_role", "").strip()
+        return str(template_data.get("system_role", "")).strip()  # Cast Any to str
 
-    def get_output_schema(self, template_name: str) -> Optional[dict[str, Any]]:
-        """
-        Get output schema from template.
+    def get_output_schema(self, template_name: str) -> dict[str, Any] | None:
+        """Get output schema from template.
 
         Args:
             template_name: Name of template file
@@ -131,11 +125,11 @@ class PromptService:
             Output schema dictionary or None
         """
         template_data = self.load_template(template_name)
-        return template_data.get("output_schema")
+        schema = template_data.get("output_schema")
+        return dict(schema) if schema else None  # Cast Any to dict or None
 
     def create_llm_prompt(self, template_name: str, context: dict[str, Any]) -> dict[str, Any]:
-        """
-        Create complete LLM prompt with system role, rendered template, and schema.
+        """Create complete LLM prompt with system role, rendered template, and schema.
 
         Args:
             template_name: Name of template file

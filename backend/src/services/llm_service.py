@@ -1,5 +1,4 @@
-"""
-LLM service abstraction layer.
+"""LLM service abstraction layer.
 
 Provides a provider-agnostic interface for LLM interactions,
 with concrete implementations for Anthropic Claude.
@@ -32,8 +31,7 @@ async def call_with_retry(
     exponential_base: float = 2.0,
     fallback: Callable | None = None,
 ) -> Any:
-    """
-    Call async function with exponential backoff retry.
+    """Call async function with exponential backoff retry.
 
     Args:
         func: Async function to call
@@ -94,8 +92,7 @@ async def call_with_retry(
 
 
 class LLMService(ABC):
-    """
-    Abstract interface for LLM services.
+    """Abstract interface for LLM services.
 
     Concrete implementations inject provider-specific clients.
     """
@@ -108,8 +105,7 @@ class LLMService(ABC):
         temperature: float = 0.7,
         max_tokens: int = 4096,
     ) -> str:
-        """
-        Generate a text completion.
+        """Generate a text completion.
 
         Args:
             prompt: User prompt
@@ -132,8 +128,7 @@ class LLMService(ABC):
         output_schema: dict[str, Any],
         system_prompt: str | None = None,
     ) -> dict[str, Any]:
-        """
-        Generate structured output matching a schema.
+        """Generate structured output matching a schema.
 
         Args:
             prompt: User prompt
@@ -159,15 +154,13 @@ class LLMServiceError(Exception):
 
 
 class AnthropicLLMService(LLMService):
-    """
-    Anthropic Claude implementation of LLM service.
+    """Anthropic Claude implementation of LLM service.
 
     Uses the Anthropic Python SDK for API communication.
     """
 
     def __init__(self, api_key: str, model: str = "claude-sonnet-4-20250514"):
-        """
-        Initialize Anthropic LLM service.
+        """Initialize Anthropic LLM service.
 
         Args:
             api_key: Anthropic API key
@@ -188,8 +181,7 @@ class AnthropicLLMService(LLMService):
         max_tokens: int = 4096,
         enable_retry: bool = True,
     ) -> str:
-        """
-        Generate a text completion using Claude with automatic retry.
+        """Generate a text completion using Claude with automatic retry.
 
         Args:
             prompt: User prompt
@@ -257,9 +249,11 @@ class AnthropicLLMService(LLMService):
 
         # Use retry logic if enabled
         if enable_retry:
-            return await call_with_retry(_api_call, max_retries=3)
+            result = await call_with_retry(_api_call, max_retries=3)
+            return str(result)
         else:
-            return await _api_call()
+            result = await _api_call()
+            return str(result)
 
     async def generate_structured_output(
         self,
@@ -267,8 +261,7 @@ class AnthropicLLMService(LLMService):
         output_schema: dict[str, Any],
         system_prompt: str | None = None,
     ) -> dict[str, Any]:
-        """
-        Generate structured output using Claude with prompt engineering.
+        """Generate structured output using Claude with prompt engineering.
 
         Note: This implementation uses prompt engineering to encourage
         structured JSON output. For production use, consider using
@@ -355,7 +348,7 @@ Respond ONLY with the JSON object, no additional text."""
                 f"LLM structured output completed and validated: {duration:.2f}s - result_keys={list(result.keys())}"
             )
 
-            return result
+            return dict(result)  # Ensure dict type
 
         except json.JSONDecodeError as e:
             duration = time.time() - start_time
@@ -383,15 +376,13 @@ Respond ONLY with the JSON object, no additional text."""
 
 
 class MockLLMService(LLMService):
-    """
-    Mock LLM service for testing.
+    """Mock LLM service for testing.
 
     Returns predefined responses without making API calls.
     """
 
     def __init__(self, responses: dict[str, str] | None = None):
-        """
-        Initialize mock LLM service.
+        """Initialize mock LLM service.
 
         Args:
             responses: Optional dictionary mapping prompts to responses
@@ -431,8 +422,7 @@ def create_llm_service(
     model: str | None = None,
     **kwargs,
 ) -> LLMService:
-    """
-    Factory function to create LLM service instances.
+    """Factory function to create LLM service instances.
 
     Args:
         provider: LLM provider name ("anthropic" or "mock")

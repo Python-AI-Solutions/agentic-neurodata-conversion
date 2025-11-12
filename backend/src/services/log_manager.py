@@ -1,5 +1,4 @@
-"""
-Log file manager for conversion process.
+"""Log file manager for conversion process.
 
 This module handles persistent logging to disk for scientific transparency
 and traceability. Each conversion session generates a timestamped log file
@@ -9,22 +8,19 @@ containing detailed process information.
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 from models.state import LogEntry
 
 
 class LogFileManager:
-    """
-    Manages persistent log file creation and writing for conversion sessions.
+    """Manages persistent log file creation and writing for conversion sessions.
 
     Each conversion session gets a unique timestamped log file that captures
     all process details for scientific reproducibility and audit trails.
     """
 
-    def __init__(self, output_dir: Optional[Path] = None):
-        """
-        Initialize the log file manager.
+    def __init__(self, output_dir: Path | None = None):
+        """Initialize the log file manager.
 
         Args:
             output_dir: Directory to store log files. Defaults to backend/src/outputs/conversion_logs/
@@ -37,12 +33,11 @@ class LogFileManager:
 
         self.output_dir = base_dir
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.current_log_file: Optional[Path] = None
-        self.session_start: Optional[datetime] = None
+        self.current_log_file: Path | None = None
+        self.session_start: datetime | None = None
 
-    def create_session_log_file(self, session_id: Optional[str] = None) -> Path:
-        """
-        Create a new log file for a conversion session.
+    def create_session_log_file(self, session_id: str | None = None) -> Path:
+        """Create a new log file for a conversion session.
 
         Args:
             session_id: Optional session identifier. If not provided, uses timestamp.
@@ -74,8 +69,7 @@ class LogFileManager:
         return self.current_log_file
 
     def write_log_entry(self, log_entry: LogEntry) -> None:
-        """
-        Write a log entry to the current log file.
+        """Write a log entry to the current log file.
 
         Args:
             log_entry: LogEntry to write
@@ -109,8 +103,7 @@ class LogFileManager:
             f.write("\n")  # Blank line between entries
 
     def write_log_entries_batch(self, log_entries: list[LogEntry]) -> None:
-        """
-        Write multiple log entries in batch.
+        """Write multiple log entries in batch.
 
         Args:
             log_entries: List of LogEntry objects to write
@@ -118,9 +111,8 @@ class LogFileManager:
         for log_entry in log_entries:
             self.write_log_entry(log_entry)
 
-    def close_session_log(self) -> Optional[Path]:
-        """
-        Close the current session log file with a footer.
+    def close_session_log(self) -> Path | None:
+        """Close the current session log file with a footer.
 
         Returns:
             Path to the closed log file, or None if no log file was open
@@ -144,9 +136,8 @@ class LogFileManager:
 
         return log_file_path
 
-    def get_current_log_file_path(self) -> Optional[Path]:
-        """
-        Get the path to the current log file.
+    def get_current_log_file_path(self) -> Path | None:
+        """Get the path to the current log file.
 
         Returns:
             Path to current log file, or None if no session active
@@ -154,8 +145,7 @@ class LogFileManager:
         return self.current_log_file
 
     def write_stage_header(self, stage_name: str) -> None:
-        """
-        Write a visual stage separator in the log file.
+        """Write a visual stage separator in the log file.
 
         Args:
             stage_name: Name of the stage

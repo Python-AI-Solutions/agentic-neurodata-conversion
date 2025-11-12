@@ -1,5 +1,4 @@
-"""
-NWB and DANDI Schema Definitions
+"""NWB and DANDI Schema Definitions.
 
 This module provides comprehensive schema definitions for all required and recommended
 fields in NWB files and DANDI archive compliance.
@@ -8,7 +7,7 @@ This replaces hardcoded field lists with a dynamic, schema-driven approach.
 """
 
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -43,8 +42,8 @@ class MetadataFieldSchema(BaseModel):
     requirement_level: FieldRequirementLevel = Field(description="How critical this field is")
 
     # Validation and normalization
-    allowed_values: Optional[list[str]] = Field(default=None, description="Enum values if applicable")
-    format: Optional[str] = Field(default=None, description="Format string (e.g., ISO 8601)")
+    allowed_values: list[str] | None = Field(default=None, description="Enum values if applicable")
+    format: str | None = Field(default=None, description="Format string (e.g., ISO 8601)")
     example: str = Field(description="Example value")
 
     # Extraction hints for LLM
@@ -53,14 +52,13 @@ class MetadataFieldSchema(BaseModel):
     normalization_rules: dict[str, str] = Field(default_factory=dict, description="Value mappings")
 
     # Context
-    nwb_path: Optional[str] = Field(default=None, description="Path in NWB file structure")
-    dandi_field: Optional[str] = Field(default=None, description="Corresponding DANDI field")
+    nwb_path: str | None = Field(default=None, description="Path in NWB file structure")
+    dandi_field: str | None = Field(default=None, description="Corresponding DANDI field")
     why_needed: str = Field(description="Explanation for users")
 
 
 class NWBDANDISchema:
-    """
-    Comprehensive schema for NWB and DANDI metadata fields.
+    """Comprehensive schema for NWB and DANDI metadata fields.
 
     This provides a single source of truth for all required fields,
     eliminating hardcoding throughout the codebase.
@@ -506,7 +504,7 @@ class NWBDANDISchema:
         ]
 
     @staticmethod
-    def get_field_by_name(field_name: str) -> Optional[MetadataFieldSchema]:
+    def get_field_by_name(field_name: str) -> MetadataFieldSchema | None:
         """Get field schema by name."""
         for field in NWBDANDISchema.get_all_fields():
             if field.name == field_name:
@@ -515,8 +513,7 @@ class NWBDANDISchema:
 
     @staticmethod
     def generate_llm_extraction_prompt() -> str:
-        """
-        Generate comprehensive LLM prompt for metadata extraction.
+        """Generate comprehensive LLM prompt for metadata extraction.
 
         This dynamically creates the prompt from the schema,
         eliminating hardcoded field lists.
@@ -617,8 +614,7 @@ Extract as much as possible from the user's message!
 
     @staticmethod
     def validate_metadata(metadata: dict[str, Any]) -> tuple[bool, list[str]]:
-        """
-        Validate metadata against schema.
+        """Validate metadata against schema.
 
         Returns:
             (is_valid, list_of_missing_required_fields)

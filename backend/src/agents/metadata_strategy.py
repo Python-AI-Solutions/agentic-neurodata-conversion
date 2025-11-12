@@ -1,5 +1,4 @@
-"""
-Metadata Request Strategy with Priority-Based Questioning.
+"""Metadata Request Strategy with Priority-Based Questioning.
 
 This module implements intelligent, priority-based metadata collection that:
 1. Asks for CRITICAL fields first (required for DANDI)
@@ -10,7 +9,7 @@ This module implements intelligent, priority-based metadata collection that:
 
 import logging
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from models import GlobalState
 
@@ -137,8 +136,7 @@ METADATA_FIELDS = {
 
 
 class MetadataRequestStrategy:
-    """
-    Intelligent metadata request strategy combining priority-based and sequential approaches.
+    """Intelligent metadata request strategy combining priority-based and sequential approaches.
 
     Flow:
     1. Ask for CRITICAL fields as a batch (with option to go sequential)
@@ -147,8 +145,8 @@ class MetadataRequestStrategy:
     4. Respect field-level and global skip preferences
     """
 
-    def __init__(self, llm_service=None, state: Optional[GlobalState] = None):
-        self._current_phase: Optional[str] = None
+    def __init__(self, llm_service=None, state: GlobalState | None = None):
+        self._current_phase: str | None = None
         self._current_field_index: int = 0
         self.llm_service = llm_service
         self.state = state
@@ -158,8 +156,7 @@ class MetadataRequestStrategy:
         state: GlobalState,
         validation_result: dict[str, Any],
     ) -> dict[str, Any]:
-        """
-        Determine the next metadata request based on current state and priorities.
+        """Determine the next metadata request based on current state and priorities.
 
         Args:
             state: Global conversion state
@@ -367,8 +364,7 @@ Would you like to add any of these? (You can say "skip" to proceed with conversi
         return [name for name in field_names if name in METADATA_FIELDS and METADATA_FIELDS[name].priority == priority]
 
     async def detect_skip_type_with_llm(self, user_message: str, conversation_context: str = "") -> str:
-        """
-        Use LLM to intelligently detect user's intent for skipping metadata questions.
+        """Use LLM to intelligently detect user's intent for skipping metadata questions.
 
         This is much more robust than keyword matching and can understand:
         - Natural language variations ("maybe later", "not right now")
@@ -498,15 +494,14 @@ What is the user's intent? Respond with exactly one word: global, field, sequent
                     )
                 return fallback
 
-            return intent
+            return str(intent)  # Cast Any to str
 
         except Exception as e:
             logger.warning(f"LLM skip detection failed: {e}, falling back to keywords")
             return self.detect_skip_type(user_message)
 
     def detect_skip_type(self, user_message: str) -> str:
-        """
-        Keyword-based skip detection (fallback when LLM is unavailable).
+        """Keyword-based skip detection (fallback when LLM is unavailable).
 
         Returns:
             "field" - Skip just this one field

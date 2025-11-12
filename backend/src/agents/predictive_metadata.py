@@ -1,5 +1,4 @@
-"""
-Predictive Metadata System with LLM Learning.
+"""Predictive Metadata System with LLM Learning.
 
 This module predicts and suggests metadata based on deep file analysis,
 going beyond simple inference to provide smart defaults.
@@ -7,15 +6,14 @@ going beyond simple inference to provide smart defaults.
 
 import json
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from models import GlobalState, LogLevel
 from services import LLMService
 
 
 class PredictiveMetadataSystem:
-    """
-    Advanced metadata prediction using LLM and pattern recognition.
+    """Advanced metadata prediction using LLM and pattern recognition.
 
     Features:
     - Deep file content analysis
@@ -25,15 +23,14 @@ class PredictiveMetadataSystem:
     - Contextual metadata generation
     """
 
-    def __init__(self, llm_service: Optional[LLMService] = None):
-        """
-        Initialize predictive metadata system.
+    def __init__(self, llm_service: LLMService | None = None):
+        """Initialize predictive metadata system.
 
         Args:
             llm_service: LLM service for intelligent predictions
         """
         self.llm_service = llm_service
-        self.prediction_history = []  # Store predictions for learning
+        self.prediction_history: list[dict[str, Any]] = []  # Store predictions for learning
 
     async def predict_metadata(
         self,
@@ -42,8 +39,7 @@ class PredictiveMetadataSystem:
         basic_inference: dict[str, Any],
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Predict comprehensive metadata using deep analysis.
+        """Predict comprehensive metadata using deep analysis.
 
         Args:
             file_path: Path to the data file
@@ -107,9 +103,7 @@ class PredictiveMetadataSystem:
         file_format: str,
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Perform deep analysis of file beyond basic inference.
-        """
+        """Perform deep analysis of file beyond basic inference."""
         path = Path(file_path)
         analysis = {
             "path": file_path,
@@ -190,7 +184,7 @@ class PredictiveMetadataSystem:
 
     async def _analyze_spikeglx_deep(self, path: Path, state: GlobalState) -> dict[str, Any]:
         """Deep analysis of SpikeGLX files."""
-        analysis = {"spikeglx_details": {}}
+        analysis: dict[str, Any] = {"spikeglx_details": {}}
 
         # Try to read .meta file for rich metadata
         meta_file = path.with_suffix(".meta")
@@ -343,7 +337,7 @@ Be aggressive with predictions - provide values even if uncertain!"""
             system_prompt=system_prompt,
         )
 
-        return response
+        return dict(response)  # Cast Any to dict
 
     def _basic_predictions(self, basic_inference: dict[str, Any]) -> dict[str, Any]:
         """Fallback basic predictions without LLM."""

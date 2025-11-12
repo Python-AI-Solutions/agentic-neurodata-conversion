@@ -1,5 +1,4 @@
-"""
-Smart Issue Resolution Engine.
+"""Smart Issue Resolution Engine.
 
 Generates detailed, actionable resolution workflows for NWB validation issues.
 Goes beyond simple suggestions to provide step-by-step guides with code examples,
@@ -15,7 +14,7 @@ Features:
 
 import json
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from models import GlobalState, LogLevel
 from services import LLMService
@@ -24,8 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 class SmartIssueResolution:
-    """
-    Generates intelligent, actionable resolution plans for validation issues.
+    """Generates intelligent, actionable resolution plans for validation issues.
 
     Provides:
     - Step-by-step fix workflows
@@ -35,9 +33,8 @@ class SmartIssueResolution:
     - Validation steps
     """
 
-    def __init__(self, llm_service: Optional[LLMService] = None):
-        """
-        Initialize the resolution engine.
+    def __init__(self, llm_service: LLMService | None = None):
+        """Initialize the resolution engine.
 
         Args:
             llm_service: Optional LLM service for intelligent resolution generation
@@ -51,8 +48,7 @@ class SmartIssueResolution:
         existing_metadata: dict[str, Any],
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Generate comprehensive resolution plan for validation issues.
+        """Generate comprehensive resolution plan for validation issues.
 
         Args:
             issues: List of validation issues
@@ -99,9 +95,7 @@ class SmartIssueResolution:
         issues: list[Any],
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Basic resolution plan when LLM is not available.
-        """
+        """Basic resolution plan when LLM is not available."""
         workflows = []
 
         for idx, issue in enumerate(issues[:5], 1):
@@ -134,9 +128,7 @@ class SmartIssueResolution:
         existing_metadata: dict[str, Any],
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Use LLM to generate intelligent resolution workflows.
-        """
+        """Use LLM to generate intelligent resolution workflows."""
         system_prompt = """You are an expert NWB data engineer and troubleshooter.
 
 Your job is to create **actionable, step-by-step resolution plans** for NWB validation issues.
@@ -299,7 +291,7 @@ Focus on the top 5-7 most critical issues."""
                 system_prompt=system_prompt,
             )
 
-            return response
+            return dict(response)  # Cast Any to dict
 
         except Exception as e:
             logger.exception(f"LLM resolution planning failed: {e}")
@@ -312,9 +304,7 @@ Focus on the top 5-7 most critical issues."""
         file_context: dict[str, Any],
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Add concrete, runnable code examples for common fixes.
-        """
+        """Add concrete, runnable code examples for common fixes."""
         system_prompt = """You are an expert Python programmer specializing in PyNWB (Neurodata Without Borders).
 
 Generate complete, runnable Python code examples for NWB file corrections.
@@ -425,8 +415,7 @@ Generate a complete, runnable code example that implements this fix."""
         context: dict[str, Any],
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Generate interactive decision tree for complex issues with multiple resolution paths.
+        """Generate interactive decision tree for complex issues with multiple resolution paths.
 
         Useful when there are multiple ways to fix an issue and the best approach
         depends on user's situation.
@@ -502,7 +491,7 @@ Create a decision tree that helps users choose the right resolution approach."""
                 system_prompt=system_prompt,
             )
 
-            return decision_tree
+            return dict(decision_tree) if decision_tree else {}  # Cast Any to dict
 
         except Exception as e:
             logger.exception(f"Decision tree generation failed: {e}")

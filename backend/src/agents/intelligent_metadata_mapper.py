@@ -1,5 +1,4 @@
-"""
-Intelligent Metadata Mapper using LLM for flexible metadata handling.
+"""Intelligent Metadata Mapper using LLM for flexible metadata handling.
 
 This module allows users to input arbitrary metadata in natural language
 and intelligently maps it to appropriate NWB schema fields or custom extensions.
@@ -8,7 +7,7 @@ and intelligently maps it to appropriate NWB schema fields or custom extensions.
 import json
 import re
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from models import GlobalState, LogLevel
 from pydantic import BaseModel, Field
@@ -201,15 +200,14 @@ class IntelligentMetadataMapper:
         },
     }
 
-    def __init__(self, llm_service: Optional[LLMService] = None):
+    def __init__(self, llm_service: LLMService | None = None):
         """Initialize the mapper with optional LLM service."""
         self.llm_service = llm_service
 
     async def parse_custom_metadata(
         self, user_input: str, existing_metadata: dict[str, Any], state: GlobalState
     ) -> dict[str, Any]:
-        """
-        Parse free-form user input into structured metadata.
+        """Parse free-form user input into structured metadata.
 
         Args:
             user_input: Natural language metadata from user
@@ -285,8 +283,7 @@ Use descriptive field names."""
             return self._parse_without_llm(user_input)
 
     async def _map_to_nwb_schema(self, extracted_fields: list[dict], state: GlobalState) -> dict[str, Any]:
-        """
-        Map extracted fields to NWB schema paths.
+        """Map extracted fields to NWB schema paths.
 
         Returns dictionary with:
         - standard_fields: Fields that map to NWB schema
@@ -305,11 +302,12 @@ Use descriptive field names."""
             # Try to match to standard NWB field
             matched = False
             for nwb_field, config in self.NWB_FIELD_MAPPINGS.items():
+                config_dict: dict[str, Any] = config  # Cast for type safety
                 # Check if field name or description matches aliases
                 if (
-                    field_name in config["aliases"]
+                    field_name in config_dict["aliases"]
                     or nwb_field in field_name
-                    or any(alias in field.get("field_description", "").lower() for alias in config["aliases"])
+                    or any(alias in field.get("field_description", "").lower() for alias in config_dict["aliases"])
                 ):
                     # Map to standard field
                     standard_fields[nwb_field] = value
@@ -317,10 +315,10 @@ Use descriptive field names."""
                         MappedField(
                             original_input=field.get("field_description", ""),
                             field_name=nwb_field,
-                            nwb_path=config["paths"][0],
+                            nwb_path=config_dict["paths"][0],
                             value=value,
-                            data_type=config["type"],
-                            category=config["category"],
+                            data_type=config_dict["type"],
+                            category=config_dict["category"],
                             confidence=field.get("confidence", 0.8),
                             is_standard=True,
                             requires_review=field.get("confidence", 1.0) < 0.7,
@@ -392,8 +390,7 @@ Use descriptive field names."""
         return clean.lower()
 
     async def suggest_missing_metadata(self, existing_metadata: dict[str, Any], file_type: str) -> list[str]:
-        """
-        Suggest additional metadata fields based on file type and existing data.
+        """Suggest additional metadata fields based on file type and existing data.
 
         Returns list of suggested fields the user might want to add.
         """
@@ -432,7 +429,7 @@ Use descriptive field names."""
         output.append("📋 **Metadata Mapping Summary**\n")
 
         # Group by category
-        by_category = {}
+        by_category: dict[str, list[dict]] = {}
         for report in mapping_report:
             category = report.get("category", "custom")
             if category not in by_category:

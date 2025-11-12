@@ -1,5 +1,4 @@
-"""
-Validation History Learning System.
+"""Validation History Learning System.
 
 Learns from past validation sessions to:
 - Recognize recurring issues
@@ -21,7 +20,7 @@ import logging
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from models import GlobalState, LogLevel, ValidationResult
 from services import LLMService
@@ -30,8 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 class ValidationHistoryLearner:
-    """
-    Learns from validation history to provide intelligent insights and predictions.
+    """Learns from validation history to provide intelligent insights and predictions.
 
     Tracks:
     - Common validation issues across files
@@ -40,9 +38,8 @@ class ValidationHistoryLearner:
     - User-specific patterns
     """
 
-    def __init__(self, llm_service: Optional[LLMService] = None, history_path: Optional[str] = None):
-        """
-        Initialize the history learner.
+    def __init__(self, llm_service: LLMService | None = None, history_path: str | None = None):
+        """Initialize the history learner.
 
         Args:
             llm_service: Optional LLM service for intelligent analysis
@@ -56,11 +53,10 @@ class ValidationHistoryLearner:
         self,
         validation_result: ValidationResult,
         file_context: dict[str, Any],
-        resolution_actions: Optional[list[dict[str, Any]]],
+        resolution_actions: list[dict[str, Any]] | None,
         state: GlobalState,
     ) -> None:
-        """
-        Record a validation session for learning.
+        """Record a validation session for learning.
 
         Args:
             validation_result: Validation results
@@ -106,8 +102,7 @@ class ValidationHistoryLearner:
         self,
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Analyze patterns across all validation history.
+        """Analyze patterns across all validation history.
 
         Returns:
             Analysis with:
@@ -176,8 +171,8 @@ class ValidationHistoryLearner:
 
     def _identify_common_issues(self, sessions: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Identify most common validation issues across sessions."""
-        issue_counts = defaultdict(int)
-        issue_severities = defaultdict(list)
+        issue_counts: defaultdict[str, int] = defaultdict(int)
+        issue_severities: defaultdict[str, list[str]] = defaultdict(list)
 
         for session in sessions:
             for issue in session.get("issues", []):
@@ -201,8 +196,7 @@ class ValidationHistoryLearner:
         return common_issues
 
     def _normalize_issue_message(self, message: str) -> str:
-        """
-        Normalize issue message to detect similar issues.
+        """Normalize issue message to detect similar issues.
 
         Examples:
         - "Missing field 'experimenter'" → "Missing field"
@@ -223,7 +217,7 @@ class ValidationHistoryLearner:
 
     def _analyze_format_specific_issues(self, sessions: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
         """Analyze issues specific to each file format."""
-        format_issues = defaultdict(lambda: defaultdict(int))
+        format_issues: defaultdict[str, defaultdict[str, int]] = defaultdict(lambda: defaultdict(int))
 
         for session in sessions:
             file_format = session.get("file_info", {}).get("format", "unknown")
@@ -265,7 +259,7 @@ class ValidationHistoryLearner:
             )
 
         # Pattern 2: Format success rates
-        format_success = defaultdict(lambda: {"total": 0, "valid": 0})
+        format_success: defaultdict[str, dict[str, int]] = defaultdict(lambda: {"total": 0, "valid": 0})
         for session in sessions:
             fmt = session.get("file_info", {}).get("format", "unknown")
             format_success[fmt]["total"] += 1
@@ -371,7 +365,7 @@ Generate 5-7 specific preventive recommendations to help users avoid common issu
                 system_prompt=system_prompt,
             )
 
-            return analysis
+            return dict(analysis)  # Cast Any to dict
 
         except Exception as e:
             logger.exception(f"LLM pattern analysis failed: {e}")
@@ -386,8 +380,7 @@ Generate 5-7 specific preventive recommendations to help users avoid common issu
         file_context: dict[str, Any],
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Predict likely validation issues based on file characteristics and history.
+        """Predict likely validation issues based on file characteristics and history.
 
         Args:
             file_context: Context about the file to be validated
@@ -462,7 +455,7 @@ Generate 5-7 specific preventive recommendations to help users avoid common issu
 
     def _extract_common_issues_from_similar(self, similar_sessions: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Extract common issues from similar validation sessions."""
-        issue_counts = defaultdict(int)
+        issue_counts: defaultdict[str, int] = defaultdict(int)
 
         for session in similar_sessions:
             seen_in_session = set()

@@ -1,5 +1,4 @@
-"""
-Evaluation Agent implementation.
+"""Evaluation Agent implementation.
 
 Responsible for:
 - NWB file validation using NWB Inspector
@@ -12,7 +11,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +22,7 @@ from agents.validation_history_learning import ValidationHistoryLearner
 from models import (
     CorrectionContext,
     GlobalState,
+    LogEntry,
     LogLevel,
     MCPMessage,
     MCPResponse,
@@ -36,15 +36,13 @@ from services.report_service import ReportService
 
 
 class EvaluationAgent:
-    """
-    Evaluation agent for validation and quality assessment.
+    """Evaluation agent for validation and quality assessment.
 
     This agent validates NWB files and performs quality checks.
     """
 
-    def __init__(self, llm_service: Optional[LLMService] = None):
-        """
-        Initialize the evaluation agent.
+    def __init__(self, llm_service: LLMService | None = None):
+        """Initialize the evaluation agent.
 
         Args:
             llm_service: Optional LLM service for correction analysis
@@ -63,8 +61,7 @@ class EvaluationAgent:
         message: MCPMessage,
         state: GlobalState,
     ) -> MCPResponse:
-        """
-        Run NWB Inspector validation on an NWB file.
+        """Run NWB Inspector validation on an NWB file.
 
         Args:
             message: MCP message with context containing 'nwb_path'
@@ -314,8 +311,7 @@ class EvaluationAgent:
             )
 
     def _extract_file_info(self, nwb_path: str) -> dict[str, Any]:
-        """
-        Extract comprehensive file information from NWB file for reports.
+        """Extract comprehensive file information from NWB file for reports.
 
         Args:
             nwb_path: Path to NWB file
@@ -379,10 +375,10 @@ class EvaluationAgent:
             # Try to read NWB metadata using h5py
             try:
                 with h5py.File(nwb_path, "r") as f:
-                    # Debug logging (use state.add_log instead of print)
-                    self._state.add_log(LogLevel.DEBUG, f"Reading NWB file with h5py: {nwb_path}")
-                    self._state.add_log(LogLevel.DEBUG, f"Root level groups: {list(f.keys())}")
-                    self._state.add_log(LogLevel.DEBUG, f"Root level attrs: {list(f.attrs.keys())}")
+                    # Debug logging
+                    logger.debug(f"Reading NWB file with h5py: {nwb_path}")
+                    logger.debug(f"Root level groups: {list(f.keys())}")
+                    logger.debug(f"Root level attrs: {list(f.attrs.keys())}")
 
                     # Helper to set top-level attrs with provenance
                     def set_attr_with_provenance(attr_name, field_name=None):
@@ -392,8 +388,10 @@ class EvaluationAgent:
                         if attr_name in f.attrs:
                             value = decode_value(f.attrs[attr_name])
                             file_info[field_name] = value
-                            file_info["_provenance"][field_name] = "file-extracted"
-                            file_info["_source_files"][field_name] = nwb_path
+                            provenance_dict: dict[str, Any] = file_info["_provenance"]  # type: ignore[assignment]
+                            provenance_dict[field_name] = "file-extracted"
+                            source_dict: dict[str, Any] = file_info["_source_files"]  # type: ignore[assignment]
+                            source_dict[field_name] = nwb_path
 
                     # Extract top-level attributes
                     set_attr_with_provenance("nwb_version")
@@ -404,9 +402,9 @@ class EvaluationAgent:
                     # Extract general metadata
                     if "general" in f:
                         general = f["general"]
-                        self._state.add_log(LogLevel.DEBUG, "Found /general group")
-                        self._state.add_log(LogLevel.DEBUG, f"/general attrs: {list(general.attrs.keys())}")
-                        self._state.add_log(LogLevel.DEBUG, f"/general subgroups: {list(general.keys())}")
+                        logger.debug("Found /general group")
+                        logger.debug(f"/general attrs: {list(general.attrs.keys())}")
+                        logger.debug(f"/general subgroups: {list(general.keys())}")
 
                         # CRITICAL FIX: Check both attributes AND datasets
                         # NeuroConv writes metadata as datasets, not attributes!
@@ -422,9 +420,11 @@ class EvaluationAgent:
                         def set_with_provenance(field_name, value, provenance="file-extracted", source_file=None):
                             """Set a field value and track its provenance."""
                             file_info[field_name] = value
-                            file_info["_provenance"][field_name] = provenance
+                            provenance_dict: dict[str, Any] = file_info["_provenance"]  # type: ignore[assignment]
+                            provenance_dict[field_name] = provenance
                             if source_file:
-                                file_info["_source_files"][field_name] = source_file
+                                source_dict: dict[str, Any] = file_info["_source_files"]  # type: ignore[assignment]
+                                source_dict[field_name] = source_file
 
                         # Experimenter (can be string or array)
                         exp_value = get_value(general, "experimenter")
@@ -581,8 +581,7 @@ class EvaluationAgent:
         issues: list[Any],
         state: GlobalState,
     ) -> list[dict[str, Any]]:
-        """
-        Use LLM to prioritize validation issues and explain their importance.
+        """Use LLM to prioritize validation issues and explain their importance.
 
         Categorizes issues into:
         - DANDI-blocking: Critical for DANDI archive submission
@@ -596,7 +595,6 @@ class EvaluationAgent:
         Returns:
             List of prioritized issues with explanations and action items
         """
-
         # Format issues for LLM
         issues_text = []
         for idx, issue in enumerate(issues[:20], 1):  # Limit to first 20 for token efficiency
@@ -714,8 +712,8 @@ Focus on DANDI archive requirements."""
         validation_result: ValidationResult,
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        🎯 PRIORITY 3: Quality Scoring System
+        """🎯 PRIORITY 3: Quality Scoring System.
+
         Use LLM to assess overall NWB file quality on a 0-100 scale.
 
         Evaluates:
@@ -865,7 +863,7 @@ Provide:
                 system_prompt=system_prompt,
             )
 
-            return quality_assessment
+            return dict(quality_assessment)  # Cast Any to dict
 
         except Exception as e:
             state.add_log(
@@ -887,8 +885,7 @@ Provide:
             }
 
     async def _run_nwb_inspector(self, nwb_path: str) -> ValidationResult:
-        """
-        Run NWB Inspector validation.
+        """Run NWB Inspector validation.
 
         Args:
             nwb_path: Path to NWB file
@@ -929,8 +926,7 @@ Provide:
         message: MCPMessage,
         state: GlobalState,
     ) -> MCPResponse:
-        """
-        Analyze validation issues and suggest corrections (requires LLM).
+        """Analyze validation issues and suggest corrections (requires LLM).
 
         Args:
             message: MCP message with context containing validation results
@@ -1017,8 +1013,7 @@ Provide:
         correction_context: CorrectionContext,
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Use LLM to analyze validation issues and suggest corrections.
+        """Use LLM to analyze validation issues and suggest corrections.
 
         Args:
             correction_context: Context for correction analysis
@@ -1061,11 +1056,10 @@ Provide:
             system_prompt="You are an expert in NWB (Neurodata Without Borders) file format and validation. Analyze validation issues and suggest corrections.",
         )
 
-        return result
+        return dict(result)  # Cast Any to dict
 
     def _build_correction_prompt(self, context: CorrectionContext) -> str:
-        """
-        Build LLM prompt for correction analysis.
+        """Build LLM prompt for correction analysis.
 
         Args:
             context: Correction context
@@ -1116,8 +1110,7 @@ Focus on the most critical issues first."""
         message: MCPMessage,
         state: GlobalState,
     ) -> MCPResponse:
-        """
-        Generate evaluation report (PDF for PASSED, JSON for FAILED).
+        """Generate evaluation report (PDF for PASSED, JSON for FAILED).
 
         Args:
             message: MCP message with validation_result and optional llm_analysis
@@ -1350,9 +1343,10 @@ Focus on the most critical issues first."""
                 error_context={"exception": str(e)},
             )
 
-    def _prepare_logs_for_sequential_view(self, logs: list[LogEntry]) -> tuple[list[dict[str, Any]], list[str]]:
-        """
-        Prepare logs for sequential chronological display with stage tags.
+    def _prepare_logs_for_sequential_view(
+        self, logs: list[LogEntry]
+    ) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
+        """Prepare logs for sequential chronological display with stage tags.
 
         This method organizes logs in chronological order while tagging each with its
         workflow stage for filtering. This preserves the natural flow of events while
@@ -1459,8 +1453,7 @@ Focus on the most critical issues first."""
         return enhanced_logs, stage_options
 
     def _categorize_logs_by_stage(self, logs: list[LogEntry]) -> dict[str, list[dict[str, Any]]]:
-        """
-        DEPRECATED: Use _prepare_logs_for_sequential_view instead.
+        """DEPRECATED: Use _prepare_logs_for_sequential_view instead.
 
         Categorize logs by workflow stage for detailed process tracing.
 
@@ -1487,7 +1480,7 @@ Focus on the most critical issues first."""
         }
 
         # Categorize logs
-        categorized = {stage: [] for stage in stage_keywords}
+        categorized: dict[str, list] = {stage: [] for stage in stage_keywords}
         categorized["general"] = []  # For logs that don't match any stage
 
         for log in logs:
@@ -1523,8 +1516,7 @@ Focus on the most critical issues first."""
         return {stage: logs_list for stage, logs_list in categorized.items() if logs_list}
 
     def _build_workflow_trace(self, state: GlobalState) -> dict[str, Any]:
-        """
-        Build a comprehensive workflow trace from the state for transparency and reproducibility.
+        """Build a comprehensive workflow trace from the state for transparency and reproducibility.
 
         Args:
             state: The global state containing logs and workflow information
@@ -1666,8 +1658,7 @@ Focus on the most critical issues first."""
         }
 
     def _add_metadata_provenance(self, file_info: dict[str, Any], state: GlobalState) -> dict[str, Any]:
-        """
-        Add provenance information to metadata fields for transparency and reproducibility.
+        """Add provenance information to metadata fields for transparency and reproducibility.
 
         Tracks the source of each metadata value with 6 provenance types:
         - user-specified: User directly provided value
@@ -1790,8 +1781,7 @@ Focus on the most critical issues first."""
         return file_info_with_prov
 
     async def _generate_quality_assessment(self, validation_result: dict[str, Any]) -> dict[str, Any]:
-        """
-        Generate LLM-powered quality assessment for PASSED/PASSED_WITH_ISSUES files.
+        """Generate LLM-powered quality assessment for PASSED/PASSED_WITH_ISSUES files.
 
         Implements Story 9.3: LLM Report Generation
         """
@@ -1816,11 +1806,10 @@ Focus on the most critical issues first."""
             system_prompt=prompt_data["system_role"],
         )
 
-        return result
+        return dict(result)  # Cast Any to dict
 
     async def _generate_correction_guidance(self, validation_result: dict[str, Any]) -> dict[str, Any]:
-        """
-        Generate LLM-powered correction guidance for FAILED files.
+        """Generate LLM-powered correction guidance for FAILED files.
 
         Implements Story 9.4: LLM Correction Analysis
         """
@@ -1846,15 +1835,14 @@ Focus on the most critical issues first."""
             system_prompt=prompt_data["system_role"],
         )
 
-        return result
+        return dict(result)  # Cast Any to dict
 
 
 def register_evaluation_agent(
     mcp_server,
-    llm_service: Optional[LLMService] = None,
+    llm_service: LLMService | None = None,
 ) -> EvaluationAgent:
-    """
-    Register Evaluation Agent handlers with MCP server.
+    """Register Evaluation Agent handlers with MCP server.
 
     Args:
         mcp_server: MCP server instance

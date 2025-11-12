@@ -1,5 +1,4 @@
-"""
-MCP (Model Context Protocol) Server implementation.
+"""MCP (Model Context Protocol) Server implementation.
 
 This is the central orchestration layer that routes messages between agents
 and manages the global state.
@@ -13,8 +12,7 @@ from models.state import GlobalState, LogLevel
 
 
 class MCPServer:
-    """
-    Central MCP server for agent communication.
+    """Central MCP server for agent communication.
 
     Manages:
     - Message routing between agents
@@ -41,8 +39,7 @@ class MCPServer:
         action: str,
         handler: Callable[[MCPMessage, GlobalState], MCPResponse],
     ) -> None:
-        """
-        Register a message handler for a specific agent and action.
+        """Register a message handler for a specific agent and action.
 
         Args:
             agent_name: Name of the agent (conversation|conversion|evaluation)
@@ -60,8 +57,7 @@ class MCPServer:
         )
 
     def subscribe_to_events(self, subscriber: Callable[[MCPEvent], None]) -> None:
-        """
-        Subscribe to all MCP events.
+        """Subscribe to all MCP events.
 
         Args:
             subscriber: Async callable that receives events
@@ -69,8 +65,7 @@ class MCPServer:
         self._event_subscribers.append(subscriber)
 
     def unsubscribe_from_events(self, subscriber: Callable[[MCPEvent], None]) -> None:
-        """
-        Unsubscribe from MCP events.
+        """Unsubscribe from MCP events.
 
         Args:
             subscriber: Async callable to remove from subscribers
@@ -87,8 +82,7 @@ class MCPServer:
             pass
 
     async def send_message(self, message: MCPMessage) -> MCPResponse:
-        """
-        Send a message to the target agent and wait for response.
+        """Send a message to the target agent and wait for response.
 
         Args:
             message: MCP message to send
@@ -173,8 +167,7 @@ class MCPServer:
             )
 
     async def broadcast_event(self, event: MCPEvent) -> None:
-        """
-        Broadcast an event to all subscribers.
+        """Broadcast an event to all subscribers.
 
         Args:
             event: Event to broadcast
@@ -199,8 +192,7 @@ class MCPServer:
         )
 
     def get_handlers_info(self) -> dict[str, list[str]]:
-        """
-        Get information about registered handlers.
+        """Get information about registered handlers.
 
         Returns:
             Dictionary mapping agent names to lists of registered actions
@@ -213,8 +205,7 @@ _mcp_server: MCPServer | None = None
 
 
 def get_mcp_server() -> MCPServer:
-    """
-    Get or create the global MCP server instance.
+    """Get or create the global MCP server instance.
 
     Returns:
         Global MCPServer instance
@@ -228,8 +219,7 @@ def get_mcp_server() -> MCPServer:
 
 
 def reset_mcp_server() -> None:
-    """
-    Reset the global MCP server instance.
+    """Reset the global MCP server instance.
 
     Used primarily for testing.
     """

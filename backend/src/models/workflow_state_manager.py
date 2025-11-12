@@ -1,5 +1,4 @@
-"""
-Workflow State Manager - Centralized state transition logic.
+"""Workflow State Manager - Centralized state transition logic.
 
 WORKFLOW_CONDITION_FLAGS_ANALYSIS.md Fix: Consolidate state transition logic
 (Recommendation 6.1, Breaking Point #1)
@@ -12,8 +11,7 @@ from .state import ConversationPhase, ConversionStatus, GlobalState, MetadataReq
 
 
 class WorkflowStateManager:
-    """
-    Centralized state transition logic for the conversion workflow.
+    """Centralized state transition logic for the conversion workflow.
 
     This class consolidates all state check logic that was previously scattered
     across conversation_agent.py, conversational_handler.py, and main.py.
@@ -35,8 +33,7 @@ class WorkflowStateManager:
         pass
 
     def should_request_metadata(self, state: GlobalState) -> bool:
-        """
-        Single method to decide if metadata request is needed.
+        """Single method to decide if metadata request is needed.
 
         Replaces complex multi-file logic with single source of truth.
 
@@ -58,8 +55,7 @@ class WorkflowStateManager:
         )
 
     def can_accept_upload(self, state: GlobalState) -> bool:
-        """
-        Check if file upload is allowed in current state.
+        """Check if file upload is allowed in current state.
 
         Replaces: main.py:226-237
 
@@ -78,8 +74,7 @@ class WorkflowStateManager:
         return state.status not in blocking_statuses
 
     def can_start_conversion(self, state: GlobalState) -> bool:
-        """
-        Check if conversion can be started.
+        """Check if conversion can be started.
 
         Replaces: main.py:541-551
 
@@ -100,8 +95,7 @@ class WorkflowStateManager:
         return state.status not in blocking_statuses
 
     def is_in_active_conversation(self, state: GlobalState) -> bool:
-        """
-        Check if user is in an active conversation.
+        """Check if user is in an active conversation.
 
         Replaces: main.py:304-308
 
@@ -116,8 +110,7 @@ class WorkflowStateManager:
         )
 
     def should_proceed_with_minimal_metadata(self, state: GlobalState) -> bool:
-        """
-        Check if should proceed with minimal metadata (user declined).
+        """Check if should proceed with minimal metadata (user declined).
 
         Replaces logic in:
         - conversational_handler.py:106
@@ -136,8 +129,7 @@ class WorkflowStateManager:
         }
 
     def get_missing_required_fields(self, state: GlobalState) -> list[str]:
-        """
-        Get list of missing required DANDI fields.
+        """Get list of missing required DANDI fields.
 
         Args:
             state: Current global state
@@ -179,8 +171,7 @@ class WorkflowStateManager:
         )
 
     def _recently_had_user_response(self, state: GlobalState) -> bool:
-        """
-        Check if user recently responded in conversation.
+        """Check if user recently responded in conversation.
 
         Looks at last 2 messages in conversation history.
         """
@@ -192,8 +183,7 @@ class WorkflowStateManager:
         return any(msg.get("role") == "user" for msg in recent_messages)
 
     def update_metadata_policy_after_request(self, state: GlobalState) -> None:
-        """
-        Update metadata policy after requesting metadata from user.
+        """Update metadata policy after requesting metadata from user.
 
         Args:
             state: Current global state (modified in-place)
@@ -204,8 +194,7 @@ class WorkflowStateManager:
             state.metadata_requests_count = 1
 
     def update_metadata_policy_after_user_provided(self, state: GlobalState) -> None:
-        """
-        Update metadata policy after user provided metadata.
+        """Update metadata policy after user provided metadata.
 
         Args:
             state: Current global state (modified in-place)
@@ -213,8 +202,7 @@ class WorkflowStateManager:
         state.metadata_policy = MetadataRequestPolicy.USER_PROVIDED
 
     def update_metadata_policy_after_user_declined(self, state: GlobalState) -> None:
-        """
-        Update metadata policy after user declined to provide metadata.
+        """Update metadata policy after user declined to provide metadata.
 
         Args:
             state: Current global state (modified in-place)
@@ -224,8 +212,7 @@ class WorkflowStateManager:
         state.user_wants_minimal = True
 
     def format_missing_fields_message(self, missing_fields: list[str]) -> str:
-        """
-        Format a user-friendly message for missing fields.
+        """Format a user-friendly message for missing fields.
 
         Args:
             missing_fields: List of missing field names

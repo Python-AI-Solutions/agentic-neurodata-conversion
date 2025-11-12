@@ -21,14 +21,13 @@ __author__ = "Aditya Patane"
 
 # Import key components for easy access
 try:
-    from backend.src.models.mcp import MCPMessage, MCPMessageType
+    from backend.src.models.mcp import MCPMessage
     from backend.src.models.state import GlobalState
     from backend.src.services.llm_service import LLMService
 
     __all__ = [
         "GlobalState",
         "MCPMessage",
-        "MCPMessageType",
         "LLMService",
         "__version__",
         "__author__",

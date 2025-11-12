@@ -1,5 +1,4 @@
-"""
-Adaptive Retry Strategy for Intelligent Error Recovery.
+"""Adaptive Retry Strategy for Intelligent Error Recovery.
 
 This module implements smart retry logic that:
 1. Analyzes validation failure patterns
@@ -10,7 +9,7 @@ This module implements smart retry logic that:
 
 import json
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from models import GlobalState, LogLevel
 from services import LLMService
@@ -19,8 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class AdaptiveRetryStrategy:
-    """
-    Intelligent retry strategy that learns from failures.
+    """Intelligent retry strategy that learns from failures.
 
     Instead of blindly retrying the same approach, this analyzes:
     - What failed and why
@@ -29,9 +27,8 @@ class AdaptiveRetryStrategy:
     - What different approach might work better
     """
 
-    def __init__(self, llm_service: Optional[LLMService] = None):
-        """
-        Initialize adaptive retry strategy.
+    def __init__(self, llm_service: LLMService | None = None):
+        """Initialize adaptive retry strategy.
 
         Args:
             llm_service: Optional LLM service for intelligent analysis
@@ -43,8 +40,7 @@ class AdaptiveRetryStrategy:
         state: GlobalState,
         current_validation_result: dict[str, Any],
     ) -> dict[str, Any]:
-        """
-        Analyze failure pattern and recommend next retry strategy.
+        """Analyze failure pattern and recommend next retry strategy.
 
         Args:
             state: Global conversion state with history
@@ -133,8 +129,7 @@ class AdaptiveRetryStrategy:
         previous_issues: list[dict[str, Any]],
         current_issues: list[dict[str, Any]],
     ) -> dict[str, Any]:
-        """
-        Analyze whether we're making progress across retries.
+        """Analyze whether we're making progress across retries.
 
         Args:
             previous_issues: Issues from previous attempts
@@ -183,8 +178,7 @@ class AdaptiveRetryStrategy:
         current_issues: list[dict[str, Any]],
         progress_analysis: dict[str, Any],
     ) -> dict[str, Any]:
-        """
-        Use LLM to intelligently analyze failure pattern and recommend strategy.
+        """Use LLM to intelligently analyze failure pattern and recommend strategy.
 
         Args:
             state: Global conversion state
@@ -295,7 +289,7 @@ Recommend a specific strategy."""
                 },
             )
 
-            return response
+            return dict(response)  # Cast Any to dict
 
         except Exception as e:
             logger.exception(f"LLM retry analysis failed: {e}")
@@ -312,8 +306,7 @@ Recommend a specific strategy."""
         current_issues: list[dict[str, Any]],
         progress_analysis: dict[str, Any],
     ) -> dict[str, Any]:
-        """
-        Fallback heuristic strategy when LLM unavailable.
+        """Fallback heuristic strategy when LLM unavailable.
 
         Args:
             attempt_num: Current attempt number
@@ -369,7 +362,7 @@ Recommend a specific strategy."""
             return "No issues"
 
         # Group by severity
-        by_severity = {}
+        by_severity: dict[str, list[dict[str, Any]]] = {}
         for issue in issues[:20]:  # Limit to first 20
             severity = issue.get("severity", "UNKNOWN")
             if severity not in by_severity:

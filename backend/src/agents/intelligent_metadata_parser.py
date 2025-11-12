@@ -1,5 +1,4 @@
-"""
-Intelligent Metadata Parser with Natural Language Understanding
+"""Intelligent Metadata Parser with Natural Language Understanding.
 
 Accepts user input in natural language and converts to NWB/DANDI-compliant formats
 with confidence-based auto-application when user skips confirmation.
@@ -8,7 +7,7 @@ with confidence-based auto-application when user skips confirmation.
 import re
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from agents.nwb_dandi_schema import MetadataFieldSchema, NWBDANDISchema
 from dateutil import parser as date_parser
@@ -37,7 +36,7 @@ class ParsedField:
         nwb_compliant: bool,
         needs_review: bool = False,
         was_explicit: bool = True,
-        alternatives: Optional[list[str]] = None,
+        alternatives: list[str] | None = None,
     ):
         self.field_name = field_name
         self.raw_input = raw_input
@@ -75,8 +74,7 @@ class ParsedField:
         }
 
     def to_provenance_info(self):
-        """
-        Convert to ProvenanceInfo for metadata provenance tracking.
+        """Convert to ProvenanceInfo for metadata provenance tracking.
 
         Returns ProvenanceInfo with provenance type based on whether value
         was explicitly stated or inferred from context.
@@ -102,8 +100,7 @@ class ParsedField:
 
 
 class IntelligentMetadataParser:
-    """
-    Parse natural language metadata input and normalize to NWB/DANDI formats.
+    """Parse natural language metadata input and normalize to NWB/DANDI formats.
 
     Features:
     - Natural language understanding
@@ -113,7 +110,7 @@ class IntelligentMetadataParser:
     - User confirmation with edit capability
     """
 
-    def __init__(self, llm_service: Optional[LLMService] = None):
+    def __init__(self, llm_service: LLMService | None = None):
         self.llm_service = llm_service
         self.schema = NWBDANDISchema()
         self.field_schemas = {field.name: field for field in self.schema.get_all_fields()}
@@ -123,8 +120,7 @@ class IntelligentMetadataParser:
         user_input: str,
         state: GlobalState,
     ) -> list[ParsedField]:
-        """
-        Parse natural language input containing multiple metadata fields.
+        """Parse natural language input containing multiple metadata fields.
 
         Example inputs:
         - "I'm Dr. Jane Smith from MIT studying 8 week old mice"
@@ -295,8 +291,7 @@ For each field found, provide:
         user_input: str,
         state: GlobalState,
     ) -> ParsedField:
-        """
-        Parse a single metadata field from user input.
+        """Parse a single metadata field from user input.
 
         Example:
         - Field: "age", Input: "8 weeks old" → "P56D"
@@ -415,8 +410,7 @@ Provide:
         parsed_fields: list[ParsedField],
         state=None,  # Add state parameter to check missing fields
     ) -> str:
-        """
-        Generate user-friendly confirmation message showing parsed results with provenance badges.
+        """Generate user-friendly confirmation message showing parsed results with provenance badges.
 
         Args:
             parsed_fields: List of parsed fields
@@ -557,8 +551,7 @@ Provide:
         parsed_field: ParsedField,
         state: GlobalState,
     ) -> Any:
-        """
-        Apply metadata using best knowledge when user skips confirmation.
+        """Apply metadata using best knowledge when user skips confirmation.
 
         Three-tier approach:
         - High confidence (≥80%): Apply silently (provenance: AI_PARSED)
@@ -695,8 +688,7 @@ Provide:
         return repr(value)
 
     def _post_process_date_field(self, field_name: str, value: Any, state: GlobalState) -> Any:
-        """
-        Post-process date fields to ensure they are in ISO 8601 format.
+        """Post-process date fields to ensure they are in ISO 8601 format.
 
         Handles cases where the LLM might not have properly formatted the date.
         """

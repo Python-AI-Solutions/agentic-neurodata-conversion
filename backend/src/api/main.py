@@ -1,5 +1,4 @@
-"""
-FastAPI application for agentic neurodata conversion.
+"""FastAPI application for agentic neurodata conversion.
 
 Main API server with REST endpoints and WebSocket support.
 """
@@ -11,7 +10,6 @@ import threading
 import time
 from collections import defaultdict
 from pathlib import Path
-from typing import Optional
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
@@ -77,8 +75,7 @@ class SimpleRateLimiter:
         self._lock = threading.Lock()
 
     def is_allowed(self, client_id: str, max_requests: int, window_seconds: int) -> bool:
-        """
-        Check if request is allowed under rate limit.
+        """Check if request is allowed under rate limit.
 
         Args:
             client_id: Unique identifier for client (IP address)
@@ -116,8 +113,7 @@ _rate_limiter = SimpleRateLimiter()
 
 
 def check_rate_limit(request: Request, max_requests: int = RATE_LIMIT_REQUESTS, window: int = RATE_LIMIT_WINDOW):
-    """
-    Check rate limit for incoming request.
+    """Check rate limit for incoming request.
 
     Raises HTTPException 429 if rate limit exceeded.
     """
@@ -147,7 +143,7 @@ async def rate_limit_llm(request: Request):
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
 
 # Convert "*" string to list for CORSMiddleware
-if ["*"] == CORS_ORIGINS:
+if CORS_ORIGINS == ["*"]:
     logger.warning("⚠️  CORS is configured to allow ALL origins (*)")
     logger.warning("⚠️  Disabling credentials to prevent CSRF attacks")
     logger.warning("⚠️  Set CORS_ORIGINS environment variable in production!")
@@ -169,7 +165,7 @@ app.add_middleware(
 )
 
 # Global state
-_mcp_server: Optional[MCPServer] = None
+_mcp_server: MCPServer | None = None
 _mcp_server_lock = threading.Lock()  # Thread-safe MCP server initialization
 _upload_dir: Path = Path(tempfile.gettempdir()) / "nwb_uploads"
 _upload_dir.mkdir(exist_ok=True)
@@ -181,8 +177,7 @@ _workflow_manager = WorkflowStateManager()
 # Global exception handlers for consistent error responses
 @app.exception_handler(ValidationError)
 async def validation_exception_handler(request: Request, exc: ValidationError):
-    """
-    Handle Pydantic validation errors with user-friendly messages.
+    """Handle Pydantic validation errors with user-friendly messages.
 
     Returns a structured error response with field-level details.
     """
@@ -208,8 +203,7 @@ async def validation_exception_handler(request: Request, exc: ValidationError):
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    """
-    Catch-all exception handler to ensure consistent error responses.
+    """Catch-all exception handler to ensure consistent error responses.
 
     Logs the error and returns a standardized JSON error response.
     """
@@ -256,8 +250,7 @@ async def _generate_upload_welcome_message(
     file_size_mb: float,
     llm_service,
 ) -> dict:
-    """
-    Use LLM to generate a welcoming, informative upload response.
+    """Use LLM to generate a welcoming, informative upload response.
 
     Args:
         filename: Uploaded filename
@@ -384,8 +377,7 @@ async def health_check():
 
 
 def sanitize_filename(filename: str) -> str:
-    """
-    Sanitize a filename to prevent path traversal attacks.
+    """Sanitize a filename to prevent path traversal attacks.
 
     Args:
         filename: User-provided filename
@@ -419,8 +411,7 @@ def sanitize_filename(filename: str) -> str:
 
 
 def validate_safe_path(file_path: Path, base_dir: Path) -> Path:
-    """
-    Validate that a file path is within the base directory (no path traversal).
+    """Validate that a file path is within the base directory (no path traversal).
 
     Args:
         file_path: Path to validate
@@ -450,10 +441,9 @@ def validate_safe_path(file_path: Path, base_dir: Path) -> Path:
 async def upload_file(
     file: UploadFile = File(...),
     additional_files: list[UploadFile] = File(default=[]),
-    metadata: Optional[str] = Form(None),
+    metadata: str | None = Form(None),
 ):
-    """
-    Upload neurodata file(s) for conversion. Supports multiple files.
+    """Upload neurodata file(s) for conversion. Supports multiple files.
 
     Args:
         file: Main uploaded file (required)
@@ -814,8 +804,7 @@ Return JSON with a 'message' field."""
 
 @app.get("/api/status", response_model=StatusResponse)
 async def get_status():
-    """
-    Get current conversion status.
+    """Get current conversion status.
 
     Returns:
         Current status and progress
@@ -841,8 +830,7 @@ async def get_status():
 
 @app.get("/api/metadata-provenance")
 async def get_metadata_provenance():
-    """
-    Get metadata provenance information for all fields.
+    """Get metadata provenance information for all fields.
 
     Returns complete audit trail showing source, confidence, and reliability
     of each metadata field for scientific transparency and DANDI compliance.
@@ -875,8 +863,7 @@ async def get_metadata_provenance():
 
 @app.post("/api/start-conversion")
 async def start_conversion():
-    """
-    Start the conversion workflow after file upload.
+    """Start the conversion workflow after file upload.
 
     This triggers the Conversation Agent to:
     1. Validate metadata
@@ -938,8 +925,7 @@ async def start_conversion():
 
 @app.post("/api/improvement-decision")
 async def improvement_decision(decision: str = Form(...)):
-    """
-    Submit improvement decision for PASSED_WITH_ISSUES validation.
+    """Submit improvement decision for PASSED_WITH_ISSUES validation.
 
     When validation passes but has warnings, user can choose:
     - "improve" - Enter correction loop to fix warnings
@@ -1008,8 +994,7 @@ async def improvement_decision(decision: str = Form(...)):
 
 @app.post("/api/retry-approval", response_model=RetryApprovalResponse)
 async def retry_approval(request: RetryApprovalRequest):
-    """
-    Submit retry approval decision.
+    """Submit retry approval decision.
 
     Args:
         request: Retry approval request
@@ -1079,8 +1064,7 @@ async def retry_approval(request: RetryApprovalRequest):
 
 @app.post("/api/user-input", response_model=UserInputResponse)
 async def submit_user_input(request: UserInputRequest):
-    """
-    Submit user input (e.g., format selection, corrections).
+    """Submit user input (e.g., format selection, corrections).
 
     Args:
         request: User input request
@@ -1121,8 +1105,7 @@ async def submit_user_input(request: UserInputRequest):
 
 @app.post("/api/chat")
 async def chat_message(message: str = Form(...), _: None = Depends(rate_limit_llm)):
-    """
-    Send a conversational message to the LLM-driven chat.
+    """Send a conversational message to the LLM-driven chat.
 
     This enables natural conversation for gathering metadata,
     answering questions about validation issues, etc.
@@ -1174,7 +1157,7 @@ async def chat_message(message: str = Form(...), _: None = Depends(rate_limit_ll
                 timeout=180.0,  # 3 minute timeout for LLM processing
             )
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             state.add_log(
                 LogLevel.ERROR,
                 "Chat LLM call timed out",
@@ -1339,8 +1322,7 @@ async def chat_message(message: str = Form(...), _: None = Depends(rate_limit_ll
 
 @app.post("/api/chat/smart")
 async def smart_chat(message: str = Form(...), _: None = Depends(rate_limit_llm)):
-    """
-    Smart chat endpoint that works in ALL states, at ANY time.
+    """Smart chat endpoint that works in ALL states, at ANY time.
 
     This makes the system feel like Claude.ai - always ready to help.
     Users can ask questions before upload, during conversion, after validation.
@@ -1430,8 +1412,7 @@ async def smart_chat(message: str = Form(...), _: None = Depends(rate_limit_llm)
 
 @app.get("/api/validation", response_model=ValidationResponse)
 async def get_validation_results():
-    """
-    Get validation results.
+    """Get validation results.
 
     Returns:
         Validation results if available
@@ -1449,8 +1430,7 @@ async def get_validation_results():
 
 @app.get("/api/correction-context")
 async def get_correction_context():
-    """
-    Get detailed correction context including issue breakdown.
+    """Get detailed correction context including issue breakdown.
 
     Returns:
         Correction context with auto-fixable and user-input-required issues
@@ -1520,8 +1500,7 @@ async def get_correction_context():
 
 @app.get("/api/logs", response_model=LogsResponse)
 async def get_logs(limit: int = 100, offset: int = 0):
-    """
-    Get conversion logs.
+    """Get conversion logs.
 
     Args:
         limit: Maximum number of logs to return
@@ -1544,8 +1523,7 @@ async def get_logs(limit: int = 100, offset: int = 0):
 
 @app.get("/api/download/nwb")
 async def download_nwb():
-    """
-    Download the converted NWB file.
+    """Download the converted NWB file.
 
     Returns:
         NWB file as download
@@ -1575,8 +1553,7 @@ async def download_nwb():
 
 @app.get("/api/reports/view")
 async def view_html_report():
-    """
-    View the HTML evaluation report in browser.
+    """View the HTML evaluation report in browser.
 
     Returns:
         HTML report content for display in browser
@@ -1668,8 +1645,7 @@ async def view_html_report():
 
 @app.get("/api/download/report")
 async def download_report():
-    """
-    Download the evaluation report (HTML, PDF, or JSON).
+    """Download the evaluation report (HTML, PDF, or JSON).
 
     Returns:
         Report file as download
@@ -1728,8 +1704,7 @@ async def download_report():
 
 @app.post("/api/reset")
 async def reset_session():
-    """
-    Reset the conversion session.
+    """Reset the conversion session.
 
     Returns:
         Confirmation message
@@ -1742,8 +1717,7 @@ async def reset_session():
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    """
-    WebSocket endpoint for real-time updates.
+    """WebSocket endpoint for real-time updates.
 
     Args:
         websocket: WebSocket connection
@@ -1811,7 +1785,7 @@ if __name__ == "__main__":
 
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",
+        host="0.0.0.0",  # nosec B104 - required for Docker/network access in development
         port=8000,
         reload=True,
     )

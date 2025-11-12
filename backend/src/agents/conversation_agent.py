@@ -1,5 +1,4 @@
-"""
-Conversation Agent implementation.
+"""Conversation Agent implementation.
 
 Responsible for:
 - All user interactions
@@ -9,8 +8,11 @@ Responsible for:
 """
 
 import json
+import logging
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from agents.adaptive_retry import AdaptiveRetryStrategy
 from agents.conversational_handler import ConversationalHandler
@@ -39,8 +41,7 @@ MAX_CORRECTION_ATTEMPTS = 3
 
 
 class ConversationAgent:
-    """
-    Conversation agent for user interaction and workflow orchestration.
+    """Conversation agent for user interaction and workflow orchestration.
 
     This agent coordinates the conversion workflow by sending messages
     to other agents through the MCP server.
@@ -49,10 +50,9 @@ class ConversationAgent:
     def __init__(
         self,
         mcp_server: MCPServer,
-        llm_service: Optional[LLMService] = None,
+        llm_service: LLMService | None = None,
     ):
-        """
-        Initialize the conversation agent.
+        """Initialize the conversation agent.
 
         Args:
             mcp_server: MCP server for agent communication
@@ -79,10 +79,9 @@ class ConversationAgent:
         confidence: float = 100.0,
         source: str = "",
         needs_review: bool = False,
-        raw_input: Optional[str] = None,
+        raw_input: str | None = None,
     ) -> None:
-        """
-        Track provenance for a metadata field.
+        """Track provenance for a metadata field.
 
         This is a central method for recording the source, confidence, and origin
         of every metadata field for scientific transparency and DANDI compliance.
@@ -133,10 +132,9 @@ class ConversationAgent:
         value: Any,
         confidence: float = 100.0,
         source: str = "User explicitly provided",
-        raw_input: Optional[str] = None,
+        raw_input: str | None = None,
     ) -> None:
-        """
-        Track provenance for user-provided metadata.
+        """Track provenance for user-provided metadata.
 
         Args:
             state: Global state
@@ -166,8 +164,7 @@ class ConversationAgent:
         raw_input: str,
         reasoning: str = "",
     ) -> None:
-        """
-        Track provenance for AI-parsed metadata from natural language.
+        """Track provenance for AI-parsed metadata from natural language.
 
         Args:
             state: Global state
@@ -201,8 +198,7 @@ class ConversationAgent:
         value: Any,
         source: str,
     ) -> None:
-        """
-        Track provenance for auto-corrected metadata during error correction.
+        """Track provenance for auto-corrected metadata during error correction.
 
         Args:
             state: Global state
@@ -228,8 +224,7 @@ class ConversationAgent:
         file_info: dict[str, Any],
         state: GlobalState,
     ) -> str:
-        """
-        Generate dynamic, file-specific metadata request using LLM.
+        """Generate dynamic, file-specific metadata request using LLM.
 
         Instead of a fixed template, this creates personalized questions that:
         1. Acknowledge what was learned from file analysis
@@ -361,7 +356,7 @@ Keep it warm, conversational, and emphasize that skipping is totally fine.
                 },
             )
 
-            return response.get("message", "")
+            return str(response.get("message", ""))  # Cast Any to str
 
         except Exception as e:
             state.add_log(
@@ -383,8 +378,7 @@ Please provide these details, or say "skip for now" to proceed with minimal meta
         message: MCPMessage,
         state: GlobalState,
     ) -> MCPResponse:
-        """
-        Start the conversion workflow.
+        """Start the conversion workflow.
 
         Args:
             message: MCP message with context containing conversion parameters
@@ -766,8 +760,7 @@ Please provide these details, or say "skip for now" to proceed with minimal meta
         context: dict[str, Any],
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Use LLM to explain errors in user-friendly terms.
+        """Use LLM to explain errors in user-friendly terms.
 
         Transforms technical error messages into actionable guidance.
         This makes errors understandable and helps users know what to do next.
@@ -851,7 +844,7 @@ Respond in JSON format."""
                 {"error_code": error.get("code")},
             )
 
-            return explanation
+            return dict(explanation)  # Cast Any to dict
 
         except Exception as e:
             state.add_log(
@@ -872,8 +865,7 @@ Respond in JSON format."""
         metadata: dict[str, Any],
         state: GlobalState,
     ) -> str:
-        """
-        Generate user-friendly message for missing required metadata using LLM.
+        """Generate user-friendly message for missing required metadata using LLM.
 
         Args:
             missing_fields: List of missing required fields
@@ -904,17 +896,16 @@ Be warm, specific, and actionable. Keep it concise (2-3 sentences)."""
                 prompt=user_prompt,
                 system_prompt=system_prompt,
             )
-            return response
+            return str(response)  # Cast Any to str
         except Exception as e:
-            self._state.add_log(LogLevel.WARNING, f"Failed to generate LLM metadata message, using fallback: {e}")
+            logger.warning(f"Failed to generate LLM metadata message, using fallback: {e}")
             return self._generate_fallback_missing_metadata_message(missing_fields)
 
     def _generate_fallback_missing_metadata_message(
         self,
         missing_fields: list[str],
     ) -> str:
-        """
-        Generate basic message for missing metadata (fallback without LLM).
+        """Generate basic message for missing metadata (fallback without LLM).
 
         Args:
             missing_fields: List of missing required fields
@@ -956,8 +947,7 @@ You can provide this via the chat interface."""
         format_name: str,
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Use LLM to analyze file BEFORE conversion and predict potential issues.
+        """Use LLM to analyze file BEFORE conversion and predict potential issues.
 
         This proactive approach prevents wasted time on conversions that will likely fail.
 
@@ -1079,7 +1069,7 @@ Be specific and actionable."""
                 },
             )
 
-            return prediction
+            return dict(prediction)  # Cast Any to dict
 
         except Exception as e:
             state.add_log(LogLevel.WARNING, f"Proactive analysis failed: {e}")
@@ -1091,8 +1081,7 @@ Be specific and actionable."""
         context: dict[str, Any],
         state: GlobalState,
     ) -> dict[str, Any]:
-        """
-        Use LLM to decide the next best action based on current state.
+        """Use LLM to decide the next best action based on current state.
 
         This reduces hardcoded orchestration logic by having the LLM analyze
         the situation and suggest the optimal next step.
@@ -1176,7 +1165,7 @@ What should happen next? Which agent should handle it?"""
                 {"reasoning": response.get("reasoning")},
             )
 
-            return response
+            return dict(response)  # Cast Any to dict
 
         except Exception as e:
             state.add_log(
@@ -1195,8 +1184,7 @@ What should happen next? Which agent should handle it?"""
         context: dict[str, Any],
         state: GlobalState,
     ) -> str:
-        """
-        Use LLM to generate contextual, engaging status messages.
+        """Use LLM to generate contextual, engaging status messages.
 
         Replaces hardcoded templates with intelligent summaries that:
         - Acknowledge what happened
@@ -1282,7 +1270,7 @@ Create a friendly, informative message."""
                 {"status": status},
             )
 
-            return response.get("message", fallback_messages.get(status, "Operation completed"))
+            return str(response.get("message", fallback_messages.get(status, "Operation completed")))  # Cast Any to str
 
         except Exception as e:
             state.add_log(
@@ -1294,8 +1282,7 @@ Create a friendly, informative message."""
     async def _generate_metadata_review_message(
         self, metadata: dict[str, Any], format_name: str, state: GlobalState
     ) -> str:
-        """
-        Generate a metadata review message before starting conversion.
+        """Generate a metadata review message before starting conversion.
 
         Shows all collected metadata and asks if user wants to add anything.
 
@@ -1376,16 +1363,19 @@ Create a clear, friendly message that:
                 prompt=user_prompt, output_schema=output_schema, system_prompt=system_prompt
             )
 
-            return response.get("message", "")
+            return str(response.get("message", ""))  # Cast Any to str
 
         except Exception as e:
-            state.add_log(LogLevel.WARNING, f"Failed to generate review message: {e}")
-            # Return fallback
-            return self._generate_metadata_review_message(metadata, format_name, state)
+            logger.warning(f"Failed to generate review message, using fallback: {e}")
+            # Return simple fallback message (avoid recursion)
+            return """## 📋 Metadata Review
+
+**Metadata collected.** Would you like to add anything before conversion?
+
+• Type additional metadata or say "proceed" to continue."""
 
     def _user_expresses_intent_to_add_more(self, user_message: str) -> bool:
-        """
-        Detect if user wants to add metadata but hasn't provided concrete data yet.
+        """Detect if user wants to add metadata but hasn't provided concrete data yet.
 
         This distinguishes between:
         - "I want to add some more" (intent only, no data) → Returns True
@@ -1432,8 +1422,7 @@ Create a clear, friendly message that:
         metadata: dict[str, Any],
         state: GlobalState,
     ) -> MCPResponse:
-        """
-        Continue the conversion workflow after metadata collection is complete.
+        """Continue the conversion workflow after metadata collection is complete.
 
         This skips format detection and metadata inference (already done) and proceeds
         directly to: Step 2 (custom metadata) → Step 3 (metadata review) → Step 4 (conversion)
@@ -1512,8 +1501,7 @@ Create a clear, friendly message that:
     async def _generate_custom_metadata_prompt(
         self, format_name: str, metadata: dict[str, Any], state: GlobalState
     ) -> str:
-        """
-        Generate a friendly prompt asking if user wants to add custom metadata.
+        """Generate a friendly prompt asking if user wants to add custom metadata.
 
         Args:
             format_name: Detected data format
@@ -1572,15 +1560,14 @@ End with clear instructions on how to provide it or skip."""
                 prompt=user_prompt, output_schema=output_schema, system_prompt=system_prompt
             )
 
-            return response.get("message", self._generate_custom_metadata_prompt.__doc__)
+            return str(response.get("message", self._generate_custom_metadata_prompt.__doc__))  # Cast Any to str
 
         except Exception as e:
             state.add_log(LogLevel.WARNING, f"Failed to generate custom prompt: {e}")
             return self._generate_custom_metadata_prompt.__doc__
 
     async def _handle_custom_metadata_response(self, user_input: str, state: GlobalState) -> dict[str, Any]:
-        """
-        Process user's custom metadata input using intelligent mapping.
+        """Process user's custom metadata input using intelligent mapping.
 
         Args:
             user_input: User's natural language metadata
@@ -1631,7 +1618,7 @@ End with clear instructions on how to provide it or skip."""
                 },
             )
 
-            return parsed_metadata
+            return dict(parsed_metadata)  # Cast Any to dict
 
         except Exception as e:
             state.add_log(LogLevel.ERROR, f"Failed to parse custom metadata: {e}")
@@ -1646,8 +1633,7 @@ End with clear instructions on how to provide it or skip."""
         input_path: str,
         state: GlobalState,
     ) -> MCPResponse:
-        """
-        Complete conversion with minimal metadata and create informative report.
+        """Complete conversion with minimal metadata and create informative report.
 
         This is called when user declines to provide additional metadata.
         Instead of looping infinitely asking for metadata, we:
@@ -1741,8 +1727,7 @@ The conversion report has been generated with full details."""
         self,
         metadata: dict[str, Any],
     ) -> tuple[bool, list[str]]:
-        """
-        Validate that all required NWB metadata fields are present BEFORE conversion.
+        """Validate that all required NWB metadata fields are present BEFORE conversion.
 
         This prevents conversion failures mid-process and provides early feedback.
         Uses the NWB/DANDI schema to dynamically validate all required fields.
@@ -1766,8 +1751,7 @@ The conversion report has been generated with full details."""
         metadata: dict[str, Any],
         state: GlobalState,
     ) -> MCPResponse:
-        """
-        Run the conversion and validation steps.
+        """Run the conversion and validation steps.
 
         Args:
             original_message_id: Original message ID for reply
@@ -2201,8 +2185,7 @@ The conversion report has been generated with full details."""
         message: MCPMessage,
         state: GlobalState,
     ) -> MCPResponse:
-        """
-        Handle user's manual format selection.
+        """Handle user's manual format selection.
 
         Args:
             message: MCP message with selected format
@@ -2247,8 +2230,7 @@ The conversion report has been generated with full details."""
         message: MCPMessage,
         state: GlobalState,
     ) -> MCPResponse:
-        """
-        Handle user's retry approval/rejection.
+        """Handle user's retry approval/rejection.
 
         Args:
             message: MCP message with user decision
@@ -2747,8 +2729,7 @@ The conversion report has been generated with full details."""
             )
 
     def _identify_user_input_required(self, corrections: dict[str, Any]) -> list[dict[str, Any]]:
-        """
-        Identify issues that require user input to fix.
+        """Identify issues that require user input to fix.
 
         Implements Story 8.6: User Input Request
 
@@ -2822,8 +2803,7 @@ The conversion report has been generated with full details."""
         return required_fields
 
     def _extract_auto_fixes(self, corrections: dict[str, Any]) -> dict[str, Any]:
-        """
-        Extract automatically fixable corrections from LLM analysis.
+        """Extract automatically fixable corrections from LLM analysis.
 
         Implements Story 8.5: Automatic Issue Correction
 
@@ -2887,8 +2867,7 @@ The conversion report has been generated with full details."""
         message: MCPMessage,
         state: GlobalState,
     ) -> MCPResponse:
-        """
-        Handle user's conversational response to LLM questions.
+        """Handle user's conversational response to LLM questions.
 
         This enables natural, flowing conversation where the LLM analyzes
         user responses and decides next steps dynamically.
@@ -3516,8 +3495,7 @@ The conversion report has been generated with full details."""
         message: MCPMessage,
         state: GlobalState,
     ) -> MCPResponse:
-        """
-        Handle general user questions at ANY time, in ANY state.
+        """Handle general user questions at ANY time, in ANY state.
 
         This makes the system feel like Claude.ai - always ready to help.
         Users can ask about NWB format, how to use the system, or get
@@ -3673,8 +3651,7 @@ Respond in JSON format."""
         message: MCPMessage,
         state: GlobalState,
     ) -> MCPResponse:
-        """
-        Handle user decision for PASSED_WITH_ISSUES validation.
+        """Handle user decision for PASSED_WITH_ISSUES validation.
 
         When validation passes but has warnings, user chooses:
         - "improve" - Enter correction loop to fix warnings
@@ -3889,8 +3866,7 @@ Respond in JSON format."""
         issues: list[dict[str, Any]],
         state: GlobalState,
     ) -> str:
-        """
-        Generate smart prompts for correction issues using LLM.
+        """Generate smart prompts for correction issues using LLM.
 
         Args:
             issues: List of issues requiring user input
@@ -3935,7 +3911,9 @@ Return JSON with a 'message' field."""
                         output_schema=output_schema,
                         system_prompt=system_prompt,
                     )
-                    return response.get("message", self._generate_basic_correction_prompts(issues))
+                    return str(
+                        response.get("message", self._generate_basic_correction_prompts(issues))
+                    )  # Cast Any to str
                 finally:
                     state.llm_processing = False
         except Exception as e:
@@ -3949,8 +3927,7 @@ Return JSON with a 'message' field."""
     async def _handle_auto_fix_approval_response(
         self, user_message: str, reply_to: str, state: GlobalState
     ) -> MCPResponse:
-        """
-        Handle user's response to auto-fix approval request.
+        """Handle user's response to auto-fix approval request.
 
         Args:
             user_message: User's message
@@ -4125,8 +4102,7 @@ Return JSON with a 'message' field."""
             )
 
     def _generate_auto_fix_summary(self, issues: list[dict[str, Any]]) -> str:
-        """
-        Generate summary of auto-fixable issues.
+        """Generate summary of auto-fixable issues.
 
         Args:
             issues: List of auto-fixable issues
@@ -4147,8 +4123,7 @@ Return JSON with a 'message' field."""
     def _extract_fixes_from_issues(
         self, auto_fixable_issues: list[dict[str, Any]], state: GlobalState
     ) -> dict[str, Any]:
-        """
-        PRIORITY 2 FIX: Extract metadata fixes from auto-fixable issues.
+        """PRIORITY 2 FIX: Extract metadata fixes from auto-fixable issues.
 
         Converts validation issues into concrete metadata field updates.
 
@@ -4180,9 +4155,8 @@ Return JSON with a 'message' field."""
 
         return auto_fixes
 
-    def _infer_fix_from_issue(self, issue: dict[str, Any], state: GlobalState) -> Optional[dict[str, Any]]:
-        """
-        Infer metadata fix from validation issue message.
+    def _infer_fix_from_issue(self, issue: dict[str, Any], state: GlobalState) -> dict[str, Any] | None:
+        """Infer metadata fix from validation issue message.
 
         Args:
             issue: Validation issue dict
@@ -4215,8 +4189,7 @@ Return JSON with a 'message' field."""
         return None
 
     async def _extract_metadata_from_message(self, user_message: str, state: GlobalState) -> dict[str, Any]:
-        """
-        Extract metadata from user's message using intelligent parsing.
+        """Extract metadata from user's message using intelligent parsing.
 
         Args:
             user_message: User's message
@@ -4256,8 +4229,7 @@ Return JSON with a 'message' field."""
         return extracted_metadata
 
     def _validate_metadata_format(self, metadata: dict[str, Any]) -> dict[str, str]:
-        """
-        Validate metadata format and return any errors.
+        """Validate metadata format and return any errors.
 
         Args:
             metadata: Metadata to validate
@@ -4292,15 +4264,14 @@ Return JSON with a 'message' field."""
                 species in str(value).lower()
                 for species in ["mus musculus", "rattus norvegicus", "homo sapiens", "macaca"]
             ):
-                errors[
-                    field
-                ] = "Please use scientific name (e.g., 'Mus musculus' for mouse, 'Rattus norvegicus' for rat)"
+                errors[field] = (
+                    "Please use scientific name (e.g., 'Mus musculus' for mouse, 'Rattus norvegicus' for rat)"
+                )
 
         return errors
 
     def _is_valid_date_format(self, value: str) -> bool:
-        """
-        Check if a date string is in valid format.
+        """Check if a date string is in valid format.
 
         Args:
             value: Date string to check
@@ -4330,8 +4301,7 @@ Return JSON with a 'message' field."""
             return False
 
     def _generate_basic_correction_prompts(self, issues: list[dict[str, Any]]) -> str:
-        """
-        Generate basic correction prompts without LLM.
+        """Generate basic correction prompts without LLM.
 
         Args:
             issues: List of issues requiring user input
@@ -4348,10 +4318,9 @@ Return JSON with a 'message' field."""
 
 def register_conversation_agent(
     mcp_server: MCPServer,
-    llm_service: Optional[LLMService] = None,
+    llm_service: LLMService | None = None,
 ) -> ConversationAgent:
-    """
-    Register Conversation Agent handlers with MCP server.
+    """Register Conversation Agent handlers with MCP server.
 
     Args:
         mcp_server: MCP server instance
