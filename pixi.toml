@@ -1,4 +1,4 @@
-[project]
+[workspace]
 name = "agentic-neurodata-conversion"
 version = "0.1.0"
 description = "AI-assisted neurodata conversion to NWB format using multi-agent architecture"
@@ -25,6 +25,7 @@ h5py = ">=3.12.1"
 pre-commit = ">=4.3.0,<5"
 hypothesis = ">=6.0.0"
 types-python-dateutil = ">=2.9.0.20251108,<3"
+types-pyyaml = ">=6.0.0"
 
 [pypi-dependencies]
 neuroconv = ">=0.6.3"

@@ -271,11 +271,6 @@ addopts = [
     "--strict-markers",
     "--disable-warnings",
     "-ra",
-    "--cov=backend/src",
-    "--cov-report=html",
-    "--cov-report=term-missing",
-    "--cov-report=xml",
-    "--cov-fail-under=60",  # Minimum 60% coverage (can increase to 80)
     "--maxfail=5",
     "--durations=10",
 ]
@@ -311,7 +306,7 @@ omit = [
     "*/.pytest_cache/*",
 ]
 branch = true
-parallel = true
+parallel = false
 
 [tool.coverage.report]
 fail_under = 60  # Minimum 60% coverage (your project has 80%, can increase)
