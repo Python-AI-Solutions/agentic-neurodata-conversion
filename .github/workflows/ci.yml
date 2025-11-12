@@ -33,7 +33,7 @@ jobs:
 
       - name: Run type checking with MyPy
         run: pixi run typecheck
-        continue-on-error: true  # MyPy warnings shouldn't block CI initially
+        continue-on-error: false  # Type errors must block CI
 
   test:
     name: Run Tests
@@ -60,7 +60,7 @@ jobs:
 
       - name: Run integration tests
         run: pixi run test-integration
-        continue-on-error: true  # Integration tests may need test data
+        continue-on-error: false  # Integration test failures must block CI
 
       - name: Generate coverage report with threshold check
         run: pixi run -e default pytest "test scripts" --cov=backend/src --cov-report=xml --cov-report=term-missing --cov-fail-under=60
@@ -70,7 +70,7 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           file: ./coverage.xml
-          fail_ci_if_error: false
+          fail_ci_if_error: true  # Codecov upload failures must block CI
           flags: unittests
           name: codecov-${{ matrix.python-version }}
 
@@ -88,9 +88,9 @@ jobs:
 
       - name: Run Bandit security checks
         run: |
-          pixi run -e default bandit -r backend/src -f json -o bandit-report.json || true
+          pixi run -e default bandit -r backend/src -f json -o bandit-report.json
           pixi run -e default bandit -r backend/src
-        continue-on-error: true
+        continue-on-error: false  # Security issues must block CI
 
       - name: Upload security report
         if: always()
@@ -118,6 +118,11 @@ jobs:
 
           if [ "${{ needs.test.result }}" != "success" ]; then
             echo "❌ Tests failed"
+            exit 1
+          fi
+
+          if [ "${{ needs.security.result }}" != "success" ]; then
+            echo "❌ Security checks failed"
             exit 1
           fi
 
