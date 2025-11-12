@@ -4,10 +4,11 @@ Factory for generating GlobalState instances.
 Provides programmatic generation of GlobalState objects in various
 states for testing different workflow stages.
 """
-from pathlib import Path
-from typing import Optional
 
-from models import GlobalState, ConversionStatus, ValidationOutcome
+from pathlib import Path
+
+from models import ConversionStatus, GlobalState
+
 from .metadata_factory import MetadataFactory
 from .validation_factory import ValidationFactory
 
@@ -28,7 +29,7 @@ class StateFactory:
         return state
 
     @staticmethod
-    def create_uploaded_state(input_path: Optional[Path] = None) -> GlobalState:
+    def create_uploaded_state(input_path: Path | None = None) -> GlobalState:
         """Create GlobalState after file upload."""
         state = GlobalState()
         state.status = ConversionStatus.FORMAT_DETECTED
@@ -68,9 +69,7 @@ class StateFactory:
         return state
 
     @staticmethod
-    def create_awaiting_approval_state(
-        validation_result: Optional[dict] = None
-    ) -> GlobalState:
+    def create_awaiting_approval_state(validation_result: dict | None = None) -> GlobalState:
         """Create GlobalState awaiting user approval for retry."""
         state = GlobalState()
         state.status = ConversionStatus.AWAITING_APPROVAL
@@ -86,9 +85,7 @@ class StateFactory:
         return state
 
     @staticmethod
-    def create_completed_state(
-        validation_passed: bool = True
-    ) -> GlobalState:
+    def create_completed_state(validation_passed: bool = True) -> GlobalState:
         """Create GlobalState after successful completion."""
         state = GlobalState()
         state.status = ConversionStatus.COMPLETE
@@ -134,9 +131,7 @@ class StateFactory:
         state.retry_count = retry_count
 
         # Previous validation result (from last attempt)
-        state.validation_result = ValidationFactory.create_result_for_retry_attempt(
-            retry_count - 1
-        )
+        state.validation_result = ValidationFactory.create_result_for_retry_attempt(retry_count - 1)
 
         return state
 
@@ -153,11 +148,7 @@ class StateFactory:
         state = GlobalState()
 
         for i in range(num_logs):
-            state.add_log(
-                level="INFO",
-                message=f"Log entry {i+1}",
-                agent="test_agent"
-            )
+            state.add_log(level="INFO", message=f"Log entry {i + 1}", agent="test_agent")
 
         return state
 
@@ -195,10 +186,7 @@ class StateFactory:
 
     @staticmethod
     def create_custom_state(
-        status: ConversionStatus,
-        has_metadata: bool = False,
-        has_validation_result: bool = False,
-        retry_count: int = 0
+        status: ConversionStatus, has_metadata: bool = False, has_validation_result: bool = False, retry_count: int = 0
     ) -> GlobalState:
         """Create a custom GlobalState.
 

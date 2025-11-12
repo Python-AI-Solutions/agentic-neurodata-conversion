@@ -7,8 +7,11 @@ This test suite validates all data in the test_data/ directory:
 - OpenEphys fixtures
 - Neuropixels data
 """
-import pytest
+
 from pathlib import Path
+
+import pytest
+
 from backend.src.agents.conversion_agent import ConversionAgent
 
 
@@ -39,17 +42,14 @@ class TestAllNWBFiles:
             assert len(nwbfile.acquisition) > 0, "Should have acquisition data"
 
             # Check for electrical series (SpikeGLX data)
-            has_electrical_series = any(
-                'ElectricalSeries' in str(type(acq))
-                for acq in nwbfile.acquisition.values()
-            )
+            has_electrical_series = any("ElectricalSeries" in str(type(acq)) for acq in nwbfile.acquisition.values())
             assert has_electrical_series, "Should have ElectricalSeries data"
 
             # Get the electrical series
             for key, acq in nwbfile.acquisition.items():
-                if 'ElectricalSeries' in str(type(acq)):
+                if "ElectricalSeries" in str(type(acq)):
                     # Verify data dimensions
-                    assert hasattr(acq, 'data'), "ElectricalSeries should have data"
+                    assert hasattr(acq, "data"), "ElectricalSeries should have data"
                     data_shape = acq.data.shape
                     print(f"  {key}: {data_shape[0]} samples × {data_shape[1]} channels")
                     assert data_shape[0] > 0, "Should have time samples"
@@ -99,7 +99,7 @@ class TestAllNWBFiles:
             print(f"  Institution: {nwbfile.institution if hasattr(nwbfile, 'institution') else 'N/A'}")
 
             # Check for icephys data
-            if hasattr(nwbfile, 'icephys_electrodes'):
+            if hasattr(nwbfile, "icephys_electrodes"):
                 print(f"  Intracellular electrodes: {len(nwbfile.icephys_electrodes)}")
 
 
@@ -197,6 +197,7 @@ class TestAllRawDataFormats:
 
         # Verify JSON structure
         import json
+
         with open(oebin_file) as f:
             structure = json.load(f)
 
@@ -220,11 +221,12 @@ class TestAllRawDataFormats:
 
         # Verify XML structure
         import xml.etree.ElementTree as ET
+
         tree = ET.parse(settings_file)
         root = tree.getroot()
 
         assert root.tag == "SETTINGS", "Should have SETTINGS root element"
-        print(f"  OpenEphys old format detected")
+        print("  OpenEphys old format detected")
 
 
 @pytest.mark.integration

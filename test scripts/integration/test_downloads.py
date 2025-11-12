@@ -3,16 +3,13 @@ Integration tests for file download endpoints.
 
 Tests GET /api/download/nwb and GET /api/download/report endpoints.
 """
-import pytest
+
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, Mock, AsyncMock
-from fastapi.testclient import TestClient
+from unittest.mock import Mock, patch
 
-from api.main import app
-from models import GlobalState, ConversionStatus, ValidationStatus
-from services import LLMService
-
+import pytest
+from models import ConversionStatus, GlobalState, ValidationStatus
 
 # Note: The following fixtures are provided by conftest files:
 # - mock_llm_conversational: from root conftest.py (for general mock responses)
@@ -27,8 +24,8 @@ def patch_llm_service(mock_llm_conversational):
     Uses mock_llm_conversational from root conftest.py which provides
     general-purpose mock responses suitable for download endpoint testing.
     """
-    with patch('services.llm_service.create_llm_service', return_value=mock_llm_conversational):
-        with patch('api.main.create_llm_service', return_value=mock_llm_conversational):
+    with patch("services.llm_service.create_llm_service", return_value=mock_llm_conversational):
+        with patch("api.main.create_llm_service", return_value=mock_llm_conversational):
             yield
 
 
@@ -140,7 +137,11 @@ class TestDownloadReportEndpoint:
         # Should return 404 when no file exists
         assert response.status_code == 404
         data = response.json()
-        assert "not found" in data["detail"].lower() or "no report" in data["detail"].lower() or "no conversion output" in data["detail"].lower()
+        assert (
+            "not found" in data["detail"].lower()
+            or "no report" in data["detail"].lower()
+            or "no conversion output" in data["detail"].lower()
+        )
 
     def test_download_pdf_report_for_passed(self, api_test_client, tmp_path):
         """Test download PDF report for PASSED validation."""
@@ -162,8 +163,10 @@ class TestDownloadReportEndpoint:
             response = api_test_client.get("/api/download/report")
 
             if response.status_code == 200:
-                assert "html" in response.headers["content-type"] or \
-                       response.headers["content-type"] == "application/octet-stream"
+                assert (
+                    "html" in response.headers["content-type"]
+                    or response.headers["content-type"] == "application/octet-stream"
+                )
 
     def test_download_json_report_for_failed(self, api_test_client, tmp_path):
         """Test download JSON report for FAILED validation."""
@@ -185,8 +188,10 @@ class TestDownloadReportEndpoint:
             response = api_test_client.get("/api/download/report")
 
             if response.status_code == 200:
-                assert "html" in response.headers["content-type"] or \
-                       response.headers["content-type"] == "application/octet-stream"
+                assert (
+                    "html" in response.headers["content-type"]
+                    or response.headers["content-type"] == "application/octet-stream"
+                )
 
     def test_download_report_content_type_headers(self, api_test_client, tmp_path):
         """Test that report download has correct content-type headers."""
@@ -288,16 +293,17 @@ class TestDownloadEndpointsErrorHandling:
 class TestDownloadEndpointsWithAllValidationStatuses:
     """Test downloads work with all validation status values."""
 
-    @pytest.mark.parametrize("validation_status", [
-        ValidationStatus.PASSED,
-        ValidationStatus.PASSED_ACCEPTED,
-        ValidationStatus.PASSED_IMPROVED,
-        ValidationStatus.FAILED_USER_DECLINED,
-        ValidationStatus.FAILED_USER_ABANDONED,
-    ])
-    def test_download_nwb_with_all_validation_statuses(
-        self, api_test_client, mock_nwb_file, validation_status
-    ):
+    @pytest.mark.parametrize(
+        "validation_status",
+        [
+            ValidationStatus.PASSED,
+            ValidationStatus.PASSED_ACCEPTED,
+            ValidationStatus.PASSED_IMPROVED,
+            ValidationStatus.FAILED_USER_DECLINED,
+            ValidationStatus.FAILED_USER_ABANDONED,
+        ],
+    )
+    def test_download_nwb_with_all_validation_statuses(self, api_test_client, mock_nwb_file, validation_status):
         """Test that NWB can be downloaded regardless of validation status."""
         with patch("api.main.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()

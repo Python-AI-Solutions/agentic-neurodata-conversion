@@ -1,17 +1,14 @@
 """
 Integration tests for FastAPI endpoints.
 """
+
 import json
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import patch
 
 import pytest
-from fastapi.testclient import TestClient
 
 # Import after path is set in conftest
-from api.main import app
-from services import LLMService
-
 
 # Note: The following fixtures are provided by conftest files:
 # - mock_llm_format_detector: from root conftest.py (format detection responses)
@@ -27,8 +24,8 @@ def patch_llm_service(mock_llm_format_detector):
     Uses mock_llm_format_detector from root conftest.py which provides
     format detection responses suitable for API testing.
     """
-    with patch('services.llm_service.create_llm_service', return_value=mock_llm_format_detector):
-        with patch('api.main.create_llm_service', return_value=mock_llm_format_detector):
+    with patch("services.llm_service.create_llm_service", return_value=mock_llm_format_detector):
+        with patch("api.main.create_llm_service", return_value=mock_llm_format_detector):
             yield
 
 

@@ -4,7 +4,9 @@ Unit tests for metadata mapping functionality.
 Tests the critical metadata transformation logic that converts flat
 user input to NWB's nested metadata structure.
 """
+
 import pytest
+
 from backend.src.agents.conversion_agent import ConversionAgent
 
 
@@ -189,10 +191,7 @@ class TestMetadataMapping:
 
         # Verify other NWBFile fields
         assert structured["NWBFile"]["institution"] == "UC Berkeley"
-        assert (
-            structured["NWBFile"]["session_description"]
-            == "Recording in mouse V1 during visual stimulation"
-        )
+        assert structured["NWBFile"]["session_description"] == "Recording in mouse V1 during visual stimulation"
 
         # Verify Subject fields
         assert structured["Subject"]["subject_id"] == "mouse_042"

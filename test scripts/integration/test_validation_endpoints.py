@@ -3,14 +3,11 @@ Integration tests for validation and correction context endpoints.
 
 Tests GET /api/validation and GET /api/correction-context endpoints.
 """
+
+from unittest.mock import Mock, patch
+
 import pytest
-from unittest.mock import patch, Mock, AsyncMock
-from fastapi.testclient import TestClient
-
-from api.main import app
-from models import GlobalState, ConversionStatus, ValidationStatus
-from services import LLMService
-
+from models import ConversionStatus, GlobalState, ValidationStatus
 
 # Note: The following fixtures are provided by conftest files:
 # - mock_llm_quality_assessor: from root conftest.py (for quality/validation assessment)
@@ -25,8 +22,8 @@ def patch_llm_service(mock_llm_quality_assessor):
     Uses mock_llm_quality_assessor from root conftest.py which provides
     quality and validation assessment responses suitable for validation endpoint testing.
     """
-    with patch('services.llm_service.create_llm_service', return_value=mock_llm_quality_assessor):
-        with patch('api.main.create_llm_service', return_value=mock_llm_quality_assessor):
+    with patch("services.llm_service.create_llm_service", return_value=mock_llm_quality_assessor):
+        with patch("api.main.create_llm_service", return_value=mock_llm_quality_assessor):
             yield
 
 
@@ -231,16 +228,17 @@ class TestValidationAndCorrectionIntegration:
 class TestEndpointsWithAllValidationStatuses:
     """Test endpoints work with all validation status values."""
 
-    @pytest.mark.parametrize("validation_status,overall_status", [
-        (ValidationStatus.PASSED, "PASSED"),
-        (ValidationStatus.PASSED_ACCEPTED, "PASSED_WITH_ISSUES"),
-        (ValidationStatus.PASSED_IMPROVED, "PASSED"),
-        (ValidationStatus.FAILED_USER_DECLINED, "FAILED"),
-        (ValidationStatus.FAILED_USER_ABANDONED, "FAILED"),
-    ])
-    def test_validation_endpoint_all_statuses(
-        self, api_test_client, validation_status, overall_status
-    ):
+    @pytest.mark.parametrize(
+        "validation_status,overall_status",
+        [
+            (ValidationStatus.PASSED, "PASSED"),
+            (ValidationStatus.PASSED_ACCEPTED, "PASSED_WITH_ISSUES"),
+            (ValidationStatus.PASSED_IMPROVED, "PASSED"),
+            (ValidationStatus.FAILED_USER_DECLINED, "FAILED"),
+            (ValidationStatus.FAILED_USER_ABANDONED, "FAILED"),
+        ],
+    )
+    def test_validation_endpoint_all_statuses(self, api_test_client, validation_status, overall_status):
         """Test validation endpoint with all possible validation statuses."""
         with patch("api.main.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()

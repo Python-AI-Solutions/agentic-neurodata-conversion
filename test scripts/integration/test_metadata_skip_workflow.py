@@ -10,16 +10,14 @@ Tests the complete workflow:
 This tests the bug fix where system now properly uses pending_conversion_input_path
 to resume conversion after metadata skip.
 """
-import asyncio
-import os
-import pytest
+
 from pathlib import Path
 
-from models.state import GlobalState, ConversionStatus, LogLevel
-from models.mcp import MCPMessage
+import pytest
 from agents import register_conversation_agent, register_conversion_agent, register_evaluation_agent
+from models.mcp import MCPMessage
+from models.state import ConversionStatus, LogLevel
 from services import MCPServer, MockLLMService, reset_mcp_server
-
 
 # Note: The following fixture is provided by conftest:
 # - global_state: from root conftest.py (provides fresh GlobalState for each test)
@@ -100,15 +98,20 @@ async def test_upload_skip_for_now_conversion(mcp_server_with_agents, test_file)
     assert response.success
     # Status might stay AWAITING_USER_INPUT if showing metadata review screen
     # or transition to CONVERTING - either is valid
-    assert global_state.status in [ConversionStatus.AWAITING_USER_INPUT, ConversionStatus.DETECTING_FORMAT, ConversionStatus.CONVERTING, ConversionStatus.VALIDATING]
+    assert global_state.status in [
+        ConversionStatus.AWAITING_USER_INPUT,
+        ConversionStatus.DETECTING_FORMAT,
+        ConversionStatus.CONVERTING,
+        ConversionStatus.VALIDATING,
+    ]
 
     # Verify: No errors in logs
     error_logs = [log for log in global_state.logs if log.level == LogLevel.ERROR]
     # Filter out expected validation errors from NWB Inspector
     critical_errors = [
-        log for log in error_logs
-        if "Cannot restart conversion" in log.message
-        or "input_path not available" in log.message
+        log
+        for log in error_logs
+        if "Cannot restart conversion" in log.message or "input_path not available" in log.message
     ]
     assert len(critical_errors) == 0, f"Found critical errors: {critical_errors}"
 
@@ -156,10 +159,7 @@ async def test_upload_skip_this_one_next_field(mcp_server_with_agents, test_file
 
     # Verify: No critical errors
     error_logs = [log for log in global_state.logs if log.level == LogLevel.ERROR]
-    critical_errors = [
-        log for log in error_logs
-        if "Cannot restart conversion" in log.message
-    ]
+    critical_errors = [log for log in error_logs if "Cannot restart conversion" in log.message]
     assert len(critical_errors) == 0
 
 
@@ -209,10 +209,7 @@ async def test_upload_ask_one_by_one_sequential(mcp_server_with_agents, test_fil
 
     # Verify: No critical errors
     error_logs = [log for log in global_state.logs if log.level == LogLevel.ERROR]
-    critical_errors = [
-        log for log in error_logs
-        if "Cannot restart conversion" in log.message
-    ]
+    critical_errors = [log for log in error_logs if "Cannot restart conversion" in log.message]
     assert len(critical_errors) == 0
 
 
@@ -248,10 +245,7 @@ async def test_pending_path_fallback_to_input_path(mcp_server_with_agents, test_
 
     # Verify: No critical errors
     error_logs = [log for log in global_state.logs if log.level == LogLevel.ERROR]
-    critical_errors = [
-        log for log in error_logs
-        if "Cannot restart conversion" in log.message
-    ]
+    critical_errors = [log for log in error_logs if "Cannot restart conversion" in log.message]
     assert len(critical_errors) == 0
 
 

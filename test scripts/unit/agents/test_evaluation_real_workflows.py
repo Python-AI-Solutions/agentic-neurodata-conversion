@@ -4,8 +4,8 @@ Real workflow tests for EvaluationAgent.
 These tests use evaluation_agent_real fixture which has real internal logic,
 testing actual validation workflows instead of mocking them away.
 """
+
 import pytest
-from models import ValidationIssue, ValidationSeverity, ValidationResult
 
 
 @pytest.mark.unit

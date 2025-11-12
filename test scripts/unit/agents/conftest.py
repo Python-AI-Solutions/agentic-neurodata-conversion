@@ -11,19 +11,15 @@ Fixture inheritance:
     - All fixtures from this file (agents/conftest.py)
     - Local fixtures defined in individual test files
 """
-import pytest
-from unittest.mock import Mock, AsyncMock
-from pathlib import Path
 
+import pytest
 from agents import (
     ConversationAgent,
     ConversionAgent,
     EvaluationAgent,
 )
 from agents.conversational_handler import ConversationalHandler
-from models import GlobalState, ConversionStatus, ConversationPhase, MCPMessage
-from services import MCPServer
-
+from models import ConversationPhase, ConversionStatus, GlobalState, MCPMessage
 
 # ============================================================================
 # Agent Instance Fixtures
@@ -49,10 +45,7 @@ def conversation_agent(mock_mcp_server, mock_llm_conversational):
             response = await conversation_agent.handle_user_input("hello")
             assert response is not None
     """
-    return ConversationAgent(
-        mcp_server=mock_mcp_server,
-        llm_service=mock_llm_conversational
-    )
+    return ConversationAgent(mcp_server=mock_mcp_server, llm_service=mock_llm_conversational)
 
 
 @pytest.fixture
@@ -77,10 +70,7 @@ def conversation_agent_real(real_mcp_server, mock_llm_api_only):
             await conversation_agent_real.handle_user_input("hello", global_state)
             assert len(global_state.logs) > 0
     """
-    return ConversationAgent(
-        mcp_server=real_mcp_server,
-        llm_service=mock_llm_api_only
-    )
+    return ConversationAgent(mcp_server=real_mcp_server, llm_service=mock_llm_api_only)
 
 
 @pytest.fixture
@@ -102,9 +92,7 @@ def conversion_agent(mock_mcp_server, mock_llm_format_detector):
             result = await conversion_agent.detect_format(str(tmp_path / "test.nwb"))
             assert result["format"] == "NWB"
     """
-    return ConversionAgent(
-        llm_service=mock_llm_format_detector
-    )
+    return ConversionAgent(llm_service=mock_llm_format_detector)
 
 
 @pytest.fixture
@@ -128,9 +116,7 @@ def conversion_agent_real(mock_llm_api_only):
             result = await conversion_agent_real._detect_format(str(tmp_path), global_state)
             assert result is not None
     """
-    return ConversionAgent(
-        llm_service=mock_llm_api_only
-    )
+    return ConversionAgent(llm_service=mock_llm_api_only)
 
 
 @pytest.fixture
@@ -151,9 +137,7 @@ def evaluation_agent(mock_llm_quality_assessor):
             result = await evaluation_agent.assess_quality("/test/file.nwb")
             assert "overall_score" in result
     """
-    return EvaluationAgent(
-        llm_service=mock_llm_quality_assessor
-    )
+    return EvaluationAgent(llm_service=mock_llm_quality_assessor)
 
 
 @pytest.fixture
@@ -179,9 +163,7 @@ def evaluation_agent_real(mock_llm_api_only):
             result = await evaluation_agent_real.validate_nwb(str(nwb_file), global_state)
             assert result is not None
     """
-    return EvaluationAgent(
-        llm_service=mock_llm_api_only
-    )
+    return EvaluationAgent(llm_service=mock_llm_api_only)
 
 
 @pytest.fixture
@@ -293,7 +275,7 @@ def sample_mcp_message():
         sender="conversation_agent",
         receiver="conversion_agent",
         message_type="convert_file",
-        payload={"file_path": "/test/file.nwb"}
+        payload={"file_path": "/test/file.nwb"},
     )
 
 
@@ -310,11 +292,7 @@ def mock_agent_response():
             assert "status" in mock_agent_response
             assert mock_agent_response["status"] == "success"
     """
-    return {
-        "status": "success",
-        "message": "Operation completed",
-        "data": {}
-    }
+    return {"status": "success", "message": "Operation completed", "data": {}}
 
 
 @pytest.fixture
@@ -334,7 +312,7 @@ def mock_format_detection_result():
         "detected_format": "NWB",
         "confidence": 0.95,
         "reasoning": "File has .nwb extension and valid HDF5 structure",
-        "file_path": "/test/recording.nwb"
+        "file_path": "/test/recording.nwb",
     }
 
 
@@ -359,10 +337,10 @@ def mock_validation_result_agent():
                 "severity": "critical",
                 "message": "Missing required field: session_description",
                 "location": "/",
-                "check_name": "check_session_description"
+                "check_name": "check_session_description",
             }
         ],
-        "summary": {"critical": 1, "error": 0, "warning": 0, "info": 0}
+        "summary": {"critical": 1, "error": 0, "warning": 0, "info": 0},
     }
 
 
@@ -391,7 +369,7 @@ def sample_user_metadata_input():
         "subject_input": "mouse",
         "session_description": "Visual cortex recording during maze navigation",
         "skip_input": "skip this",
-        "decline_input": "no thanks"
+        "decline_input": "no thanks",
     }
 
 
@@ -431,16 +409,16 @@ def sample_validation_with_issues():
                 "severity": "WARNING",
                 "message": "Missing experimenter information",
                 "location": "/general/experimenter",
-                "check_name": "check_experimenter"
+                "check_name": "check_experimenter",
             },
             {
                 "severity": "INFO",
                 "message": "Subject age not specified",
                 "location": "/general/subject/age",
-                "check_name": "check_subject_age"
-            }
+                "check_name": "check_subject_age",
+            },
         ],
-        "summary": {"critical": 0, "error": 0, "warning": 1, "info": 1}
+        "summary": {"critical": 0, "error": 0, "warning": 1, "info": 1},
     }
 
 
@@ -460,7 +438,7 @@ def sample_improvement_responses():
     return {
         "accept": ["accept it", "good enough", "yes, accept", "ok", "that's fine"],
         "retry": ["fix it", "retry", "improve", "try again", "make it better"],
-        "unsure": ["maybe", "not sure", "what do you think", "help me decide"]
+        "unsure": ["maybe", "not sure", "what do you think", "help me decide"],
     }
 
 
@@ -482,7 +460,7 @@ def sample_metadata_parse_response():
         "subject_species": "Mus musculus",
         "session_description": "Visual cortex recording",
         "confidence": 0.85,
-        "reasoning": "Extracted from natural language input"
+        "reasoning": "Extracted from natural language input",
     }
 
 
@@ -506,8 +484,8 @@ def sample_provenance_metadata():
                 "source": "USER_SPECIFIED",
                 "confidence": 1.0,
                 "timestamp": "2025-01-01T12:00:00",
-                "method": "direct_input"
-            }
+                "method": "direct_input",
+            },
         },
         "institution": {
             "value": "MIT",
@@ -516,7 +494,7 @@ def sample_provenance_metadata():
                 "confidence": 0.85,
                 "timestamp": "2025-01-01T12:00:05",
                 "method": "llm_extraction",
-                "original_input": "from MIT"
-            }
-        }
+                "original_input": "from MIT",
+            },
+        },
     }

@@ -7,13 +7,12 @@ test clients, WebSocket mocks, and full workflow setup helpers.
 These fixtures are available to all tests in the integration/ directory
 and inherit from the root conftest.py fixtures.
 """
+
+from unittest.mock import AsyncMock, Mock
+
 import pytest
 from fastapi.testclient import TestClient
-from pathlib import Path
-from unittest.mock import Mock, AsyncMock
-
 from models import ConversionStatus
-
 
 # ============================================================================
 # API Test Client Fixtures
@@ -45,6 +44,7 @@ def api_test_client():
         for isolated tests.
     """
     from api.main import app
+
     return TestClient(app)
 
 
@@ -102,7 +102,7 @@ def uploaded_nwb_file(tmp_path, create_test_nwb_file):
     return create_test_nwb_file(
         tmp_path,
         "uploaded_recording.nwb",
-        b"mock nwb content" * 100  # Make it reasonably sized
+        b"mock nwb content" * 100,  # Make it reasonably sized
     )
 
 
@@ -217,11 +217,7 @@ def mock_file_upload():
             )
             assert response.status_code == 200
     """
-    return (
-        "test_recording.nwb",
-        b"mock nwb file content" * 50,
-        "application/octet-stream"
-    )
+    return ("test_recording.nwb", b"mock nwb file content" * 50, "application/octet-stream")
 
 
 @pytest.fixture
@@ -246,16 +242,11 @@ def mock_validation_response():
                 "severity": "critical",
                 "message": "Missing required field",
                 "location": "/",
-                "check_name": "check_required_field"
+                "check_name": "check_required_field",
             }
         ],
-        "summary": {
-            "critical": 1,
-            "error": 0,
-            "warning": 0,
-            "info": 0
-        },
-        "overall_status": "FAILED"
+        "summary": {"critical": 1, "error": 0, "warning": 0, "info": 0},
+        "overall_status": "FAILED",
     }
 
 
@@ -279,5 +270,5 @@ def mock_conversion_response():
         "message": "Conversion completed successfully",
         "output_file": "/tmp/converted.nwb",
         "format": "NWB",
-        "duration_ms": 1500
+        "duration_ms": 1500,
     }

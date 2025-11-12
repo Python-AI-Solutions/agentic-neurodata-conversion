@@ -3,7 +3,7 @@
 Demo script to run complete SpikeGLX conversion with auto-apply metadata.
 This demonstrates the full conversion workflow and report generation.
 """
-import asyncio
+
 import json
 import sys
 from pathlib import Path
@@ -11,14 +11,13 @@ from pathlib import Path
 # Add backend/src to path
 sys.path.insert(0, str(Path(__file__).parent / "backend" / "src"))
 
-from models import GlobalState, ConversionStatus
-from services import MCPServer
-from services.llm_service import MockLLMService
 from agents import (
     register_conversation_agent,
     register_conversion_agent,
     register_evaluation_agent,
 )
+from services import MCPServer
+from services.llm_service import MockLLMService
 
 
 async def run_conversion_demo():
@@ -107,7 +106,7 @@ async def run_conversion_demo():
 
     if convert_response.result.get("status") == "completed":
         output_path = convert_response.result.get("output_path")
-        print(f"✅ Conversion successful!")
+        print("✅ Conversion successful!")
         print(f"   Output NWB file: {output_path}")
         print(f"   File size: {Path(output_path).stat().st_size / 1024 / 1024:.2f} MB")
         print()
@@ -130,10 +129,10 @@ async def run_conversion_demo():
     validate_response = await mcp_server.route_message(validate_msg, mcp_server.global_state)
     validation_result = validate_response.result.get("validation_result", {})
 
-    print(f"✅ Validation complete")
+    print("✅ Validation complete")
     print(f"   Status: {validation_result.get('status', 'unknown')}")
 
-    summary = validation_result.get('summary', {})
+    summary = validation_result.get("summary", {})
     print(f"   Total issues: {summary.get('total_issues', 0)}")
     print(f"   - Critical: {summary.get('critical', 0)}")
     print(f"   - Best practice violations: {summary.get('best_practice_violation', 0)}")
@@ -160,7 +159,7 @@ async def run_conversion_demo():
     json_report = report_response.result.get("json_report")
     text_report = report_response.result.get("text_report")
 
-    print(f"✅ Reports generated:")
+    print("✅ Reports generated:")
     if pdf_report and Path(pdf_report).exists():
         print(f"   📄 PDF: {pdf_report} ({Path(pdf_report).stat().st_size / 1024:.1f} KB)")
     if json_report and Path(json_report).exists():
@@ -176,7 +175,7 @@ async def run_conversion_demo():
     print()
 
     if json_report and Path(json_report).exists():
-        with open(json_report, 'r') as f:
+        with open(json_report) as f:
             report_data = json.load(f)
 
         print("📊 Validation Summary:")
@@ -186,21 +185,21 @@ async def run_conversion_demo():
         print()
 
         print("📋 Issues by Severity:")
-        for severity, count in report_data.get('issues_by_severity', {}).items():
+        for severity, count in report_data.get("issues_by_severity", {}).items():
             print(f"   {severity}: {count}")
         print()
 
         print("🔬 Workflow Trace:")
-        workflow = report_data.get('workflow_trace', {})
+        workflow = report_data.get("workflow_trace", {})
         print(f"   Format: {workflow.get('input_format')}")
         print(f"   Conversion Time: {workflow.get('conversion_duration_seconds', 0):.2f}s")
-        print(f"   Technologies Used:")
-        for tech in workflow.get('technologies_used', []):
+        print("   Technologies Used:")
+        for tech in workflow.get("technologies_used", []):
             print(f"      - {tech}")
         print()
 
         # Show first few issues
-        issues = report_data.get('issues', [])
+        issues = report_data.get("issues", [])
         if issues:
             print(f"📌 Sample Issues (showing first 3 of {len(issues)}):")
             for i, issue in enumerate(issues[:3], 1):
@@ -213,7 +212,7 @@ async def run_conversion_demo():
         print("=" * 80)
         print("TEXT REPORT EXCERPT")
         print("=" * 80)
-        with open(text_report, 'r') as f:
+        with open(text_report) as f:
             lines = f.readlines()
             print("".join(lines[:50]))  # First 50 lines
             if len(lines) > 50:

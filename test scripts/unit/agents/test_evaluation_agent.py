@@ -12,36 +12,32 @@ Tests cover:
 - Metadata provenance tracking
 - LLM-based analysis (with mocking)
 """
-import asyncio
+
 import json
-import pytest
-from datetime import datetime
-from pathlib import Path
-from typing import Dict, Any, List
-from unittest.mock import Mock, AsyncMock, patch, MagicMock, mock_open
-import sys
 import os
+import sys
+from datetime import datetime
+from unittest.mock import AsyncMock, Mock, mock_open, patch
+
+import pytest
 
 # Add backend/src to Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend", "src"))
 
 from agents.evaluation_agent import EvaluationAgent
 from models import (
     ConversionStatus,
     CorrectionContext,
     GlobalState,
-    LogLevel,
     LogEntry,
+    LogLevel,
     MCPMessage,
     MCPResponse,
-    ValidationResult,
     ValidationIssue,
-    ValidationSeverity,
-    ValidationStatus,
     ValidationOutcome,
+    ValidationResult,
+    ValidationSeverity,
 )
-from services import LLMService
-
 
 # ============================================================================
 # Fixtures
@@ -52,10 +48,12 @@ from services import LLMService
 # - evaluation_agent: from agents/conftest.py (uses mock_llm_quality_assessor)
 # - global_state: from root conftest.py
 
+
 @pytest.fixture
 def evaluation_agent_no_llm():
     """Create an EvaluationAgent instance without LLM service for testing fallback behavior."""
     return EvaluationAgent(llm_service=None)
+
 
 @pytest.fixture
 def sample_nwb_path(tmp_path):
@@ -68,7 +66,6 @@ def sample_nwb_path(tmp_path):
 @pytest.fixture
 def sample_validation_result():
     """Create a sample validation result for testing."""
-    from models import ValidationIssue, ValidationSeverity
     return ValidationResult(
         is_valid=True,
         issues=[
@@ -110,6 +107,7 @@ def sample_mcp_message():
 # Test: Initialization
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestEvaluationAgentInitialization:
     """Test suite for EvaluationAgent initialization."""
@@ -141,14 +139,13 @@ class TestEvaluationAgentInitialization:
 # Test: File Validation
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestFileValidation:
     """Test suite for NWB file validation."""
 
     @pytest.mark.asyncio
-    async def test_handle_run_validation_success(
-        self, evaluation_agent, global_state, sample_nwb_path
-    ):
+    async def test_handle_run_validation_success(self, evaluation_agent, global_state, sample_nwb_path):
         """Test successful validation handling."""
         message = MCPMessage(
             message_id="val-123",
@@ -159,11 +156,7 @@ class TestFileValidation:
         )
 
         # Mock the _run_nwb_inspector method
-        with patch.object(
-            evaluation_agent,
-            '_run_nwb_inspector',
-            new_callable=AsyncMock
-        ) as mock_inspector:
+        with patch.object(evaluation_agent, "_run_nwb_inspector", new_callable=AsyncMock) as mock_inspector:
             mock_inspector.return_value = ValidationResult(
                 is_valid=True,
                 issues=[],
@@ -178,9 +171,7 @@ class TestFileValidation:
             mock_inspector.assert_called_once_with(sample_nwb_path)
 
     @pytest.mark.asyncio
-    async def test_handle_run_validation_missing_path(
-        self, evaluation_agent, global_state
-    ):
+    async def test_handle_run_validation_missing_path(self, evaluation_agent, global_state):
         """Test validation with missing NWB path."""
         message = MCPMessage(
             message_id="val-123",
@@ -194,8 +185,8 @@ class TestFileValidation:
 
         assert response.success is False
         assert response.error is not None
-        assert response.error['code'] == "MISSING_NWB_PATH"
-        assert "required" in response.error['message'].lower()
+        assert response.error["code"] == "MISSING_NWB_PATH"
+        assert "required" in response.error["message"].lower()
 
     @pytest.mark.asyncio
     async def test_handle_run_validation_with_issues(
@@ -210,11 +201,7 @@ class TestFileValidation:
             context={"nwb_path": sample_nwb_path},
         )
 
-        with patch.object(
-            evaluation_agent,
-            '_run_nwb_inspector',
-            new_callable=AsyncMock
-        ) as mock_inspector:
+        with patch.object(evaluation_agent, "_run_nwb_inspector", new_callable=AsyncMock) as mock_inspector:
             mock_inspector.return_value = sample_validation_result
 
             response = await evaluation_agent.handle_run_validation(message, global_state)
@@ -228,6 +215,7 @@ class TestFileValidation:
 # ============================================================================
 # Test: File Info Extraction
 # ============================================================================
+
 
 @pytest.mark.unit
 class TestFileInfoExtraction:
@@ -257,20 +245,17 @@ class TestFileInfoExtraction:
 # Test: Quality Assessment
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestQualityAssessment:
     """Test suite for NWB quality assessment."""
 
     @pytest.mark.asyncio
-    async def test_assess_nwb_quality_with_llm(
-        self, evaluation_agent, sample_validation_result, global_state
-    ):
+    async def test_assess_nwb_quality_with_llm(self, evaluation_agent, sample_validation_result, global_state):
         """Test quality assessment with LLM service."""
         nwb_path = "/path/to/test.nwb"
 
-        quality = await evaluation_agent._assess_nwb_quality(
-            nwb_path, sample_validation_result, global_state
-        )
+        quality = await evaluation_agent._assess_nwb_quality(nwb_path, sample_validation_result, global_state)
 
         assert quality is not None
         assert "overall_score" in quality or "assessment" in quality
@@ -282,9 +267,7 @@ class TestQualityAssessment:
         """Test quality assessment without LLM service."""
         nwb_path = "/path/to/test.nwb"
 
-        quality = await evaluation_agent_no_llm._assess_nwb_quality(
-            nwb_path, sample_validation_result, global_state
-        )
+        quality = await evaluation_agent_no_llm._assess_nwb_quality(nwb_path, sample_validation_result, global_state)
 
         # Should return basic quality metrics even without LLM
         assert quality is not None
@@ -293,6 +276,7 @@ class TestQualityAssessment:
 # ============================================================================
 # Test: Issue Prioritization
 # ============================================================================
+
 
 @pytest.mark.unit
 class TestIssuePrioritization:
@@ -311,9 +295,7 @@ class TestIssuePrioritization:
         assert isinstance(result, (dict, list))
 
     @pytest.mark.asyncio
-    async def test_prioritize_and_explain_issues_empty_list(
-        self, evaluation_agent, global_state
-    ):
+    async def test_prioritize_and_explain_issues_empty_list(self, evaluation_agent, global_state):
         """Test issue prioritization with empty issues list."""
         result = await evaluation_agent._prioritize_and_explain_issues([], global_state)
 
@@ -324,23 +306,24 @@ class TestIssuePrioritization:
 # Test: NWB Inspector Integration
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestNWBInspectorIntegration:
     """Test suite for NWB Inspector integration."""
 
     @pytest.mark.asyncio
-    async def test_run_nwb_inspector_success(
-        self, evaluation_agent, sample_nwb_path
-    ):
+    async def test_run_nwb_inspector_success(self, evaluation_agent, sample_nwb_path):
         """Test successful NWB inspector execution."""
         # Mock subprocess to avoid actual NWB Inspector call
-        with patch('subprocess.run') as mock_run:
+        with patch("subprocess.run") as mock_run:
             mock_run.return_value = Mock(
                 returncode=0,
-                stdout=json.dumps({
-                    "messages": [],
-                    "file_path": sample_nwb_path,
-                }),
+                stdout=json.dumps(
+                    {
+                        "messages": [],
+                        "file_path": sample_nwb_path,
+                    }
+                ),
                 stderr="",
             )
 
@@ -350,23 +333,23 @@ class TestNWBInspectorIntegration:
             assert result.is_valid in [True, False]
 
     @pytest.mark.asyncio
-    async def test_run_nwb_inspector_with_errors(
-        self, evaluation_agent, sample_nwb_path
-    ):
+    async def test_run_nwb_inspector_with_errors(self, evaluation_agent, sample_nwb_path):
         """Test NWB inspector with validation errors."""
-        with patch('subprocess.run') as mock_run:
+        with patch("subprocess.run") as mock_run:
             mock_run.return_value = Mock(
                 returncode=0,
-                stdout=json.dumps({
-                    "messages": [
-                        {
-                            "message": "Critical error",
-                            "severity": 2,
-                            "location": "/",
-                        }
-                    ],
-                    "file_path": sample_nwb_path,
-                }),
+                stdout=json.dumps(
+                    {
+                        "messages": [
+                            {
+                                "message": "Critical error",
+                                "severity": 2,
+                                "location": "/",
+                            }
+                        ],
+                        "file_path": sample_nwb_path,
+                    }
+                ),
                 stderr="",
             )
 
@@ -380,14 +363,13 @@ class TestNWBInspectorIntegration:
 # Test: Correction Analysis
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestCorrectionAnalysis:
     """Test suite for correction analysis."""
 
     @pytest.mark.asyncio
-    async def test_handle_analyze_corrections_with_llm(
-        self, evaluation_agent, global_state
-    ):
+    async def test_handle_analyze_corrections_with_llm(self, evaluation_agent, global_state):
         """Test correction analysis with LLM service."""
         message = MCPMessage(
             message_id="corr-123",
@@ -408,9 +390,7 @@ class TestCorrectionAnalysis:
         assert isinstance(response, MCPResponse)
 
     @pytest.mark.asyncio
-    async def test_handle_analyze_corrections_without_llm(
-        self, evaluation_agent_no_llm, global_state
-    ):
+    async def test_handle_analyze_corrections_without_llm(self, evaluation_agent_no_llm, global_state):
         """Test correction analysis without LLM service."""
         message = MCPMessage(
             message_id="corr-123",
@@ -425,9 +405,7 @@ class TestCorrectionAnalysis:
             },
         )
 
-        response = await evaluation_agent_no_llm.handle_analyze_corrections(
-            message, global_state
-        )
+        response = await evaluation_agent_no_llm.handle_analyze_corrections(message, global_state)
 
         # Should handle gracefully without LLM
         assert response is not None
@@ -436,6 +414,7 @@ class TestCorrectionAnalysis:
 # ============================================================================
 # Test: LLM Analysis
 # ============================================================================
+
 
 @pytest.mark.unit
 @pytest.mark.llm
@@ -450,14 +429,12 @@ class TestLLMAnalysis:
         )
 
         with patch.object(
-            evaluation_agent._llm_service,
-            'generate_structured_output',
-            new_callable=AsyncMock
+            evaluation_agent._llm_service, "generate_structured_output", new_callable=AsyncMock
         ) as mock_generate:
             mock_generate.return_value = {
                 "analysis": "Detailed analysis response",
                 "suggestions": [],
-                "recommended_action": "retry"
+                "recommended_action": "retry",
             }
 
             result = await evaluation_agent._analyze_with_llm(context, global_state)
@@ -473,12 +450,8 @@ class TestLLMAnalysis:
             validation_result=sample_validation_result,
         )
 
-        with patch.object(
-            evaluation_agent._llm_service,
-            'generate_response',
-            new_callable=AsyncMock
-        ) as mock_generate:
-            mock_generate.side_effect = asyncio.TimeoutError("LLM timeout")
+        with patch.object(evaluation_agent._llm_service, "generate_response", new_callable=AsyncMock) as mock_generate:
+            mock_generate.side_effect = TimeoutError("LLM timeout")
 
             # Should handle timeout gracefully
             result = await evaluation_agent._analyze_with_llm(context, global_state)
@@ -490,6 +463,7 @@ class TestLLMAnalysis:
 # ============================================================================
 # Test: Prompt Building
 # ============================================================================
+
 
 @pytest.mark.unit
 class TestPromptBuilding:
@@ -512,11 +486,8 @@ class TestPromptBuilding:
         """Test building correction prompt with no issues."""
         # Create a validation result with no issues
         from models import ValidationResult
-        empty_result = ValidationResult(
-            is_valid=True,
-            issues=[],
-            summary={}
-        )
+
+        empty_result = ValidationResult(is_valid=True, issues=[], summary={})
         context = CorrectionContext(
             validation_result=empty_result,
         )
@@ -531,14 +502,13 @@ class TestPromptBuilding:
 # Test: Report Generation
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestReportGeneration:
     """Test suite for report generation."""
 
     @pytest.mark.asyncio
-    async def test_handle_generate_report_success(
-        self, evaluation_agent, global_state
-    ):
+    async def test_handle_generate_report_success(self, evaluation_agent, global_state):
         """Test successful report generation."""
         # Setup state with validation data
         global_state.status = ConversionStatus.COMPLETED
@@ -549,63 +519,45 @@ class TestReportGeneration:
             target_agent="evaluation",
             action="generate_report",
             context={
-                "validation_result": {
-                    "overall_status": "PASSED",
-                    "is_valid": True,
-                    "issues": [],
-                    "file_info": {}
-                },
-                "nwb_path": "/path/to/test.nwb"
+                "validation_result": {"overall_status": "PASSED", "is_valid": True, "issues": [], "file_info": {}},
+                "nwb_path": "/path/to/test.nwb",
             },
         )
 
-        with patch.object(
-            evaluation_agent._report_service,
-            'generate_html_report',
-            return_value=None
-        ) as mock_html, patch.object(
-            evaluation_agent._report_service,
-            'generate_pdf_report',
-            return_value=None
-        ) as mock_pdf, patch.object(
-            evaluation_agent._report_service,
-            'generate_text_report',
-            return_value=None
-        ) as mock_text, patch.object(
-            evaluation_agent,
-            '_extract_file_info',
-            return_value={
-                "file_size_bytes": 1024,
-                "nwb_version": "2.5.0",
-                "creation_date": "2024-01-01"
-            }
-        ), patch.object(
-            evaluation_agent,
-            '_add_metadata_provenance',
-            return_value={
-                "file_size_bytes": 1024,
-                "nwb_version": "2.5.0",
-                "creation_date": "2024-01-01"
-            }
-        ), patch.object(
-            evaluation_agent,
-            '_build_workflow_trace',
-            return_value={"summary": {}, "detailed_logs_sequential": [], "stage_options": []}
-        ), patch.object(
-            evaluation_agent,
-            '_generate_quality_assessment',
-            new_callable=AsyncMock,
-            return_value={"overall_score": 85, "grade": "B", "assessment": "Good quality"}
-        ), patch('builtins.open', mock_open()):
+        with (
+            patch.object(evaluation_agent._report_service, "generate_html_report", return_value=None) as mock_html,
+            patch.object(evaluation_agent._report_service, "generate_pdf_report", return_value=None) as mock_pdf,
+            patch.object(evaluation_agent._report_service, "generate_text_report", return_value=None) as mock_text,
+            patch.object(
+                evaluation_agent,
+                "_extract_file_info",
+                return_value={"file_size_bytes": 1024, "nwb_version": "2.5.0", "creation_date": "2024-01-01"},
+            ),
+            patch.object(
+                evaluation_agent,
+                "_add_metadata_provenance",
+                return_value={"file_size_bytes": 1024, "nwb_version": "2.5.0", "creation_date": "2024-01-01"},
+            ),
+            patch.object(
+                evaluation_agent,
+                "_build_workflow_trace",
+                return_value={"summary": {}, "detailed_logs_sequential": [], "stage_options": []},
+            ),
+            patch.object(
+                evaluation_agent,
+                "_generate_quality_assessment",
+                new_callable=AsyncMock,
+                return_value={"overall_score": 85, "grade": "B", "assessment": "Good quality"},
+            ),
+            patch("builtins.open", mock_open()),
+        ):
             response = await evaluation_agent.handle_generate_report(message, global_state)
 
             assert response.success is True
             mock_html.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_handle_generate_report_error(
-        self, evaluation_agent, global_state
-    ):
+    async def test_handle_generate_report_error(self, evaluation_agent, global_state):
         """Test report generation with error."""
         message = MCPMessage(
             message_id="report-123",
@@ -615,9 +567,7 @@ class TestReportGeneration:
         )
 
         with patch.object(
-            evaluation_agent._report_service,
-            'generate_html_report',
-            new_callable=AsyncMock
+            evaluation_agent._report_service, "generate_html_report", new_callable=AsyncMock
         ) as mock_html:
             mock_html.side_effect = Exception("Report generation failed")
 
@@ -630,6 +580,7 @@ class TestReportGeneration:
 # ============================================================================
 # Test: Log Processing
 # ============================================================================
+
 
 @pytest.mark.unit
 class TestLogProcessing:
@@ -700,6 +651,7 @@ class TestLogProcessing:
 # Test: Workflow Trace
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestWorkflowTrace:
     """Test suite for workflow trace building."""
@@ -733,6 +685,7 @@ class TestWorkflowTrace:
 # Test: Metadata Provenance
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestMetadataProvenance:
     """Test suite for metadata provenance tracking."""
@@ -761,26 +714,21 @@ class TestMetadataProvenance:
 # Test: Quality Assessment Generation
 # ============================================================================
 
+
 @pytest.mark.unit
 @pytest.mark.llm
 class TestQualityAssessmentGeneration:
     """Test suite for quality assessment generation."""
 
     @pytest.mark.asyncio
-    async def test_generate_quality_assessment(
-        self, evaluation_agent, sample_validation_result
-    ):
+    async def test_generate_quality_assessment(self, evaluation_agent, sample_validation_result):
         """Test generating quality assessment."""
         validation_dict = {
             "is_valid": sample_validation_result.is_valid,
             "issues": sample_validation_result.issues,
-            "file_info": {
-                "file_size_bytes": 1024,
-                "nwb_version": "2.5.0",
-                "creation_date": "2024-01-01"
-            },
+            "file_info": {"file_size_bytes": 1024, "nwb_version": "2.5.0", "creation_date": "2024-01-01"},
             "overall_status": "PASSED",
-            "issue_counts": {"critical": 0, "error": 0, "warning": 0}
+            "issue_counts": {"critical": 0, "error": 0, "warning": 0},
         }
 
         assessment = await evaluation_agent._generate_quality_assessment(validation_dict)
@@ -793,21 +741,20 @@ class TestQualityAssessmentGeneration:
 # Test: Correction Guidance Generation
 # ============================================================================
 
+
 @pytest.mark.unit
 @pytest.mark.llm
 class TestCorrectionGuidanceGeneration:
     """Test suite for correction guidance generation."""
 
     @pytest.mark.asyncio
-    async def test_generate_correction_guidance(
-        self, evaluation_agent, sample_validation_result
-    ):
+    async def test_generate_correction_guidance(self, evaluation_agent, sample_validation_result):
         """Test generating correction guidance."""
         validation_dict = {
             "is_valid": sample_validation_result.is_valid,
             "issues": sample_validation_result.issues,
             "nwb_file_path": "/path/to/test.nwb",
-            "issue_counts": {"critical": 1, "error": 0, "warning": 1}
+            "issue_counts": {"critical": 1, "error": 0, "warning": 1},
         }
 
         guidance = await evaluation_agent._generate_correction_guidance(validation_dict)
@@ -820,14 +767,13 @@ class TestCorrectionGuidanceGeneration:
 # Test: Integration Scenarios
 # ============================================================================
 
+
 @pytest.mark.integration
 class TestIntegrationScenarios:
     """Integration tests for complete evaluation workflows."""
 
     @pytest.mark.asyncio
-    async def test_complete_validation_workflow(
-        self, evaluation_agent, global_state, sample_nwb_path
-    ):
+    async def test_complete_validation_workflow(self, evaluation_agent, global_state, sample_nwb_path):
         """Test complete validation workflow from start to finish."""
         # Step 1: Validate file
         val_message = MCPMessage(
@@ -838,11 +784,7 @@ class TestIntegrationScenarios:
             context={"nwb_path": sample_nwb_path},
         )
 
-        with patch.object(
-            evaluation_agent,
-            '_run_nwb_inspector',
-            new_callable=AsyncMock
-        ) as mock_inspector:
+        with patch.object(evaluation_agent, "_run_nwb_inspector", new_callable=AsyncMock) as mock_inspector:
             mock_inspector.return_value = ValidationResult(
                 is_valid=True,
                 issues=[],
@@ -850,9 +792,7 @@ class TestIntegrationScenarios:
                 inspector_version="0.5.0",
             )
 
-            val_response = await evaluation_agent.handle_run_validation(
-                val_message, global_state
-            )
+            val_response = await evaluation_agent.handle_run_validation(val_message, global_state)
 
             assert val_response.success is True
 
@@ -863,57 +803,39 @@ class TestIntegrationScenarios:
             target_agent="evaluation",
             action="generate_report",
             context={
-                "validation_result": {
-                    "overall_status": "PASSED",
-                    "is_valid": True,
-                    "issues": [],
-                    "file_info": {}
-                },
-                "nwb_path": sample_nwb_path
+                "validation_result": {"overall_status": "PASSED", "is_valid": True, "issues": [], "file_info": {}},
+                "nwb_path": sample_nwb_path,
             },
         )
 
-        with patch.object(
-            evaluation_agent._report_service,
-            'generate_html_report',
-            return_value=None
-        ) as mock_html, patch.object(
-            evaluation_agent._report_service,
-            'generate_pdf_report',
-            return_value=None
-        ), patch.object(
-            evaluation_agent._report_service,
-            'generate_text_report',
-            return_value=None
-        ), patch.object(
-            evaluation_agent,
-            '_extract_file_info',
-            return_value={
-                "file_size_bytes": 1024,
-                "nwb_version": "2.5.0",
-                "creation_date": "2024-01-01"
-            }
-        ), patch.object(
-            evaluation_agent,
-            '_add_metadata_provenance',
-            return_value={
-                "file_size_bytes": 1024,
-                "nwb_version": "2.5.0",
-                "creation_date": "2024-01-01"
-            }
-        ), patch.object(
-            evaluation_agent,
-            '_build_workflow_trace',
-            return_value={"summary": {}, "detailed_logs_sequential": [], "stage_options": []}
-        ), patch.object(
-            evaluation_agent,
-            '_generate_quality_assessment',
-            new_callable=AsyncMock,
-            return_value={"overall_score": 85, "grade": "B", "assessment": "Good quality"}
-        ), patch('builtins.open', mock_open()):
-            report_response = await evaluation_agent.handle_generate_report(
-                report_message, global_state
-            )
+        with (
+            patch.object(evaluation_agent._report_service, "generate_html_report", return_value=None) as mock_html,
+            patch.object(evaluation_agent._report_service, "generate_pdf_report", return_value=None),
+            patch.object(evaluation_agent._report_service, "generate_text_report", return_value=None),
+            patch.object(
+                evaluation_agent,
+                "_extract_file_info",
+                return_value={"file_size_bytes": 1024, "nwb_version": "2.5.0", "creation_date": "2024-01-01"},
+            ),
+            patch.object(
+                evaluation_agent,
+                "_add_metadata_provenance",
+                return_value={"file_size_bytes": 1024, "nwb_version": "2.5.0", "creation_date": "2024-01-01"},
+            ),
+            patch.object(
+                evaluation_agent,
+                "_build_workflow_trace",
+                return_value={"summary": {}, "detailed_logs_sequential": [], "stage_options": []},
+            ),
+            patch.object(
+                evaluation_agent,
+                "_generate_quality_assessment",
+                new_callable=AsyncMock,
+                return_value={"overall_score": 85, "grade": "B", "assessment": "Good quality"},
+            ),
+            patch("builtins.open", mock_open()),
+        ):
+            report_response = await evaluation_agent.handle_generate_report(report_message, global_state)
 
             assert report_response.success is True
             mock_html.assert_called_once()
@@ -922,6 +844,7 @@ class TestIntegrationScenarios:
 # ============================================================================
 # Test: Edge Cases and Error Handling
 # ============================================================================
+
 
 @pytest.mark.unit
 class TestEdgeCasesAndErrorHandling:
@@ -934,9 +857,7 @@ class TestEdgeCasesAndErrorHandling:
         assert info is not None
 
     @pytest.mark.asyncio
-    async def test_validation_with_corrupted_nwb(
-        self, evaluation_agent, tmp_path, global_state
-    ):
+    async def test_validation_with_corrupted_nwb(self, evaluation_agent, tmp_path, global_state):
         """Test validation with corrupted NWB file."""
         corrupted_file = tmp_path / "corrupted.nwb"
         corrupted_file.write_bytes(b"not a valid nwb file")
@@ -949,7 +870,7 @@ class TestEdgeCasesAndErrorHandling:
             context={"nwb_path": str(corrupted_file)},
         )
 
-        with patch('subprocess.run') as mock_run:
+        with patch("subprocess.run") as mock_run:
             mock_run.return_value = Mock(
                 returncode=1,
                 stdout="",
@@ -973,9 +894,10 @@ class TestEdgeCasesAndErrorHandling:
 # Test: File Info Extraction
 # ============================================================================
 
+
 @pytest.mark.unit
-class TestFileInfoExtraction:
-    """Test suite for _extract_file_info method."""
+class TestFileInfoExtractionH5py:
+    """Test suite for _extract_file_info method with h5py."""
 
     @pytest.mark.asyncio
     async def test_extract_file_info_with_h5py_success(self, evaluation_agent, tmp_path, global_state):
@@ -1050,41 +972,40 @@ class TestFileInfoExtraction:
         evaluation_agent._state = global_state
 
         # Mock h5py to raise exception, forcing PyNWB fallback
-        with patch('h5py.File', side_effect=Exception("h5py error")):
-            with patch('pynwb.NWBHDF5IO') as mock_pynwb:
-                mock_nwbfile = Mock()
-                mock_nwbfile.nwb_version = "2.5.0"
-                mock_nwbfile.identifier = "pynwb-test"
-                mock_nwbfile.session_description = "PyNWB test"
-                mock_nwbfile.session_start_time = "2024-01-01"
-                mock_nwbfile.session_id = "session-pynwb"
-                mock_nwbfile.experimenter = ["Dr. PyNWB"]
-                mock_nwbfile.institution = "PyNWB Inst"
-                mock_nwbfile.lab = "PyNWB Lab"
-                mock_nwbfile.experiment_description = "PyNWB exp"
+        with patch("h5py.File", side_effect=Exception("h5py error")), patch("pynwb.NWBHDF5IO") as mock_pynwb:
+            mock_nwbfile = Mock()
+            mock_nwbfile.nwb_version = "2.5.0"
+            mock_nwbfile.identifier = "pynwb-test"
+            mock_nwbfile.session_description = "PyNWB test"
+            mock_nwbfile.session_start_time = "2024-01-01"
+            mock_nwbfile.session_id = "session-pynwb"
+            mock_nwbfile.experimenter = ["Dr. PyNWB"]
+            mock_nwbfile.institution = "PyNWB Inst"
+            mock_nwbfile.lab = "PyNWB Lab"
+            mock_nwbfile.experiment_description = "PyNWB exp"
 
-                mock_subject = Mock()
-                mock_subject.subject_id = "subject-pynwb"
-                mock_subject.species = "Rattus norvegicus"
-                mock_subject.sex = "F"
-                mock_subject.age = "P60D"
-                mock_subject.date_of_birth = "2023-01-01"
-                mock_subject.description = "Test subject"
-                mock_subject.genotype = "WT"
-                mock_subject.strain = "Wistar"
-                mock_nwbfile.subject = mock_subject
+            mock_subject = Mock()
+            mock_subject.subject_id = "subject-pynwb"
+            mock_subject.species = "Rattus norvegicus"
+            mock_subject.sex = "F"
+            mock_subject.age = "P60D"
+            mock_subject.date_of_birth = "2023-01-01"
+            mock_subject.description = "Test subject"
+            mock_subject.genotype = "WT"
+            mock_subject.strain = "Wistar"
+            mock_nwbfile.subject = mock_subject
 
-                mock_io = Mock()
-                mock_io.read.return_value = mock_nwbfile
-                mock_io.__enter__ = Mock(return_value=mock_io)
-                mock_io.__exit__ = Mock(return_value=None)
-                mock_pynwb.return_value = mock_io
+            mock_io = Mock()
+            mock_io.read.return_value = mock_nwbfile
+            mock_io.__enter__ = Mock(return_value=mock_io)
+            mock_io.__exit__ = Mock(return_value=None)
+            mock_pynwb.return_value = mock_io
 
-                file_info = evaluation_agent._extract_file_info(str(nwb_file))
+            file_info = evaluation_agent._extract_file_info(str(nwb_file))
 
-                assert file_info["nwb_version"] == "2.5.0"
-                assert file_info["experimenter"] == ["Dr. PyNWB"]
-                assert file_info["subject_id"] == "subject-pynwb"
+            assert file_info["nwb_version"] == "2.5.0"
+            assert file_info["experimenter"] == ["Dr. PyNWB"]
+            assert file_info["subject_id"] == "subject-pynwb"
 
     def test_extract_file_info_nonexistent_file(self, evaluation_agent, global_state):
         """Test file info extraction with non-existent file."""
@@ -1102,14 +1023,13 @@ class TestFileInfoExtraction:
 # Test: PASSED_WITH_ISSUES Report Generation
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestPassedWithIssuesReporting:
     """Test suite for PASSED_WITH_ISSUES report generation."""
 
     @pytest.mark.asyncio
-    async def test_handle_generate_report_passed_with_issues(
-        self, evaluation_agent, tmp_path, global_state
-    ):
+    async def test_handle_generate_report_passed_with_issues(self, evaluation_agent, tmp_path, global_state):
         """Test report generation for PASSED_WITH_ISSUES status."""
         global_state.output_path = str(tmp_path / "test.nwb")
 
@@ -1131,21 +1051,11 @@ class TestPassedWithIssuesReporting:
             },
         )
 
-        with patch.object(
-            evaluation_agent._report_service,
-            'generate_json_report'
-        ) as mock_json, patch.object(
-            evaluation_agent,
-            '_extract_file_info',
-            return_value={"nwb_version": "2.5.0"}
-        ), patch.object(
-            evaluation_agent,
-            '_build_workflow_trace',
-            return_value={"summary": {}}
-        ), patch.object(
-            evaluation_agent,
-            '_add_metadata_provenance',
-            return_value={"nwb_version": "2.5.0"}
+        with (
+            patch.object(evaluation_agent._report_service, "generate_json_report") as mock_json,
+            patch.object(evaluation_agent, "_extract_file_info", return_value={"nwb_version": "2.5.0"}),
+            patch.object(evaluation_agent, "_build_workflow_trace", return_value={"summary": {}}),
+            patch.object(evaluation_agent, "_add_metadata_provenance", return_value={"nwb_version": "2.5.0"}),
         ):
             response = await evaluation_agent.handle_generate_report(message, global_state)
 
@@ -1184,33 +1094,30 @@ class TestPassedWithIssuesReporting:
             },
         )
 
-        with patch.object(
-            evaluation_agent._report_service,
-            'generate_html_report'
-        ) as mock_html, patch.object(
-            evaluation_agent._report_service,
-            'generate_pdf_report'
-        ) as mock_pdf, patch.object(
-            evaluation_agent._report_service,
-            'generate_text_report'
-        ) as mock_text, patch.object(
-            evaluation_agent,
-            '_extract_file_info',
-            return_value={"nwb_version": "2.5.0", "_provenance": {}, "_source_files": {}}
-        ), patch.object(
-            evaluation_agent,
-            '_build_workflow_trace',
-            return_value={"summary": {}}
-        ), patch.object(
-            evaluation_agent,
-            '_add_metadata_provenance',
-            return_value={"nwb_version": "2.5.0", "_provenance": {}, "_source_files": {}}
-        ), patch.object(
-            evaluation_agent,
-            '_generate_quality_assessment',
-            new_callable=AsyncMock,
-            return_value={"score": 85, "grade": "B"}
-        ), patch('builtins.open', mock_open()), patch('json.dump'):
+        with (
+            patch.object(evaluation_agent._report_service, "generate_html_report") as mock_html,
+            patch.object(evaluation_agent._report_service, "generate_pdf_report") as mock_pdf,
+            patch.object(evaluation_agent._report_service, "generate_text_report") as mock_text,
+            patch.object(
+                evaluation_agent,
+                "_extract_file_info",
+                return_value={"nwb_version": "2.5.0", "_provenance": {}, "_source_files": {}},
+            ),
+            patch.object(evaluation_agent, "_build_workflow_trace", return_value={"summary": {}}),
+            patch.object(
+                evaluation_agent,
+                "_add_metadata_provenance",
+                return_value={"nwb_version": "2.5.0", "_provenance": {}, "_source_files": {}},
+            ),
+            patch.object(
+                evaluation_agent,
+                "_generate_quality_assessment",
+                new_callable=AsyncMock,
+                return_value={"score": 85, "grade": "B"},
+            ),
+            patch("builtins.open", mock_open()),
+            patch("json.dump"),
+        ):
             response = await evaluation_agent.handle_generate_report(message, global_state)
 
             assert response.success is True
@@ -1225,14 +1132,16 @@ class TestPassedWithIssuesReporting:
 # Test: Register Evaluation Agent
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestRegisterEvaluationAgent:
     """Test suite for register_evaluation_agent function."""
 
     def test_register_evaluation_agent_with_llm(self):
         """Test registering evaluation agent with LLM service."""
-        from agents.evaluation_agent import register_evaluation_agent
         from unittest.mock import Mock
+
+        from agents.evaluation_agent import register_evaluation_agent
 
         mock_mcp = Mock()
         mock_llm = Mock()
@@ -1251,8 +1160,9 @@ class TestRegisterEvaluationAgent:
 
     def test_register_evaluation_agent_without_llm(self):
         """Test registering evaluation agent without LLM service."""
-        from agents.evaluation_agent import register_evaluation_agent
         from unittest.mock import Mock
+
+        from agents.evaluation_agent import register_evaluation_agent
 
         mock_mcp = Mock()
 
@@ -1266,6 +1176,7 @@ class TestRegisterEvaluationAgent:
 # Test: LLM Exception Handling
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestLLMExceptionHandling:
     """Test suite for exception handling in LLM-powered features."""
@@ -1273,7 +1184,6 @@ class TestLLMExceptionHandling:
     @pytest.mark.asyncio
     async def test_prioritize_issues_llm_failure(self, evaluation_agent, global_state):
         """Test issue prioritization falls back gracefully on LLM failure."""
-        from models import ValidationIssue, ValidationSeverity
 
         issues = [
             ValidationIssue(
@@ -1298,7 +1208,7 @@ class TestLLMExceptionHandling:
     @pytest.mark.asyncio
     async def test_assess_quality_llm_failure(self, evaluation_agent, tmp_path, global_state):
         """Test quality assessment falls back gracefully on LLM failure."""
-        from models import ValidationResult, ValidationIssue, ValidationSeverity
+        from models import ValidationResult
 
         nwb_file = tmp_path / "test.nwb"
         nwb_file.write_bytes(b"mock")
@@ -1318,15 +1228,11 @@ class TestLLMExceptionHandling:
         )
 
         # Mock LLM to raise exception
-        evaluation_agent._llm_service.generate_structured_output = AsyncMock(
-            side_effect=Exception("LLM error")
-        )
+        evaluation_agent._llm_service.generate_structured_output = AsyncMock(side_effect=Exception("LLM error"))
 
         # Mock _extract_file_info to avoid actual file reading
-        with patch.object(evaluation_agent, '_extract_file_info', return_value={}):
-            result = await evaluation_agent._assess_nwb_quality(
-                str(nwb_file), validation_result, global_state
-            )
+        with patch.object(evaluation_agent, "_extract_file_info", return_value={}):
+            result = await evaluation_agent._assess_nwb_quality(str(nwb_file), validation_result, global_state)
 
         # Should return fallback score
         assert result["score"] >= 0
@@ -1338,14 +1244,13 @@ class TestLLMExceptionHandling:
 # Test: Analyze Corrections Edge Cases
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestAnalyzeCorrectionsEdgeCases:
     """Test suite for edge cases in handle_analyze_corrections."""
 
     @pytest.mark.asyncio
-    async def test_analyze_corrections_missing_validation_result(
-        self, evaluation_agent, global_state
-    ):
+    async def test_analyze_corrections_missing_validation_result(self, evaluation_agent, global_state):
         """Test analyze_corrections with missing validation_result."""
         message = MCPMessage(
             message_id="analyze-123",
@@ -1363,7 +1268,6 @@ class TestAnalyzeCorrectionsEdgeCases:
     @pytest.mark.asyncio
     async def test_analyze_corrections_success(self, evaluation_agent, global_state):
         """Test analyze_corrections success path."""
-        from models import ValidationIssue, ValidationSeverity
 
         validation_result_data = {
             "is_valid": False,
@@ -1418,14 +1322,13 @@ class TestAnalyzeCorrectionsEdgeCases:
 # Test: FAILED Report Generation
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestFailedReportGeneration:
     """Test suite for FAILED validation report generation."""
 
     @pytest.mark.asyncio
-    async def test_handle_generate_report_failed_validation(
-        self, evaluation_agent, tmp_path, global_state
-    ):
+    async def test_handle_generate_report_failed_validation(self, evaluation_agent, tmp_path, global_state):
         """Test report generation for FAILED validation."""
         global_state.output_path = str(tmp_path / "test.nwb")
 
@@ -1453,26 +1356,21 @@ class TestFailedReportGeneration:
             },
         )
 
-        with patch.object(
-            evaluation_agent._report_service,
-            'generate_json_report'
-        ) as mock_json, patch.object(
-            evaluation_agent,
-            '_extract_file_info',
-            return_value={"nwb_version": "2.5.0", "_provenance": {}}
-        ), patch.object(
-            evaluation_agent,
-            '_add_metadata_provenance',
-            return_value={"nwb_version": "2.5.0", "_provenance": {}}
-        ), patch.object(
-            evaluation_agent,
-            '_build_workflow_trace',
-            return_value={"summary": {}}
-        ), patch.object(
-            evaluation_agent,
-            '_generate_correction_guidance',
-            new_callable=AsyncMock,
-            return_value={"suggestions": []}
+        with (
+            patch.object(evaluation_agent._report_service, "generate_json_report") as mock_json,
+            patch.object(
+                evaluation_agent, "_extract_file_info", return_value={"nwb_version": "2.5.0", "_provenance": {}}
+            ),
+            patch.object(
+                evaluation_agent, "_add_metadata_provenance", return_value={"nwb_version": "2.5.0", "_provenance": {}}
+            ),
+            patch.object(evaluation_agent, "_build_workflow_trace", return_value={"summary": {}}),
+            patch.object(
+                evaluation_agent,
+                "_generate_correction_guidance",
+                new_callable=AsyncMock,
+                return_value={"suggestions": []},
+            ),
         ):
             response = await evaluation_agent.handle_generate_report(message, global_state)
 
@@ -1481,9 +1379,7 @@ class TestFailedReportGeneration:
             mock_json.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_handle_generate_report_failed_no_nwb_path(
-        self, evaluation_agent, global_state
-    ):
+    async def test_handle_generate_report_failed_no_nwb_path(self, evaluation_agent, global_state):
         """Test FAILED report generation without NWB path."""
         validation_result = {
             "overall_status": "FAILED",
@@ -1502,18 +1398,15 @@ class TestFailedReportGeneration:
             },
         )
 
-        with patch.object(
-            evaluation_agent._report_service,
-            'generate_json_report'
-        ) as mock_json, patch.object(
-            evaluation_agent,
-            '_build_workflow_trace',
-            return_value={"summary": {}}
-        ), patch.object(
-            evaluation_agent,
-            '_generate_correction_guidance',
-            new_callable=AsyncMock,
-            return_value={"suggestions": []}
+        with (
+            patch.object(evaluation_agent._report_service, "generate_json_report") as mock_json,
+            patch.object(evaluation_agent, "_build_workflow_trace", return_value={"summary": {}}),
+            patch.object(
+                evaluation_agent,
+                "_generate_correction_guidance",
+                new_callable=AsyncMock,
+                return_value={"suggestions": []},
+            ),
         ):
             response = await evaluation_agent.handle_generate_report(message, global_state)
 
@@ -1525,16 +1418,15 @@ class TestFailedReportGeneration:
 # Test: _analyze_quality Edge Cases
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestAnalyzeQualityEdgeCases:
     """Test suite for _analyze_quality edge cases."""
 
     @pytest.mark.asyncio
-    async def test_analyze_quality_with_metadata_completeness(
-        self, evaluation_agent, tmp_path, global_state
-    ):
+    async def test_analyze_quality_with_metadata_completeness(self, evaluation_agent, tmp_path, global_state):
         """Test quality analysis includes metadata completeness."""
-        from models import ValidationResult, ValidationIssue, ValidationSeverity
+        from models import ValidationResult
 
         nwb_file = tmp_path / "test.nwb"
         nwb_file.write_bytes(b"mock")
@@ -1560,16 +1452,14 @@ class TestAnalyzeQualityEdgeCases:
         # Mock file info extraction
         with patch.object(
             evaluation_agent,
-            '_extract_file_info',
+            "_extract_file_info",
             return_value={
                 "experimenter": ["Dr. Smith"],
                 "institution": "MIT",
                 "subject_id": "mouse-001",
-            }
+            },
         ):
-            result = await evaluation_agent._assess_nwb_quality(
-                str(nwb_file), validation_result, global_state
-            )
+            result = await evaluation_agent._assess_nwb_quality(str(nwb_file), validation_result, global_state)
 
         assert result["score"] == 92
         assert result["grade"] == "A"
@@ -1579,6 +1469,7 @@ class TestAnalyzeQualityEdgeCases:
 # ============================================================================
 # Test: Build Workflow Trace
 # ============================================================================
+
 
 @pytest.mark.unit
 class TestBuildWorkflowTraceDetailed:
@@ -1597,9 +1488,7 @@ class TestBuildWorkflowTraceDetailed:
         assert "summary" in trace
         assert len(trace["detailed_logs_sequential"]) == 4
 
-    def test_build_workflow_trace_with_stage_categorization(
-        self, evaluation_agent, global_state
-    ):
+    def test_build_workflow_trace_with_stage_categorization(self, evaluation_agent, global_state):
         """Test workflow trace categorizes logs by stage."""
         # Add logs that should be categorized by stage
         global_state.add_log("info", "File uploaded")
@@ -1617,14 +1506,13 @@ class TestBuildWorkflowTraceDetailed:
 # Test: Generate Correction Guidance
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestGenerateCorrectionGuidanceDetailed:
     """Test suite for correction guidance generation."""
 
     @pytest.mark.asyncio
-    async def test_generate_correction_guidance_with_critical_issues(
-        self, evaluation_agent
-    ):
+    async def test_generate_correction_guidance_with_critical_issues(self, evaluation_agent):
         """Test correction guidance prioritizes critical issues."""
         validation_result = {
             "issues": [
@@ -1659,14 +1547,13 @@ class TestGenerateCorrectionGuidanceDetailed:
 # Test: Validation After Correction Attempt
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestValidationVariants:
     """Test suite for validation variants."""
 
     @pytest.mark.asyncio
-    async def test_validation_with_warnings_only(
-        self, evaluation_agent, tmp_path, global_state
-    ):
+    async def test_validation_with_warnings_only(self, evaluation_agent, tmp_path, global_state):
         """Test validation with warnings only."""
         nwb_file = tmp_path / "test.nwb"
         nwb_file.write_bytes(b"mock nwb")
@@ -1679,15 +1566,15 @@ class TestValidationVariants:
             context={"nwb_path": str(nwb_file)},
         )
 
-        with patch('subprocess.run') as mock_run:
+        with patch("subprocess.run") as mock_run:
             mock_run.return_value = Mock(
                 returncode=0,
-                stdout=json.dumps({
-                    "messages": [
-                        {"message": "Warning message", "severity": 1, "location": "/"}
-                    ],
-                    "summary": {"info": 0, "warning": 1, "error": 0, "critical": 0},
-                }),
+                stdout=json.dumps(
+                    {
+                        "messages": [{"message": "Warning message", "severity": 1, "location": "/"}],
+                        "summary": {"info": 0, "warning": 1, "error": 0, "critical": 0},
+                    }
+                ),
                 stderr="",
             )
 
@@ -1697,15 +1584,13 @@ class TestValidationVariants:
             assert global_state.overall_status == ValidationOutcome.PASSED_WITH_ISSUES
 
     @pytest.mark.asyncio
-    async def test_run_nwb_inspector_handles_exception(
-        self, evaluation_agent, tmp_path, global_state
-    ):
+    async def test_run_nwb_inspector_handles_exception(self, evaluation_agent, tmp_path, global_state):
         """Test NWB inspector handles exceptions gracefully."""
         nwb_file = tmp_path / "test.nwb"
         nwb_file.write_bytes(b"mock")
 
         # Mock inspect_nwbfile to raise an exception
-        with patch('nwbinspector.inspect_nwbfile', side_effect=Exception("Inspector error")):
+        with patch("nwbinspector.inspect_nwbfile", side_effect=Exception("Inspector error")):
             # Should raise the exception since there's no fallback
             with pytest.raises(Exception, match="Inspector error"):
                 await evaluation_agent._run_nwb_inspector(str(nwb_file))
@@ -1715,14 +1600,13 @@ class TestValidationVariants:
 # Test: Report Generation Exception Handling
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestReportGenerationExceptionHandling:
     """Test suite for report generation error handling."""
 
     @pytest.mark.asyncio
-    async def test_report_generation_handles_exception(
-        self, evaluation_agent, tmp_path, global_state
-    ):
+    async def test_report_generation_handles_exception(self, evaluation_agent, tmp_path, global_state):
         """Test report generation handles exceptions gracefully."""
         validation_result = {
             "overall_status": "PASSED",
@@ -1743,9 +1627,7 @@ class TestReportGenerationExceptionHandling:
 
         # Mock report service to raise exception
         with patch.object(
-            evaluation_agent._report_service,
-            'generate_html_report',
-            side_effect=Exception("Report generation failed")
+            evaluation_agent._report_service, "generate_html_report", side_effect=Exception("Report generation failed")
         ):
             response = await evaluation_agent.handle_generate_report(message, global_state)
 
@@ -1758,14 +1640,13 @@ class TestReportGenerationExceptionHandling:
 # Test: Validation Outcome Edge Cases
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestValidationOutcomeEdgeCases:
     """Test suite for validation outcome determination."""
 
     @pytest.mark.asyncio
-    async def test_validation_passed_with_info_only(
-        self, evaluation_agent, tmp_path, global_state
-    ):
+    async def test_validation_passed_with_info_only(self, evaluation_agent, tmp_path, global_state):
         """Test validation with info messages only is PASSED_WITH_ISSUES."""
         nwb_file = tmp_path / "test.nwb"
         nwb_file.write_bytes(b"mock nwb")
@@ -1778,15 +1659,15 @@ class TestValidationOutcomeEdgeCases:
             context={"nwb_path": str(nwb_file)},
         )
 
-        with patch('subprocess.run') as mock_run:
+        with patch("subprocess.run") as mock_run:
             mock_run.return_value = Mock(
                 returncode=0,
-                stdout=json.dumps({
-                    "messages": [
-                        {"message": "Info message", "severity": 3, "location": "/"}
-                    ],
-                    "summary": {"info": 1, "warning": 0, "error": 0, "critical": 0},
-                }),
+                stdout=json.dumps(
+                    {
+                        "messages": [{"message": "Info message", "severity": 3, "location": "/"}],
+                        "summary": {"info": 1, "warning": 0, "error": 0, "critical": 0},
+                    }
+                ),
                 stderr="",
             )
 
@@ -1795,8 +1676,8 @@ class TestValidationOutcomeEdgeCases:
             assert response.success is True
             assert global_state.overall_status == ValidationOutcome.PASSED_WITH_ISSUES
 
-@pytest.mark.unit
 
+@pytest.mark.unit
 @pytest.mark.unit
 class TestRealValidationWorkflows:
     """

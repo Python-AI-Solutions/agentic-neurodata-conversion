@@ -11,20 +11,17 @@ Tests cover:
 - Summary generation
 - LLM-assisted analysis
 """
-import pytest
-from datetime import datetime
-from typing import Dict, Any, List
-from unittest.mock import Mock, AsyncMock, patch
-import sys
+
 import os
+import sys
+
+import pytest
 
 # Add backend/src to Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend", "src"))
 
 from agents.intelligent_validation_analyzer import IntelligentValidationAnalyzer
-from models import ValidationResult, ValidationStatus, GlobalState
-from services import LLMService
-
+from models import GlobalState, ValidationResult, ValidationStatus
 
 # ============================================================================
 # Fixtures
@@ -32,6 +29,7 @@ from services import LLMService
 
 # Note: mock_llm_quality_assessor is provided by root conftest.py
 # It returns quality assessment responses suitable for validation analysis
+
 
 @pytest.fixture
 def analyzer_with_llm(mock_llm_quality_assessor):
@@ -54,6 +52,7 @@ def analyzer_without_llm():
 def sample_validation_result():
     """Create sample validation result with issues."""
     from models import ValidationIssue, ValidationSeverity
+
     return ValidationResult(
         is_valid=False,
         issues=[
@@ -138,6 +137,7 @@ def sample_file_context():
 # Test: Initialization
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestIntelligentValidationAnalyzerInitialization:
     """Test suite for IntelligentValidationAnalyzer initialization."""
@@ -160,6 +160,7 @@ class TestIntelligentValidationAnalyzerInitialization:
 # ============================================================================
 # Test: Validation Result Analysis
 # ============================================================================
+
 
 @pytest.mark.unit
 class TestValidationResultAnalysis:
@@ -187,7 +188,9 @@ class TestValidationResultAnalysis:
         assert isinstance(analysis, dict)
         # Implementation uses generate_structured_output, not generate_response
         # Note: May be called multiple times for different analysis steps
-        assert mock_llm_service.generate_structured_output.called or True  # Allow test to pass even if not called in basic flow
+        assert (
+            mock_llm_service.generate_structured_output.called or True
+        )  # Allow test to pass even if not called in basic flow
 
     @pytest.mark.asyncio
     async def test_analyze_validation_results_without_llm(
@@ -204,9 +207,7 @@ class TestValidationResultAnalysis:
         # Should use basic analysis
 
     @pytest.mark.asyncio
-    async def test_analyze_validation_results_passed(
-        self, analyzer_with_llm, sample_file_context
-    ):
+    async def test_analyze_validation_results_passed(self, analyzer_with_llm, sample_file_context):
         """Test analyzing passed validation."""
         passed_result = ValidationResult(
             is_valid=True,
@@ -216,17 +217,13 @@ class TestValidationResultAnalysis:
         )
 
         state = GlobalState()
-        analysis = await analyzer_with_llm.analyze_validation_results(
-            passed_result, sample_file_context, state
-        )
+        analysis = await analyzer_with_llm.analyze_validation_results(passed_result, sample_file_context, state)
 
         assert analysis is not None
         # Should indicate no issues found
 
     @pytest.mark.asyncio
-    async def test_analyze_validation_results_empty_issues(
-        self, analyzer_with_llm, sample_file_context
-    ):
+    async def test_analyze_validation_results_empty_issues(self, analyzer_with_llm, sample_file_context):
         """Test analyzing validation with no issues."""
         result = ValidationResult(
             status=ValidationStatus.PASSED,
@@ -245,24 +242,21 @@ class TestValidationResultAnalysis:
 # Test: Basic Analysis
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestBasicAnalysis:
     """Test suite for basic analysis without LLM."""
 
-    def test_basic_analysis_with_issues(
-        self, analyzer_without_llm, sample_validation_result
-    ):
+    def test_basic_analysis_with_issues(self, analyzer_without_llm, sample_validation_result):
         """Test basic analysis with issues."""
         state = GlobalState()
         analysis = analyzer_without_llm._basic_analysis(sample_validation_result, state)
 
         assert analysis is not None
         assert isinstance(analysis, dict)
-        assert 'issues_by_severity' in analysis or 'summary' in analysis or True
+        assert "issues_by_severity" in analysis or "summary" in analysis or True
 
-    def test_basic_analysis_empty_issues(
-        self, analyzer_without_llm
-    ):
+    def test_basic_analysis_empty_issues(self, analyzer_without_llm):
         """Test basic analysis with empty issues."""
         empty_result = ValidationResult(
             is_valid=True,
@@ -276,9 +270,7 @@ class TestBasicAnalysis:
         assert analysis is not None
         assert isinstance(analysis, dict)
 
-    def test_basic_analysis_categorizes_by_severity(
-        self, analyzer_without_llm, sample_validation_result
-    ):
+    def test_basic_analysis_categorizes_by_severity(self, analyzer_without_llm, sample_validation_result):
         """Test that basic analysis categorizes by severity."""
         state = GlobalState()
         analysis = analyzer_without_llm._basic_analysis(sample_validation_result, state)
@@ -291,14 +283,13 @@ class TestBasicAnalysis:
 # Test: Issue Grouping
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestIssueGrouping:
     """Test suite for grouping related issues."""
 
     @pytest.mark.asyncio
-    async def test_group_related_issues_with_llm(
-        self, analyzer_with_llm, sample_validation_result, mock_llm_service
-    ):
+    async def test_group_related_issues_with_llm(self, analyzer_with_llm, sample_validation_result, mock_llm_service):
         """Test grouping related issues with LLM."""
         mock_llm_service.generate_response.return_value = """
         {
@@ -318,9 +309,7 @@ class TestIssueGrouping:
         assert isinstance(groups, (list, dict))
 
     @pytest.mark.asyncio
-    async def test_group_related_issues_without_llm(
-        self, analyzer_without_llm, sample_validation_result
-    ):
+    async def test_group_related_issues_without_llm(self, analyzer_without_llm, sample_validation_result):
         """Test grouping without LLM uses basic categorization."""
         # Without LLM, may return basic grouping or None
         try:
@@ -332,9 +321,7 @@ class TestIssueGrouping:
             pass
 
     @pytest.mark.asyncio
-    async def test_group_related_issues_empty_list(
-        self, analyzer_with_llm
-    ):
+    async def test_group_related_issues_empty_list(self, analyzer_with_llm):
         """Test grouping with empty issue list."""
         state = GlobalState()
         groups = await analyzer_with_llm._group_related_issues([], state)
@@ -345,6 +332,7 @@ class TestIssueGrouping:
 # ============================================================================
 # Test: Root Cause Identification
 # ============================================================================
+
 
 @pytest.mark.unit
 @pytest.mark.llm
@@ -372,11 +360,10 @@ class TestRootCauseIdentification:
         assert isinstance(root_causes, (list, dict, str))
 
     @pytest.mark.asyncio
-    async def test_identify_root_causes_single_issue(
-        self, analyzer_with_llm, sample_file_context, mock_llm_service
-    ):
+    async def test_identify_root_causes_single_issue(self, analyzer_with_llm, sample_file_context, mock_llm_service):
         """Test identifying root cause for single issue."""
         from models import ValidationIssue, ValidationSeverity
+
         single_issue = [
             ValidationIssue(
                 severity=ValidationSeverity.CRITICAL,
@@ -418,15 +405,14 @@ class TestRootCauseIdentification:
 # Test: Fix Order Determination
 # ============================================================================
 
+
 @pytest.mark.unit
 @pytest.mark.llm
 class TestFixOrderDetermination:
     """Test suite for determining fix order."""
 
     @pytest.mark.asyncio
-    async def test_determine_fix_order_with_llm(
-        self, analyzer_with_llm, mock_llm_service
-    ):
+    async def test_determine_fix_order_with_llm(self, analyzer_with_llm, mock_llm_service):
         """Test determining fix order with LLM."""
         mock_llm_service.generate_response.return_value = """
         Recommended fix order:
@@ -444,9 +430,7 @@ class TestFixOrderDetermination:
         assert isinstance(fix_order, (list, dict, str))
 
     @pytest.mark.asyncio
-    async def test_determine_fix_order_prioritizes_critical(
-        self, analyzer_with_llm
-    ):
+    async def test_determine_fix_order_prioritizes_critical(self, analyzer_with_llm):
         """Test that fix order prioritizes critical issues."""
         state = GlobalState()
         root_causes = [{"cause": "Critical issues", "related_issues": []}]
@@ -457,9 +441,7 @@ class TestFixOrderDetermination:
         assert fix_order is not None
 
     @pytest.mark.asyncio
-    async def test_determine_fix_order_empty_issues(
-        self, analyzer_with_llm
-    ):
+    async def test_determine_fix_order_empty_issues(self, analyzer_with_llm):
         """Test determining fix order with no issues."""
         state = GlobalState()
         root_causes = []
@@ -473,15 +455,14 @@ class TestFixOrderDetermination:
 # Test: Impact Assessment
 # ============================================================================
 
+
 @pytest.mark.unit
 @pytest.mark.llm
 class TestImpactAssessment:
     """Test suite for issue impact assessment."""
 
     @pytest.mark.asyncio
-    async def test_assess_issue_impact_with_llm(
-        self, analyzer_with_llm, sample_validation_result, mock_llm_service
-    ):
+    async def test_assess_issue_impact_with_llm(self, analyzer_with_llm, sample_validation_result, mock_llm_service):
         """Test assessing impact of issues with LLM."""
         mock_llm_service.generate_response.return_value = """
         Impact: HIGH
@@ -490,21 +471,24 @@ class TestImpactAssessment:
 
         state = GlobalState()
         root_causes = [{"cause": "Missing metadata"}]
-        impact = await analyzer_with_llm._assess_issue_impact(
-            sample_validation_result.issues, root_causes, state
-        )
+        impact = await analyzer_with_llm._assess_issue_impact(sample_validation_result.issues, root_causes, state)
 
         assert impact is not None
         assert isinstance(impact, (str, dict))
 
     @pytest.mark.asyncio
-    async def test_assess_issue_impact_critical_vs_warning(
-        self, analyzer_with_llm
-    ):
+    async def test_assess_issue_impact_critical_vs_warning(self, analyzer_with_llm):
         """Test that critical issues have higher impact than warnings."""
         from models import ValidationIssue, ValidationSeverity
-        critical_issues = [ValidationIssue(severity=ValidationSeverity.CRITICAL, message="Critical error", location="/", check_name="test")]
-        warning_issues = [ValidationIssue(severity=ValidationSeverity.WARNING, message="Warning", location="/", check_name="test")]
+
+        critical_issues = [
+            ValidationIssue(
+                severity=ValidationSeverity.CRITICAL, message="Critical error", location="/", check_name="test"
+            )
+        ]
+        warning_issues = [
+            ValidationIssue(severity=ValidationSeverity.WARNING, message="Warning", location="/", check_name="test")
+        ]
 
         state = GlobalState()
         root_causes = []
@@ -520,13 +504,12 @@ class TestImpactAssessment:
 # Test: Quick Wins Identification
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestQuickWinsIdentification:
     """Test suite for identifying quick wins."""
 
-    def test_identify_quick_wins_with_issues(
-        self, analyzer_without_llm, sample_validation_result
-    ):
+    def test_identify_quick_wins_with_issues(self, analyzer_without_llm, sample_validation_result):
         """Test identifying quick wins from issues."""
         impact_analysis = {"low_impact": [], "medium_impact": [], "high_impact": []}
         quick_wins = analyzer_without_llm._identify_quick_wins(sample_validation_result.issues, impact_analysis)
@@ -534,9 +517,7 @@ class TestQuickWinsIdentification:
         assert quick_wins is not None
         assert isinstance(quick_wins, list)
 
-    def test_identify_quick_wins_empty_issues(
-        self, analyzer_without_llm
-    ):
+    def test_identify_quick_wins_empty_issues(self, analyzer_without_llm):
         """Test identifying quick wins with no issues."""
         impact_analysis = {}
         quick_wins = analyzer_without_llm._identify_quick_wins([], impact_analysis)
@@ -545,11 +526,10 @@ class TestQuickWinsIdentification:
         assert isinstance(quick_wins, list)
         assert len(quick_wins) == 0
 
-    def test_identify_quick_wins_prioritizes_easy_fixes(
-        self, analyzer_without_llm
-    ):
+    def test_identify_quick_wins_prioritizes_easy_fixes(self, analyzer_without_llm):
         """Test that quick wins prioritizes easy fixes."""
         from models import ValidationIssue, ValidationSeverity
+
         issues = [
             ValidationIssue(
                 severity=ValidationSeverity.INFO,
@@ -576,13 +556,12 @@ class TestQuickWinsIdentification:
 # Test: Summary Generation
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestSummaryGeneration:
     """Test suite for summary generation."""
 
-    def test_generate_summary_with_analysis(
-        self, analyzer_without_llm
-    ):
+    def test_generate_summary_with_analysis(self, analyzer_without_llm):
         """Test generating summary from analysis."""
         root_causes = [{"cause": "Missing metadata", "related_issues": []}]
         quick_wins = [{"issue": "Add institution"}]
@@ -594,9 +573,7 @@ class TestSummaryGeneration:
         assert isinstance(summary, str)
         assert len(summary) > 0
 
-    def test_generate_summary_no_issues(
-        self, analyzer_without_llm
-    ):
+    def test_generate_summary_no_issues(self, analyzer_without_llm):
         """Test generating summary with no issues."""
         root_causes = []
         quick_wins = []
@@ -607,9 +584,7 @@ class TestSummaryGeneration:
         assert summary is not None
         assert isinstance(summary, str)
 
-    def test_generate_summary_includes_severity_counts(
-        self, analyzer_without_llm, sample_validation_result
-    ):
+    def test_generate_summary_includes_severity_counts(self, analyzer_without_llm, sample_validation_result):
         """Test that summary includes severity counts."""
         state = GlobalState()
         analysis = analyzer_without_llm._basic_analysis(sample_validation_result, state)
@@ -630,14 +605,13 @@ class TestSummaryGeneration:
 # Test: Integration Scenarios
 # ============================================================================
 
+
 @pytest.mark.integration
 class TestIntegrationScenarios:
     """Integration tests for validation analysis."""
 
     @pytest.mark.asyncio
-    async def test_complete_analysis_workflow(
-        self, analyzer_with_llm, sample_validation_result, sample_file_context
-    ):
+    async def test_complete_analysis_workflow(self, analyzer_with_llm, sample_validation_result, sample_file_context):
         """Test complete analysis workflow."""
         # Analyze validation results
         state = GlobalState()
@@ -650,11 +624,10 @@ class TestIntegrationScenarios:
         assert isinstance(analysis, dict)
 
     @pytest.mark.asyncio
-    async def test_analysis_handles_complex_issues(
-        self, analyzer_with_llm, sample_file_context
-    ):
+    async def test_analysis_handles_complex_issues(self, analyzer_with_llm, sample_file_context):
         """Test analysis of complex validation issues."""
         from models import ValidationIssue, ValidationSeverity
+
         complex_result = ValidationResult(
             is_valid=False,
             issues=[
@@ -669,9 +642,7 @@ class TestIntegrationScenarios:
         )
 
         state = GlobalState()
-        analysis = await analyzer_with_llm.analyze_validation_results(
-            complex_result, sample_file_context, state
-        )
+        analysis = await analyzer_with_llm.analyze_validation_results(complex_result, sample_file_context, state)
 
         assert analysis is not None
 
@@ -680,16 +651,16 @@ class TestIntegrationScenarios:
 # Test: Edge Cases and Error Handling
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestEdgeCasesAndErrorHandling:
     """Test suite for edge cases and error handling."""
 
     @pytest.mark.asyncio
-    async def test_analyze_with_malformed_issues(
-        self, analyzer_with_llm, sample_file_context
-    ):
+    async def test_analyze_with_malformed_issues(self, analyzer_with_llm, sample_file_context):
         """Test analysis with malformed issue data."""
         from models import ValidationIssue, ValidationSeverity
+
         malformed_result = ValidationResult(
             is_valid=False,
             issues=[
@@ -701,9 +672,7 @@ class TestEdgeCasesAndErrorHandling:
 
         # Should handle gracefully
         state = GlobalState()
-        analysis = await analyzer_with_llm.analyze_validation_results(
-            malformed_result, sample_file_context, state
-        )
+        analysis = await analyzer_with_llm.analyze_validation_results(malformed_result, sample_file_context, state)
 
         assert analysis is not None
 

@@ -8,13 +8,14 @@ Tests the conversion agent including:
 - NeuroConv integration
 - Error handling
 """
-import pytest
-from pathlib import Path
-from unittest.mock import Mock, patch, AsyncMock
-import tempfile
 
+import tempfile
+from pathlib import Path
+from unittest.mock import AsyncMock, patch
+
+import pytest
 from agents.conversion_agent import ConversionAgent
-from models import GlobalState, ConversionStatus, LogLevel, MCPMessage, MCPResponse
+from models import ConversionStatus, GlobalState, MCPMessage
 from services.llm_service import MockLLMService
 
 
@@ -43,7 +44,7 @@ class TestConversionAgentInitialization:
     def test_get_supported_formats_fallback(self):
         """Test _get_supported_formats fallback when NeuroConv fails."""
         # Mock get_format_summaries to fail (need to patch where it's imported from)
-        with patch('neuroconv.get_format_summaries', side_effect=Exception("Mock error")):
+        with patch("neuroconv.get_format_summaries", side_effect=Exception("Mock error")):
             # Create new agent which will trigger fallback
             agent = ConversionAgent(llm_service=None)
 
@@ -122,15 +123,18 @@ class TestFormatDetection:
 
         # Fixed: Use patch.object with AsyncMock for proper async method mocking
         # Also mock _get_supported_formats to include "SpikeGLX" for validation
-        with patch.object(
-            agent_with_llm,
-            '_detect_format_with_llm',
-            new_callable=AsyncMock,
-            return_value={"format": "SpikeGLX", "confidence": 85}
-        ), patch.object(
-            agent_with_llm,
-            '_get_supported_formats',
-            return_value=["SpikeGLX", "OpenEphys", "Neuropixels", "AlphaOmega"]
+        with (
+            patch.object(
+                agent_with_llm,
+                "_detect_format_with_llm",
+                new_callable=AsyncMock,
+                return_value={"format": "SpikeGLX", "confidence": 85},
+            ),
+            patch.object(
+                agent_with_llm,
+                "_get_supported_formats",
+                return_value=["SpikeGLX", "OpenEphys", "Neuropixels", "AlphaOmega"],
+            ),
         ):
             state = GlobalState()
             result = await agent_with_llm._detect_format(str(temp_dir / "data.bin"), state)
@@ -149,9 +153,9 @@ class TestFormatDetection:
         # Mock LLM to return low confidence using patch.object
         with patch.object(
             agent_with_llm,
-            '_detect_format_with_llm',
+            "_detect_format_with_llm",
             new_callable=AsyncMock,
-            return_value={"format": "Unknown", "confidence": 50}
+            return_value={"format": "Unknown", "confidence": 50},
         ):
             state = GlobalState()
             result = await agent_with_llm._detect_format(str(temp_dir), state)
@@ -238,7 +242,9 @@ class TestFormatDetection:
 
         # .nidq files are detected as SpikeGLX (which is the correct format interface)
         assert result == "SpikeGLX"
-        assert any("pattern matching" in log.message.lower() and "spikeglx" in log.message.lower() for log in state.logs)
+        assert any(
+            "pattern matching" in log.message.lower() and "spikeglx" in log.message.lower() for log in state.logs
+        )
 
     @pytest.mark.asyncio
     async def test_detect_axon_abf_file(self, agent_no_llm, temp_dir):
@@ -317,7 +323,7 @@ class TestParameterOptimization:
 
         # Mock LLM to raise error
         async def mock_generate_error(*args, **kwargs):
-            raise Exception("LLM API Error")
+            raise RuntimeError("LLM API Error")
 
         agent_with_llm._llm_service.generate_structured_output = mock_generate_error
 
@@ -430,7 +436,7 @@ class TestProgressNarration:
 
         # Fixed: Mock generate_completion (not generate_text) to raise error
         async def mock_generate_error(*args, **kwargs):
-            raise Exception("LLM Error")
+            raise RuntimeError("LLM Error")
 
         agent_with_llm._llm_service.generate_completion = mock_generate_error
 
@@ -514,9 +520,9 @@ class TestHandleDetectFormat:
 
         # Mock _detect_format to raise an exception
         async def mock_detect_error(*args, **kwargs):
-            raise Exception("Simulated detection error")
+            raise RuntimeError("Simulated detection error")
 
-        with patch.object(agent, '_detect_format', side_effect=mock_detect_error):
+        with patch.object(agent, "_detect_format", side_effect=mock_detect_error):
             message = MCPMessage(
                 target_agent="conversion",
                 action="detect_format",
@@ -639,7 +645,7 @@ class TestFileSizeFormatting:
         output_file = tmp_path / "output.nwb"
 
         # Mock large file size
-        with patch.object(Path, 'stat') as mock_stat:
+        with patch.object(Path, "stat") as mock_stat:
             mock_stat.return_value.st_size = 2 * 1024 * 1024 * 1024  # 2 GB
 
             message = MCPMessage(
@@ -655,7 +661,7 @@ class TestFileSizeFormatting:
             state = GlobalState()
 
             # Mock the actual conversion to avoid NeuroConv
-            with patch.object(agent, '_run_neuroconv_conversion'):
+            with patch.object(agent, "_run_neuroconv_conversion"):
                 response = await agent.handle_run_conversion(message, state)
 
             # Check logs contain GB formatting
@@ -671,7 +677,7 @@ class TestFileSizeFormatting:
         output_file = tmp_path / "output.nwb"
 
         # Mock medium file size
-        with patch.object(Path, 'stat') as mock_stat:
+        with patch.object(Path, "stat") as mock_stat:
             mock_stat.return_value.st_size = 50 * 1024 * 1024  # 50 MB
 
             message = MCPMessage(
@@ -686,7 +692,7 @@ class TestFileSizeFormatting:
             )
             state = GlobalState()
 
-            with patch.object(agent, '_run_neuroconv_conversion'):
+            with patch.object(agent, "_run_neuroconv_conversion"):
                 response = await agent.handle_run_conversion(message, state)
 
             log_messages = [log.message for log in state.logs]
@@ -713,7 +719,7 @@ class TestFileSizeFormatting:
         )
         state = GlobalState()
 
-        with patch.object(agent, '_run_neuroconv_conversion'):
+        with patch.object(agent, "_run_neuroconv_conversion"):
             response = await agent.handle_run_conversion(message, state)
 
         log_messages = [log.message for log in state.logs]
@@ -751,7 +757,7 @@ class TestDurationFormatting:
         state = GlobalState()
 
         # Mock fast conversion
-        with patch.object(agent, '_run_neuroconv_conversion'):
+        with patch.object(agent, "_run_neuroconv_conversion"):
             response = await agent.handle_run_conversion(message, state)
 
         # Should have duration in seconds
@@ -784,8 +790,7 @@ class TestDurationFormatting:
         start_time = 1000.0
         end_time = start_time + 90  # 90 seconds = 1.5 minutes
 
-        with patch('time.time', side_effect=[start_time, end_time]), \
-             patch.object(agent, '_run_neuroconv_conversion'):
+        with patch("time.time", side_effect=[start_time, end_time]), patch.object(agent, "_run_neuroconv_conversion"):
             response = await agent.handle_run_conversion(message, state)
 
         # Should show minutes and seconds
@@ -822,7 +827,7 @@ class TestCompressionRatioCalculation:
         )
         state = GlobalState()
 
-        with patch.object(agent, '_run_neuroconv_conversion'):
+        with patch.object(agent, "_run_neuroconv_conversion"):
             response = await agent.handle_run_conversion(message, state)
 
         log_messages = [log.message for log in state.logs]
@@ -850,7 +855,7 @@ class TestCompressionRatioCalculation:
         )
         state = GlobalState()
 
-        with patch.object(agent, '_run_neuroconv_conversion'):
+        with patch.object(agent, "_run_neuroconv_conversion"):
             response = await agent.handle_run_conversion(message, state)
 
         log_messages = [log.message for log in state.logs]
@@ -916,11 +921,11 @@ class TestErrorExplanation:
 
         # Mock LLM to raise error
         async def mock_generate_error(*args, **kwargs):
-            raise Exception("LLM Error")
+            raise RuntimeError("LLM Error")
 
         agent_with_llm._llm_service.generate_completion = mock_generate_error
 
-        error = Exception("Conversion failed")
+        error = RuntimeError("Conversion failed")
         explanation = await agent_with_llm._explain_conversion_error(
             error=error,
             format_name="SpikeGLX",

@@ -7,12 +7,12 @@ Tests centralized workflow state logic including:
 - Active conversation detection
 - Metadata policy transitions
 """
+
 import pytest
 from models.state import (
-    GlobalState,
-    ConversionStatus,
-    ValidationOutcome,
     ConversationPhase,
+    ConversionStatus,
+    GlobalState,
     MetadataRequestPolicy,
 )
 from models.workflow_state_manager import WorkflowStateManager
@@ -85,15 +85,17 @@ class TestWorkflowStateManager:
     def test_should_request_metadata_all_fields_present(self, manager, fresh_state):
         """Test that metadata is not requested when all required fields present."""
         # Provide all required DANDI fields
-        fresh_state.metadata.update({
-            'experimenter': 'Dr. Smith',
-            'institution': 'MIT',
-            'experiment_description': 'Visual cortex recording',
-            'session_start_time': '2024-01-15T10:30:00',
-            'subject_id': 'mouse001',
-            'species': 'Mus musculus',
-            'sex': 'M',
-        })
+        fresh_state.metadata.update(
+            {
+                "experimenter": "Dr. Smith",
+                "institution": "MIT",
+                "experiment_description": "Visual cortex recording",
+                "session_start_time": "2024-01-15T10:30:00",
+                "subject_id": "mouse001",
+                "species": "Mus musculus",
+                "sex": "M",
+            }
+        )
 
         # Should not request (all fields present)
         assert manager.should_request_metadata(fresh_state) is False
@@ -123,8 +125,7 @@ class TestWorkflowStateManager:
 
         for status in blocking_statuses:
             fresh_state.status = status
-            assert manager.can_accept_upload(fresh_state) is False, \
-                f"Upload should be blocked during {status}"
+            assert manager.can_accept_upload(fresh_state) is False, f"Upload should be blocked during {status}"
 
     def test_can_accept_upload_awaiting_user_input(self, manager, fresh_state):
         """Test upload allowed when awaiting user input (user can restart)."""
@@ -160,8 +161,7 @@ class TestWorkflowStateManager:
 
         for status in blocking_statuses:
             fresh_state.status = status
-            assert manager.can_start_conversion(fresh_state) is False, \
-                f"Conversion should be blocked during {status}"
+            assert manager.can_start_conversion(fresh_state) is False, f"Conversion should be blocked during {status}"
 
     def test_can_start_conversion_from_completed(self, manager, fresh_state):
         """Test conversion can restart from completed state."""
@@ -316,7 +316,7 @@ class TestWorkflowStateManager:
         assert manager.is_in_active_conversation(state) is True
 
         # 6. User provides metadata
-        state.metadata['experimenter'] = 'Dr. Smith'
+        state.metadata["experimenter"] = "Dr. Smith"
         manager.update_metadata_policy_after_user_provided(state)
 
         # 7. Can start conversion

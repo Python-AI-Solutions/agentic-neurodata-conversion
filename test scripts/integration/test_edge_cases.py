@@ -3,16 +3,13 @@ Integration tests for edge cases and error handling.
 
 Tests various error scenarios, edge cases, and system limits.
 """
-import pytest
+
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, Mock, AsyncMock
-from fastapi.testclient import TestClient
+from unittest.mock import AsyncMock, Mock, patch
 
-from api.main import app
-from models import GlobalState, ConversionStatus
-from services import LLMService
-
+import pytest
+from models import ConversionStatus, GlobalState
 
 # Note: The following fixtures are provided by conftest files:
 # - mock_llm_conversational: from root conftest.py (for chat/conversational responses)
@@ -27,8 +24,8 @@ def patch_llm_service(mock_llm_conversational):
     Uses mock_llm_conversational from root conftest.py which provides
     general-purpose mock responses suitable for edge case testing.
     """
-    with patch('services.llm_service.create_llm_service', return_value=mock_llm_conversational):
-        with patch('api.main.create_llm_service', return_value=mock_llm_conversational):
+    with patch("services.llm_service.create_llm_service", return_value=mock_llm_conversational):
+        with patch("api.main.create_llm_service", return_value=mock_llm_conversational):
             yield
 
 
@@ -53,11 +50,7 @@ class TestSystemBusyScenarios:
                 response = api_test_client.post(
                     "/api/upload",
                     files={"file": ("test.bin", open(f.name, "rb"), "application/octet-stream")},
-                    data={
-                        "subject_id": "TEST001",
-                        "species": "Mus musculus",
-                        "session_description": "Test session"
-                    }
+                    data={"subject_id": "TEST001", "species": "Mus musculus", "session_description": "Test session"},
                 )
 
             # Should return 409 Conflict
@@ -78,7 +71,7 @@ class TestSystemBusyScenarios:
                 response = api_test_client.post(
                     "/api/upload",
                     files={"file": ("test2.bin", f, "application/octet-stream")},
-                    data={"subject_id": "TEST002"}
+                    data={"subject_id": "TEST002"},
                 )
 
             assert response.status_code in [409, 422]
@@ -94,7 +87,7 @@ class TestInvalidInputs:
             response = api_test_client.post(
                 "/api/upload",
                 files={"file": ("test.bin", f, "application/octet-stream")},
-                data={}  # Missing required fields
+                data={},  # Missing required fields
             )
 
         # Should return 400 or 422 for missing required fields
@@ -109,7 +102,7 @@ class TestInvalidInputs:
                 data={
                     "subject_id": "",  # Empty string
                     "species": "Invalid Species Name That Doesnt Exist",
-                }
+                },
             )
 
         # Should handle malformed metadata
@@ -117,10 +110,7 @@ class TestInvalidInputs:
 
     def test_retry_approval_with_invalid_decision(self, api_test_client):
         """Test retry approval with invalid decision value."""
-        response = api_test_client.post(
-            "/api/retry-approval",
-            json={"decision": "invalid_decision"}
-        )
+        response = api_test_client.post("/api/retry-approval", json={"decision": "invalid_decision"})
 
         # Should return 422 for invalid enum value
         assert response.status_code == 422
@@ -152,8 +142,8 @@ class TestLargeFileHandling:
                     data={
                         "subject_id": "LARGE001",
                         "species": "Mus musculus",
-                        "session_description": "Large file test"
-                    }
+                        "session_description": "Large file test",
+                    },
                 )
 
             # Should handle large files (may accept or reject based on limits)
@@ -182,10 +172,7 @@ class TestMissingLLMService:
             # No LLM service
             mock_get_server.return_value = mock_server
 
-            response = api_test_client.post(
-                "/api/chat/smart",
-                json={"message": "test"}
-            )
+            response = api_test_client.post("/api/chat/smart", json={"message": "test"})
 
             # Should handle gracefully (including rate limiting)
             assert response.status_code in [200, 422, 429, 500, 503]
@@ -251,10 +238,7 @@ class TestStateTransitions:
             mock_server.send_message = AsyncMock()  # Mock async send_message
             mock_get_server.return_value = mock_server
 
-            response = api_test_client.post(
-                "/api/retry-approval",
-                json={"decision": "approve"}
-            )
+            response = api_test_client.post("/api/retry-approval", json={"decision": "approve"})
 
             # Should handle invalid state transition
             assert response.status_code in [400, 422, 500]
@@ -268,10 +252,7 @@ class TestStateTransitions:
             mock_server.global_state = mock_state
             mock_get_server.return_value = mock_server
 
-            response = api_test_client.post(
-                "/api/user-input",
-                json={"input": "test"}
-            )
+            response = api_test_client.post("/api/user-input", json={"input": "test"})
 
             # Should handle invalid state
             assert response.status_code in [400, 422, 500]
@@ -287,11 +268,7 @@ class TestSpecialCharacters:
             response = api_test_client.post(
                 "/api/upload",
                 files={"file": ("测试文件.bin", f, "application/octet-stream")},
-                data={
-                    "subject_id": "TEST001",
-                    "species": "Mus musculus",
-                    "session_description": "Test"
-                }
+                data={"subject_id": "TEST001", "species": "Mus musculus", "session_description": "Test"},
             )
 
         # Should handle unicode filenames
@@ -306,8 +283,8 @@ class TestSpecialCharacters:
                 data={
                     "subject_id": "TEST-001_α",
                     "species": "Mus musculus",
-                    "session_description": "Test with émojis 🧠 and symbols @#$%"
-                }
+                    "session_description": "Test with émojis 🧠 and symbols @#$%",
+                },
             )
 
         # Should handle special characters
@@ -388,9 +365,9 @@ class TestEdgeCaseMetadata:
                 files={"file": ("test.bin", f, "application/octet-stream")},
                 data={
                     "subject_id": "",  # Empty
-                    "species": "",     # Empty
-                    "session_description": ""  # Empty
-                }
+                    "species": "",  # Empty
+                    "session_description": "",  # Empty
+                },
             )
 
         # Should reject empty required fields
@@ -405,8 +382,8 @@ class TestEdgeCaseMetadata:
                 data={
                     "subject_id": "TEST001",
                     "species": "Mus musculus",
-                    "session_description": "x" * 10000  # Very long
-                }
+                    "session_description": "x" * 10000,  # Very long
+                },
             )
 
         # Should handle or reject very long values

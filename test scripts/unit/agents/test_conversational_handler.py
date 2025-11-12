@@ -4,11 +4,11 @@ Unit tests for ConversationalHandler.
 Tests intelligent LLM-driven conversational interactions for NWB conversion.
 """
 
-import pytest
 from unittest.mock import AsyncMock, Mock
 
+import pytest
 from agents.conversational_handler import ConversationalHandler
-from models import GlobalState, MetadataRequestPolicy
+from models import MetadataRequestPolicy
 from services.llm_service import MockLLMService
 
 
@@ -102,9 +102,7 @@ class TestAnalyzeValidationAndRespond:
 
         validation_result = {"summary": {}, "issues": []}
 
-        result = await handler.analyze_validation_and_respond(
-            validation_result, "/test/file.nwb", global_state
-        )
+        result = await handler.analyze_validation_and_respond(validation_result, "/test/file.nwb", global_state)
 
         assert result["type"] == "proceed_minimal"
         assert result["proceed_with_minimal"] is True
@@ -120,9 +118,7 @@ class TestAnalyzeValidationAndRespond:
 
         validation_result = {"summary": {}, "issues": []}
 
-        result = await handler.analyze_validation_and_respond(
-            validation_result, "/test/file.nwb", global_state
-        )
+        result = await handler.analyze_validation_and_respond(validation_result, "/test/file.nwb", global_state)
 
         assert result["type"] == "proceed_minimal"
 
@@ -154,9 +150,7 @@ class TestAnalyzeValidationAndRespond:
             "issues": [{"message": "Missing experimenter"}],
         }
 
-        result = await handler.analyze_validation_and_respond(
-            validation_result, "/test/file.nwb", global_state
-        )
+        result = await handler.analyze_validation_and_respond(validation_result, "/test/file.nwb", global_state)
 
         assert result["type"] == "conversational"
         assert result["needs_user_input"] is True
@@ -178,9 +172,7 @@ class TestAnalyzeValidationAndRespond:
 
         validation_result = {"summary": {}, "issues": []}
 
-        result = await handler.analyze_validation_and_respond(
-            validation_result, "/test/file.nwb", global_state
-        )
+        result = await handler.analyze_validation_and_respond(validation_result, "/test/file.nwb", global_state)
 
         assert result["type"] == "conversational"
         assert result["needs_user_input"] is False
@@ -198,15 +190,11 @@ class TestAnalyzeValidationAndRespond:
         )
 
         handler = ConversationalHandler(llm_service)
-        handler.metadata_strategy.get_next_request = Mock(
-            return_value={"action": "proceed"}
-        )
+        handler.metadata_strategy.get_next_request = Mock(return_value={"action": "proceed"})
 
         validation_result = {"summary": {}, "issues": []}
 
-        result = await handler.analyze_validation_and_respond(
-            validation_result, "/test/file.nwb", global_state
-        )
+        result = await handler.analyze_validation_and_respond(validation_result, "/test/file.nwb", global_state)
 
         assert result["type"] == "proceed_minimal"
 
@@ -223,15 +211,11 @@ class TestAnalyzeValidationAndRespond:
         )
 
         handler = ConversationalHandler(llm_service)
-        handler.metadata_strategy.get_next_request = Mock(
-            side_effect=Exception("Strategy failed")
-        )
+        handler.metadata_strategy.get_next_request = Mock(side_effect=Exception("Strategy failed"))
 
         validation_result = {"summary": {}, "issues": []}
 
-        result = await handler.analyze_validation_and_respond(
-            validation_result, "/test/file.nwb", global_state
-        )
+        result = await handler.analyze_validation_and_respond(validation_result, "/test/file.nwb", global_state)
 
         # Should fall back to simple response
         assert result["type"] == "conversational"
@@ -320,9 +304,7 @@ class TestParseAndConfirmMetadata:
             "institution": "MIT",
         }
 
-        result = await handler.parse_and_confirm_metadata(
-            "yes", global_state, mode="batch"
-        )
+        result = await handler.parse_and_confirm_metadata("yes", global_state, mode="batch")
 
         assert result["type"] == "confirmed"
         assert "experimenter" in result["confirmed_fields"]
@@ -336,9 +318,7 @@ class TestParseAndConfirmMetadata:
 
         global_state.pending_parsed_fields = {"experimenter": ["Dr. Jane Smith"]}
 
-        result = await handler.parse_and_confirm_metadata(
-            "no, change it", global_state, mode="batch"
-        )
+        result = await handler.parse_and_confirm_metadata("no, change it", global_state, mode="batch")
 
         assert result["type"] == "needs_edit"
         assert "confirmation_message" in result
@@ -351,9 +331,7 @@ class TestParseAndConfirmMetadata:
 
         global_state.pending_parsed_fields = {"experimenter": ["Dr. Smith"]}
 
-        result = await handler.parse_and_confirm_metadata(
-            "skip", global_state, mode="batch"
-        )
+        result = await handler.parse_and_confirm_metadata("skip", global_state, mode="batch")
 
         assert result["type"] == "auto_applied"
         assert "auto_applied_fields" in result
@@ -365,9 +343,7 @@ class TestParseAndConfirmMetadata:
         # Configure MockLLMService to return expected structured output
         real_conversational_handler.metadata_parser.llm_service.generate_structured_output = AsyncMock(
             return_value={
-                "parsed_fields": [
-                    {"field_name": "experimenter", "value": ["Dr. Jane Smith"], "confidence": 95.0}
-                ],
+                "parsed_fields": [{"field_name": "experimenter", "value": ["Dr. Jane Smith"], "confidence": 95.0}],
                 "confidence_scores": {"experimenter": 95.0},
             }
         )
@@ -389,9 +365,7 @@ class TestParseAndConfirmMetadata:
         )
 
         # Should not raise, should handle gracefully
-        result = await real_conversational_handler.parse_and_confirm_metadata(
-            "some input", global_state, mode="batch"
-        )
+        result = await real_conversational_handler.parse_and_confirm_metadata("some input", global_state, mode="batch")
 
         # Should fall back to basic extraction
         assert isinstance(result, dict)
@@ -405,9 +379,7 @@ class TestAnalyzeValidationLLMFailure:
     async def test_analyze_validation_llm_exception(self, global_state):
         """Test handles LLM exception gracefully."""
         llm_service = MockLLMService()
-        llm_service.generate_structured_output = AsyncMock(
-            side_effect=Exception("LLM service failed")
-        )
+        llm_service.generate_structured_output = AsyncMock(side_effect=Exception("LLM service failed"))
 
         handler = ConversationalHandler(llm_service)
 
@@ -415,9 +387,7 @@ class TestAnalyzeValidationLLMFailure:
 
         # Should raise the exception (no fallback at this level)
         with pytest.raises(Exception, match="LLM service failed"):
-            await handler.analyze_validation_and_respond(
-                validation_result, "/test/file.nwb", global_state
-            )
+            await handler.analyze_validation_and_respond(validation_result, "/test/file.nwb", global_state)
 
 
 @pytest.mark.unit
@@ -534,9 +504,7 @@ class TestGenerateSmartMetadataRequests:
             "issues": [{"message": "Missing experimenter"}],
         }
 
-        result = await handler.generate_smart_metadata_requests(
-            validation_result, str(nwb_file), global_state
-        )
+        result = await handler.generate_smart_metadata_requests(validation_result, str(nwb_file), global_state)
 
         assert result["message"] == "I need some metadata"
         assert len(result["required_fields"]) == 1
@@ -546,9 +514,7 @@ class TestGenerateSmartMetadataRequests:
     async def test_generate_smart_request_llm_failure(self, tmp_path, global_state):
         """Test generating metadata request falls back when LLM fails."""
         llm_service = MockLLMService()
-        llm_service.generate_structured_output = AsyncMock(
-            side_effect=Exception("LLM error")
-        )
+        llm_service.generate_structured_output = AsyncMock(side_effect=Exception("LLM error"))
 
         handler = ConversationalHandler(llm_service)
 
@@ -559,9 +525,7 @@ class TestGenerateSmartMetadataRequests:
             "issues": [{"message": "Missing required field: experimenter"}],
         }
 
-        result = await handler.generate_smart_metadata_requests(
-            validation_result, str(nwb_file), global_state
-        )
+        result = await handler.generate_smart_metadata_requests(validation_result, str(nwb_file), global_state)
 
         # Should fallback to basic request
         assert "message" in result
@@ -670,9 +634,7 @@ class TestRealConversationalHandlerWorkflows:
 
         # Process with real logic
         response = await handler.process_user_response(
-            user_message=user_message,
-            context={"issues": [], "conversation_history": []},
-            state=global_state
+            user_message=user_message, context={"issues": [], "conversation_history": []}, state=global_state
         )
 
         # Verify real processing happened
@@ -690,12 +652,8 @@ class TestRealConversationalHandlerWorkflows:
         assert handler.context_manager is not None
 
         # Verify context manager can manage context
-        conversation_history = [
-            {"role": "user", "content": "Hello"},
-            {"role": "assistant", "content": "Hi there!"}
-        ]
+        conversation_history = [{"role": "user", "content": "Hello"}, {"role": "assistant", "content": "Hi there!"}]
         managed = await handler.context_manager.manage_context(
-            conversation_history=conversation_history,
-            state=global_state
+            conversation_history=conversation_history, state=global_state
         )
         assert isinstance(managed, list)

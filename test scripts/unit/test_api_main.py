@@ -1,15 +1,17 @@
 """
 Unit tests for API main.py - focused on error paths and edge cases.
 """
-import pytest
-from unittest.mock import patch, Mock, MagicMock, AsyncMock
-from fastapi.testclient import TestClient
-from pathlib import Path
+
 import os
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
 
 # Import after path is set in conftest
-from api.main import app, sanitize_filename, validate_safe_path, SimpleRateLimiter
-from models import GlobalState, ConversionStatus
+from api.main import SimpleRateLimiter, app, sanitize_filename, validate_safe_path
+from fastapi import HTTPException
+from fastapi.testclient import TestClient
+from models import ConversionStatus, GlobalState
 
 
 @pytest.fixture
@@ -38,7 +40,7 @@ def mock_rate_limiter():
 
     This fixture patches the rate limiter to always allow requests.
     """
-    with patch('api.main._rate_limiter') as mock_limiter:
+    with patch("api.main._rate_limiter") as mock_limiter:
         # Create a mock that always allows requests
         mock_limiter.is_allowed.return_value = True
         yield mock_limiter
@@ -290,11 +292,7 @@ class TestSuccessfulWorkflows:
         metadata = {"session_description": "Test session"}
 
         with patch("api.main.get_or_create_mcp_server", return_value=mock_mcp_server):
-            response = api_client.post(
-                "/api/upload",
-                files=files,
-                data={"metadata": json.dumps(metadata)}
-            )
+            response = api_client.post("/api/upload", files=files, data={"metadata": json.dumps(metadata)})
 
         # Should succeed with valid metadata
         assert response.status_code in [200, 422]  # May fail validation but shouldn't crash
@@ -319,7 +317,7 @@ class TestRateLimiting:
         limiter = SimpleRateLimiter()
 
         # Should allow up to max_requests
-        for i in range(5):
+        for _i in range(5):
             assert limiter.is_allowed("client1", max_requests=10, window_seconds=60)
 
     def test_rate_limiter_blocks_over_limit(self):
@@ -327,7 +325,7 @@ class TestRateLimiting:
         limiter = SimpleRateLimiter()
 
         # Fill up the limit
-        for i in range(10):
+        for _i in range(10):
             limiter.is_allowed("client2", max_requests=10, window_seconds=60)
 
         # Next request should be blocked
@@ -338,7 +336,7 @@ class TestRateLimiting:
         limiter = SimpleRateLimiter()
 
         # Client 1 uses up limit
-        for i in range(10):
+        for _i in range(10):
             limiter.is_allowed("client1", max_requests=10, window_seconds=60)
 
         # Client 2 should still be allowed
@@ -349,7 +347,7 @@ class TestRateLimiting:
         limiter = SimpleRateLimiter()
 
         # Fill up limit
-        for i in range(10):
+        for _i in range(10):
             limiter.is_allowed("client3", max_requests=10, window_seconds=60)
 
         retry_after = limiter.get_retry_after("client3", window_seconds=60)
@@ -384,12 +382,12 @@ class TestPathSecurity:
 
     def test_sanitize_filename_rejects_empty(self):
         """Test sanitizing rejects empty filename."""
-        with pytest.raises(Exception):  # HTTPException
+        with pytest.raises(HTTPException):
             sanitize_filename("")
 
     def test_sanitize_filename_rejects_dots(self):
         """Test sanitizing rejects just dots."""
-        with pytest.raises(Exception):  # HTTPException
+        with pytest.raises(HTTPException):
             sanitize_filename("..")
 
     def test_validate_safe_path_valid(self, tmp_path):
@@ -407,7 +405,7 @@ class TestPathSecurity:
         base.mkdir()
         evil_path = base / ".." / ".." / "etc" / "passwd"
 
-        with pytest.raises(Exception):  # HTTPException
+        with pytest.raises(HTTPException):
             validate_safe_path(evil_path, base)
 
 
@@ -460,11 +458,12 @@ class TestStartupValidation:
 
     def test_startup_validates_api_key_missing(self):
         """Test startup validation detects missing API key."""
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(ValueError, match="ANTHROPIC_API_KEY"):
-                from api.main import startup_event
-                import asyncio
-                asyncio.run(startup_event())
+        with patch.dict(os.environ, {}, clear=True), pytest.raises(ValueError, match="ANTHROPIC_API_KEY"):
+            import asyncio
+
+            from api.main import startup_event
+
+            asyncio.run(startup_event())
 
     def test_startup_validates_api_key_format(self):
         """Test startup validation checks API key format."""
@@ -538,10 +537,7 @@ class TestConversionEndpoints:
             api_client.post("/api/upload", files=files)
 
             # Then start conversion
-            response = api_client.post(
-                "/api/start-conversion",
-                json={"skip_metadata": True}
-            )
+            response = api_client.post("/api/start-conversion", json={"skip_metadata": True})
 
         # Should attempt to start conversion
         assert response.status_code in [200, 400, 422, 500]
@@ -600,10 +596,7 @@ class TestMetadataEndpoints:
         """Test submitting metadata."""
         api_client.post("/api/reset")
 
-        metadata = {
-            "session_description": "Test session",
-            "identifier": "test_001"
-        }
+        metadata = {"session_description": "Test session", "identifier": "test_001"}
 
         response = api_client.post("/api/metadata/submit", json=metadata)
 
@@ -644,12 +637,13 @@ class TestMCPServerInitialization:
 
         try:
             with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-ant-test123"}):
-                with patch("api.main.get_mcp_server") as mock_get_server, \
-                     patch("api.main.create_llm_service") as mock_create_llm, \
-                     patch("api.main.register_conversion_agent"), \
-                     patch("api.main.register_evaluation_agent"), \
-                     patch("api.main.register_conversation_agent"):
-
+                with (
+                    patch("api.main.get_mcp_server") as mock_get_server,
+                    patch("api.main.create_llm_service") as mock_create_llm,
+                    patch("api.main.register_conversion_agent"),
+                    patch("api.main.register_evaluation_agent"),
+                    patch("api.main.register_conversation_agent"),
+                ):
                     mock_mcp = Mock()
                     mock_get_server.return_value = mock_mcp
                     mock_create_llm.return_value = Mock()
@@ -674,11 +668,12 @@ class TestMCPServerInitialization:
 
         try:
             with patch.dict(os.environ, {}, clear=True):
-                with patch("api.main.get_mcp_server") as mock_get_server, \
-                     patch("api.main.register_conversion_agent"), \
-                     patch("api.main.register_evaluation_agent"), \
-                     patch("api.main.register_conversation_agent"):
-
+                with (
+                    patch("api.main.get_mcp_server") as mock_get_server,
+                    patch("api.main.register_conversion_agent"),
+                    patch("api.main.register_evaluation_agent"),
+                    patch("api.main.register_conversation_agent"),
+                ):
                     mock_mcp = Mock()
                     mock_get_server.return_value = mock_mcp
 

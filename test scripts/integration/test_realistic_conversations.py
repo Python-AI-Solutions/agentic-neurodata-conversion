@@ -7,17 +7,15 @@ user corrections, clarifications, and realistic user behavior.
 Addresses Critical Gap: Current tests use robotic single-turn interactions
 that don't represent how users actually engage with a conversational AI system.
 """
-import pytest
-import asyncio
-from unittest.mock import Mock, AsyncMock, patch
-from pathlib import Path
 
-from models import GlobalState, ConversionStatus, MetadataRequestPolicy
+from unittest.mock import AsyncMock
+
+import pytest
 from agents.conversation_agent import ConversationAgent
 from agents.conversion_agent import ConversionAgent
 from agents.evaluation_agent import EvaluationAgent
+from models import ConversionStatus, GlobalState
 from services.mcp_server import get_mcp_server
-from models.mcp import MCPMessage
 
 
 @pytest.fixture
@@ -49,31 +47,33 @@ async def simulate_chat(agent, message: str, state: GlobalState):
     uses MCP messages for communication, not direct method calls.
     """
     # Log the user message
-    from models.state import LogEntry, LogLevel
     from datetime import datetime
 
-    state.logs.append(LogEntry(
-        timestamp=datetime.now(),
-        level=LogLevel.INFO,
-        message=f"User input: {message}",
-        context={"conversation_phase": state.conversation_phase.value}
-    ))
+    from models.state import LogEntry, LogLevel
+
+    state.logs.append(
+        LogEntry(
+            timestamp=datetime.now(),
+            level=LogLevel.INFO,
+            message=f"User input: {message}",
+            context={"conversation_phase": state.conversation_phase.value},
+        )
+    )
 
     # Simulate successful response
     from models.mcp import MCPResponse
-    response = MCPResponse(
-        reply_to="test-message-id",
-        success=True,
-        result={"message": message}
-    )
+
+    response = MCPResponse(reply_to="test-message-id", success=True, result={"message": message})
 
     # Log the system response
-    state.logs.append(LogEntry(
-        timestamp=datetime.now(),
-        level=LogLevel.INFO,
-        message="System response generated",
-        context={"success": True, "conversation_phase": state.conversation_phase.value}
-    ))
+    state.logs.append(
+        LogEntry(
+            timestamp=datetime.now(),
+            level=LogLevel.INFO,
+            message="System response generated",
+            context={"success": True, "conversation_phase": state.conversation_phase.value},
+        )
+    )
 
     return response
 
@@ -87,11 +87,7 @@ class TestRealisticMetadataConversation:
         """Test user correcting information during metadata collection."""
 
         # Turn 1: User provides initial info
-        response1 = await simulate_chat(
-            mock_conversation_agent,
-            "the experimenter is John Smith",
-            global_state
-        )
+        response1 = await simulate_chat(mock_conversation_agent, "the experimenter is John Smith", global_state)
 
         # Simulate metadata being set
         global_state.metadata["experimenter"] = "John Smith"
@@ -99,11 +95,7 @@ class TestRealisticMetadataConversation:
         assert response1.success is True
 
         # Turn 2: User realizes mistake and corrects
-        response2 = await simulate_chat(
-            mock_conversation_agent,
-            "wait no sorry, it's actually Jane Doe",
-            global_state
-        )
+        response2 = await simulate_chat(mock_conversation_agent, "wait no sorry, it's actually Jane Doe", global_state)
 
         # Simulate correction
         global_state.metadata["experimenter"] = "Jane Doe"
@@ -126,17 +118,11 @@ class TestRealisticMetadataConversation:
         )
 
         # Turn 1: System asks for session description
-        response1 = await simulate_chat(
-            mock_conversation_agent,
-            "start conversion",
-            global_state
-        )
+        response1 = await simulate_chat(mock_conversation_agent, "start conversion", global_state)
 
         # Turn 2: User asks for clarification
         response2 = await simulate_chat(
-            mock_conversation_agent,
-            "what do you mean by session description?",
-            global_state
+            mock_conversation_agent, "what do you mean by session description?", global_state
         )
 
         # System should provide explanation (through LLM)
@@ -148,11 +134,7 @@ class TestRealisticMetadataConversation:
         """Test user providing incomplete information."""
 
         # Turn 1: User provides some fields
-        response1 = await simulate_chat(
-            mock_conversation_agent,
-            "experimenter is Jane, species is mouse",
-            global_state
-        )
+        response1 = await simulate_chat(mock_conversation_agent, "experimenter is Jane, species is mouse", global_state)
 
         # Simulate partial metadata
         global_state.metadata["experimenter"] = "Jane"
@@ -161,11 +143,7 @@ class TestRealisticMetadataConversation:
         assert response1.success is True
 
         # Turn 2: User skips some fields
-        response2 = await simulate_chat(
-            mock_conversation_agent,
-            "i don't have session start time",
-            global_state
-        )
+        response2 = await simulate_chat(mock_conversation_agent, "i don't have session start time", global_state)
 
         assert response2.success is True
 
@@ -182,21 +160,13 @@ class TestRetryLoopConversations:
         global_state.status = ConversionStatus.AWAITING_RETRY_APPROVAL
 
         # Turn 1: User asks for details
-        response1 = await simulate_chat(
-            mock_conversation_agent,
-            "what issues were found?",
-            global_state
-        )
+        response1 = await simulate_chat(mock_conversation_agent, "what issues were found?", global_state)
 
         # System should explain issues
         assert response1.success is True
 
         # Turn 2: User approves retry
-        response2 = await simulate_chat(
-            mock_conversation_agent,
-            "ok, try to fix them",
-            global_state
-        )
+        response2 = await simulate_chat(mock_conversation_agent, "ok, try to fix them", global_state)
 
         assert response2.success is True
 
@@ -208,11 +178,7 @@ class TestRetryLoopConversations:
         global_state.status = ConversionStatus.AWAITING_RETRY_APPROVAL
 
         # User declines improvement
-        response = await simulate_chat(
-            mock_conversation_agent,
-            "no thanks, i'll accept it as is",
-            global_state
-        )
+        response = await simulate_chat(mock_conversation_agent, "no thanks, i'll accept it as is", global_state)
 
         assert response.success is True
 
@@ -221,15 +187,18 @@ class TestRetryLoopConversations:
 class TestNaturalLanguageVariations:
     """Test system handles various ways users express intent."""
 
-    @pytest.mark.parametrize("approval_phrase", [
-        "yes",
-        "yeah sure",
-        "ok go ahead",
-        "yep",
-        "please retry",
-        "try again",
-        "fix it",
-    ])
+    @pytest.mark.parametrize(
+        "approval_phrase",
+        [
+            "yes",
+            "yeah sure",
+            "ok go ahead",
+            "yep",
+            "please retry",
+            "try again",
+            "fix it",
+        ],
+    )
     @pytest.mark.asyncio
     async def test_various_approval_phrases(self, approval_phrase, mock_conversation_agent, global_state):
         """Test system recognizes different approval phrasings."""
@@ -238,23 +207,22 @@ class TestNaturalLanguageVariations:
         global_state.status = ConversionStatus.AWAITING_RETRY_APPROVAL
 
         # User approves with different phrasing
-        response = await simulate_chat(
-            mock_conversation_agent,
-            approval_phrase,
-            global_state
-        )
+        response = await simulate_chat(mock_conversation_agent, approval_phrase, global_state)
 
         # Should accept the approval
         assert response.success is True
 
-    @pytest.mark.parametrize("decline_phrase", [
-        "no",
-        "no thanks",
-        "skip it",
-        "don't bother",
-        "i'll accept it as is",
-        "that's fine",
-    ])
+    @pytest.mark.parametrize(
+        "decline_phrase",
+        [
+            "no",
+            "no thanks",
+            "skip it",
+            "don't bother",
+            "i'll accept it as is",
+            "that's fine",
+        ],
+    )
     @pytest.mark.asyncio
     async def test_various_decline_phrases(self, decline_phrase, mock_conversation_agent, global_state):
         """Test system recognizes different decline phrasings."""
@@ -263,11 +231,7 @@ class TestNaturalLanguageVariations:
         global_state.status = ConversionStatus.AWAITING_RETRY_APPROVAL
 
         # User declines with different phrasing
-        response = await simulate_chat(
-            mock_conversation_agent,
-            decline_phrase,
-            global_state
-        )
+        response = await simulate_chat(mock_conversation_agent, decline_phrase, global_state)
 
         # Should accept the decline
         assert response.success is True
@@ -300,7 +264,9 @@ class TestMultiTurnWorkflows:
         assert r4.success is True
 
         # Turn 5: Ask to skip a field
-        r5 = await simulate_chat(mock_conversation_agent, "i don't have the session description right now", global_state)
+        r5 = await simulate_chat(
+            mock_conversation_agent, "i don't have the session description right now", global_state
+        )
         assert r5.success is True
 
         # Verify: All interactions successful
@@ -374,9 +340,7 @@ class TestAmbiguousUserInput:
 
         # User doesn't know technical format name
         response = await simulate_chat(
-            mock_conversation_agent,
-            "it's from that neuropixels thing? maybe?",
-            global_state
+            mock_conversation_agent, "it's from that neuropixels thing? maybe?", global_state
         )
 
         # System should handle ambiguity

@@ -4,22 +4,19 @@ Unit tests for ConversationAgent.
 Tests initialization, provenance tracking, and core utility methods.
 """
 
-import asyncio
-import pytest
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
-from agents.conversation_agent import ConversationAgent, MAX_CORRECTION_ATTEMPTS
+import pytest
+from agents.conversation_agent import MAX_CORRECTION_ATTEMPTS, ConversationAgent
 from models import (
     ConversationPhase,
     ConversionStatus,
-    GlobalState,
     LogLevel,
     MetadataProvenance,
-    MetadataRequestPolicy,
     ValidationOutcome,
     ValidationStatus,
 )
-from models.mcp import MCPResponse, MCPMessage
+from models.mcp import MCPMessage, MCPResponse
 from services.llm_service import MockLLMService
 
 
@@ -428,9 +425,7 @@ class TestExplainErrorToUser:
 
         mock_mcp = Mock()
         llm_service = MockLLMService()
-        llm_service.generate_structured_output = AsyncMock(
-            side_effect=Exception("LLM service unavailable")
-        )
+        llm_service.generate_structured_output = AsyncMock(side_effect=Exception("LLM service unavailable"))
 
         agent = ConversationAgent(mock_mcp, llm_service)
 
@@ -502,9 +497,7 @@ class TestDecideNextAction:
 
         mock_mcp = Mock()
         llm_service = MockLLMService()
-        llm_service.generate_structured_output = AsyncMock(
-            side_effect=Exception("LLM timeout")
-        )
+        llm_service.generate_structured_output = AsyncMock(side_effect=Exception("LLM timeout"))
 
         agent = ConversationAgent(mock_mcp, llm_service)
 
@@ -590,7 +583,6 @@ class TestHandleStartConversion:
     @pytest.mark.asyncio
     async def test_handle_start_missing_input_path(self, global_state):
         """Test start conversion without input path."""
-        from unittest.mock import AsyncMock
         from models.mcp import MCPMessage
 
         mock_mcp = Mock()
@@ -611,6 +603,7 @@ class TestHandleStartConversion:
     async def test_handle_start_format_detection_success(self, global_state, tmp_path):
         """Test start conversion with successful format detection."""
         from unittest.mock import AsyncMock
+
         from models.mcp import MCPMessage, MCPResponse
 
         mock_mcp = Mock()
@@ -647,6 +640,7 @@ class TestHandleStartConversion:
     async def test_handle_start_ambiguous_format(self, global_state, tmp_path):
         """Test start conversion with ambiguous format detection."""
         from unittest.mock import AsyncMock
+
         from models.mcp import MCPMessage, MCPResponse
 
         mock_mcp = Mock()
@@ -683,6 +677,7 @@ class TestHandleStartConversion:
     async def test_handle_start_format_detection_failed(self, global_state, tmp_path):
         """Test start conversion when format detection fails."""
         from unittest.mock import AsyncMock
+
         from models.mcp import MCPMessage, MCPResponse
 
         mock_mcp = Mock()
@@ -805,8 +800,8 @@ class TestHandleRetryDecision:
     @pytest.mark.asyncio
     async def test_handle_retry_reject_decision(self, global_state):
         """Test retry decision with reject."""
-        from models.mcp import MCPMessage
         from models import ValidationStatus
+        from models.mcp import MCPMessage
 
         mock_mcp = Mock()
         agent = ConversationAgent(mock_mcp, llm_service=None)
@@ -829,8 +824,8 @@ class TestHandleRetryDecision:
     @pytest.mark.asyncio
     async def test_handle_retry_accept_decision_passed_with_issues(self, global_state):
         """Test retry decision with accept for PASSED_WITH_ISSUES."""
-        from models.mcp import MCPMessage
         from models import ValidationOutcome, ValidationStatus
+        from models.mcp import MCPMessage
 
         mock_mcp = Mock()
         agent = ConversationAgent(mock_mcp, llm_service=None)
@@ -854,8 +849,8 @@ class TestHandleRetryDecision:
     @pytest.mark.asyncio
     async def test_handle_retry_accept_decision_invalid_status(self, global_state):
         """Test accept decision only works for PASSED_WITH_ISSUES."""
-        from models.mcp import MCPMessage
         from models import ValidationOutcome
+        from models.mcp import MCPMessage
 
         mock_mcp = Mock()
         agent = ConversationAgent(mock_mcp, llm_service=None)
@@ -942,7 +937,6 @@ class TestHandleConversationalResponse:
     async def test_handle_conversational_cancel_keywords(self, global_state):
         """Test conversational response with cancellation keywords."""
         from models.mcp import MCPMessage
-        from models import ValidationStatus
 
         mock_mcp = Mock()
         agent = ConversationAgent(mock_mcp, llm_service=None)
@@ -970,6 +964,7 @@ class TestHandleConversationalResponse:
     async def test_handle_conversational_metadata_review_proceed(self, global_state, tmp_path):
         """Test metadata review conversation with proceed."""
         from unittest.mock import AsyncMock, patch
+
         from models.mcp import MCPMessage
 
         mock_mcp = Mock()
@@ -989,7 +984,7 @@ class TestHandleConversationalResponse:
         )
 
         # Mock _run_conversion
-        with patch.object(agent, '_run_conversion', new_callable=AsyncMock) as mock_run:
+        with patch.object(agent, "_run_conversion", new_callable=AsyncMock) as mock_run:
             mock_run.return_value = MCPResponse.success_response(
                 reply_to=message.message_id,
                 result={"status": "conversion_started"},
@@ -1049,9 +1044,7 @@ class TestHandleConversationalResponse:
         )
 
         with patch.object(agent, "_continue_conversion_workflow", new_callable=AsyncMock) as mock_continue:
-            mock_continue.return_value = MCPResponse.success_response(
-                reply_to="msg_1", result={"status": "converting"}
-            )
+            mock_continue.return_value = MCPResponse.success_response(reply_to="msg_1", result={"status": "converting"})
             response = await agent.handle_conversational_response(message, global_state)
 
         assert response.success is True
@@ -1085,15 +1078,11 @@ class TestHandleConversationalResponse:
 
         mock_mcp = Mock()
         mock_mcp.send_message = AsyncMock(
-            return_value=MCPResponse.success_response(
-                reply_to="msg_1", result={"format": "SpikeGLX"}
-            )
+            return_value=MCPResponse.success_response(reply_to="msg_1", result={"format": "SpikeGLX"})
         )
         llm_service = MockLLMService()
         # Configure LLM to return global skip detection
-        llm_service.generate_structured_output = AsyncMock(
-            return_value={"skip_type": "global", "confidence": 0.95}
-        )
+        llm_service.generate_structured_output = AsyncMock(return_value={"skip_type": "global", "confidence": 0.95})
         agent = ConversationAgent(mock_mcp, llm_service)
         # Uses real ConversationalHandler created by agent
 
@@ -1109,9 +1098,7 @@ class TestHandleConversationalResponse:
         )
 
         with patch.object(agent, "handle_start_conversion", new_callable=AsyncMock) as mock_start:
-            mock_start.return_value = MCPResponse.success_response(
-                reply_to="msg_1", result={"status": "started"}
-            )
+            mock_start.return_value = MCPResponse.success_response(reply_to="msg_1", result={"status": "started"})
             response = await agent.handle_conversational_response(message, global_state)
 
         assert response.success is True
@@ -1140,7 +1127,7 @@ class TestHandleConversationalResponse:
                             "needs_review": False,
                         }
                     ]
-                }
+                },
             ]
         )
         agent = ConversationAgent(mock_mcp, llm_service)
@@ -1184,7 +1171,7 @@ class TestHandleConversationalResponse:
                     "parsed_fields": [],
                     "confidence_scores": {},
                     "needs_more_info": True,
-                }
+                },
             ]
         )
         agent = ConversationAgent(mock_mcp, llm_service)
@@ -1224,9 +1211,7 @@ class TestHandleConversationalResponse:
         )
 
         with patch.object(agent, "_run_conversion", new_callable=AsyncMock) as mock_run:
-            mock_run.return_value = MCPResponse.success_response(
-                reply_to="msg_1", result={"status": "converting"}
-            )
+            mock_run.return_value = MCPResponse.success_response(reply_to="msg_1", result={"status": "converting"})
             response = await agent.handle_conversational_response(message, global_state)
 
         assert response.success is True
@@ -1290,7 +1275,7 @@ class TestContinueConversionWorkflow:
         metadata = {"format": "SpikeGLX", "_metadata_review_shown": True}
 
         # Mock _run_conversion
-        with patch.object(agent, '_run_conversion', new_callable=AsyncMock) as mock_run:
+        with patch.object(agent, "_run_conversion", new_callable=AsyncMock) as mock_run:
             mock_run.return_value = MCPResponse.success_response(
                 reply_to="test",
                 result={"status": "conversion_started"},
@@ -1322,7 +1307,7 @@ class TestContinueConversionWorkflow:
         metadata = {"format": "SpikeGLX"}  # No _metadata_review_shown flag
 
         # Mock _generate_metadata_review_message
-        with patch.object(agent, '_generate_metadata_review_message', new_callable=AsyncMock) as mock_review:
+        with patch.object(agent, "_generate_metadata_review_message", new_callable=AsyncMock) as mock_review:
             mock_review.return_value = "Please review your metadata"
 
             result = await agent._continue_conversion_workflow(
@@ -1365,6 +1350,7 @@ class TestHandleGeneralQuery:
     async def test_handle_general_query_with_llm(self, global_state):
         """Test general query with LLM."""
         from unittest.mock import AsyncMock
+
         from models.mcp import MCPMessage
 
         mock_mcp = Mock()
@@ -1396,7 +1382,6 @@ class TestGenerateMissingMetadataMessageWithLLM:
     async def test_generate_with_llm_success(self, global_state):
         """Test generating metadata message with LLM successfully."""
         from unittest.mock import AsyncMock
-        from models.mcp import MCPMessage
 
         mock_mcp = Mock()
         llm_service = MockLLMService()
@@ -1428,15 +1413,13 @@ class TestGenerateMissingMetadataMessageWithLLM:
         missing_fields = ["experimenter"]
         metadata = {}
 
-        # Note: Production code has a bug (uses self._state instead of state parameter)
-        # This causes AttributeError. Test expects fallback to work once bug is fixed.
-        # For now, skip this test case since the bug prevents proper testing
-        # result = await agent._generate_missing_metadata_message(missing_fields, metadata, global_state)
-        # assert "experimenter" in result.lower()
+        # Bug fixed: now properly uses state parameter instead of self._state
+        result = await agent._generate_missing_metadata_message(missing_fields, metadata, global_state)
 
-        # Just verify the method can be called (bug will cause AttributeError)
-        with pytest.raises(AttributeError, match="_state"):
-            await agent._generate_missing_metadata_message(missing_fields, metadata, global_state)
+        # Should return fallback message containing the missing field
+        assert isinstance(result, str)
+        assert len(result) > 0
+        assert "experimenter" in result.lower()
 
 
 @pytest.mark.unit
@@ -1507,9 +1490,7 @@ class TestHandleCustomMetadataResponse:
         mock_mcp = Mock()
         agent = ConversationAgent(mock_mcp, llm_service=None)
 
-        result = await agent._handle_custom_metadata_response(
-            user_input="sampling rate is 30kHz", state=global_state
-        )
+        result = await agent._handle_custom_metadata_response(user_input="sampling rate is 30kHz", state=global_state)
 
         assert result == {}
 
@@ -1556,9 +1537,7 @@ class TestHandleCustomMetadataResponse:
         mock_mapper.parse_custom_metadata = AsyncMock(side_effect=Exception("Parsing failed"))
         agent._metadata_mapper = mock_mapper
 
-        result = await agent._handle_custom_metadata_response(
-            user_input="invalid input", state=global_state
-        )
+        result = await agent._handle_custom_metadata_response(user_input="invalid input", state=global_state)
 
         assert result == {}
 
@@ -1571,13 +1550,12 @@ class TestFinalizeWithMinimalMetadata:
     async def test_finalize_generates_report_and_message(self, global_state, tmp_path):
         """Test finalization creates report and completion message."""
         from unittest.mock import AsyncMock
-        from models.mcp import MCPMessage, MCPResponse
+
+        from models.mcp import MCPResponse
 
         mock_mcp = Mock()
         mock_mcp.send_message = AsyncMock(
-            return_value=MCPResponse.success_response(
-                reply_to="test", result={"report_path": "/tmp/report.html"}
-            )
+            return_value=MCPResponse.success_response(reply_to="test", result={"report_path": "/tmp/report.html"})
         )
 
         agent = ConversationAgent(mock_mcp, llm_service=None)
@@ -1615,6 +1593,7 @@ class TestFinalizeWithMinimalMetadata:
     async def test_finalize_with_no_report(self, global_state, tmp_path):
         """Test finalization when report generation fails."""
         from unittest.mock import AsyncMock
+
         from models.mcp import MCPResponse
 
         mock_mcp = Mock()
@@ -1710,9 +1689,8 @@ class TestGenerateMetadataReviewMessage:
 
     @pytest.mark.asyncio
     async def test_with_llm_failure_uses_fallback(self, global_state):
-        """Test that LLM failure attempts fallback (bug: missing await)."""
+        """Test that LLM failure uses fallback message."""
         from unittest.mock import AsyncMock
-        import asyncio
 
         mock_mcp = Mock()
         llm_service = MockLLMService()
@@ -1724,14 +1702,10 @@ class TestGenerateMetadataReviewMessage:
 
         result = await agent._generate_metadata_review_message(metadata, "SpikeGLX", global_state)
 
-        # Note: Production code has a bug (line 1384 missing await)
-        # This causes a coroutine to be returned instead of a string
-        # Test documents the bug - once fixed, this should return a string
-        assert asyncio.iscoroutine(result) or isinstance(result, str)
-
-        # Clean up coroutine if it wasn't awaited
-        if asyncio.iscoroutine(result):
-            result.close()
+        # Bug fixed: now properly awaits the fallback call
+        # Should return a string fallback message
+        assert isinstance(result, str)
+        assert len(result) > 0
 
 
 @pytest.mark.unit
@@ -2061,9 +2035,7 @@ class TestGenerateCorrectionPrompts:
         )
         agent = ConversationAgent(mock_mcp, llm_service)
 
-        issues = [
-            {"check_name": "MissingExperimenter", "message": "experimenter field missing"}
-        ]
+        issues = [{"check_name": "MissingExperimenter", "message": "experimenter field missing"}]
 
         result = await agent._generate_correction_prompts(issues, global_state)
 
@@ -2075,14 +2047,10 @@ class TestGenerateCorrectionPrompts:
         """Test fallback to basic prompts on LLM failure."""
         mock_mcp = Mock()
         llm_service = MockLLMService()
-        llm_service.generate_structured_output = AsyncMock(
-            side_effect=Exception("LLM failed")
-        )
+        llm_service.generate_structured_output = AsyncMock(side_effect=Exception("LLM failed"))
         agent = ConversationAgent(mock_mcp, llm_service)
 
-        issues = [
-            {"check_name": "MissingInstitution", "message": "institution missing"}
-        ]
+        issues = [{"check_name": "MissingInstitution", "message": "institution missing"}]
 
         result = await agent._generate_correction_prompts(issues, global_state)
 
@@ -2100,9 +2068,7 @@ class TestGenerateCorrectionPrompts:
         # Mark LLM as processing
         global_state.llm_processing = True
 
-        issues = [
-            {"check_name": "MissingData", "message": "data missing"}
-        ]
+        issues = [{"check_name": "MissingData", "message": "data missing"}]
 
         result = await agent._generate_correction_prompts(issues, global_state)
 
@@ -2120,12 +2086,7 @@ class TestGenerateAutoFixSummary:
         mock_mcp = Mock()
         agent = ConversationAgent(mock_mcp, llm_service=None)
 
-        issues = [
-            {
-                "check_name": "InvalidDate",
-                "message": "Date format is incorrect"
-            }
-        ]
+        issues = [{"check_name": "InvalidDate", "message": "Date format is incorrect"}]
 
         result = agent._generate_auto_fix_summary(issues)
 
@@ -2140,7 +2101,7 @@ class TestGenerateAutoFixSummary:
         issues = [
             {"check_name": "InvalidDate", "message": "Date format wrong"},
             {"check_name": "MissingField", "message": "Field missing"},
-            {"check_name": "TypeError", "message": "Type mismatch"}
+            {"check_name": "TypeError", "message": "Type mismatch"},
         ]
 
         result = agent._generate_auto_fix_summary(issues)
@@ -2155,9 +2116,7 @@ class TestGenerateAutoFixSummary:
         agent = ConversationAgent(mock_mcp, llm_service=None)
 
         long_message = "A" * 150  # 150 characters
-        issues = [
-            {"check_name": "LongError", "message": long_message}
-        ]
+        issues = [{"check_name": "LongError", "message": long_message}]
 
         result = agent._generate_auto_fix_summary(issues)
 
@@ -2172,7 +2131,7 @@ class TestGenerateAutoFixSummary:
 
         issues = [
             {},  # No check_name or message
-            {"check_name": "HasName"}  # No message
+            {"check_name": "HasName"},  # No message
         ]
 
         result = agent._generate_auto_fix_summary(issues)
@@ -2238,13 +2197,7 @@ class TestIdentifyUserInputRequired:
         agent = ConversationAgent(mock_mcp, llm_service=None)
 
         corrections = {
-            "suggestions": [
-                {
-                    "issue": "Missing subject_id field",
-                    "suggestion": "Add subject_id",
-                    "actionable": False
-                }
-            ]
+            "suggestions": [{"issue": "Missing subject_id field", "suggestion": "Add subject_id", "actionable": False}]
         }
 
         result = agent._identify_user_input_required(corrections)
@@ -2263,7 +2216,7 @@ class TestIdentifyUserInputRequired:
                 {
                     "issue": "session_description field present",
                     "suggestion": "Session description is too short",
-                    "actionable": False
+                    "actionable": False,
                 }
             ]
         }
@@ -2284,7 +2237,7 @@ class TestIdentifyUserInputRequired:
                 {
                     "issue": "Missing experimenter information",
                     "suggestion": "Add experimenter names",
-                    "actionable": False
+                    "actionable": False,
                 }
             ]
         }
@@ -2304,7 +2257,7 @@ class TestIdentifyUserInputRequired:
                 {
                     "issue": "Missing subject_id",
                     "suggestion": "Add subject_id",
-                    "actionable": True  # Actionable, should be skipped
+                    "actionable": True,  # Actionable, should be skipped
                 }
             ]
         }
@@ -2322,7 +2275,7 @@ class TestIdentifyUserInputRequired:
             "suggestions": [
                 {"issue": "Missing subject_id", "suggestion": "Add it", "actionable": False},
                 {"issue": "Missing experimenter", "suggestion": "Add it", "actionable": False},
-                {"issue": "institution field", "suggestion": "Needs value", "actionable": False}
+                {"issue": "institution field", "suggestion": "Needs value", "actionable": False},
             ]
         }
 
@@ -2346,11 +2299,7 @@ class TestExtractAutoFixes:
 
         corrections = {
             "suggestions": [
-                {
-                    "issue": "subject_id field needs value",
-                    "suggestion": "Set subject_id to default",
-                    "actionable": True
-                }
+                {"issue": "subject_id field needs value", "suggestion": "Set subject_id to default", "actionable": True}
             ]
         }
 
@@ -2369,7 +2318,7 @@ class TestExtractAutoFixes:
                 {
                     "issue": "subject_id missing",
                     "suggestion": "Ask user for subject_id",
-                    "actionable": False  # Not actionable
+                    "actionable": False,  # Not actionable
                 }
             ]
         }
@@ -2469,9 +2418,7 @@ class TestHandleImprovementDecision:
         """Test handling 'accept' decision for passed with issues."""
         mock_mcp = Mock()
         mock_mcp.send_message = AsyncMock(
-            return_value=MCPResponse.success_response(
-                reply_to="msg_123", result={"report_generated": True}
-            )
+            return_value=MCPResponse.success_response(reply_to="msg_123", result={"report_generated": True})
         )
         agent = ConversationAgent(mock_mcp, llm_service=None)
 
@@ -2570,9 +2517,7 @@ class TestHandleImprovementDecision:
                 result={
                     "corrections": {
                         "auto_fixable_issues": [],
-                        "user_input_required": [
-                            {"field": "experimenter", "message": "Missing experimenter"}
-                        ],
+                        "user_input_required": [{"field": "experimenter", "message": "Missing experimenter"}],
                     }
                 },
             )
@@ -2593,9 +2538,7 @@ class TestHandleImprovementDecision:
         )
 
         # Mock _generate_correction_prompts since it might be called
-        with patch.object(
-            agent, "_generate_correction_prompts", new_callable=AsyncMock
-        ) as mock_generate:
+        with patch.object(agent, "_generate_correction_prompts", new_callable=AsyncMock) as mock_generate:
             mock_generate.return_value = "Please provide experimenter information"
 
             response = await agent.handle_improvement_decision(message, global_state)
@@ -2665,9 +2608,7 @@ class TestUserInteractionScenarios:
         """Test user providing metadata using field:value pattern during review."""
         mock_mcp = Mock()
         mock_mcp.send_message = AsyncMock(
-            return_value=MCPResponse.success_response(
-                reply_to="msg_123", result={"status": "success"}
-            )
+            return_value=MCPResponse.success_response(reply_to="msg_123", result={"status": "success"})
         )
         agent = ConversationAgent(mock_mcp, llm_service=None)
 
@@ -2686,9 +2627,7 @@ class TestUserInteractionScenarios:
 
         # Mock _run_conversion to avoid actual conversion
         with patch.object(agent, "_run_conversion", new_callable=AsyncMock) as mock_run:
-            mock_run.return_value = MCPResponse.success_response(
-                reply_to="msg_123", result={"status": "converting"}
-            )
+            mock_run.return_value = MCPResponse.success_response(reply_to="msg_123", result={"status": "converting"})
 
             response = await agent.handle_conversational_response(message, global_state)
 
@@ -2746,9 +2685,7 @@ class TestUserInteractionScenarios:
         """Test user declining to add custom metadata."""
         mock_mcp = Mock()
         mock_mcp.send_message = AsyncMock(
-            return_value=MCPResponse.success_response(
-                reply_to="msg_123", result={"status": "success"}
-            )
+            return_value=MCPResponse.success_response(reply_to="msg_123", result={"status": "success"})
         )
         agent = ConversationAgent(mock_mcp, llm_service=None)
 
@@ -2766,9 +2703,7 @@ class TestUserInteractionScenarios:
         )
 
         # Mock _continue_conversion_workflow
-        with patch.object(
-            agent, "_continue_conversion_workflow", new_callable=AsyncMock
-        ) as mock_continue:
+        with patch.object(agent, "_continue_conversion_workflow", new_callable=AsyncMock) as mock_continue:
             mock_continue.return_value = MCPResponse.success_response(
                 reply_to="msg_123", result={"status": "continuing"}
             )
@@ -2791,9 +2726,7 @@ class TestUserInteractionScenarios:
 
         mock_mcp = Mock()
         mock_mcp.send_message = AsyncMock(
-            return_value=MCPResponse.success_response(
-                reply_to="msg_123", result={"status": "success"}
-            )
+            return_value=MCPResponse.success_response(reply_to="msg_123", result={"status": "success"})
         )
 
         # Create agent with metadata mapper
@@ -2823,9 +2756,7 @@ class TestUserInteractionScenarios:
 
         # Mock _run_conversion
         with patch.object(agent, "_run_conversion", new_callable=AsyncMock) as mock_run:
-            mock_run.return_value = MCPResponse.success_response(
-                reply_to="msg_123", result={"status": "converting"}
-            )
+            mock_run.return_value = MCPResponse.success_response(reply_to="msg_123", result={"status": "converting"})
 
             response = await agent.handle_conversational_response(message, global_state)
 
@@ -2838,9 +2769,7 @@ class TestUserInteractionScenarios:
         """Test user providing metadata with equals signs instead of colons."""
         mock_mcp = Mock()
         mock_mcp.send_message = AsyncMock(
-            return_value=MCPResponse.success_response(
-                reply_to="msg_123", result={"status": "success"}
-            )
+            return_value=MCPResponse.success_response(reply_to="msg_123", result={"status": "success"})
         )
         agent = ConversationAgent(mock_mcp, llm_service=None)
 
@@ -2858,9 +2787,7 @@ class TestUserInteractionScenarios:
         )
 
         with patch.object(agent, "_run_conversion", new_callable=AsyncMock) as mock_run:
-            mock_run.return_value = MCPResponse.success_response(
-                reply_to="msg_123", result={"status": "converting"}
-            )
+            mock_run.return_value = MCPResponse.success_response(reply_to="msg_123", result={"status": "converting"})
 
             response = await agent.handle_conversational_response(message, global_state)
 
@@ -2912,9 +2839,7 @@ class TestUserInteractionScenarios:
             context={"message": "skip"},
         )
 
-        with patch.object(
-            agent, "_continue_conversion_workflow", new_callable=AsyncMock
-        ) as mock_continue:
+        with patch.object(agent, "_continue_conversion_workflow", new_callable=AsyncMock) as mock_continue:
             response = await agent.handle_conversational_response(message, global_state)
 
             # Should error because no input path
@@ -2927,9 +2852,7 @@ class TestUserInteractionScenarios:
         """Test user providing metadata with underscores in field name."""
         mock_mcp = Mock()
         mock_mcp.send_message = AsyncMock(
-            return_value=MCPResponse.success_response(
-                reply_to="msg_123", result={"status": "success"}
-            )
+            return_value=MCPResponse.success_response(reply_to="msg_123", result={"status": "success"})
         )
         agent = ConversationAgent(mock_mcp, llm_service=None)
 
@@ -2947,9 +2870,7 @@ class TestUserInteractionScenarios:
         )
 
         with patch.object(agent, "_run_conversion", new_callable=AsyncMock) as mock_run:
-            mock_run.return_value = MCPResponse.success_response(
-                reply_to="msg_123", result={"status": "converting"}
-            )
+            mock_run.return_value = MCPResponse.success_response(reply_to="msg_123", result={"status": "converting"})
 
             response = await agent.handle_conversational_response(message, global_state)
 
@@ -2999,7 +2920,7 @@ class TestAgentMCPInteractions:
 
         # Should return a response (may need metadata, may ask for input, etc)
         assert response is not None
-        assert hasattr(response, 'success')
+        assert hasattr(response, "success")
 
     @pytest.mark.asyncio
     async def test_format_detection_failure_via_mcp(self, global_state, tmp_path):
@@ -3049,9 +2970,7 @@ class TestAgentMCPInteractions:
 
         mock_mcp = Mock()
         mock_mcp.send_message = AsyncMock(
-            return_value=MCPResponse.success_response(
-                reply_to="msg_123", result={"status": "success"}
-            )
+            return_value=MCPResponse.success_response(reply_to="msg_123", result={"status": "success"})
         )
 
         agent = ConversationAgent(mock_mcp, llm_service=mock_llm)
@@ -3073,7 +2992,7 @@ class TestAgentMCPInteractions:
 
         # Should ask for metadata or proceed with workflow
         assert response is not None
-        assert hasattr(response, 'success')
+        assert hasattr(response, "success")
 
     @pytest.mark.asyncio
     async def test_user_provides_metadata_then_conversion_proceeds(self, global_state, tmp_path):
@@ -3196,9 +3115,7 @@ class TestEdgeCases:
         """Test handling of empty metadata dictionary."""
         mock_mcp = Mock()
         mock_mcp.send_message = AsyncMock(
-            return_value=MCPResponse.success_response(
-                reply_to="msg_123", result={"status": "success"}
-            )
+            return_value=MCPResponse.success_response(reply_to="msg_123", result={"status": "success"})
         )
 
         agent = ConversationAgent(mock_mcp, llm_service=None)
@@ -3293,9 +3210,7 @@ class TestEdgeCases:
         )
 
         with patch.object(agent, "_run_conversion", new_callable=AsyncMock) as mock_run:
-            mock_run.return_value = MCPResponse.success_response(
-                reply_to="msg_123", result={"status": "converting"}
-            )
+            mock_run.return_value = MCPResponse.success_response(reply_to="msg_123", result={"status": "converting"})
 
             response = await agent.handle_conversational_response(message, global_state)
 
@@ -3659,9 +3574,7 @@ class TestRetryWorkflowWithNoProgress:
         """Test that approving retry increments correction attempt."""
         mock_mcp = Mock()
         mock_mcp.send_message = AsyncMock(
-            return_value=MCPResponse.success_response(
-                reply_to="msg_1", result={"status": "retrying"}
-            )
+            return_value=MCPResponse.success_response(reply_to="msg_1", result={"status": "retrying"})
         )
 
         agent = ConversationAgent(mock_mcp, llm_service=None)
@@ -3685,9 +3598,7 @@ class TestRetryWorkflowWithNoProgress:
         )
 
         with patch.object(agent, "_run_conversion", new_callable=AsyncMock) as mock_run:
-            mock_run.return_value = MCPResponse.success_response(
-                reply_to="msg_123", result={"status": "converting"}
-            )
+            mock_run.return_value = MCPResponse.success_response(reply_to="msg_123", result={"status": "converting"})
 
             response = await agent.handle_retry_decision(message, global_state)
 
@@ -3722,9 +3633,7 @@ class TestRetryWorkflowWithNoProgress:
         """Test that no-progress detection logs a warning."""
         mock_mcp = Mock()
         mock_mcp.send_message = AsyncMock(
-            return_value=MCPResponse.success_response(
-                reply_to="msg_1", result={"status": "retrying"}
-            )
+            return_value=MCPResponse.success_response(reply_to="msg_1", result={"status": "retrying"})
         )
 
         agent = ConversationAgent(mock_mcp, llm_service=None)
@@ -3754,9 +3663,7 @@ class TestRetryWorkflowWithNoProgress:
         )
 
         with patch.object(agent, "_run_conversion", new_callable=AsyncMock) as mock_run:
-            mock_run.return_value = MCPResponse.success_response(
-                reply_to="msg_123", result={"status": "converting"}
-            )
+            mock_run.return_value = MCPResponse.success_response(reply_to="msg_123", result={"status": "converting"})
 
             response = await agent.handle_retry_decision(message, global_state)
 
@@ -3769,9 +3676,7 @@ class TestRetryWorkflowWithNoProgress:
         """Test adaptive retry strategy is invoked during retry."""
         mock_mcp = Mock()
         mock_mcp.send_message = AsyncMock(
-            return_value=MCPResponse.success_response(
-                reply_to="msg_1", result={"status": "retrying"}
-            )
+            return_value=MCPResponse.success_response(reply_to="msg_1", result={"status": "retrying"})
         )
 
         mock_adaptive_strategy = AsyncMock()
@@ -3809,9 +3714,7 @@ class TestRetryWorkflowWithNoProgress:
         )
 
         with patch.object(agent, "_run_conversion", new_callable=AsyncMock) as mock_run:
-            mock_run.return_value = MCPResponse.success_response(
-                reply_to="msg_123", result={"status": "converting"}
-            )
+            mock_run.return_value = MCPResponse.success_response(reply_to="msg_123", result={"status": "converting"})
 
             response = await agent.handle_retry_decision(message, global_state)
 
@@ -3823,9 +3726,7 @@ class TestRetryWorkflowWithNoProgress:
         """Test that retry resets the progress tracking flags."""
         mock_mcp = Mock()
         mock_mcp.send_message = AsyncMock(
-            return_value=MCPResponse.success_response(
-                reply_to="msg_1", result={"status": "retrying"}
-            )
+            return_value=MCPResponse.success_response(reply_to="msg_1", result={"status": "retrying"})
         )
 
         agent = ConversationAgent(mock_mcp, llm_service=None)
@@ -3851,9 +3752,7 @@ class TestRetryWorkflowWithNoProgress:
         )
 
         with patch.object(agent, "_run_conversion", new_callable=AsyncMock) as mock_run:
-            mock_run.return_value = MCPResponse.success_response(
-                reply_to="msg_123", result={"status": "converting"}
-            )
+            mock_run.return_value = MCPResponse.success_response(reply_to="msg_123", result={"status": "converting"})
 
             response = await agent.handle_retry_decision(message, global_state)
 
@@ -3973,9 +3872,7 @@ class TestImprovementDecisionWorkflow:
         """Test accepting PASSED_WITH_ISSUES result."""
         mock_mcp = Mock()
         mock_mcp.send_message = AsyncMock(
-            return_value=MCPResponse.success_response(
-                reply_to="msg_eval", result={"report_generated": True}
-            )
+            return_value=MCPResponse.success_response(reply_to="msg_eval", result={"report_generated": True})
         )
         agent = ConversationAgent(mock_mcp, llm_service=None)
 
@@ -3996,15 +3893,12 @@ class TestImprovementDecisionWorkflow:
         assert response.result.get("status") == "completed"
 
 
-
 @pytest.mark.unit
 class TestLLMResponseHandling:
     """Test LLM-powered conversation features."""
 
     @pytest.mark.asyncio
-    async def test_llm_generates_smart_missing_metadata_message(
-        self, global_state, tmp_path
-    ):
+    async def test_llm_generates_smart_missing_metadata_message(self, global_state, tmp_path):
         """Test LLM generates context-aware missing metadata request."""
         mock_llm = MockLLMService()
         mock_llm.generate_response = AsyncMock(
@@ -4048,16 +3942,12 @@ class TestLLMResponseHandling:
             message_id="msg_123",
             target_agent="conversation",
             action="handle_user_input",
-            context={
-                "user_message": "Dr. Jane Smith from MIT, recording V1 neurons in mice"
-            },
+            context={"user_message": "Dr. Jane Smith from MIT, recording V1 neurons in mice"},
         )
 
         # Mock _run_conversion to avoid actual conversion
         with patch.object(agent, "_run_conversion", new_callable=AsyncMock) as mock_run:
-            mock_run.return_value = MCPResponse.success_response(
-                reply_to="msg_123", result={"status": "converting"}
-            )
+            mock_run.return_value = MCPResponse.success_response(reply_to="msg_123", result={"status": "converting"})
             response = await agent.handle_conversational_response(message, global_state)
 
             # Should extract metadata and proceed
@@ -4072,9 +3962,7 @@ class TestLLMResponseHandling:
         )
         mock_mcp = Mock()
         mock_mcp.send_message = AsyncMock(
-            return_value=MCPResponse.success_response(
-                reply_to="msg_123", result={"status": "validating"}
-            )
+            return_value=MCPResponse.success_response(reply_to="msg_123", result={"status": "validating"})
         )
         agent = ConversationAgent(mock_mcp, llm_service=mock_llm)
 
@@ -4120,16 +4008,12 @@ class TestLLMResponseHandling:
             message_id="msg_123",
             target_agent="conversation",
             action="handle_user_input",
-            context={
-                "user_message": "experimenter: Dr. Smith\ninstitution: MIT"
-            },
+            context={"user_message": "experimenter: Dr. Smith\ninstitution: MIT"},
         )
 
         # Mock _run_conversion
         with patch.object(agent, "_run_conversion", new_callable=AsyncMock) as mock_run:
-            mock_run.return_value = MCPResponse.success_response(
-                reply_to="msg_123", result={"status": "converting"}
-            )
+            mock_run.return_value = MCPResponse.success_response(reply_to="msg_123", result={"status": "converting"})
             response = await agent.handle_conversational_response(message, global_state)
 
             # Should still work using structured parsing
@@ -4145,9 +4029,7 @@ class TestUserResponsePatterns:
         """Test different ways users confirm: yes, yeah, sure, ok."""
         mock_mcp = Mock()
         mock_mcp.send_message = AsyncMock(
-            return_value=MCPResponse.success_response(
-                reply_to="msg_123", result={"status": "completed"}
-            )
+            return_value=MCPResponse.success_response(reply_to="msg_123", result={"status": "completed"})
         )
         agent = ConversationAgent(mock_mcp, llm_service=None)
 
@@ -4275,9 +4157,7 @@ class TestAgentMCPMessageExchanges:
     """Test complex multi-agent MCP communication workflows."""
 
     @pytest.mark.asyncio
-    async def test_conversion_agent_returns_partial_results(
-        self, global_state, tmp_path
-    ):
+    async def test_conversion_agent_returns_partial_results(self, global_state, tmp_path):
         """Test handling when conversion agent returns partial metadata."""
         mock_mcp = Mock()
         mock_mcp.send_message = AsyncMock(
@@ -4335,9 +4215,7 @@ class TestAgentMCPMessageExchanges:
                             "auto_fixable": False,
                         }
                     ],
-                    "suggested_corrections": {
-                        "session_start_time": "2024-03-15T14:30:00-05:00"
-                    },
+                    "suggested_corrections": {"session_start_time": "2024-03-15T14:30:00-05:00"},
                 },
             )
         )
@@ -4352,9 +4230,7 @@ class TestAgentMCPMessageExchanges:
             "Validation failed",
             {
                 "issues": [{"message": "session_start_time is missing"}],
-                "suggested_corrections": {
-                    "session_start_time": "2024-03-15T14:30:00-05:00"
-                },
+                "suggested_corrections": {"session_start_time": "2024-03-15T14:30:00-05:00"},
             },
         )
 
@@ -4406,9 +4282,7 @@ class TestAgentMCPMessageExchanges:
 
         # Mock _run_conversion to avoid actual conversion
         with patch.object(agent, "_run_conversion", new_callable=AsyncMock) as mock_run:
-            mock_run.return_value = MCPResponse.success_response(
-                reply_to="msg_1", result={"status": "converting"}
-            )
+            mock_run.return_value = MCPResponse.success_response(reply_to="msg_1", result={"status": "converting"})
             response = await agent.handle_start_conversion(message, global_state)
 
             # Should have called MCP to start workflow
@@ -4418,9 +4292,7 @@ class TestAgentMCPMessageExchanges:
     async def test_agent_handles_mcp_timeout(self, global_state, tmp_path):
         """Test handling when MCP message times out."""
         mock_mcp = Mock()
-        mock_mcp.send_message = AsyncMock(
-            side_effect=asyncio.TimeoutError("MCP message timeout")
-        )
+        mock_mcp.send_message = AsyncMock(side_effect=TimeoutError("MCP message timeout"))
         agent = ConversationAgent(mock_mcp, llm_service=None)
 
         input_file = tmp_path / "test.bin"
@@ -4444,7 +4316,7 @@ class TestAgentMCPMessageExchanges:
             response = await agent.handle_start_conversion(message, global_state)
             # If no exception, should return a response
             assert response is not None
-        except asyncio.TimeoutError:
+        except TimeoutError:
             # Also acceptable to propagate timeout for retry handling
             pass
 
@@ -4492,15 +4364,11 @@ class TestUncoveredWorkflows:
     """Test previously uncovered workflow sections to improve coverage."""
 
     @pytest.mark.asyncio
-    async def test_metadata_auto_fill_from_inference_with_confidence_check(
-        self, global_state, tmp_path
-    ):
+    async def test_metadata_auto_fill_from_inference_with_confidence_check(self, global_state, tmp_path):
         """Test auto-filling optional fields from AI inference (lines 1804-1831)."""
         mock_mcp = Mock()
         mock_mcp.send_message = AsyncMock(
-            return_value=MCPResponse.success_response(
-                reply_to="msg_123", result={"status": "converting"}
-            )
+            return_value=MCPResponse.success_response(reply_to="msg_123", result={"status": "converting"})
         )
         agent = ConversationAgent(mock_mcp, llm_service=None)
 
@@ -4534,9 +4402,7 @@ class TestUncoveredWorkflows:
 
         # Mock _run_conversion to actually invoke the auto-fill logic
         with patch.object(agent, "_run_conversion", new_callable=AsyncMock) as mock_run:
-            mock_run.return_value = MCPResponse.success_response(
-                reply_to="msg_123", result={"status": "converting"}
-            )
+            mock_run.return_value = MCPResponse.success_response(reply_to="msg_123", result={"status": "converting"})
             response = await agent.handle_start_conversion(message, global_state)
 
             # Auto-fill should have added high-confidence fields
@@ -4545,29 +4411,18 @@ class TestUncoveredWorkflows:
             assert response is not None
 
     @pytest.mark.asyncio
-    async def test_missing_fields_warning_logged_non_blocking(
-        self, global_state, tmp_path
-    ):
+    async def test_missing_fields_warning_logged_non_blocking(self, global_state, tmp_path):
         """Test that missing fields generate warning but don't block conversion (lines 1787-1802)."""
         mock_mcp = Mock()
         # Mock format detection and conversion responses
         mock_mcp.send_message = AsyncMock(
             side_effect=[
                 # Format detection response
-                MCPResponse.success_response(
-                    reply_to="msg_123",
-                    result={"format": "SpikeGLX", "confidence": "high"}
-                ),
+                MCPResponse.success_response(reply_to="msg_123", result={"format": "SpikeGLX", "confidence": "high"}),
                 # Conversion response
-                MCPResponse.success_response(
-                    reply_to="msg_123",
-                    result={"status": "completed"}
-                ),
+                MCPResponse.success_response(reply_to="msg_123", result={"status": "completed"}),
                 # Validation response
-                MCPResponse.success_response(
-                    reply_to="msg_123",
-                    result={"overall_status": "PASSED", "issues": []}
-                )
+                MCPResponse.success_response(reply_to="msg_123", result={"overall_status": "PASSED", "issues": []}),
             ]
         )
         agent = ConversationAgent(mock_mcp, llm_service=None)
@@ -4598,9 +4453,7 @@ class TestUncoveredWorkflows:
         )
 
         with patch.object(agent, "_run_conversion", new_callable=AsyncMock) as mock_run:
-            mock_run.return_value = MCPResponse.success_response(
-                reply_to="msg_123", result={"status": "converting"}
-            )
+            mock_run.return_value = MCPResponse.success_response(reply_to="msg_123", result={"status": "converting"})
             response = await agent.handle_start_conversion(message, global_state)
 
             # Should proceed to conversion
@@ -4637,11 +4490,7 @@ class TestUncoveredWorkflows:
         global_state.add_log(
             LogLevel.ERROR,
             "Validation failed",
-            {
-                "validation_result": {
-                    "issues": [{"message": "session_start_time is missing"}]
-                }
-            },
+            {"validation_result": {"issues": [{"message": "session_start_time is missing"}]}},
         )
 
         # Simulate validation failure triggering correction analysis
@@ -4652,9 +4501,7 @@ class TestUncoveredWorkflows:
             action="handle_validation_result",
             context={
                 "validation_status": "FAILED",
-                "validation_result": {
-                    "issues": [{"message": "session_start_time is missing"}]
-                },
+                "validation_result": {"issues": [{"message": "session_start_time is missing"}]},
             },
         )
 
@@ -4667,9 +4514,7 @@ class TestUncoveredWorkflows:
     async def test_custom_metadata_response_handling(self, global_state, tmp_path):
         """Test handling custom metadata response (lines 3120-3151)."""
         mock_llm = MockLLMService()
-        mock_llm.generate_response = AsyncMock(
-            return_value='{"custom_field_1": "value1", "custom_field_2": "value2"}'
-        )
+        mock_llm.generate_response = AsyncMock(return_value='{"custom_field_1": "value1", "custom_field_2": "value2"}')
         mock_mcp = Mock()
         agent = ConversationAgent(mock_mcp, llm_service=mock_llm)
 
@@ -4688,16 +4533,12 @@ class TestUncoveredWorkflows:
             message_id="msg_123",
             target_agent="conversation",
             action="handle_user_input",
-            context={
-                "user_message": "custom_field_1: value1\ncustom_field_2: value2"
-            },
+            context={"user_message": "custom_field_1: value1\ncustom_field_2: value2"},
         )
 
         # Mock _run_conversion to avoid actual conversion
         with patch.object(agent, "_run_conversion", new_callable=AsyncMock) as mock_run:
-            mock_run.return_value = MCPResponse.success_response(
-                reply_to="msg_123", result={"status": "converting"}
-            )
+            mock_run.return_value = MCPResponse.success_response(reply_to="msg_123", result={"status": "converting"})
             response = await agent.handle_conversational_response(message, global_state)
 
             # Should handle custom metadata and proceed
@@ -4776,9 +4617,7 @@ class TestCompleteMetadataWorkflows:
         )
         mock_mcp = Mock()
         mock_mcp.send_message = AsyncMock(
-            return_value=MCPResponse.success_response(
-                reply_to="msg_123", result={"status": "converting"}
-            )
+            return_value=MCPResponse.success_response(reply_to="msg_123", result={"status": "converting"})
         )
         agent = ConversationAgent(mock_mcp, llm_service=mock_llm)
 
@@ -4812,9 +4651,7 @@ class TestCompleteMetadataWorkflows:
         )
 
         with patch.object(agent, "_run_conversion", new_callable=AsyncMock) as mock_run:
-            mock_run.return_value = MCPResponse.success_response(
-                reply_to="msg_123", result={"status": "converting"}
-            )
+            mock_run.return_value = MCPResponse.success_response(reply_to="msg_123", result={"status": "converting"})
             response = await agent.handle_conversational_response(message, global_state)
 
             # Should update metadata with user corrections
@@ -4892,9 +4729,7 @@ class TestCompleteCorrectionWorkflows:
                     },
                 ),
                 # Second: reconversion after auto-fix
-                MCPResponse.success_response(
-                    reply_to="msg_2", result={"status": "converting"}
-                ),
+                MCPResponse.success_response(reply_to="msg_2", result={"status": "converting"}),
                 # Third: re-validation succeeds
                 MCPResponse.success_response(
                     reply_to="msg_3",
@@ -4931,9 +4766,7 @@ class TestCompleteCorrectionWorkflows:
         )
 
         with patch.object(agent, "_run_conversion", new_callable=AsyncMock) as mock_run:
-            mock_run.return_value = MCPResponse.success_response(
-                reply_to="msg_1", result={"status": "converting"}
-            )
+            mock_run.return_value = MCPResponse.success_response(reply_to="msg_1", result={"status": "converting"})
             response = await agent.handle_retry_decision(message, global_state)
 
             # Should initiate retry
@@ -4978,9 +4811,7 @@ class TestCompleteConversationalFlows:
     """Test complete conversational interaction flows."""
 
     @pytest.mark.asyncio
-    async def test_user_confused_then_gets_help_then_provides_data(
-        self, global_state, tmp_path
-    ):
+    async def test_user_confused_then_gets_help_then_provides_data(self, global_state, tmp_path):
         """Test workflow where user is confused, asks for help, then provides data."""
         mock_llm = MockLLMService()
         mock_llm.generate_response = AsyncMock(
@@ -5027,21 +4858,15 @@ class TestCompleteConversationalFlows:
         )
 
         with patch.object(agent, "_run_conversion", new_callable=AsyncMock) as mock_run:
-            mock_run.return_value = MCPResponse.success_response(
-                reply_to="msg_3", result={"status": "converting"}
-            )
+            mock_run.return_value = MCPResponse.success_response(reply_to="msg_3", result={"status": "converting"})
             response3 = await agent.handle_conversational_response(message3, global_state)
             assert response3 is not None
 
     @pytest.mark.asyncio
-    async def test_user_starts_minimal_then_adds_more_metadata(
-        self, global_state, tmp_path
-    ):
+    async def test_user_starts_minimal_then_adds_more_metadata(self, global_state, tmp_path):
         """Test user initially wants minimal metadata, then decides to add more."""
         mock_llm = MockLLMService()
-        mock_llm.generate_response = AsyncMock(
-            return_value='{"keywords": ["electrophysiology", "V1"]}'
-        )
+        mock_llm.generate_response = AsyncMock(return_value='{"keywords": ["electrophysiology", "V1"]}')
         mock_mcp = Mock()
         agent = ConversationAgent(mock_mcp, llm_service=mock_llm)
 
@@ -5093,9 +4918,7 @@ class TestValidationAndRecoveryWorkflows:
                 result={
                     "corrections": {
                         "analysis": "Critical issues found",
-                        "suggestions": [
-                            {"field": "session_start_time", "auto_fixable": False}
-                        ],
+                        "suggestions": [{"field": "session_start_time", "auto_fixable": False}],
                         "recommended_action": "request_user_input",
                     }
                 },
@@ -5119,9 +4942,7 @@ class TestValidationAndRecoveryWorkflows:
         )
 
         # Verify critical logs were added
-        critical_logs = [
-            log for log in global_state.logs if log.level == LogLevel.CRITICAL
-        ]
+        critical_logs = [log for log in global_state.logs if log.level == LogLevel.CRITICAL]
         assert len(critical_logs) > 0
 
     @pytest.mark.asyncio
@@ -5130,9 +4951,7 @@ class TestValidationAndRecoveryWorkflows:
         mock_mcp = Mock()
         # Set up send_message as AsyncMock for any MCP calls
         mock_mcp.send_message = AsyncMock(
-            return_value=MCPResponse.success_response(
-                reply_to="msg_123", result={"status": "accepted"}
-            )
+            return_value=MCPResponse.success_response(reply_to="msg_123", result={"status": "accepted"})
         )
         agent = ConversationAgent(mock_mcp, llm_service=None)
 
@@ -5140,9 +4959,7 @@ class TestValidationAndRecoveryWorkflows:
         global_state.overall_status = ValidationOutcome.PASSED_WITH_ISSUES
         global_state.metadata = {
             "format": "SpikeGLX",
-            "validation_issues": [
-                {"severity": "WARNING", "message": "Optional field missing"}
-            ],
+            "validation_issues": [{"severity": "WARNING", "message": "Optional field missing"}],
         }
 
         message = MCPMessage(
@@ -5162,9 +4979,7 @@ class TestMixedWorkflowScenarios:
     """Test mixed/complex workflow scenarios."""
 
     @pytest.mark.asyncio
-    async def test_format_detection_then_metadata_then_conversion(
-        self, global_state, tmp_path
-    ):
+    async def test_format_detection_then_metadata_then_conversion(self, global_state, tmp_path):
         """Test complete flow: format detection → metadata collection → conversion."""
         mock_mcp = Mock()
         mock_mcp.send_message = AsyncMock(
@@ -5175,15 +4990,11 @@ class TestMixedWorkflowScenarios:
                     result={"detected_format": "SpikeGLX", "confidence": 0.95},
                 ),
                 # Conversion
-                MCPResponse.success_response(
-                    reply_to="msg_2", result={"status": "completed"}
-                ),
+                MCPResponse.success_response(reply_to="msg_2", result={"status": "completed"}),
             ]
         )
         mock_llm = MockLLMService()
-        mock_llm.generate_response = AsyncMock(
-            return_value='{"experimenter": ["Dr. Smith"], "institution": "MIT"}'
-        )
+        mock_llm.generate_response = AsyncMock(return_value='{"experimenter": ["Dr. Smith"], "institution": "MIT"}')
         agent = ConversationAgent(mock_mcp, llm_service=mock_llm)
 
         input_file = tmp_path / "recording.imec0.ap.bin"
@@ -5199,9 +5010,7 @@ class TestMixedWorkflowScenarios:
         )
 
         with patch.object(agent, "_run_conversion", new_callable=AsyncMock) as mock_run:
-            mock_run.return_value = MCPResponse.success_response(
-                reply_to="msg_1", result={"status": "converting"}
-            )
+            mock_run.return_value = MCPResponse.success_response(reply_to="msg_1", result={"status": "converting"})
             response = await agent.handle_start_conversion(message, global_state)
             assert response is not None
 
@@ -5250,14 +5059,10 @@ class TestErrorRecoveryScenarios:
     """Test error recovery and graceful degradation scenarios."""
 
     @pytest.mark.asyncio
-    async def test_llm_fails_during_metadata_parsing_fallback(
-        self, global_state, tmp_path
-    ):
+    async def test_llm_fails_during_metadata_parsing_fallback(self, global_state, tmp_path):
         """Test graceful fallback when LLM fails during metadata parsing."""
         mock_llm = MockLLMService()
-        mock_llm.generate_response = AsyncMock(
-            side_effect=Exception("LLM service temporarily unavailable")
-        )
+        mock_llm.generate_response = AsyncMock(side_effect=Exception("LLM service temporarily unavailable"))
         mock_mcp = Mock()
         agent = ConversationAgent(mock_mcp, llm_service=mock_llm)
 
@@ -5276,9 +5081,7 @@ class TestErrorRecoveryScenarios:
         )
 
         with patch.object(agent, "_run_conversion", new_callable=AsyncMock) as mock_run:
-            mock_run.return_value = MCPResponse.success_response(
-                reply_to="msg_123", result={"status": "converting"}
-            )
+            mock_run.return_value = MCPResponse.success_response(reply_to="msg_123", result={"status": "converting"})
             # Should not crash, should fall back to structured parsing
             response = await agent.handle_conversational_response(message, global_state)
             assert response is not None
@@ -5291,9 +5094,7 @@ class TestErrorRecoveryScenarios:
         mock_mcp.send_message = AsyncMock(
             side_effect=[
                 Exception("Network error"),
-                MCPResponse.success_response(
-                    reply_to="msg_123", result={"status": "completed"}
-                ),
+                MCPResponse.success_response(reply_to="msg_123", result={"status": "completed"}),
             ]
         )
         agent = ConversationAgent(mock_mcp, llm_service=None)
@@ -5335,17 +5136,13 @@ class TestRunConversion:
     """Direct tests for _run_conversion method (lines 1761-2189)."""
 
     @pytest.mark.asyncio
-    async def test_run_conversion_with_missing_fields_logs_warning(
-        self, global_state, tmp_path
-    ):
+    async def test_run_conversion_with_missing_fields_logs_warning(self, global_state, tmp_path):
         """Test that missing metadata fields generate warning but conversion proceeds."""
         mock_mcp = Mock()
         mock_mcp.send_message = AsyncMock(
             side_effect=[
                 # Conversion response
-                MCPResponse.success_response(
-                    reply_to="msg_1", result={"output_path": "/tmp/test.nwb"}
-                ),
+                MCPResponse.success_response(reply_to="msg_1", result={"output_path": "/tmp/test.nwb"}),
                 # Validation response - correct structure
                 MCPResponse.success_response(
                     reply_to="msg_2",
@@ -5357,9 +5154,7 @@ class TestRunConversion:
                     },
                 ),
                 # Report generation response
-                MCPResponse.success_response(
-                    reply_to="msg_3", result={"report_generated": True}
-                ),
+                MCPResponse.success_response(reply_to="msg_3", result={"report_generated": True}),
             ]
         )
         agent = ConversationAgent(mock_mcp, llm_service=None)
@@ -5385,16 +5180,12 @@ class TestRunConversion:
         assert any("missing" in log.message.lower() for log in warning_logs)
 
     @pytest.mark.asyncio
-    async def test_run_conversion_auto_fills_from_inference(
-        self, global_state, tmp_path
-    ):
+    async def test_run_conversion_auto_fills_from_inference(self, global_state, tmp_path):
         """Test auto-filling optional metadata from inference results."""
         mock_mcp = Mock()
         mock_mcp.send_message = AsyncMock(
             side_effect=[
-                MCPResponse.success_response(
-                    reply_to="msg_1", result={"output_path": "/tmp/test.nwb"}
-                ),
+                MCPResponse.success_response(reply_to="msg_1", result={"output_path": "/tmp/test.nwb"}),
                 MCPResponse.success_response(
                     reply_to="msg_2",
                     result={
@@ -5405,9 +5196,7 @@ class TestRunConversion:
                     },
                 ),
                 # Report generation response
-                MCPResponse.success_response(
-                    reply_to="msg_3", result={"report_generated": True}
-                ),
+                MCPResponse.success_response(reply_to="msg_3", result={"report_generated": True}),
             ]
         )
         agent = ConversationAgent(mock_mcp, llm_service=None)
@@ -5448,9 +5237,7 @@ class TestRunConversion:
         mock_mcp = Mock()
         mock_mcp.send_message = AsyncMock(
             return_value=MCPResponse.error_response(
-                reply_to="msg_1",
-                error_code="CONVERSION_FAILED",
-                error_message="Conversion error"
+                reply_to="msg_1", error_code="CONVERSION_FAILED", error_message="Conversion error"
             )
         )
         agent = ConversationAgent(mock_mcp, llm_service=None)
@@ -5478,9 +5265,7 @@ class TestRunConversion:
         mock_mcp.send_message = AsyncMock(
             side_effect=[
                 # Conversion succeeds
-                MCPResponse.success_response(
-                    reply_to="msg_1", result={"output_path": "/tmp/test.nwb"}
-                ),
+                MCPResponse.success_response(reply_to="msg_1", result={"output_path": "/tmp/test.nwb"}),
                 # Validation passes with issues
                 MCPResponse.success_response(
                     reply_to="msg_2",
@@ -5489,16 +5274,14 @@ class TestRunConversion:
                             "overall_status": "PASSED_WITH_ISSUES",
                             "issues": [
                                 {"severity": "WARNING", "message": "Missing optional field"},
-                                {"severity": "INFO", "message": "Best practice suggestion"}
+                                {"severity": "INFO", "message": "Best practice suggestion"},
                             ],
                             "summary": {"warning": 1, "info": 1},
                         }
                     },
                 ),
                 # Report generation
-                MCPResponse.success_response(
-                    reply_to="msg_3", result={"report_path": "/tmp/report.json"}
-                ),
+                MCPResponse.success_response(reply_to="msg_3", result={"report_path": "/tmp/report.json"}),
             ]
         )
         agent = ConversationAgent(mock_mcp, llm_service=None)
@@ -5527,9 +5310,7 @@ class TestRunConversion:
         mock_mcp.send_message = AsyncMock(
             side_effect=[
                 # Conversion succeeds
-                MCPResponse.success_response(
-                    reply_to="msg_1", result={"output_path": "/tmp/test.nwb"}
-                ),
+                MCPResponse.success_response(reply_to="msg_1", result={"output_path": "/tmp/test.nwb"}),
                 # Validation passes
                 MCPResponse.success_response(
                     reply_to="msg_2",
@@ -5542,9 +5323,7 @@ class TestRunConversion:
                     },
                 ),
                 # Report generation
-                MCPResponse.success_response(
-                    reply_to="msg_3", result={"report_generated": True}
-                ),
+                MCPResponse.success_response(reply_to="msg_3", result={"report_generated": True}),
             ]
         )
         agent = ConversationAgent(mock_mcp, llm_service=None)
@@ -5556,12 +5335,12 @@ class TestRunConversion:
         global_state.inference_result = {
             "inferred_metadata": {
                 "keywords": ["neuroscience", "electrophysiology"],
-                "related_publications": ["doi:10.1234/test"]
+                "related_publications": ["doi:10.1234/test"],
             },
             "confidence_scores": {
                 "keywords": 85,  # Above 60% threshold
-                "related_publications": 70
-            }
+                "related_publications": 70,
+            },
         }
 
         metadata = {"experimenter": ["Dr. Smith"]}
@@ -5584,9 +5363,7 @@ class TestRunConversion:
         mock_mcp = Mock()
         mock_mcp.send_message = AsyncMock(
             side_effect=[
-                MCPResponse.success_response(
-                    reply_to="msg_1", result={"output_path": "/tmp/test.nwb"}
-                ),
+                MCPResponse.success_response(reply_to="msg_1", result={"output_path": "/tmp/test.nwb"}),
                 MCPResponse.success_response(
                     reply_to="msg_2",
                     result={
@@ -5597,9 +5374,7 @@ class TestRunConversion:
                         }
                     },
                 ),
-                MCPResponse.success_response(
-                    reply_to="msg_3", result={"report_generated": True}
-                ),
+                MCPResponse.success_response(reply_to="msg_3", result={"report_generated": True}),
             ]
         )
         agent = ConversationAgent(mock_mcp, llm_service=None)
@@ -5629,17 +5404,13 @@ class TestRunConversion:
         mock_mcp = Mock()
         mock_mcp.send_message = AsyncMock(
             side_effect=[
-                MCPResponse.success_response(
-                    reply_to="msg_1", result={"output_path": "/tmp/test.nwb"}
-                ),
+                MCPResponse.success_response(reply_to="msg_1", result={"output_path": "/tmp/test.nwb"}),
                 MCPResponse.success_response(
                     reply_to="msg_2",
                     result={
                         "validation_result": {
                             "overall_status": "FAILED",
-                            "issues": [
-                                {"severity": "CRITICAL", "message": "Missing required field: experimenter"}
-                            ],
+                            "issues": [{"severity": "CRITICAL", "message": "Missing required field: experimenter"}],
                             "summary": {"critical": 1},
                         }
                     },
@@ -5653,7 +5424,13 @@ class TestRunConversion:
             return_value={
                 "message": "I found a critical issue that needs fixing.",
                 "needs_user_input": True,
-                "suggested_fixes": [{"field": "experimenter", "description": "Person who performed experiment", "example": "Dr. Jane Smith"}],
+                "suggested_fixes": [
+                    {
+                        "field": "experimenter",
+                        "description": "Person who performed experiment",
+                        "example": "Dr. Jane Smith",
+                    }
+                ],
                 "severity": "high",
             }
         )
@@ -5680,16 +5457,13 @@ class TestRunConversion:
         assert "needs_user_input" in response.result
         assert response.result["needs_user_input"] is True
 
-
     @pytest.mark.asyncio
     async def test_run_conversion_llm_analysis_exception_fallback(self, global_state, tmp_path):
         """Test _run_conversion falls back when LLM analysis raises exception using real handler."""
         mock_mcp = Mock()
         mock_mcp.send_message = AsyncMock(
             side_effect=[
-                MCPResponse.success_response(
-                    reply_to="msg_1", result={"output_path": "/tmp/test.nwb"}
-                ),
+                MCPResponse.success_response(reply_to="msg_1", result={"output_path": "/tmp/test.nwb"}),
                 MCPResponse.success_response(
                     reply_to="msg_2",
                     result={
@@ -5705,9 +5479,7 @@ class TestRunConversion:
 
         # Configure LLM to raise exception during validation analysis
         llm_service = MockLLMService()
-        llm_service.generate_structured_output = AsyncMock(
-            side_effect=Exception("LLM service unavailable")
-        )
+        llm_service.generate_structured_output = AsyncMock(side_effect=Exception("LLM service unavailable"))
 
         agent = ConversationAgent(mock_mcp, llm_service=llm_service)
         # Uses real ConversationalHandler that will raise exception due to LLM failure
@@ -5738,9 +5510,7 @@ class TestRunConversion:
         mock_mcp = Mock()
         mock_mcp.send_message = AsyncMock(
             side_effect=[
-                MCPResponse.success_response(
-                    reply_to="msg_1", result={"output_path": "/tmp/test.nwb"}
-                ),
+                MCPResponse.success_response(reply_to="msg_1", result={"output_path": "/tmp/test.nwb"}),
                 MCPResponse.success_response(
                     reply_to="msg_2",
                     result={
@@ -5793,9 +5563,7 @@ class TestRunConversion:
                     result={
                         "corrections": {
                             "analysis": "Some issues need user input",
-                            "suggestions": [
-                                {"field": "session_start_time", "requires_user_input": True}
-                            ],
+                            "suggestions": [{"field": "session_start_time", "requires_user_input": True}],
                             "recommended_action": "request_user_input",
                         }
                     },
@@ -5807,9 +5575,7 @@ class TestRunConversion:
 
         # Mock helper methods
         agent._extract_auto_fixes = Mock(return_value=[])
-        agent._identify_user_input_required = Mock(
-            return_value=["session_start_time", "experiment_description"]
-        )
+        agent._identify_user_input_required = Mock(return_value=["session_start_time", "experiment_description"])
 
         # Set up state properly with validation data in logs
         await global_state.update_status(ConversionStatus.AWAITING_RETRY_APPROVAL)
@@ -5817,11 +5583,7 @@ class TestRunConversion:
             "overall_status": "FAILED",
             "issues": [{"severity": "CRITICAL", "message": "Missing session_start_time"}],
         }
-        global_state.add_log(
-            LogLevel.INFO,
-            "Validation completed",
-            {"validation": validation_data}
-        )
+        global_state.add_log(LogLevel.INFO, "Validation completed", {"validation": validation_data})
 
         message = MCPMessage(
             target_agent="conversation",
@@ -5852,10 +5614,7 @@ class TestRealConversationWorkflows:
         """Test real metadata provenance tracking logic."""
         # Track user-provided metadata
         conversation_agent_real._track_user_provided_metadata(
-            global_state,
-            field_name="experimenter",
-            value=["Jane Doe"],
-            raw_input="experimenter: Jane Doe"
+            global_state, field_name="experimenter", value=["Jane Doe"], raw_input="experimenter: Jane Doe"
         )
 
         # Verify real tracking logic executed
@@ -5872,7 +5631,7 @@ class TestRealConversationWorkflows:
             field_name="institution",
             value="MIT",
             confidence=85.0,
-            raw_input="We did the experiment at MIT"
+            raw_input="We did the experiment at MIT",
         )
 
         # Verify real tracking logic
@@ -5885,11 +5644,7 @@ class TestRealConversationWorkflows:
     async def test_real_low_confidence_metadata_flagging(self, conversation_agent_real, global_state):
         """Test real logic for flagging low-confidence metadata."""
         conversation_agent_real._track_ai_parsed_metadata(
-            global_state,
-            field_name="keywords",
-            value=["neuroscience"],
-            confidence=60.0,
-            raw_input="neuroscience study"
+            global_state, field_name="keywords", value=["neuroscience"], confidence=60.0, raw_input="neuroscience study"
         )
 
         # Should flag for review when confidence < 70%
@@ -5902,7 +5657,7 @@ class TestRealConversationWorkflows:
         global_state.metadata = {
             "experimenter": ["Jane Doe"],
             "institution": "MIT",
-            "session_description": "Neural recording in V1"
+            "session_description": "Neural recording in V1",
         }
 
         # Test real validation
@@ -5915,11 +5670,7 @@ class TestRealConversationWorkflows:
     @pytest.mark.asyncio
     async def test_real_user_intent_detection_positive(self, conversation_agent_real):
         """Test real user intent detection for adding metadata."""
-        test_inputs = [
-            "yes I want to add more",
-            "sure let me add some",
-            "can i add more"
-        ]
+        test_inputs = ["yes I want to add more", "sure let me add some", "can i add more"]
 
         for user_input in test_inputs:
             result = conversation_agent_real._user_expresses_intent_to_add_more(user_input)
@@ -5929,11 +5680,7 @@ class TestRealConversationWorkflows:
     async def test_real_user_intent_detection_negative(self, conversation_agent_real):
         """Test real user intent detection for declining metadata."""
         # These inputs should NOT match the intent phrases and return False
-        test_inputs = [
-            "no thanks",
-            "that's all",
-            "proceed with conversion"
-        ]
+        test_inputs = ["no thanks", "that's all", "proceed with conversion"]
 
         for user_input in test_inputs:
             result = conversation_agent_real._user_expresses_intent_to_add_more(user_input)
@@ -5981,4 +5728,4 @@ class TestRealConversationWorkflows:
             strategy = conversation_agent_real._adaptive_retry_strategy
             assert strategy is not None
             # Strategy should have analyze_and_recommend_strategy method
-            assert hasattr(strategy, 'analyze_and_recommend_strategy')
+            assert hasattr(strategy, "analyze_and_recommend_strategy")

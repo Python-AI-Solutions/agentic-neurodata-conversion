@@ -4,13 +4,11 @@ Unit tests for AdaptiveRetryStrategy.
 Tests intelligent retry logic that learns from failures and recommends strategies.
 """
 
-import pytest
 from unittest.mock import AsyncMock
 
+import pytest
 from agents.adaptive_retry import AdaptiveRetryStrategy
-from models import GlobalState, LogLevel, ConversionStatus
 from services.llm_service import MockLLMService
-
 
 # Note: The following fixtures are provided by conftest files:
 # - global_state: from root conftest.py (Fresh GlobalState for each test)
@@ -47,9 +45,7 @@ class TestAnalyzeAndRecommendStrategy:
 
         validation_result = {"issues": [{"message": "Missing experimenter"}]}
 
-        result = await strategy.analyze_and_recommend_strategy(
-            global_state, validation_result
-        )
+        result = await strategy.analyze_and_recommend_strategy(global_state, validation_result)
 
         assert result["should_retry"] is False
         assert result["strategy"] == "stop"
@@ -64,14 +60,10 @@ class TestAnalyzeAndRecommendStrategy:
 
         # Current issues
         validation_result = {
-            "issues": [
-                {"message": "Missing experimenter", "check_function_name": "check_experimenter"}
-            ]
+            "issues": [{"message": "Missing experimenter", "check_function_name": "check_experimenter"}]
         }
 
-        result = await strategy.analyze_and_recommend_strategy(
-            global_state, validation_result
-        )
+        result = await strategy.analyze_and_recommend_strategy(global_state, validation_result)
 
         # Should provide a strategy
         assert "should_retry" in result
@@ -96,13 +88,9 @@ class TestAnalyzeAndRecommendStrategy:
         strategy = AdaptiveRetryStrategy(llm_service=llm_service)
         global_state.correction_attempt = 1
 
-        validation_result = {
-            "issues": [{"message": "Missing subject_id", "check_function_name": "check_subject"}]
-        }
+        validation_result = {"issues": [{"message": "Missing subject_id", "check_function_name": "check_subject"}]}
 
-        result = await strategy.analyze_and_recommend_strategy(
-            global_state, validation_result
-        )
+        result = await strategy.analyze_and_recommend_strategy(global_state, validation_result)
 
         assert result["should_retry"] is True
         assert result["strategy"] == "retry_with_changes"
@@ -115,18 +103,14 @@ class TestAnalyzeAndRecommendStrategy:
     async def test_analyze_fallback_when_llm_fails(self, global_state):
         """Test analysis falls back to heuristic when LLM fails."""
         llm_service = MockLLMService()
-        llm_service.generate_structured_output = AsyncMock(
-            side_effect=Exception("LLM error")
-        )
+        llm_service.generate_structured_output = AsyncMock(side_effect=Exception("LLM error"))
 
         strategy = AdaptiveRetryStrategy(llm_service=llm_service)
         global_state.correction_attempt = 1
 
         validation_result = {"issues": [{"message": "Missing metadata"}]}
 
-        result = await strategy.analyze_and_recommend_strategy(
-            global_state, validation_result
-        )
+        result = await strategy.analyze_and_recommend_strategy(global_state, validation_result)
 
         # Should fall back to heuristic
         assert "should_retry" in result
@@ -141,9 +125,7 @@ class TestAnalyzeAndRecommendStrategy:
         # Invalid validation result
         validation_result = None
 
-        result = await strategy.analyze_and_recommend_strategy(
-            global_state, validation_result
-        )
+        result = await strategy.analyze_and_recommend_strategy(global_state, validation_result)
 
         # Should return safe fallback
         assert result["should_retry"] is True
@@ -244,9 +226,7 @@ class TestAnalyzeProgress:
         """Test progress analysis when new issues are introduced."""
         strategy = AdaptiveRetryStrategy()
 
-        previous_issues = [
-            {"check_function_name": "check_experimenter"}
-        ]
+        previous_issues = [{"check_function_name": "check_experimenter"}]
 
         current_issues = [
             {"check_function_name": "check_experimenter"},
@@ -322,9 +302,7 @@ class TestHeuristicStrategy:
         """Test heuristic identifies metadata issues."""
         strategy = AdaptiveRetryStrategy()
 
-        metadata_issues = [
-            {"message": "Missing metadata field: experimenter"}
-        ]
+        metadata_issues = [{"message": "Missing metadata field: experimenter"}]
 
         result = strategy._heuristic_strategy(
             attempt_num=1,
@@ -399,10 +377,7 @@ class TestFormatIssuesSummary:
         """Test that formatting limits to first 20 issues."""
         strategy = AdaptiveRetryStrategy()
 
-        issues = [
-            {"severity": "ERROR", "message": f"Error {i}"}
-            for i in range(30)
-        ]
+        issues = [{"severity": "ERROR", "message": f"Error {i}"} for i in range(30)]
 
         summary = strategy._format_issues_summary(issues)
 
@@ -412,10 +387,7 @@ class TestFormatIssuesSummary:
         """Test that formatting shows max 5 issues per severity."""
         strategy = AdaptiveRetryStrategy()
 
-        issues = [
-            {"severity": "ERROR", "message": f"Error {i}"}
-            for i in range(10)
-        ]
+        issues = [{"severity": "ERROR", "message": f"Error {i}"} for i in range(10)]
 
         summary = strategy._format_issues_summary(issues)
 
@@ -452,9 +424,7 @@ class TestLLMPoweredAnalysis:
         current_issues = [{"message": "Missing subject_id", "check_function_name": "check_subject_id"}]
         progress_analysis = {"making_progress": True, "issues_fixed": 0, "new_issues": 1, "persistent_issues": 0}
 
-        result = await strategy._llm_powered_analysis(
-            global_state, previous_issues, current_issues, progress_analysis
-        )
+        result = await strategy._llm_powered_analysis(global_state, previous_issues, current_issues, progress_analysis)
 
         assert result["should_retry"] is True
         assert result["strategy"] == "retry_with_changes"
@@ -499,9 +469,7 @@ class TestLLMPoweredAnalysis:
     async def test_llm_analysis_fallback_on_error(self, global_state):
         """Test LLM analysis falls back to heuristic on error."""
         llm_service = MockLLMService()
-        llm_service.generate_structured_output = AsyncMock(
-            side_effect=Exception("LLM service unavailable")
-        )
+        llm_service.generate_structured_output = AsyncMock(side_effect=Exception("LLM service unavailable"))
 
         strategy = AdaptiveRetryStrategy(llm_service=llm_service)
         global_state.correction_attempt = 1
@@ -513,9 +481,7 @@ class TestLLMPoweredAnalysis:
             "persistent_issues": 1,
         }
 
-        result = await strategy._llm_powered_analysis(
-            global_state, [], [{"message": "Error"}], progress_analysis
-        )
+        result = await strategy._llm_powered_analysis(global_state, [], [{"message": "Error"}], progress_analysis)
 
         # Should fall back to heuristic
         assert "should_retry" in result
@@ -558,9 +524,7 @@ class TestAdaptiveRetryStrategyIntegration:
             ]
         }
 
-        result = await strategy.analyze_and_recommend_strategy(
-            global_state, current_validation
-        )
+        result = await strategy.analyze_and_recommend_strategy(global_state, current_validation)
 
         assert result["should_retry"] is True
         assert result["strategy"] == "retry_with_changes"
@@ -571,17 +535,11 @@ class TestAdaptiveRetryStrategyIntegration:
         strategy = AdaptiveRetryStrategy()  # No LLM, use heuristic
 
         global_state.correction_attempt = 3
-        global_state.previous_validation_issues = [
-            {"message": "Same error", "check_function_name": "check1"}
-        ]
+        global_state.previous_validation_issues = [{"message": "Same error", "check_function_name": "check1"}]
 
-        current_validation = {
-            "issues": [{"message": "Same error", "check_function_name": "check1"}]
-        }
+        current_validation = {"issues": [{"message": "Same error", "check_function_name": "check1"}]}
 
-        result = await strategy.analyze_and_recommend_strategy(
-            global_state, current_validation
-        )
+        result = await strategy.analyze_and_recommend_strategy(global_state, current_validation)
 
         # Should provide a strategy
         assert "should_retry" in result
@@ -596,9 +554,7 @@ class TestAdaptiveRetryStrategyIntegration:
 
         current_validation = {"issues": [{"message": "Persistent error"}]}
 
-        result = await strategy.analyze_and_recommend_strategy(
-            global_state, current_validation
-        )
+        result = await strategy.analyze_and_recommend_strategy(global_state, current_validation)
 
         assert result["should_retry"] is False
         assert result["strategy"] == "stop"

@@ -3,14 +3,11 @@ Integration tests for chat endpoints.
 
 Tests POST /api/chat and POST /api/chat/smart endpoints.
 """
+
+from unittest.mock import AsyncMock, Mock, patch
+
 import pytest
-from unittest.mock import patch, Mock, AsyncMock
-from fastapi.testclient import TestClient
-
-from api.main import app
-from models import GlobalState, ConversionStatus
-from services import LLMService
-
+from models import ConversionStatus, GlobalState
 
 # Note: The following fixtures are provided by conftest files:
 # - mock_llm_conversational: from root conftest.py (for chat/conversational responses)
@@ -26,8 +23,8 @@ def patch_llm_service(mock_llm_conversational):
     Uses mock_llm_conversational from root conftest.py which provides
     chat-oriented responses suitable for conversational testing.
     """
-    with patch('services.llm_service.create_llm_service', return_value=mock_llm_conversational):
-        with patch('api.main.create_llm_service', return_value=mock_llm_conversational):
+    with patch("services.llm_service.create_llm_service", return_value=mock_llm_conversational):
+        with patch("api.main.create_llm_service", return_value=mock_llm_conversational):
             yield
 
 
@@ -51,10 +48,7 @@ class TestBasicChatEndpoint:
     def test_chat_with_valid_message(self, api_test_client):
         """Test chat with valid message."""
         # API expects form data, not JSON
-        response = api_test_client.post(
-            "/api/chat",
-            data={"message": "What formats do you support?"}
-        )
+        response = api_test_client.post("/api/chat", data={"message": "What formats do you support?"})
 
         # Should return 200 if endpoint implemented, 404 if not
         assert response.status_code in [200, 404]
@@ -109,18 +103,14 @@ class TestSmartChatEndpoint:
             mock_server.global_state = mock_state
 
             # Mock LLM response - must be AsyncMock since send_message is awaited
-            mock_server.send_message = AsyncMock(return_value=Mock(
-                success=True,
-                result={"response": "I understand your question."}
-            ))
+            mock_server.send_message = AsyncMock(
+                return_value=Mock(success=True, result={"response": "I understand your question."})
+            )
 
             mock_get_server.return_value = mock_server
 
             # API expects form data, not JSON
-            response = api_test_client.post(
-                "/api/chat/smart",
-                data={"message": "Can you help me?"}
-            )
+            response = api_test_client.post("/api/chat/smart", data={"message": "Can you help me?"})
 
             # Should process message
             if response.status_code == 200:
@@ -136,18 +126,14 @@ class TestSmartChatEndpoint:
             mock_server.global_state = mock_state
 
             # Mock send_message even if LLM is not available - must be AsyncMock since send_message is awaited
-            mock_server.send_message = AsyncMock(return_value=Mock(
-                success=True,
-                result={"response": "I understand your question."}
-            ))
+            mock_server.send_message = AsyncMock(
+                return_value=Mock(success=True, result={"response": "I understand your question."})
+            )
 
             mock_get_server.return_value = mock_server
 
             # API expects form data, not JSON
-            response = api_test_client.post(
-                "/api/chat/smart",
-                data={"message": "Hello"}
-            )
+            response = api_test_client.post("/api/chat/smart", data={"message": "Hello"})
 
             # Should handle missing LLM gracefully
             assert response.status_code in [200, 500, 503]
@@ -161,18 +147,14 @@ class TestSmartChatEndpoint:
             mock_server.global_state = mock_state
 
             # Mock send_message - must be AsyncMock since send_message is awaited
-            mock_server.send_message = AsyncMock(return_value=Mock(
-                success=True,
-                result={"response": "Conversion is in progress."}
-            ))
+            mock_server.send_message = AsyncMock(
+                return_value=Mock(success=True, result={"response": "Conversion is in progress."})
+            )
 
             mock_get_server.return_value = mock_server
 
             # API expects form data, not JSON
-            response = api_test_client.post(
-                "/api/chat/smart",
-                data={"message": "What's the status?"}
-            )
+            response = api_test_client.post("/api/chat/smart", data={"message": "What's the status?"})
 
             # Should allow status queries during conversion
             assert response.status_code in [200, 400]
@@ -186,21 +168,16 @@ class TestSmartChatEndpoint:
             mock_server.global_state = mock_state
 
             # Mock MCP message sending - must be AsyncMock since send_message is awaited
-            mock_server.send_message = AsyncMock(return_value=Mock(
-                success=True,
-                result={
-                    "response": "Please provide the subject ID.",
-                    "extracted_metadata": {}
-                }
-            ))
+            mock_server.send_message = AsyncMock(
+                return_value=Mock(
+                    success=True, result={"response": "Please provide the subject ID.", "extracted_metadata": {}}
+                )
+            )
 
             mock_get_server.return_value = mock_server
 
             # API expects form data, not JSON
-            response = api_test_client.post(
-                "/api/chat/smart",
-                data={"message": "The subject ID is SUB-001"}
-            )
+            response = api_test_client.post("/api/chat/smart", data={"message": "The subject ID is SUB-001"})
 
             # Should extract metadata from user response
             assert response.status_code in [200, 500]
@@ -217,21 +194,16 @@ class TestSmartChatEndpoint:
                 mock_server.global_state = mock_state
 
                 # Mock MCP response for cancellation - must be AsyncMock since send_message is awaited
-                mock_server.send_message = AsyncMock(return_value=Mock(
-                    success=True,
-                    result={
-                        "status": "failed",
-                        "validation_status": "failed_user_abandoned"
-                    }
-                ))
+                mock_server.send_message = AsyncMock(
+                    return_value=Mock(
+                        success=True, result={"status": "failed", "validation_status": "failed_user_abandoned"}
+                    )
+                )
 
                 mock_get_server.return_value = mock_server
 
                 # API expects form data, not JSON
-                response = api_test_client.post(
-                    "/api/chat/smart",
-                    data={"message": keyword}
-                )
+                response = api_test_client.post("/api/chat/smart", data={"message": keyword})
 
                 # Should handle cancellation (or rate limiting)
                 assert response.status_code in [200, 400, 429]
@@ -250,24 +222,15 @@ class TestChatContextHandling:
             mock_server.global_state = mock_state
 
             # Must be AsyncMock since send_message is awaited
-            mock_server.send_message = AsyncMock(return_value=Mock(
-                success=True,
-                result={"response": "Understood"}
-            ))
+            mock_server.send_message = AsyncMock(return_value=Mock(success=True, result={"response": "Understood"}))
 
             mock_get_server.return_value = mock_server
 
             # First message - API expects form data
-            response1 = api_test_client.post(
-                "/api/chat/smart",
-                data={"message": "I have data from experiments"}
-            )
+            response1 = api_test_client.post("/api/chat/smart", data={"message": "I have data from experiments"})
 
             # Second message (should have context from first) - API expects form data
-            response2 = api_test_client.post(
-                "/api/chat/smart",
-                data={"message": "Can you convert it?"}
-            )
+            response2 = api_test_client.post("/api/chat/smart", data={"message": "Can you convert it?"})
 
             # Both should succeed (or rate limiting)
             assert response1.status_code in [200, 429, 500]
@@ -280,11 +243,7 @@ class TestChatErrorHandling:
 
     def test_chat_with_invalid_json(self, api_test_client):
         """Test chat with invalid JSON."""
-        response = api_test_client.post(
-            "/api/chat",
-            data="not json",
-            headers={"Content-Type": "application/json"}
-        )
+        response = api_test_client.post("/api/chat", data="not json", headers={"Content-Type": "application/json"})
 
         # Should return 422 for invalid JSON (or 429 for rate limiting)
         assert response.status_code in [422, 429]
@@ -294,10 +253,7 @@ class TestChatErrorHandling:
         long_message = "x" * 10000  # 10,000 characters
 
         # API expects form data, not JSON
-        response = api_test_client.post(
-            "/api/chat/smart",
-            data={"message": long_message}
-        )
+        response = api_test_client.post("/api/chat/smart", data={"message": long_message})
 
         # Should reject with 413 (payload too large), 400 (bad request), or 429 (rate limit)
         # or accept with 200 if no length limit enforced
@@ -310,10 +266,7 @@ class TestChatErrorHandling:
     def test_chat_with_special_characters(self, api_test_client):
         """Test chat with special characters and unicode."""
         # API expects form data, not JSON
-        response = api_test_client.post(
-            "/api/chat/smart",
-            data={"message": "Test 特殊文字 émojis 🚀 symbols @#$%"}
-        )
+        response = api_test_client.post("/api/chat/smart", data={"message": "Test 特殊文字 émojis 🚀 symbols @#$%"})
 
         # Should handle special characters (or rate limiting)
         assert response.status_code in [200, 400, 429, 500]
@@ -332,10 +285,7 @@ class TestChatConcurrency:
             mock_server.global_state = mock_state
 
             # Must be AsyncMock since send_message is awaited
-            mock_server.send_message = AsyncMock(return_value=Mock(
-                success=True,
-                result={"response": "Understood"}
-            ))
+            mock_server.send_message = AsyncMock(return_value=Mock(success=True, result={"response": "Understood"}))
 
             mock_get_server.return_value = mock_server
 
@@ -346,10 +296,7 @@ class TestChatConcurrency:
                 {"message": "Message 3"},
             ]
 
-            responses = [
-                api_test_client.post("/api/chat/smart", data=msg)
-                for msg in messages
-            ]
+            responses = [api_test_client.post("/api/chat/smart", data=msg) for msg in messages]
 
             # All should return valid status codes (or rate limiting)
             for response in responses:

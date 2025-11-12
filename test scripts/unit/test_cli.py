@@ -4,13 +4,10 @@ Unit tests for CLI (Command Line Interface).
 Tests argument parsing, command execution, and server initialization.
 """
 
+from unittest.mock import Mock, patch
+
 import pytest
-import sys
-from unittest.mock import Mock, patch, MagicMock
-from pathlib import Path
-
 from cli import main, start_server
-
 
 # Note: CLI tests don't require async fixtures
 
@@ -89,9 +86,8 @@ class TestServerCommand:
         mock_uvicorn = Mock()
         mock_uvicorn.run = Mock()
 
-        with patch.dict("sys.modules", {"uvicorn": mock_uvicorn}):
-            with patch("sys.argv", ["nwb-convert", "server"]):
-                main()
+        with patch.dict("sys.modules", {"uvicorn": mock_uvicorn}), patch("sys.argv", ["nwb-convert", "server"]):
+            main()
 
         # Check uvicorn.run was called with defaults
         mock_uvicorn.run.assert_called_once()
@@ -128,12 +124,11 @@ class TestServerCommand:
     def test_server_command_missing_uvicorn(self, capsys):
         """Test server command when uvicorn is not installed."""
         # Simulate ImportError when uvicorn is imported
-        with patch.dict("sys.modules", {"uvicorn": None}):
-            with patch("sys.argv", ["nwb-convert", "server"]):
-                with pytest.raises(SystemExit) as exc_info:
-                    main()
+        with patch.dict("sys.modules", {"uvicorn": None}), patch("sys.argv", ["nwb-convert", "server"]):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
 
-                assert exc_info.value.code == 1
+            assert exc_info.value.code == 1
 
         captured = capsys.readouterr()
         assert "uvicorn is not installed" in captured.out
@@ -202,7 +197,11 @@ class TestStartServerFunction:
         call_kwargs = mock_uvicorn.run.call_args[1]  # Keyword args
 
         # App is passed as a positional argument
-        assert len(call_args) == 0 or "backend.src.api.main:app" in str(call_args) or "backend.src.api.main:app" in call_kwargs.get("app", "")
+        assert (
+            len(call_args) == 0
+            or "backend.src.api.main:app" in str(call_args)
+            or "backend.src.api.main:app" in call_kwargs.get("app", "")
+        )
 
         # Check keyword arguments
         assert call_kwargs["host"] == "0.0.0.0"
@@ -265,9 +264,8 @@ class TestCLIEdgeCases:
 
     def test_empty_input_path_convert(self, capsys):
         """Test convert command with empty input path."""
-        with patch("sys.argv", ["nwb-convert", "convert", "", "output.nwb"]):
-            with pytest.raises(SystemExit):
-                main()
+        with patch("sys.argv", ["nwb-convert", "convert", "", "output.nwb"]), pytest.raises(SystemExit):
+            main()
 
     def test_multiple_subcommands_not_allowed(self):
         """Test that multiple subcommands are not allowed."""

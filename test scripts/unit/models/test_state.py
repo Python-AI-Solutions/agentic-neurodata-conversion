@@ -6,10 +6,9 @@ Tests central state management, thread safety, and state transitions.
 
 import asyncio
 from datetime import datetime
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import Mock
 
 import pytest
-
 from models.state import (
     MAX_RETRY_ATTEMPTS,
     ConversationPhase,

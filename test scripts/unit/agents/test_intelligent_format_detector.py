@@ -9,20 +9,18 @@ Tests cover:
 - Multi-file format handling
 - Edge cases and error handling
 """
-import pytest
-from pathlib import Path
-from typing import Dict, Any
-from unittest.mock import Mock, AsyncMock, patch
-import sys
+
 import os
+import sys
+from pathlib import Path
+
+import pytest
 
 # Add backend/src to Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend", "src"))
 
 from agents.intelligent_format_detector import IntelligentFormatDetector
-from services import LLMService
 from models import GlobalState
-
 
 # ============================================================================
 # Fixtures
@@ -30,6 +28,7 @@ from models import GlobalState
 
 # Note: mock_llm_format_detector is provided by root conftest.py
 # It returns format detection responses suitable for this detector
+
 
 @pytest.fixture
 def detector_with_llm(mock_llm_format_detector):
@@ -80,6 +79,7 @@ def sample_intan_files(tmp_path):
 # Test: Initialization
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestIntelligentFormatDetectorInitialization:
     """Test suite for IntelligentFormatDetector initialization."""
@@ -110,34 +110,31 @@ class TestIntelligentFormatDetectorInitialization:
 
         # Should support common formats
         format_names = [name.lower() for name in formats.keys()]
-        assert any('spikeglx' in name.lower() or 'openephys' in name.lower() for name in formats.keys())
+        assert any("spikeglx" in name.lower() or "openephys" in name.lower() for name in formats.keys())
 
 
 # ============================================================================
 # Test: Format Detection - NWB Files
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestNWBFormatDetection:
     """Test suite for NWB format detection."""
 
     @pytest.mark.asyncio
-    async def test_detect_nwb_format_by_extension(
-        self, detector_with_llm, sample_nwb_file
-    ):
+    async def test_detect_nwb_format_by_extension(self, detector_with_llm, sample_nwb_file):
         """Test NWB detection by file extension."""
         # Fixed: detect_format requires state parameter
         state = GlobalState()
         result = await detector_with_llm.detect_format(str(sample_nwb_file), state)
 
         assert result is not None
-        assert 'format' in result or 'detected_format' in result
-        assert result.get('confidence', 0) > 0
+        assert "format" in result or "detected_format" in result
+        assert result.get("confidence", 0) > 0
 
     @pytest.mark.asyncio
-    async def test_detect_nwb_format_without_llm(
-        self, detector_without_llm, sample_nwb_file
-    ):
+    async def test_detect_nwb_format_without_llm(self, detector_without_llm, sample_nwb_file):
         """Test NWB detection without LLM service."""
         # Fixed: detect_format requires state parameter
         state = GlobalState()
@@ -147,9 +144,7 @@ class TestNWBFormatDetection:
         # Should still detect based on extension
 
     @pytest.mark.asyncio
-    async def test_detect_nwb_format_with_llm_confirmation(
-        self, detector_with_llm, sample_nwb_file, mock_llm_service
-    ):
+    async def test_detect_nwb_format_with_llm_confirmation(self, detector_with_llm, sample_nwb_file, mock_llm_service):
         """Test NWB detection with LLM confirmation."""
         mock_llm_service.generate_response.return_value = "The file appears to be in NWB format"
 
@@ -166,14 +161,13 @@ class TestNWBFormatDetection:
 # Test: Format Detection - SpikeGLX Files
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestSpikeGLXFormatDetection:
     """Test suite for SpikeGLX format detection."""
 
     @pytest.mark.asyncio
-    async def test_detect_spikeglx_format(
-        self, detector_with_llm, sample_spikeglx_files
-    ):
+    async def test_detect_spikeglx_format(self, detector_with_llm, sample_spikeglx_files):
         """Test SpikeGLX detection from .bin and .meta files."""
         bin_file = sample_spikeglx_files[0]
 
@@ -183,9 +177,7 @@ class TestSpikeGLXFormatDetection:
         assert result is not None
 
     @pytest.mark.asyncio
-    async def test_detect_spikeglx_requires_meta_file(
-        self, detector_with_llm, tmp_path
-    ):
+    async def test_detect_spikeglx_requires_meta_file(self, detector_with_llm, tmp_path):
         """Test SpikeGLX detection requires matching .meta file."""
         # Create only .bin file without .meta
         bin_only = tmp_path / "test_g0_t0.imec0.ap.bin"
@@ -202,14 +194,13 @@ class TestSpikeGLXFormatDetection:
 # Test: Format Detection - Intan Files
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestIntanFormatDetection:
     """Test suite for Intan format detection."""
 
     @pytest.mark.asyncio
-    async def test_detect_intan_rhd_format(
-        self, detector_with_llm, sample_intan_files
-    ):
+    async def test_detect_intan_rhd_format(self, detector_with_llm, sample_intan_files):
         """Test Intan RHD format detection."""
         rhd_file = sample_intan_files[0]
 
@@ -234,24 +225,21 @@ class TestIntanFormatDetection:
 # Test: File Structure Analysis
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestFileStructureAnalysis:
     """Test suite for file structure analysis."""
 
-    def test_analyze_file_structure_single_file(
-        self, detector_with_llm, sample_nwb_file
-    ):
+    def test_analyze_file_structure_single_file(self, detector_with_llm, sample_nwb_file):
         """Test analyzing single file structure."""
         file_info = detector_with_llm._analyze_file_structure(sample_nwb_file)
 
         assert file_info is not None
-        assert 'extension' in file_info
-        assert 'size_mb' in file_info  # Implementation uses 'size_mb', not 'size'
-        assert 'path' in file_info
+        assert "extension" in file_info
+        assert "size_mb" in file_info  # Implementation uses 'size_mb', not 'size'
+        assert "path" in file_info
 
-    def test_analyze_file_structure_with_companion_files(
-        self, detector_with_llm, sample_spikeglx_files
-    ):
+    def test_analyze_file_structure_with_companion_files(self, detector_with_llm, sample_spikeglx_files):
         """Test analyzing file structure with companion files."""
         bin_file = sample_spikeglx_files[0]
 
@@ -259,8 +247,8 @@ class TestFileStructureAnalysis:
 
         assert file_info is not None
         # Should detect companion .meta file
-        if 'companion_files' in file_info:
-            assert len(file_info['companion_files']) > 0
+        if "companion_files" in file_info:
+            assert len(file_info["companion_files"]) > 0
 
     def test_analyze_file_structure_directory(self, detector_with_llm, tmp_path):
         """Test analyzing directory structure."""
@@ -279,6 +267,7 @@ class TestFileStructureAnalysis:
 # Test: Heuristic-Based Detection
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestHeuristicBasedDetection:
     """Test suite for heuristic-based format detection."""
@@ -286,9 +275,9 @@ class TestHeuristicBasedDetection:
     def test_apply_heuristics_nwb_file(self, detector_with_llm):
         """Test heuristics for NWB file."""
         file_info = {
-            'extension': '.nwb',
-            'size': 1024 * 1024,  # 1 MB
-            'path': '/path/to/file.nwb',
+            "extension": ".nwb",
+            "size": 1024 * 1024,  # 1 MB
+            "path": "/path/to/file.nwb",
         }
 
         matches = detector_with_llm._apply_heuristics(file_info)
@@ -300,10 +289,10 @@ class TestHeuristicBasedDetection:
     def test_apply_heuristics_spikeglx_files(self, detector_with_llm):
         """Test heuristics for SpikeGLX files."""
         file_info = {
-            'extension': '.bin',
-            'size': 1024 * 1024 * 100,  # 100 MB
-            'path': '/path/to/recording_g0_t0.imec0.ap.bin',
-            'companion_files': ['.meta'],
+            "extension": ".bin",
+            "size": 1024 * 1024 * 100,  # 100 MB
+            "path": "/path/to/recording_g0_t0.imec0.ap.bin",
+            "companion_files": [".meta"],
         }
 
         matches = detector_with_llm._apply_heuristics(file_info)
@@ -314,9 +303,9 @@ class TestHeuristicBasedDetection:
     def test_apply_heuristics_no_matches(self, detector_with_llm):
         """Test heuristics with unknown format."""
         file_info = {
-            'extension': '.xyz',
-            'size': 1024,
-            'path': '/path/to/unknown.xyz',
+            "extension": ".xyz",
+            "size": 1024,
+            "path": "/path/to/unknown.xyz",
         }
 
         matches = detector_with_llm._apply_heuristics(file_info)
@@ -330,26 +319,25 @@ class TestHeuristicBasedDetection:
 # Test: LLM-Assisted Detection
 # ============================================================================
 
+
 @pytest.mark.unit
 @pytest.mark.llm
 class TestLLMAssistedDetection:
     """Test suite for LLM-assisted format detection."""
 
     @pytest.mark.asyncio
-    async def test_llm_format_analysis_success(
-        self, mock_llm_format_detector
-    ):
+    async def test_llm_format_analysis_success(self, mock_llm_format_detector):
         """Test successful LLM format analysis."""
         file_info = {
-            'extension': '.bin',
-            'size': 1024 * 1024,
-            'path': '/path/to/data.bin',
+            "extension": ".bin",
+            "size": 1024 * 1024,
+            "path": "/path/to/data.bin",
         }
 
         # Need at least 2 matches for LLM to be called (per implementation line 101)
         heuristic_matches = [
-            {'format': 'SpikeGLX', 'confidence': 70, 'reasoning': 'Binary file with spike patterns'},
-            {'format': 'Blackrock', 'confidence': 50, 'reasoning': 'Binary file format'}
+            {"format": "SpikeGLX", "confidence": 70, "reasoning": "Binary file with spike patterns"},
+            {"format": "Blackrock", "confidence": 50, "reasoning": "Binary file format"},
         ]
 
         # Implementation uses generate_structured_output
@@ -359,35 +347,29 @@ class TestLLMAssistedDetection:
             "reasoning": "Based on the file extension and size, this appears to be a SpikeGLX recording.",
             "missing_files": [],
             "suggestions": [],
-            "alternative_formats": []
+            "alternative_formats": [],
         }
 
         # Create detector with the same mock that we're asserting on
         detector = IntelligentFormatDetector(llm_service=mock_llm_format_detector)
         state = GlobalState()
 
-        result = await detector._llm_format_analysis(
-            file_info, heuristic_matches, state
-        )
+        result = await detector._llm_format_analysis(file_info, heuristic_matches, state)
 
         assert result is not None
         mock_llm_format_detector.generate_structured_output.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_llm_format_analysis_timeout(
-        self, detector_with_llm, mock_llm_service
-    ):
+    async def test_llm_format_analysis_timeout(self, detector_with_llm, mock_llm_service):
         """Test LLM analysis with timeout."""
-        file_info = {'extension': '.bin', 'size': 1024}
+        file_info = {"extension": ".bin", "size": 1024}
         heuristic_matches = []
 
         mock_llm_service.generate_response.side_effect = Exception("Timeout")
 
         # Should handle timeout gracefully
         state = GlobalState()
-        result = await detector_with_llm._llm_format_analysis(
-            file_info, heuristic_matches, state
-        )
+        result = await detector_with_llm._llm_format_analysis(file_info, heuristic_matches, state)
 
         # Should fallback to heuristics
         assert result is not None or result is None
@@ -395,12 +377,12 @@ class TestLLMAssistedDetection:
     @pytest.mark.asyncio
     async def test_llm_analysis_without_llm_service(self, detector_without_llm):
         """Test that analysis works without LLM service."""
-        file_info = {'extension': '.nwb', 'size': 1024}
+        file_info = {"extension": ".nwb", "size": 1024}
 
         # Should not crash without LLM
         # The detector should use heuristics only
         state = GlobalState()
-        result = await detector_without_llm.detect_format(file_info.get('path', '/test.nwb'), state)
+        result = await detector_without_llm.detect_format(file_info.get("path", "/test.nwb"), state)
         assert True  # Should not raise exception
 
 
@@ -408,40 +390,31 @@ class TestLLMAssistedDetection:
 # Test: Suggestion Generation
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestSuggestionGeneration:
     """Test suite for format suggestion generation."""
 
-    def test_generate_suggestions_spikeglx_missing_meta(
-        self, detector_with_llm
-    ):
+    def test_generate_suggestions_spikeglx_missing_meta(self, detector_with_llm):
         """Test suggestions when SpikeGLX .meta file is missing."""
-        suggestions = detector_with_llm._generate_suggestions(
-            'SpikeGLX', ['.meta']
-        )
+        suggestions = detector_with_llm._generate_suggestions("SpikeGLX", [".meta"])
 
         assert suggestions is not None
         assert isinstance(suggestions, list)
         assert len(suggestions) > 0
         # Should mention .meta file
-        assert any('.meta' in str(s).lower() for s in suggestions)
+        assert any(".meta" in str(s).lower() for s in suggestions)
 
-    def test_generate_suggestions_no_missing_files(
-        self, detector_with_llm
-    ):
+    def test_generate_suggestions_no_missing_files(self, detector_with_llm):
         """Test suggestions when no files are missing."""
-        suggestions = detector_with_llm._generate_suggestions('NWB', [])
+        suggestions = detector_with_llm._generate_suggestions("NWB", [])
 
         assert suggestions is not None
         assert isinstance(suggestions, list)
 
-    def test_generate_suggestions_multiple_missing_files(
-        self, detector_with_llm
-    ):
+    def test_generate_suggestions_multiple_missing_files(self, detector_with_llm):
         """Test suggestions with multiple missing files."""
-        suggestions = detector_with_llm._generate_suggestions(
-            'Intan', ['.rhd', '.dat']
-        )
+        suggestions = detector_with_llm._generate_suggestions("Intan", [".rhd", ".dat"])
 
         assert suggestions is not None
         assert isinstance(suggestions, list)
@@ -452,6 +425,7 @@ class TestSuggestionGeneration:
 # Test: Edge Cases and Error Handling
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestEdgeCasesAndErrorHandling:
     """Test suite for edge cases and error handling."""
@@ -461,7 +435,7 @@ class TestEdgeCasesAndErrorHandling:
         """Test detection with nonexistent file."""
         # Should handle gracefully
         try:
-            result = await detector_with_llm.detect_format('/nonexistent/file.nwb', GlobalState())
+            result = await detector_with_llm.detect_format("/nonexistent/file.nwb", GlobalState())
             # May return None or error result
             assert result is not None or result is None
         except Exception:
@@ -480,9 +454,7 @@ class TestEdgeCasesAndErrorHandling:
         assert result is not None
 
     @pytest.mark.asyncio
-    async def test_detect_format_very_large_file(
-        self, detector_with_llm, tmp_path
-    ):
+    async def test_detect_format_very_large_file(self, detector_with_llm, tmp_path):
         """Test detection with very large file."""
         large_file = tmp_path / "large.bin"
         # Create a file with just metadata, not actual large content
@@ -506,9 +478,7 @@ class TestEdgeCasesAndErrorHandling:
             assert True
 
     @pytest.mark.asyncio
-    async def test_detect_format_no_extension(
-        self, detector_with_llm, tmp_path
-    ):
+    async def test_detect_format_no_extension(self, detector_with_llm, tmp_path):
         """Test detection with file without extension."""
         no_ext_file = tmp_path / "datafile"
         no_ext_file.write_bytes(b"some data")
@@ -520,9 +490,7 @@ class TestEdgeCasesAndErrorHandling:
         # Should still attempt detection
 
     @pytest.mark.asyncio
-    async def test_detect_format_multiple_dots_in_filename(
-        self, detector_with_llm, tmp_path
-    ):
+    async def test_detect_format_multiple_dots_in_filename(self, detector_with_llm, tmp_path):
         """Test detection with filename containing multiple dots."""
         multi_dot_file = tmp_path / "recording.session.1.test.nwb"
         multi_dot_file.write_bytes(b"nwb data")
@@ -538,31 +506,28 @@ class TestEdgeCasesAndErrorHandling:
 # Test: Integration Scenarios
 # ============================================================================
 
+
 @pytest.mark.integration
 class TestIntegrationScenarios:
     """Integration tests for format detection workflows."""
 
     @pytest.mark.asyncio
-    async def test_complete_detection_workflow_nwb(
-        self, detector_with_llm, sample_nwb_file
-    ):
+    async def test_complete_detection_workflow_nwb(self, detector_with_llm, sample_nwb_file):
         """Test complete detection workflow for NWB file."""
         # Step 1: Detect format
         state = GlobalState()
         result = await detector_with_llm.detect_format(str(sample_nwb_file), state)
 
         assert result is not None
-        assert 'format' in result or 'detected_format' in result
+        assert "format" in result or "detected_format" in result
 
         # Verify result structure
         # Implementation returns confidence as 0-100, not 0-1.0
-        if 'confidence' in result:
-            assert 0 <= result['confidence'] <= 100
+        if "confidence" in result:
+            assert 0 <= result["confidence"] <= 100
 
     @pytest.mark.asyncio
-    async def test_complete_detection_workflow_spikeglx(
-        self, detector_with_llm, sample_spikeglx_files
-    ):
+    async def test_complete_detection_workflow_spikeglx(self, detector_with_llm, sample_spikeglx_files):
         """Test complete detection workflow for SpikeGLX files."""
         bin_file = sample_spikeglx_files[0]
 
@@ -577,9 +542,7 @@ class TestIntegrationScenarios:
         #     assert isinstance(result['suggestions'], list)
 
     @pytest.mark.asyncio
-    async def test_fallback_to_heuristics_when_llm_fails(
-        self, detector_with_llm, sample_nwb_file, mock_llm_service
-    ):
+    async def test_fallback_to_heuristics_when_llm_fails(self, detector_with_llm, sample_nwb_file, mock_llm_service):
         """Test fallback to heuristics when LLM fails."""
         # Make LLM fail
         mock_llm_service.generate_response.side_effect = Exception("LLM Error")
@@ -595,26 +558,23 @@ class TestIntegrationScenarios:
 # Test: Confidence Scoring
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestConfidenceScoring:
     """Test suite for confidence scoring in format detection."""
 
     @pytest.mark.asyncio
-    async def test_high_confidence_for_clear_format(
-        self, detector_with_llm, sample_nwb_file
-    ):
+    async def test_high_confidence_for_clear_format(self, detector_with_llm, sample_nwb_file):
         """Test high confidence for clearly identifiable format."""
         state = GlobalState()
         result = await detector_with_llm.detect_format(str(sample_nwb_file), state)
 
-        if 'confidence' in result:
+        if "confidence" in result:
             # NWB files should have high confidence
-            assert result['confidence'] >= 0.5
+            assert result["confidence"] >= 0.5
 
     @pytest.mark.asyncio
-    async def test_lower_confidence_for_ambiguous_format(
-        self, detector_with_llm, tmp_path
-    ):
+    async def test_lower_confidence_for_ambiguous_format(self, detector_with_llm, tmp_path):
         """Test lower confidence for ambiguous format."""
         ambiguous_file = tmp_path / "data.bin"
         ambiguous_file.write_bytes(b"ambiguous data")

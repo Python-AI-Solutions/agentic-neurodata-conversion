@@ -15,31 +15,29 @@ Tests cover:
 - Various formatting utilities
 - Custom Jinja2 filters
 """
-import pytest
+
 import json
+import os
+import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-import sys
-import os
+
+import pytest
 
 # Add backend/src to Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend", "src"))
 
-from services.report_service import ReportService
 from models import (
     ConversionStatus,
     GlobalState,
     LogLevel,
-    LogEntry,
-    ValidationStatus,
 )
-
+from services.report_service import ReportService
 
 # ============================================================================
 # Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def report_service():
@@ -177,6 +175,7 @@ def sample_workflow_trace():
 # Test: Initialization
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestReportServiceInitialization:
     """Test suite for ReportService initialization."""
@@ -185,17 +184,17 @@ class TestReportServiceInitialization:
         """Test that initialization creates custom paragraph styles."""
         # Test that custom styles are available
         assert report_service.styles is not None
-        assert 'CustomTitle' in report_service.styles
-        assert 'Subtitle' in report_service.styles
+        assert "CustomTitle" in report_service.styles
+        assert "Subtitle" in report_service.styles
 
     def test_custom_filters_available(self, report_service):
         """Test that custom filter methods are available."""
         # Test that custom filter methods exist and work
-        assert hasattr(report_service, '_filter_format_timestamp')
-        assert hasattr(report_service, '_filter_format_duration')
-        assert hasattr(report_service, '_filter_format_field_name')
-        assert hasattr(report_service, '_filter_format_provenance_badge')
-        assert hasattr(report_service, '_filter_format_year')
+        assert hasattr(report_service, "_filter_format_timestamp")
+        assert hasattr(report_service, "_filter_format_duration")
+        assert hasattr(report_service, "_filter_format_field_name")
+        assert hasattr(report_service, "_filter_format_provenance_badge")
+        assert hasattr(report_service, "_filter_format_year")
 
         # Test that filters work
         timestamp_result = report_service._filter_format_timestamp("2023-01-01T00:00:00")
@@ -204,20 +203,19 @@ class TestReportServiceInitialization:
     def test_custom_styles_setup(self, report_service):
         """Test that custom PDF styles are set up."""
         # Custom styles should be initialized
-        assert hasattr(report_service, '_custom_styles') or True
+        assert hasattr(report_service, "_custom_styles") or True
 
 
 # ============================================================================
 # Test: PDF Report Generation
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestPDFReportGeneration:
     """Test suite for PDF report generation."""
 
-    def test_generate_pdf_report_success(
-        self, report_service, sample_validation_result, sample_global_state, tmp_path
-    ):
+    def test_generate_pdf_report_success(self, report_service, sample_validation_result, sample_global_state, tmp_path):
         """Test successful PDF report generation."""
         output_path = tmp_path / "test_report.pdf"
 
@@ -231,8 +229,7 @@ class TestPDFReportGeneration:
         # assert Path(result_path).exists()
 
     def test_generate_pdf_report_with_workflow_trace(
-        self, report_service, sample_validation_result, sample_global_state,
-        sample_workflow_trace, tmp_path
+        self, report_service, sample_validation_result, sample_global_state, sample_workflow_trace, tmp_path
     ):
         """Test PDF generation with workflow trace."""
         output_path = tmp_path / "test_report.pdf"
@@ -256,12 +253,13 @@ class TestPDFReportGeneration:
         )
 
         assert result_path is not None
-        assert str(result_path).endswith('.pdf')
+        assert str(result_path).endswith(".pdf")
 
 
 # ============================================================================
 # Test: HTML Report Generation
 # ============================================================================
+
 
 @pytest.mark.unit
 class TestHTMLReportGeneration:
@@ -283,12 +281,11 @@ class TestHTMLReportGeneration:
 
         # Verify HTML content
         content = Path(result_path).read_text()
-        assert '<html' in content.lower()
-        assert 'test_recording.nwb' in content or 'session' in content.lower()
+        assert "<html" in content.lower()
+        assert "test_recording.nwb" in content or "session" in content.lower()
 
     def test_generate_html_report_with_all_data(
-        self, report_service, sample_validation_result, sample_global_state,
-        sample_workflow_trace, tmp_path
+        self, report_service, sample_validation_result, sample_global_state, sample_workflow_trace, tmp_path
     ):
         """Test HTML generation with complete data."""
         output_path = tmp_path / "test_report.html"
@@ -316,12 +313,13 @@ class TestHTMLReportGeneration:
         )
 
         assert result_path is not None
-        assert str(result_path).endswith('.html')
+        assert str(result_path).endswith(".html")
 
 
 # ============================================================================
 # Test: JSON Report Generation
 # ============================================================================
+
 
 @pytest.mark.unit
 class TestJSONReportGeneration:
@@ -342,7 +340,7 @@ class TestJSONReportGeneration:
         assert Path(result_path).exists()
 
         # Verify JSON is valid
-        with open(result_path, 'r') as f:
+        with open(result_path) as f:
             data = json.load(f)
             assert data is not None
             assert isinstance(data, dict)
@@ -358,12 +356,12 @@ class TestJSONReportGeneration:
             validation_result=sample_validation_result,
         )
 
-        with open(result_path, 'r') as f:
+        with open(result_path) as f:
             data = json.load(f)
 
             # Verify key fields exist
-            assert 'session_id' in data or 'report_metadata' in data
-            assert 'status' in data or 'evaluation_summary' in data
+            assert "session_id" in data or "report_metadata" in data
+            assert "status" in data or "evaluation_summary" in data
 
     def test_generate_json_report_default_output_path(
         self, report_service, sample_validation_result, sample_global_state, tmp_path
@@ -376,12 +374,13 @@ class TestJSONReportGeneration:
         )
 
         assert result_path is not None
-        assert str(result_path).endswith('.json')
+        assert str(result_path).endswith(".json")
 
 
 # ============================================================================
 # Test: Text Report Generation
 # ============================================================================
+
 
 @pytest.mark.unit
 class TestTextReportGeneration:
@@ -415,20 +414,20 @@ class TestTextReportGeneration:
         )
 
         assert result_path is not None
-        assert str(result_path).endswith('.txt')
+        assert str(result_path).endswith(".txt")
 
 
 # ============================================================================
 # Test: Template Data Preparation
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestTemplateDataPreparation:
     """Test suite for template data preparation."""
 
     def test_prepare_template_data_complete(
-        self, report_service, sample_validation_result, sample_global_state,
-        sample_workflow_trace
+        self, report_service, sample_validation_result, sample_global_state, sample_workflow_trace
     ):
         """Test preparing complete template data."""
         data = report_service._prepare_template_data(
@@ -439,15 +438,13 @@ class TestTemplateDataPreparation:
 
         assert data is not None
         assert isinstance(data, dict)
-        assert 'report_data' in data
-        assert 'file_info' in data
-        assert 'validation_results' in data
-        assert 'issues' in data
-        assert 'quality_metrics' in data
+        assert "report_data" in data
+        assert "file_info" in data
+        assert "validation_results" in data
+        assert "issues" in data
+        assert "quality_metrics" in data
 
-    def test_prepare_template_data_minimal(
-        self, report_service, sample_validation_result, sample_global_state
-    ):
+    def test_prepare_template_data_minimal(self, report_service, sample_validation_result, sample_global_state):
         """Test preparing template data with minimal inputs."""
         data = report_service._prepare_template_data(
             validation_result=sample_validation_result,
@@ -468,20 +465,19 @@ class TestTemplateDataPreparation:
             workflow_trace=None,
         )
 
-        assert 'recommendations' in data
+        assert "recommendations" in data
 
 
 # ============================================================================
 # Test: File Info Preparation
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestFileInfoPreparation:
     """Test suite for file information preparation."""
 
-    def test_prepare_file_info_with_metadata(
-        self, report_service, sample_file_info, sample_global_state
-    ):
+    def test_prepare_file_info_with_metadata(self, report_service, sample_file_info, sample_global_state):
         """Test file info preparation with metadata."""
         info = report_service._prepare_file_info(
             sample_file_info,
@@ -490,12 +486,10 @@ class TestFileInfoPreparation:
 
         assert info is not None
         assert isinstance(info, dict)
-        assert 'original_name' in info or 'name' in info
-        assert 'size' in info or 'file_size' in info
+        assert "original_name" in info or "name" in info
+        assert "size" in info or "file_size" in info
 
-    def test_prepare_file_info_without_metadata(
-        self, report_service, sample_file_info
-    ):
+    def test_prepare_file_info_without_metadata(self, report_service, sample_file_info):
         """Test file info preparation without metadata."""
         info = report_service._prepare_file_info(sample_file_info, {})
 
@@ -506,6 +500,7 @@ class TestFileInfoPreparation:
 # ============================================================================
 # Test: Issue Preparation
 # ============================================================================
+
 
 @pytest.mark.unit
 class TestIssuePreparation:
@@ -554,13 +549,12 @@ class TestIssuePreparation:
 # Test: Recommendations Generation
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestRecommendationsGeneration:
     """Test suite for recommendations generation."""
 
-    def test_generate_recommendations_from_issues(
-        self, report_service, sample_validation_result
-    ):
+    def test_generate_recommendations_from_issues(self, report_service, sample_validation_result):
         """Test generating recommendations from validation issues."""
         recommendations = report_service._generate_recommendations(
             validation_result=sample_validation_result,
@@ -583,9 +577,7 @@ class TestRecommendationsGeneration:
         assert recommendations is not None
         assert isinstance(recommendations, list)
 
-    def test_generate_recommendations_structure(
-        self, report_service, sample_validation_result
-    ):
+    def test_generate_recommendations_structure(self, report_service, sample_validation_result):
         """Test recommendation structure."""
         recommendations = report_service._generate_recommendations(
             validation_result=sample_validation_result,
@@ -602,13 +594,12 @@ class TestRecommendationsGeneration:
 # Test: Quality Metrics Calculation
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestQualityMetricsCalculation:
     """Test suite for quality metrics calculation."""
 
-    def test_calculate_quality_metrics_complete(
-        self, report_service, sample_validation_result, sample_global_state
-    ):
+    def test_calculate_quality_metrics_complete(self, report_service, sample_validation_result, sample_global_state):
         """Test calculating quality metrics with complete data."""
         metrics = report_service._calculate_quality_metrics(
             sample_validation_result,
@@ -619,9 +610,7 @@ class TestQualityMetricsCalculation:
         assert metrics is not None
         assert isinstance(metrics, dict)
 
-    def test_calculate_quality_metrics_minimal(
-        self, report_service
-    ):
+    def test_calculate_quality_metrics_minimal(self, report_service):
         """Test calculating quality metrics with minimal data."""
         minimal_result = {
             "status": "passed",
@@ -639,9 +628,7 @@ class TestQualityMetricsCalculation:
         assert metrics is not None
         assert isinstance(metrics, dict)
 
-    def test_calculate_quality_score(
-        self, report_service, sample_validation_result
-    ):
+    def test_calculate_quality_score(self, report_service, sample_validation_result):
         """Test quality score calculation."""
         score = report_service._calculate_quality_score(sample_validation_result)
 
@@ -653,6 +640,7 @@ class TestQualityMetricsCalculation:
 # ============================================================================
 # Test: Metadata Completeness Calculation
 # ============================================================================
+
 
 @pytest.mark.unit
 class TestMetadataCompletenessCalculation:
@@ -669,14 +657,14 @@ class TestMetadataCompletenessCalculation:
                 "species": "Mus musculus",
                 "age": "P90D",
                 "sex": "M",
-            }
+            },
         }
 
         completeness = report_service._calculate_metadata_completeness(metadata)
 
         assert completeness is not None
         assert isinstance(completeness, dict)
-        assert 'percentage' in completeness or 'score' in completeness or True
+        assert "percentage" in completeness or "score" in completeness or True
 
     def test_calculate_metadata_completeness_empty(self, report_service):
         """Test completeness calculation with empty metadata."""
@@ -699,6 +687,7 @@ class TestMetadataCompletenessCalculation:
 # ============================================================================
 # Test: Missing Critical Fields Identification
 # ============================================================================
+
 
 @pytest.mark.unit
 class TestMissingCriticalFieldsIdentification:
@@ -748,6 +737,7 @@ class TestMissingCriticalFieldsIdentification:
 # Test: Formatting Utilities
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestFormattingUtilities:
     """Test suite for formatting utility methods."""
@@ -791,6 +781,7 @@ class TestFormattingUtilities:
 # Test: Jinja2 Custom Filters
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestJinja2CustomFilters:
     """Test suite for custom Jinja2 filters."""
@@ -811,7 +802,7 @@ class TestJinja2CustomFilters:
         assert formatted is not None
         assert isinstance(formatted, str)
         # Should contain time unit (ms, s, or m)
-        assert any(unit in formatted.lower() for unit in ['ms', 's', 'm'])
+        assert any(unit in formatted.lower() for unit in ["ms", "s", "m"])
 
     def test_filter_format_field_name(self, report_service):
         """Test field name formatting filter."""
@@ -851,13 +842,12 @@ class TestJinja2CustomFilters:
 # Test: Workflow Trace Preparation
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestWorkflowTracePreparation:
     """Test suite for workflow trace preparation."""
 
-    def test_prepare_workflow_trace_complete(
-        self, report_service, sample_workflow_trace
-    ):
+    def test_prepare_workflow_trace_complete(self, report_service, sample_workflow_trace):
         """Test preparing complete workflow trace."""
         prepared = report_service._prepare_workflow_trace(sample_workflow_trace)
 
@@ -884,13 +874,12 @@ class TestWorkflowTracePreparation:
 # Test: Best Practices Extraction
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestBestPracticesExtraction:
     """Test suite for best practices extraction."""
 
-    def test_extract_best_practices(
-        self, report_service, sample_validation_result
-    ):
+    def test_extract_best_practices(self, report_service, sample_validation_result):
         """Test extracting best practices from validation."""
         practices = report_service._extract_best_practices(sample_validation_result)
 
@@ -913,6 +902,7 @@ class TestBestPracticesExtraction:
 # ============================================================================
 # Test: Summary Generation
 # ============================================================================
+
 
 @pytest.mark.unit
 class TestSummaryGeneration:
@@ -942,20 +932,19 @@ class TestSummaryGeneration:
         assert isinstance(summary, str)
         assert len(summary) > 0
 
-    def test_generate_summary_with_issues(
-        self, report_service, sample_validation_result
-    ):
+    def test_generate_summary_with_issues(self, report_service, sample_validation_result):
         """Test summary includes issue counts."""
         summary = report_service._generate_summary(sample_validation_result)
 
         assert summary is not None
         # Should mention issues or validation
-        assert any(word in summary.lower() for word in ['issue', 'validation', 'warning', 'error'])
+        assert any(word in summary.lower() for word in ["issue", "validation", "warning", "error"])
 
 
 # ============================================================================
 # Test: Time Estimation
 # ============================================================================
+
 
 @pytest.mark.unit
 class TestTimeEstimation:
@@ -987,6 +976,7 @@ class TestTimeEstimation:
 # ============================================================================
 # Test: Edge Cases and Error Handling
 # ============================================================================
+
 
 @pytest.mark.unit
 class TestEdgeCasesAndErrorHandling:

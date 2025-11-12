@@ -5,14 +5,11 @@ Tests log file creation, writing, and session management for scientific
 reproducibility and audit trails.
 """
 
-import pytest
 from datetime import datetime
-from pathlib import Path
-from unittest.mock import Mock
 
-from services.log_manager import LogFileManager
+import pytest
 from models.state import LogEntry, LogLevel
-
+from services.log_manager import LogFileManager
 
 # Note: The following fixtures are provided by conftest files:
 # - tmp_path: from pytest (temporary directory for file I/O testing)

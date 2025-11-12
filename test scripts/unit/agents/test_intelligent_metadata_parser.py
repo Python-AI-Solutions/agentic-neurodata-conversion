@@ -11,24 +11,21 @@ Tests cover:
 - Fallback parsing mechanisms
 - LLM-assisted parsing
 """
-import pytest
-from datetime import datetime
-from typing import Dict, Any
-from unittest.mock import Mock, AsyncMock, patch
-import sys
+
 import os
+import sys
+
+import pytest
 
 # Add backend/src to Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend", "src"))
 
 from agents.intelligent_metadata_parser import (
+    ConfidenceLevel,
     IntelligentMetadataParser,
     ParsedField,
-    ConfidenceLevel,
 )
 from models import GlobalState
-from services import LLMService
-
 
 # ============================================================================
 # Fixtures
@@ -36,6 +33,7 @@ from services import LLMService
 
 # Note: mock_llm_metadata_parser is provided by root conftest.py
 # It returns metadata parsing responses suitable for this parser
+
 
 @pytest.fixture
 def parser_with_llm(mock_llm_metadata_parser):
@@ -76,6 +74,7 @@ def sample_user_responses():
 # ============================================================================
 # Test: ParsedField Class
 # ============================================================================
+
 
 @pytest.mark.unit
 class TestParsedFieldClass:
@@ -143,12 +142,13 @@ class TestParsedFieldClass:
 
         assert provenance is not None
         # ProvenanceInfo is a Pydantic model, not a dict
-        assert hasattr(provenance, 'value')
+        assert hasattr(provenance, "value")
 
 
 # ============================================================================
 # Test: Initialization
 # ============================================================================
+
 
 @pytest.mark.unit
 class TestIntelligentMetadataParserInitialization:
@@ -170,6 +170,7 @@ class TestIntelligentMetadataParserInitialization:
 # ============================================================================
 # Test: Batch Parsing
 # ============================================================================
+
 
 @pytest.mark.unit
 class TestBatchParsing:
@@ -193,7 +194,7 @@ class TestBatchParsing:
                     "reasoning": "Direct user input",
                     "needs_review": False,
                     "extraction_type": "explicit",
-                    "alternatives": []
+                    "alternatives": [],
                 },
                 {
                     "field_name": "experimenter",
@@ -203,60 +204,46 @@ class TestBatchParsing:
                     "reasoning": "Normalized name format",
                     "needs_review": False,
                     "extraction_type": "explicit",
-                    "alternatives": []
-                }
+                    "alternatives": [],
+                },
             ]
         }
 
         # Create parser with the same mock that we're asserting on
         parser = IntelligentMetadataParser(llm_service=mock_llm_metadata_parser)
 
-        results = await parser.parse_natural_language_batch(
-            user_input, global_state
-        )
+        results = await parser.parse_natural_language_batch(user_input, global_state)
 
         assert results is not None
         assert isinstance(results, list)
         mock_llm_metadata_parser.generate_structured_output.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_parse_natural_language_batch_without_llm(
-        self, parser_without_llm, global_state
-    ):
+    async def test_parse_natural_language_batch_without_llm(self, parser_without_llm, global_state):
         """Test batch parsing without LLM (fallback)."""
         user_input = "session_description: Test session, experimenter: John Doe"
 
-        results = await parser_without_llm.parse_natural_language_batch(
-            user_input, global_state
-        )
+        results = await parser_without_llm.parse_natural_language_batch(user_input, global_state)
 
         assert results is not None
         assert isinstance(results, list)
         # Should use fallback parsing
 
     @pytest.mark.asyncio
-    async def test_parse_natural_language_batch_empty_input(
-        self, parser_with_llm, global_state
-    ):
+    async def test_parse_natural_language_batch_empty_input(self, parser_with_llm, global_state):
         """Test batch parsing with empty input."""
-        results = await parser_with_llm.parse_natural_language_batch(
-            "", global_state
-        )
+        results = await parser_with_llm.parse_natural_language_batch("", global_state)
 
         assert results is not None
         assert isinstance(results, list)
 
     @pytest.mark.asyncio
-    async def test_parse_natural_language_batch_llm_failure(
-        self, parser_with_llm, mock_llm_service, global_state
-    ):
+    async def test_parse_natural_language_batch_llm_failure(self, parser_with_llm, mock_llm_service, global_state):
         """Test batch parsing with LLM failure."""
         user_input = "session_description: Test, experimenter: John"
         mock_llm_service.generate_structured_output.side_effect = Exception("LLM Error")
 
-        results = await parser_with_llm.parse_natural_language_batch(
-            user_input, global_state
-        )
+        results = await parser_with_llm.parse_natural_language_batch(user_input, global_state)
 
         # Should fallback to non-LLM parsing
         assert results is not None
@@ -266,21 +253,20 @@ class TestBatchParsing:
 # Test: Single Field Parsing
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestSingleFieldParsing:
     """Test suite for single field parsing."""
 
     @pytest.mark.asyncio
-    async def test_parse_single_field_with_llm(
-        self, parser_with_llm, mock_llm_service, global_state
-    ):
+    async def test_parse_single_field_with_llm(self, parser_with_llm, mock_llm_service, global_state):
         """Test parsing single field with LLM."""
         mock_llm_service.generate_structured_output.return_value = {
             "normalized_value": "Mus musculus",
             "confidence": 90,
             "reasoning": "Species name normalization",
             "needs_review": False,
-            "alternatives": []
+            "alternatives": [],
         }
 
         result = await parser_with_llm.parse_single_field(
@@ -293,9 +279,7 @@ class TestSingleFieldParsing:
         assert isinstance(result, ParsedField)
 
     @pytest.mark.asyncio
-    async def test_parse_single_field_without_llm(
-        self, parser_without_llm, global_state
-    ):
+    async def test_parse_single_field_without_llm(self, parser_without_llm, global_state):
         """Test parsing single field without LLM."""
         result = await parser_without_llm.parse_single_field(
             field_name="session_description",
@@ -307,9 +291,7 @@ class TestSingleFieldParsing:
         assert isinstance(result, ParsedField)
 
     @pytest.mark.asyncio
-    async def test_parse_single_field_empty_response(
-        self, parser_with_llm, global_state
-    ):
+    async def test_parse_single_field_empty_response(self, parser_with_llm, global_state):
         """Test parsing empty user response."""
         result = await parser_with_llm.parse_single_field(
             field_name="test",
@@ -323,6 +305,7 @@ class TestSingleFieldParsing:
 # ============================================================================
 # Test: Value Formatting
 # ============================================================================
+
 
 @pytest.mark.unit
 class TestValueFormatting:
@@ -359,13 +342,12 @@ class TestValueFormatting:
 # Test: Date Field Post-Processing
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestDateFieldPostProcessing:
     """Test suite for date field post-processing."""
 
-    def test_post_process_date_field_iso_format(
-        self, parser_with_llm, global_state
-    ):
+    def test_post_process_date_field_iso_format(self, parser_with_llm, global_state):
         """Test post-processing ISO format date."""
         result = parser_with_llm._post_process_date_field(
             "session_start_time",
@@ -376,9 +358,7 @@ class TestDateFieldPostProcessing:
         assert result is not None
         # Should be valid ISO 8601 format
 
-    def test_post_process_date_field_natural_language(
-        self, parser_with_llm, global_state
-    ):
+    def test_post_process_date_field_natural_language(self, parser_with_llm, global_state):
         """Test post-processing natural language date."""
         result = parser_with_llm._post_process_date_field(
             "session_start_time",
@@ -388,9 +368,7 @@ class TestDateFieldPostProcessing:
 
         assert result is not None
 
-    def test_post_process_date_field_invalid_date(
-        self, parser_with_llm, global_state
-    ):
+    def test_post_process_date_field_invalid_date(self, parser_with_llm, global_state):
         """Test post-processing invalid date."""
         result = parser_with_llm._post_process_date_field(
             "session_start_time",
@@ -406,6 +384,7 @@ class TestDateFieldPostProcessing:
 # Test: Schema Context Building
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestSchemaContextBuilding:
     """Test suite for schema context building."""
@@ -418,9 +397,7 @@ class TestSchemaContextBuilding:
         assert isinstance(context, str)
         assert len(context) > 0
 
-    def test_build_schema_context_includes_nwb_fields(
-        self, parser_with_llm
-    ):
+    def test_build_schema_context_includes_nwb_fields(self, parser_with_llm):
         """Test schema context includes NWB fields."""
         context = parser_with_llm._build_schema_context()
 
@@ -434,13 +411,14 @@ class TestSchemaContextBuilding:
 # Test: Normalization Rules
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestNormalizationRules:
     """Test suite for normalization rules."""
 
     def test_get_normalization_rules_species(self, parser_with_llm):
         """Test normalization rules for species field."""
-        from agents.nwb_dandi_schema import MetadataFieldSchema, FieldType, FieldRequirementLevel
+        from agents.nwb_dandi_schema import FieldRequirementLevel, FieldType, MetadataFieldSchema
 
         field_schema = MetadataFieldSchema(
             name="species",
@@ -460,7 +438,7 @@ class TestNormalizationRules:
 
     def test_get_normalization_rules_age(self, parser_with_llm):
         """Test normalization rules for age field."""
-        from agents.nwb_dandi_schema import MetadataFieldSchema, FieldType, FieldRequirementLevel
+        from agents.nwb_dandi_schema import FieldRequirementLevel, FieldType, MetadataFieldSchema
 
         field_schema = MetadataFieldSchema(
             name="age",
@@ -482,26 +460,21 @@ class TestNormalizationRules:
 # Test: Fallback Parsing
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestFallbackParsing:
     """Test suite for fallback parsing mechanisms."""
 
-    def test_fallback_parse_batch(
-        self, parser_without_llm, global_state
-    ):
+    def test_fallback_parse_batch(self, parser_without_llm, global_state):
         """Test fallback batch parsing."""
         user_input = "session_description: Test, experimenter: John"
-        results = parser_without_llm._fallback_parse_batch(
-            user_input, global_state
-        )
+        results = parser_without_llm._fallback_parse_batch(user_input, global_state)
 
         assert results is not None
         assert isinstance(results, list)
         assert len(results) >= 0
 
-    def test_fallback_parse_single(
-        self, parser_without_llm, global_state
-    ):
+    def test_fallback_parse_single(self, parser_without_llm, global_state):
         """Test fallback single field parsing."""
         result = parser_without_llm._fallback_parse_single(
             "session_description",
@@ -512,9 +485,7 @@ class TestFallbackParsing:
         assert result is not None
         assert isinstance(result, ParsedField)
 
-    def test_fallback_parse_batch_empty_input(
-        self, parser_without_llm, global_state
-    ):
+    def test_fallback_parse_batch_empty_input(self, parser_without_llm, global_state):
         """Test fallback parsing with empty input."""
         results = parser_without_llm._fallback_parse_batch("", global_state)
 
@@ -526,13 +497,12 @@ class TestFallbackParsing:
 # Test: Confirmation Message Generation
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestConfirmationMessageGeneration:
     """Test suite for confirmation message generation."""
 
-    def test_generate_confirmation_message_single_field(
-        self, parser_with_llm
-    ):
+    def test_generate_confirmation_message_single_field(self, parser_with_llm):
         """Test generating confirmation for single field."""
         parsed_field = ParsedField(
             field_name="session_description",
@@ -549,9 +519,7 @@ class TestConfirmationMessageGeneration:
         assert isinstance(message, str)
         assert len(message) > 0
 
-    def test_generate_confirmation_message_multiple_fields(
-        self, parser_with_llm
-    ):
+    def test_generate_confirmation_message_multiple_fields(self, parser_with_llm):
         """Test generating confirmation for multiple fields."""
         fields = [
             ParsedField(
@@ -577,9 +545,7 @@ class TestConfirmationMessageGeneration:
         assert message is not None
         assert len(message) > 0
 
-    def test_generate_confirmation_message_empty_list(
-        self, parser_with_llm
-    ):
+    def test_generate_confirmation_message_empty_list(self, parser_with_llm):
         """Test generating confirmation with empty list."""
         message = parser_with_llm.generate_confirmation_message([])
 
@@ -590,15 +556,14 @@ class TestConfirmationMessageGeneration:
 # Test: Apply With Best Knowledge
 # ============================================================================
 
+
 @pytest.mark.unit
 @pytest.mark.llm
 class TestApplyWithBestKnowledge:
     """Test suite for apply_with_best_knowledge method."""
 
     @pytest.mark.asyncio
-    async def test_apply_with_best_knowledge(
-        self, parser_with_llm, global_state
-    ):
+    async def test_apply_with_best_knowledge(self, parser_with_llm, global_state):
         """Test applying best knowledge to infer metadata."""
         parsed_field = ParsedField(
             field_name="session_description",
@@ -609,9 +574,7 @@ class TestApplyWithBestKnowledge:
             nwb_compliant=True,
         )
 
-        result = await parser_with_llm.apply_with_best_knowledge(
-            parsed_field, global_state
-        )
+        result = await parser_with_llm.apply_with_best_knowledge(parsed_field, global_state)
 
         assert result is not None
         # Returns the value itself
@@ -622,14 +585,13 @@ class TestApplyWithBestKnowledge:
 # Test: Edge Cases
 # ============================================================================
 
+
 @pytest.mark.unit
 class TestEdgeCases:
     """Test suite for edge cases and error handling."""
 
     @pytest.mark.asyncio
-    async def test_parse_with_unicode_characters(
-        self, parser_with_llm, global_state
-    ):
+    async def test_parse_with_unicode_characters(self, parser_with_llm, global_state):
         """Test parsing with unicode characters."""
         result = await parser_with_llm.parse_single_field(
             field_name="experimenter",
@@ -640,9 +602,7 @@ class TestEdgeCases:
         assert result is not None
 
     @pytest.mark.asyncio
-    async def test_parse_with_special_characters(
-        self, parser_with_llm, global_state
-    ):
+    async def test_parse_with_special_characters(self, parser_with_llm, global_state):
         """Test parsing with special characters."""
         result = await parser_with_llm.parse_single_field(
             field_name="session_description",
@@ -653,9 +613,7 @@ class TestEdgeCases:
         assert result is not None
 
     @pytest.mark.asyncio
-    async def test_parse_very_long_input(
-        self, parser_with_llm, global_state
-    ):
+    async def test_parse_very_long_input(self, parser_with_llm, global_state):
         """Test parsing very long input."""
         long_text = "A" * 10000
 

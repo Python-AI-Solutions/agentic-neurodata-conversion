@@ -3,10 +3,10 @@ Unit tests for MetadataInferenceEngine.
 
 Tests intelligent metadata extraction from files.
 """
-import pytest
-from unittest.mock import AsyncMock, Mock, patch
-from pathlib import Path
 
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
 from agents.metadata_inference import MetadataInferenceEngine
 from models.state import GlobalState
 
@@ -50,11 +50,9 @@ class TestMetadataInferenceEngine:
         engine = MetadataInferenceEngine(llm_service=None)
         assert engine.llm_service is None
 
-    def test_spikeglx_metadata_extraction(self, inference_engine):
+    def test_spikeglx_metadata_extraction(self, inference_engine, state):
         """Test SpikeGLX-specific metadata extraction."""
-        metadata = inference_engine._extract_spikeglx_metadata(
-            "test_data/Noise4Sam_g0_t0.imec0.ap.bin"
-        )
+        metadata = inference_engine._extract_spikeglx_metadata("test_data/Noise4Sam_g0_t0.imec0.ap.bin", state)
 
         assert metadata["recording_type"] == "electrophysiology"
         assert metadata["system"] == "SpikeGLX"
@@ -62,11 +60,9 @@ class TestMetadataInferenceEngine:
         # data_stream may not be returned by all implementations
         assert metadata.get("data_stream") in [None, "action potentials (AP)", "AP"]
 
-    def test_spikeglx_lf_stream_detection(self, inference_engine):
+    def test_spikeglx_lf_stream_detection(self, inference_engine, state):
         """Test LF stream detection in SpikeGLX files."""
-        metadata = inference_engine._extract_spikeglx_metadata(
-            "test_data/recording.imec0.lf.bin"
-        )
+        metadata = inference_engine._extract_spikeglx_metadata("test_data/recording.imec0.lf.bin", state)
 
         # data_stream may not be returned by all implementations
         assert metadata.get("data_stream") in [None, "local field potentials (LF)", "LF"]
@@ -104,34 +100,31 @@ class TestMetadataInferenceEngine:
         assert "V1" in keywords
 
     @pytest.mark.asyncio
-    async def test_full_inference_with_llm(
-        self, inference_engine, mock_llm_service, state
-    ):
+    async def test_full_inference_with_llm(self, inference_engine, mock_llm_service, state):
         """Test full inference pipeline with LLM."""
         # Mock file existence
-        with patch("pathlib.Path.exists", return_value=True):
-            with patch("pathlib.Path.stat") as mock_stat:
-                mock_stat.return_value.st_size = 1024 * 1024  # 1 MB
+        with patch("pathlib.Path.exists", return_value=True), patch("pathlib.Path.stat") as mock_stat:
+            mock_stat.return_value.st_size = 1024 * 1024  # 1 MB
 
-                # Mock LLM response
-                mock_llm_service.generate_structured_output.return_value = {
-                    "inferred_metadata": {
-                        "recording_modality": "electrophysiology",
-                        "experiment_description": "Neural recording in visual cortex",
-                    },
-                    "confidence_scores": {
-                        "recording_modality": 90,
-                        "experiment_description": 75,
-                    },
-                    "reasoning": {
-                        "recording_modality": "SpikeGLX format indicates electrophysiology",
-                    },
-                }
+            # Mock LLM response
+            mock_llm_service.generate_structured_output.return_value = {
+                "inferred_metadata": {
+                    "recording_modality": "electrophysiology",
+                    "experiment_description": "Neural recording in visual cortex",
+                },
+                "confidence_scores": {
+                    "recording_modality": 90,
+                    "experiment_description": 75,
+                },
+                "reasoning": {
+                    "recording_modality": "SpikeGLX format indicates electrophysiology",
+                },
+            }
 
-                result = await inference_engine.infer_metadata(
-                    input_path="test_data/mouse_v1.bin",
-                    state=state,
-                )
+            result = await inference_engine.infer_metadata(
+                input_path="test_data/mouse_v1.bin",
+                state=state,
+            )
 
         assert "inferred_metadata" in result
         assert "confidence_scores" in result
@@ -146,17 +139,16 @@ class TestMetadataInferenceEngine:
         engine._state = state
 
         # Mock both Path.exists and Path.stat for the file
-        with patch("pathlib.Path.exists", return_value=True):
-            with patch("pathlib.Path.stat") as mock_stat:
-                # Create a mock stat result object
-                mock_stat_result = Mock()
-                mock_stat_result.st_size = 1024 * 1024
-                mock_stat.return_value = mock_stat_result
+        with patch("pathlib.Path.exists", return_value=True), patch("pathlib.Path.stat") as mock_stat:
+            # Create a mock stat result object
+            mock_stat_result = Mock()
+            mock_stat_result.st_size = 1024 * 1024
+            mock_stat.return_value = mock_stat_result
 
-                result = await engine.infer_metadata(
-                    input_path="test_data/mouse_v1_neuropixels.bin",
-                    state=state,
-                )
+            result = await engine.infer_metadata(
+                input_path="test_data/mouse_v1_neuropixels.bin",
+                state=state,
+            )
 
         # Should still have heuristic inferences
         assert "inferred_metadata" in result
@@ -168,9 +160,7 @@ class TestMetadataInferenceEngine:
         assert metadata.get("brain_region") == "V1" or "device_name" in metadata
 
     @pytest.mark.asyncio
-    async def test_confidence_scoring(
-        self, inference_engine, mock_llm_service, state
-    ):
+    async def test_confidence_scoring(self, inference_engine, mock_llm_service, state):
         """Test confidence score priority system."""
         mock_llm_service.generate_structured_output.return_value = {
             "inferred_metadata": {
@@ -182,14 +172,13 @@ class TestMetadataInferenceEngine:
             "reasoning": {},
         }
 
-        with patch("pathlib.Path.exists", return_value=True):
-            with patch("pathlib.Path.stat") as mock_stat:
-                mock_stat.return_value.st_size = 1024 * 1024
+        with patch("pathlib.Path.exists", return_value=True), patch("pathlib.Path.stat") as mock_stat:
+            mock_stat.return_value.st_size = 1024 * 1024
 
-                result = await inference_engine.infer_metadata(
-                    input_path="test_data/mouse_neuropixels.bin",
-                    state=state,
-                )
+            result = await inference_engine.infer_metadata(
+                input_path="test_data/mouse_neuropixels.bin",
+                state=state,
+            )
 
         scores = result["confidence_scores"]
 
@@ -247,34 +236,31 @@ class TestMetadataInferenceEngine:
         assert metadata["system"] == "Intan"
 
     @pytest.mark.asyncio
-    async def test_low_confidence_warnings(
-        self, inference_engine, mock_llm_service, state
-    ):
+    async def test_low_confidence_warnings(self, inference_engine, mock_llm_service, state):
         """Test that low confidence inferences generate warnings."""
         # Mock LLM to return low confidence score
-        mock_llm_service.generate_structured_output = AsyncMock(return_value={
-            "inferred_metadata": {
-                "experiment_description": "Some description",
-            },
-            "confidence_scores": {
-                "experiment_description": 50,  # Low confidence
-            },
-            "reasoning": {
-                "experiment_description": "Low confidence inference"
-            },
-        })
+        mock_llm_service.generate_structured_output = AsyncMock(
+            return_value={
+                "inferred_metadata": {
+                    "experiment_description": "Some description",
+                },
+                "confidence_scores": {
+                    "experiment_description": 50,  # Low confidence
+                },
+                "reasoning": {"experiment_description": "Low confidence inference"},
+            }
+        )
 
-        with patch("pathlib.Path.exists", return_value=True):
-            with patch("pathlib.Path.stat") as mock_stat:
-                # Create a mock stat result object
-                mock_stat_result = Mock()
-                mock_stat_result.st_size = 1024 * 1024
-                mock_stat.return_value = mock_stat_result
+        with patch("pathlib.Path.exists", return_value=True), patch("pathlib.Path.stat") as mock_stat:
+            # Create a mock stat result object
+            mock_stat_result = Mock()
+            mock_stat_result.st_size = 1024 * 1024
+            mock_stat.return_value = mock_stat_result
 
-                result = await inference_engine.infer_metadata(
-                    input_path="test.bin",
-                    state=state,
-                )
+            result = await inference_engine.infer_metadata(
+                input_path="test.bin",
+                state=state,
+            )
 
         # Should have warning about low confidence
         suggestions = result["suggestions"]

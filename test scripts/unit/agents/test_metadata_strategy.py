@@ -5,16 +5,15 @@ Tests priority-based metadata collection strategy, skip detection,
 and sequential/batch request handling.
 """
 
-import pytest
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock
 
+import pytest
 from agents.metadata_strategy import (
+    METADATA_FIELDS,
     FieldPriority,
     MetadataField,
-    METADATA_FIELDS,
     MetadataRequestStrategy,
 )
-from models import GlobalState
 from services.llm_service import MockLLMService
 
 
@@ -390,9 +389,7 @@ class TestDetectSkipTypeWithLLM:
     async def test_detect_with_llm_failure_fallback(self, global_state):
         """Test fallback on LLM exception."""
         llm_service = MockLLMService()
-        llm_service.generate_structured_output = AsyncMock(
-            side_effect=Exception("LLM service unavailable")
-        )
+        llm_service.generate_structured_output = AsyncMock(side_effect=Exception("LLM service unavailable"))
 
         strategy = MetadataRequestStrategy(llm_service=llm_service, state=global_state)
 
@@ -621,8 +618,8 @@ class TestRealMetadataStrategyWorkflows:
         strategy = MetadataRequestStrategy(llm_service=None, state=global_state)
 
         # Verify strategy has core methods
-        assert hasattr(strategy, 'get_next_request')
-        assert hasattr(strategy, 'detect_skip_type')
+        assert hasattr(strategy, "get_next_request")
+        assert hasattr(strategy, "detect_skip_type")
 
     @pytest.mark.asyncio
     async def test_real_strategy_with_llm(self, mock_llm_api_only, global_state):

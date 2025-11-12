@@ -4,13 +4,11 @@ Unit tests for SmartAutoCorrectionSystem.
 Tests intelligent auto-correction of validation issues using LLM and fallback strategies.
 """
 
+from unittest.mock import AsyncMock
+
 import pytest
-from unittest.mock import AsyncMock, Mock
-
 from agents.smart_autocorrect import SmartAutoCorrectionSystem
-from models import GlobalState, LogLevel
 from services.llm_service import MockLLMService
-
 
 # Note: The following fixtures are provided by conftest files:
 # - global_state: from root conftest.py (Fresh GlobalState for each test)
@@ -90,10 +88,7 @@ class TestAnalyzeAndCorrect:
         assert result["safe_corrections"]["institution"]["confidence"] == 90
 
         # Check logging
-        assert any(
-            "Smart auto-correction analysis complete" in log.message
-            for log in global_state.logs
-        )
+        assert any("Smart auto-correction analysis complete" in log.message for log in global_state.logs)
 
     @pytest.mark.asyncio
     async def test_analyze_and_correct_without_llm_fallback(self, global_state):
@@ -125,9 +120,7 @@ class TestAnalyzeAndCorrect:
     async def test_analyze_and_correct_llm_failure_fallback(self, global_state):
         """Test analyze_and_correct falls back when LLM fails."""
         llm_service = MockLLMService()
-        llm_service.generate_structured_output = AsyncMock(
-            side_effect=Exception("LLM service error")
-        )
+        llm_service.generate_structured_output = AsyncMock(side_effect=Exception("LLM service error"))
 
         system = SmartAutoCorrectionSystem(llm_service=llm_service)
 
@@ -507,9 +500,7 @@ class TestGetCorrectionSummary:
         """Test correction summary with all types of corrections."""
         system = SmartAutoCorrectionSystem()
 
-        summary = system.get_correction_summary(
-            safe_count=3, risky_count=2, manual_count=1
-        )
+        summary = system.get_correction_summary(safe_count=3, risky_count=2, manual_count=1)
 
         assert "3 issues can be fixed automatically" in summary
         assert "2 fixes need your approval" in summary
@@ -519,9 +510,7 @@ class TestGetCorrectionSummary:
         """Test correction summary with only safe corrections."""
         system = SmartAutoCorrectionSystem()
 
-        summary = system.get_correction_summary(
-            safe_count=5, risky_count=0, manual_count=0
-        )
+        summary = system.get_correction_summary(safe_count=5, risky_count=0, manual_count=0)
 
         assert "5 issues can be fixed automatically" in summary
         assert "⚠️" not in summary
@@ -531,9 +520,7 @@ class TestGetCorrectionSummary:
         """Test correction summary with only manual corrections."""
         system = SmartAutoCorrectionSystem()
 
-        summary = system.get_correction_summary(
-            safe_count=0, risky_count=0, manual_count=4
-        )
+        summary = system.get_correction_summary(safe_count=0, risky_count=0, manual_count=4)
 
         assert "4 issues require your input" in summary
         assert "✅" not in summary
@@ -543,9 +530,7 @@ class TestGetCorrectionSummary:
         """Test correction summary with no corrections."""
         system = SmartAutoCorrectionSystem()
 
-        summary = system.get_correction_summary(
-            safe_count=0, risky_count=0, manual_count=0
-        )
+        summary = system.get_correction_summary(safe_count=0, risky_count=0, manual_count=0)
 
         assert summary == "No corrections needed"
 
@@ -553,9 +538,7 @@ class TestGetCorrectionSummary:
         """Test correction summary with safe and risky corrections."""
         system = SmartAutoCorrectionSystem()
 
-        summary = system.get_correction_summary(
-            safe_count=2, risky_count=1, manual_count=0
-        )
+        summary = system.get_correction_summary(safe_count=2, risky_count=1, manual_count=0)
 
         assert "2 issues can be fixed automatically" in summary
         assert "1 fixes need your approval" in summary

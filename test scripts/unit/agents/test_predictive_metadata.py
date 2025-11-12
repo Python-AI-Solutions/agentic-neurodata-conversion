@@ -4,14 +4,11 @@ Unit tests for PredictiveMetadataSystem.
 Tests intelligent metadata prediction using LLM and pattern recognition.
 """
 
+from unittest.mock import AsyncMock
+
 import pytest
-from pathlib import Path
-from unittest.mock import AsyncMock, Mock, mock_open, patch
-
 from agents.predictive_metadata import PredictiveMetadataSystem
-from models import GlobalState, LogLevel
 from services.llm_service import MockLLMService
-
 
 # Note: The following fixtures are provided by conftest files:
 # - global_state: from root conftest.py (Fresh GlobalState for each test)
@@ -313,12 +310,7 @@ class TestSpikeGLXAnalysis:
         meta_file = tmp_path / "recording.imec0.ap.meta"
 
         bin_file.write_bytes(b"mock binary data")
-        meta_file.write_text(
-            "imSampRate=30000\n"
-            "nSavedChans=385\n"
-            "fileTimeSecs=600\n"
-            "imProbeOpt=4\n"
-        )
+        meta_file.write_text("imSampRate=30000\nnSavedChans=385\nfileTimeSecs=600\nimProbeOpt=4\n")
 
         analysis = await system._analyze_spikeglx_deep(bin_file, global_state)
 
@@ -339,7 +331,7 @@ class TestSpikeGLXAnalysis:
 
         assert "spikeglx_details" in analysis
         # Should not have meta file details
-        assert analysis["spikeglx_details"].get("has_meta_file") != True
+        assert not analysis["spikeglx_details"].get("has_meta_file")
 
     @pytest.mark.asyncio
     async def test_analyze_spikeglx_corrupted_meta_file(self, tmp_path, global_state):
@@ -392,11 +384,7 @@ class TestDeepFileAnalysis:
         file_path = tmp_path / "mouse_123_20240117.imec0.ap.bin"
         file_path.write_bytes(b"mock data")
 
-        analysis = await system._deep_file_analysis(
-            str(file_path),
-            "SpikeGLX",
-            global_state
-        )
+        analysis = await system._deep_file_analysis(str(file_path), "SpikeGLX", global_state)
 
         assert analysis["path"] == str(file_path)
         assert analysis["format"] == "SpikeGLX"
@@ -411,11 +399,7 @@ class TestDeepFileAnalysis:
         file_path = tmp_path / "recording.continuous"
         file_path.write_bytes(b"mock data")
 
-        analysis = await system._deep_file_analysis(
-            str(file_path),
-            "OpenEphys",
-            global_state
-        )
+        analysis = await system._deep_file_analysis(str(file_path), "OpenEphys", global_state)
 
         assert analysis["format"] == "OpenEphys"
         assert "openephys_details" in analysis
@@ -428,11 +412,7 @@ class TestDeepFileAnalysis:
         file_path = tmp_path / "data.unknown"
         file_path.write_bytes(b"mock data")
 
-        analysis = await system._deep_file_analysis(
-            str(file_path),
-            "Unknown",
-            global_state
-        )
+        analysis = await system._deep_file_analysis(str(file_path), "Unknown", global_state)
 
         # Should still return basic analysis
         assert analysis["format"] == "Unknown"
@@ -480,12 +460,7 @@ class TestPredictMetadata:
             "reasoning": {"subject_id": "From filename"},
         }
 
-        result = await system.predict_metadata(
-            str(file_path),
-            "SpikeGLX",
-            basic_inference,
-            global_state
-        )
+        result = await system.predict_metadata(str(file_path), "SpikeGLX", basic_inference, global_state)
 
         assert "predicted_metadata" in result
         assert "experimenter" in result["predicted_metadata"]
@@ -509,12 +484,7 @@ class TestPredictMetadata:
             "reasoning": {"subject_id": "Filename pattern"},
         }
 
-        result = await system.predict_metadata(
-            str(file_path),
-            "SpikeGLX",
-            basic_inference,
-            global_state
-        )
+        result = await system.predict_metadata(str(file_path), "SpikeGLX", basic_inference, global_state)
 
         # Should use basic predictions
         assert result["predicted_metadata"] == basic_inference["inferred_metadata"]
@@ -523,9 +493,7 @@ class TestPredictMetadata:
     async def test_predict_metadata_llm_failure_fallback(self, tmp_path, global_state):
         """Test prediction falls back to basic when LLM fails."""
         llm_service = MockLLMService()
-        llm_service.generate_structured_output = AsyncMock(
-            side_effect=Exception("LLM API error")
-        )
+        llm_service.generate_structured_output = AsyncMock(side_effect=Exception("LLM API error"))
 
         system = PredictiveMetadataSystem(llm_service=llm_service)
 
@@ -536,12 +504,7 @@ class TestPredictMetadata:
             "inferred_metadata": {"subject_id": "mouse_001"},
         }
 
-        result = await system.predict_metadata(
-            str(file_path),
-            "SpikeGLX",
-            basic_inference,
-            global_state
-        )
+        result = await system.predict_metadata(str(file_path), "SpikeGLX", basic_inference, global_state)
 
         # Should fall back to basic predictions
         assert result["predicted_metadata"] == basic_inference["inferred_metadata"]
@@ -571,18 +534,11 @@ class TestPredictMetadata:
         file_path = tmp_path / "data.bin"
         file_path.write_bytes(b"mock data")
 
-        await system.predict_metadata(
-            str(file_path),
-            "SpikeGLX",
-            {},
-            global_state
-        )
+        await system.predict_metadata(str(file_path), "SpikeGLX", {}, global_state)
 
         # Should have logged success
         assert any(
-            "Predictive metadata generated" in log.message
-            and "2 fields" in log.message
-            for log in global_state.logs
+            "Predictive metadata generated" in log.message and "2 fields" in log.message for log in global_state.logs
         )
 
 
@@ -610,7 +566,7 @@ class TestLLMPredictMetadata:
             file_analysis={"format": "SpikeGLX"},
             basic_inference={"inferred_metadata": {}},
             similar_patterns=[],
-            state=global_state
+            state=global_state,
         )
 
         # Verify LLM was called

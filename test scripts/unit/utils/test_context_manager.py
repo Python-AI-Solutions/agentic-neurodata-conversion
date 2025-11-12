@@ -3,9 +3,10 @@ Unit tests for ConversationContextManager.
 
 Tests smart conversation summarization and context management.
 """
-import pytest
+
 from unittest.mock import AsyncMock, Mock
 
+import pytest
 from agents.context_manager import ConversationContextManager
 from models.state import GlobalState
 
@@ -27,10 +28,7 @@ def context_manager(mock_llm_service):
 @pytest.fixture
 def sample_conversation():
     """Create sample conversation history."""
-    return [
-        {"role": "user", "content": f"Message {i}"}
-        for i in range(20)
-    ]
+    return [{"role": "user", "content": f"Message {i}"} for i in range(20)]
 
 
 @pytest.fixture
@@ -59,10 +57,7 @@ class TestConversationContextManager:
     @pytest.mark.asyncio
     async def test_short_conversation_no_summarization(self, context_manager, state):
         """Test that short conversations are returned as-is."""
-        short_conversation = [
-            {"role": "user", "content": f"Message {i}"}
-            for i in range(10)
-        ]
+        short_conversation = [{"role": "user", "content": f"Message {i}"} for i in range(10)]
 
         result = await context_manager.manage_context(
             conversation_history=short_conversation,
@@ -78,6 +73,7 @@ class TestConversationContextManager:
         self, context_manager, mock_llm_service, sample_conversation, state
     ):
         """Test that long conversations trigger summarization."""
+
         # Mock LLM response - needs to be a coroutine
         async def mock_llm_response(*args, **kwargs):
             return {
@@ -104,10 +100,7 @@ class TestConversationContextManager:
         """Test fallback when LLM unavailable."""
         manager = ConversationContextManager(llm_service=None)
 
-        long_conversation = [
-            {"role": "user", "content": f"Message {i}"}
-            for i in range(30)
-        ]
+        long_conversation = [{"role": "user", "content": f"Message {i}"} for i in range(30)]
 
         result = await manager.manage_context(
             conversation_history=long_conversation,
@@ -120,9 +113,7 @@ class TestConversationContextManager:
         assert result[-1]["content"] == "Message 29"
 
     @pytest.mark.asyncio
-    async def test_llm_failure_fallback(
-        self, context_manager, mock_llm_service, sample_conversation, state
-    ):
+    async def test_llm_failure_fallback(self, context_manager, mock_llm_service, sample_conversation, state):
         """Test fallback when LLM call fails."""
         # Mock LLM to raise exception
         mock_llm_service.generate_structured_output.side_effect = Exception("LLM failed")
@@ -138,9 +129,7 @@ class TestConversationContextManager:
         assert any("Message 19" in msg["content"] for msg in result)
 
     @pytest.mark.asyncio
-    async def test_preserves_recent_messages(
-        self, context_manager, mock_llm_service, sample_conversation, state
-    ):
+    async def test_preserves_recent_messages(self, context_manager, mock_llm_service, sample_conversation, state):
         """Test that recent messages are always preserved."""
         mock_llm_service.generate_structured_output.return_value = {
             "summary": "Old messages summary",
@@ -163,10 +152,7 @@ class TestConversationContextManager:
 
     def test_simple_truncation_logic(self, context_manager, state):
         """Test the simple truncation fallback."""
-        long_conversation = [
-            {"role": "user", "content": f"Message {i}"}
-            for i in range(60)
-        ]
+        long_conversation = [{"role": "user", "content": f"Message {i}"} for i in range(60)]
 
         result = context_manager._simple_truncation(long_conversation, state)
 
@@ -199,10 +185,7 @@ class TestConversationContextManager:
             summarize_threshold=10,
         )
 
-        conversation = [
-            {"role": "user", "content": f"Message {i}"}
-            for i in range(12)
-        ]
+        conversation = [{"role": "user", "content": f"Message {i}"} for i in range(12)]
 
         result = await manager.manage_context(
             conversation_history=conversation,

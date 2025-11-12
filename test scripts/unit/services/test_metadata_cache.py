@@ -5,15 +5,13 @@ Tests intelligent caching for LLM-inferred metadata.
 """
 
 import asyncio
-import pytest
 from datetime import datetime, timedelta
-from unittest.mock import patch
 
+import pytest
 from services.metadata_cache import (
     CacheEntry,
     MetadataCache,
     get_metadata_cache,
-    start_cache_cleanup_task,
 )
 
 

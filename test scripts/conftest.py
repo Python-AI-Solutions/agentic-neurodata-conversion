@@ -192,12 +192,14 @@ def mock_llm_format_detector():
     """
     service = Mock(spec=LLMService)
     service.generate_response = AsyncMock(return_value="Format: NWB")
-    service.generate_structured_output = AsyncMock(return_value={
-        "detected_format": "NWB",
-        "confidence": 0.95,
-        "reasoning": "File has .nwb extension and valid HDF5 structure",
-        "alternative_formats": []
-    })
+    service.generate_structured_output = AsyncMock(
+        return_value={
+            "detected_format": "NWB",
+            "confidence": 0.95,
+            "reasoning": "File has .nwb extension and valid HDF5 structure",
+            "alternative_formats": [],
+        }
+    )
     service.is_available = Mock(return_value=True)
     service.get_model_name = Mock(return_value="mock-format-detector")
     return service
@@ -230,14 +232,16 @@ def mock_llm_quality_assessor():
         - mock_llm_corrector: For error correction testing
     """
     service = Mock(spec=LLMService)
-    service.generate_structured_output = AsyncMock(return_value={
-        "overall_score": 85,
-        "grade": "B",
-        "assessment": "Good quality NWB file with minor issues",
-        "strengths": ["Valid HDF5 structure", "Required fields present"],
-        "weaknesses": ["Missing recommended metadata"],
-        "recommendations": ["Add experimenter metadata", "Include institution"]
-    })
+    service.generate_structured_output = AsyncMock(
+        return_value={
+            "overall_score": 85,
+            "grade": "B",
+            "assessment": "Good quality NWB file with minor issues",
+            "strengths": ["Valid HDF5 structure", "Required fields present"],
+            "weaknesses": ["Missing recommended metadata"],
+            "recommendations": ["Add experimenter metadata", "Include institution"],
+        }
+    )
     service.generate_response = AsyncMock(
         return_value="Quality assessment: The NWB file has good structure with minor metadata issues."
     )
@@ -273,13 +277,15 @@ def mock_llm_metadata_parser():
         - sample_metadata: For pre-defined metadata samples
     """
     service = Mock(spec=LLMService)
-    service.generate_structured_output = AsyncMock(return_value={
-        "session_description": "Neural recording session from mouse V1",
-        "experimenter": ["John Doe"],
-        "institution": "Research Lab",
-        "lab": "Neuroscience Lab",
-        "session_start_time": "2023-06-15T10:30:00-05:00"
-    })
+    service.generate_structured_output = AsyncMock(
+        return_value={
+            "session_description": "Neural recording session from mouse V1",
+            "experimenter": ["John Doe"],
+            "institution": "Research Lab",
+            "lab": "Neuroscience Lab",
+            "session_start_time": "2023-06-15T10:30:00-05:00",
+        }
+    )
     service.generate_response = AsyncMock(
         return_value="Extracted metadata: Neural recording session from mouse V1, experimenter John Doe"
     )
@@ -319,19 +325,21 @@ def mock_llm_corrector():
     service.generate_response = AsyncMock(
         return_value="Suggested fix: Add session_description field with minimum 10 characters"
     )
-    service.generate_structured_output = AsyncMock(return_value={
-        "corrections": [
-            {
-                "field": "session_description",
-                "issue": "Too short",
-                "current_value": "a",
-                "suggested_value": "Neural recording session from mouse V1",
-                "fix": "Add detailed description"
-            }
-        ],
-        "auto_fixable": True,
-        "confidence": 0.9
-    })
+    service.generate_structured_output = AsyncMock(
+        return_value={
+            "corrections": [
+                {
+                    "field": "session_description",
+                    "issue": "Too short",
+                    "current_value": "a",
+                    "suggested_value": "Neural recording session from mouse V1",
+                    "fix": "Add detailed description",
+                }
+            ],
+            "auto_fixable": True,
+            "confidence": 0.9,
+        }
+    )
     service.is_available = Mock(return_value=True)
     service.get_model_name = Mock(return_value="mock-corrector")
     return service
@@ -363,9 +371,7 @@ def mock_llm_conversational():
         - mock_llm_service: For basic non-specialized responses
     """
     service = Mock(spec=LLMService)
-    service.generate_response = AsyncMock(
-        return_value="I understand. Let me help you with that."
-    )
+    service.generate_response = AsyncMock(return_value="I understand. Let me help you with that.")
     service.generate_structured_output = AsyncMock(
         return_value={"explanation": "The error occurred because of missing metadata fields."}
     )
@@ -483,16 +489,14 @@ def mock_mcp_server():
         - conversation_agent: Agent fixture using MCP server
         - sample_mcp_message: Sample MCP message fixture
     """
-    from models import MCPResponse, MCPMessage
+    from models import MCPMessage, MCPResponse
     from services import MCPServer
 
     server = Mock(spec=MCPServer)
     server.send_message = AsyncMock(return_value=MCPResponse(success=True, reply_to="test_message_id", result={}))
-    server.receive_message = AsyncMock(return_value=MCPMessage(
-        target_agent="test_agent",
-        action="test_action",
-        context={}
-    ))
+    server.receive_message = AsyncMock(
+        return_value=MCPMessage(target_agent="test_agent", action="test_action", context={})
+    )
     server.register_agent = Mock()
     return server
 

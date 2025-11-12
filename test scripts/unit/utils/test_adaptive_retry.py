@@ -3,9 +3,10 @@ Unit tests for AdaptiveRetryStrategy.
 
 Tests intelligent retry decision making and failure pattern analysis.
 """
-import pytest
+
 from unittest.mock import AsyncMock, Mock
 
+import pytest
 from agents.adaptive_retry import AdaptiveRetryStrategy
 from models.state import GlobalState
 
@@ -148,9 +149,7 @@ class TestAdaptiveRetryStrategy:
         assert analysis["issue_count_change"] == 2
 
     @pytest.mark.asyncio
-    async def test_llm_powered_analysis(
-        self, retry_strategy, mock_llm_service, state, validation_result
-    ):
+    async def test_llm_powered_analysis(self, retry_strategy, mock_llm_service, state, validation_result):
         """Test LLM-powered analysis."""
         mock_llm_service.generate_structured_output.return_value = {
             "should_retry": True,
@@ -173,9 +172,7 @@ class TestAdaptiveRetryStrategy:
         assert mock_llm_service.generate_structured_output.called
 
     @pytest.mark.asyncio
-    async def test_ask_user_recommendation(
-        self, retry_strategy, mock_llm_service, state, validation_result
-    ):
+    async def test_ask_user_recommendation(self, retry_strategy, mock_llm_service, state, validation_result):
         """Test recommendation to ask user for help."""
         mock_llm_service.generate_structured_output.return_value = {
             "should_retry": False,
@@ -216,9 +213,7 @@ class TestAdaptiveRetryStrategy:
         assert "message" in recommendation
 
     @pytest.mark.asyncio
-    async def test_llm_failure_fallback(
-        self, retry_strategy, mock_llm_service, state, validation_result
-    ):
+    async def test_llm_failure_fallback(self, retry_strategy, mock_llm_service, state, validation_result):
         """Test fallback when LLM call fails."""
         mock_llm_service.generate_structured_output.side_effect = Exception("LLM failed")
 
@@ -288,10 +283,7 @@ class TestAdaptiveRetryStrategy:
 
     def test_format_issues_summary_truncation(self, retry_strategy):
         """Test issue summary truncates long lists."""
-        issues = [
-            {"severity": "CRITICAL", "message": f"Issue {i}"}
-            for i in range(30)
-        ]
+        issues = [{"severity": "CRITICAL", "message": f"Issue {i}"} for i in range(30)]
 
         summary = retry_strategy._format_issues_summary(issues)
 
@@ -299,9 +291,7 @@ class TestAdaptiveRetryStrategy:
         assert "more issues" in summary.lower() or "..." in summary
 
     @pytest.mark.asyncio
-    async def test_first_attempt_always_retries(
-        self, retry_strategy, mock_llm_service, state, validation_result
-    ):
+    async def test_first_attempt_always_retries(self, retry_strategy, mock_llm_service, state, validation_result):
         """Test that first attempt always suggests retry."""
         state.correction_attempt = 1
 
@@ -312,7 +302,7 @@ class TestAdaptiveRetryStrategy:
             "approach": "fix_metadata",
             "message": "Let's try to fix the metadata issues",
             "ask_user": False,
-            "reasoning": "First attempt - issues are fixable"
+            "reasoning": "First attempt - issues are fixable",
         }
 
         recommendation = await retry_strategy.analyze_and_recommend_strategy(
@@ -331,9 +321,7 @@ class TestAdaptiveRetryStrategy:
         assert issues == []
 
     @pytest.mark.asyncio
-    async def test_recommendation_includes_reasoning(
-        self, retry_strategy, mock_llm_service, state, validation_result
-    ):
+    async def test_recommendation_includes_reasoning(self, retry_strategy, mock_llm_service, state, validation_result):
         """Test that recommendations include reasoning."""
         mock_llm_service.generate_structured_output.return_value = {
             "should_retry": True,

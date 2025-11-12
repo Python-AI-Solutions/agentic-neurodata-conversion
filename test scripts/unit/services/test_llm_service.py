@@ -7,15 +7,14 @@ Tests the LLM service abstraction layer including:
 - Error handling
 - Structured output generation
 """
-import json
-import pytest
-from unittest.mock import Mock, patch, AsyncMock
 
+from unittest.mock import AsyncMock, Mock
+
+import pytest
 from services.llm_service import (
-    LLMService,
     AnthropicLLMService,
-    MockLLMService,
     LLMServiceError,
+    MockLLMService,
     create_llm_service,
 )
 

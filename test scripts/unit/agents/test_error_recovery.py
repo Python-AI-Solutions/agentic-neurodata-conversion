@@ -4,14 +4,11 @@ Unit tests for IntelligentErrorRecovery.
 Tests LLM-powered error analysis and recovery suggestions.
 """
 
-import pytest
 from unittest.mock import AsyncMock
-from datetime import datetime
 
+import pytest
 from agents.error_recovery import IntelligentErrorRecovery
-from models import GlobalState, LogLevel, ConversionStatus
 from services.llm_service import MockLLMService
-
 
 # Note: The following fixtures are provided by conftest files:
 # - global_state: from root conftest.py (Fresh GlobalState for each test)
@@ -116,9 +113,7 @@ class TestAnalyzeError:
     async def test_analyze_error_llm_failure_fallback(self, global_state):
         """Test error analysis falls back when LLM fails."""
         llm_service = MockLLMService()
-        llm_service.generate_structured_output = AsyncMock(
-            side_effect=Exception("LLM service error")
-        )
+        llm_service.generate_structured_output = AsyncMock(side_effect=Exception("LLM service error"))
 
         recovery = IntelligentErrorRecovery(llm_service=llm_service)
 
@@ -224,9 +219,7 @@ class TestGetErrorPatterns:
     def test_get_error_patterns_single_error(self):
         """Test error patterns with single error."""
         recovery = IntelligentErrorRecovery()
-        recovery.error_history = [
-            {"error_type": "ValueError", "error_message": "Test error"}
-        ]
+        recovery.error_history = [{"error_type": "ValueError", "error_message": "Test error"}]
 
         patterns = recovery._get_error_patterns()
 
@@ -425,9 +418,7 @@ class TestIntelligentErrorRecoveryIntegration:
     async def test_error_recovery_with_llm_failure(self, global_state):
         """Test error recovery gracefully handles LLM failures."""
         llm_service = MockLLMService()
-        llm_service.generate_structured_output = AsyncMock(
-            side_effect=Exception("LLM error")
-        )
+        llm_service.generate_structured_output = AsyncMock(side_effect=Exception("LLM error"))
 
         recovery = IntelligentErrorRecovery(llm_service=llm_service)
 
@@ -515,17 +506,13 @@ class TestRealErrorRecoveryWorkflows:
             return_value={
                 "error_type": "ValidationError",
                 "severity": "high",
-                "suggested_actions": ["Check required fields"]
+                "suggested_actions": ["Check required fields"],
             }
         )
 
         # Test with real error analysis method
         error = ValueError("Missing required field")
-        analysis = await recovery.analyze_error(
-            error=error,
-            context={"operation": "test"},
-            state=global_state
-        )
+        analysis = await recovery.analyze_error(error=error, context={"operation": "test"}, state=global_state)
 
         # Should return analysis dict
         assert isinstance(analysis, dict)

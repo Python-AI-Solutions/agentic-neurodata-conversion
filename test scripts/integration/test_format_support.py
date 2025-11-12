@@ -4,8 +4,11 @@ Integration tests for format support.
 Tests actual conversion workflows for each supported format.
 These tests require test data files to be present.
 """
-import pytest
+
 from pathlib import Path
+
+import pytest
+
 from backend.src.agents.conversion_agent import ConversionAgent
 from backend.src.models import GlobalState, MCPMessage
 
@@ -130,6 +133,7 @@ class TestFormatConversion:
             # Verify it's a valid NWB file
             try:
                 from pynwb import NWBHDF5IO
+
                 with NWBHDF5IO(str(output_path), "r") as io:
                     nwbfile = io.read()
                     assert nwbfile is not None
@@ -204,6 +208,7 @@ class TestFormatConversion:
             # Verify it's a valid NWB file
             try:
                 from pynwb import NWBHDF5IO
+
                 with NWBHDF5IO(str(output_path), "r") as io:
                     nwbfile = io.read()
                     assert nwbfile is not None
@@ -279,6 +284,7 @@ class TestFormatConversion:
             # Verify it's a valid NWB file
             try:
                 from pynwb import NWBHDF5IO
+
                 with NWBHDF5IO(str(output_path), "r") as io:
                     nwbfile = io.read()
                     assert nwbfile is not None

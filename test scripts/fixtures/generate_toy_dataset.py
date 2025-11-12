@@ -5,8 +5,9 @@ This script creates minimal but valid SpikeGLX files (.bin + .meta) for testing
 format detection and conversion workflows without requiring real neural data.
 """
 
-import numpy as np
 from pathlib import Path
+
+import numpy as np
 
 
 def generate_synthetic_neural_data(
@@ -43,9 +44,7 @@ def generate_synthetic_neural_data(
 
         for ch in range(n_channels):
             n_spikes = int(spike_rate * (n_samples / sample_rate))
-            spike_times = np.random.choice(
-                n_samples - spike_duration, size=n_spikes, replace=False
-            )
+            spike_times = np.random.choice(n_samples - spike_duration, size=n_spikes, replace=False)
 
             for spike_time in spike_times:
                 # Simple spike waveform (negative then positive deflection)
@@ -173,9 +172,7 @@ def generate_toy_spikeglx_dataset(output_dir: Path):
 
     # Generate AP band data
     print(f"  Generating AP band ({ap_sample_rate} Hz)...")
-    ap_data = generate_synthetic_neural_data(
-        n_channels, ap_n_samples, ap_sample_rate, add_spikes=True
-    )
+    ap_data = generate_synthetic_neural_data(n_channels, ap_n_samples, ap_sample_rate, add_spikes=True)
 
     # Save AP binary file (channels interleaved)
     ap_bin_path = output_dir / f"{base_name}.ap.bin"
@@ -196,9 +193,7 @@ def generate_toy_spikeglx_dataset(output_dir: Path):
 
     # Generate LF band data
     print(f"  Generating LF band ({lf_sample_rate} Hz)...")
-    lf_data = generate_synthetic_neural_data(
-        n_channels, lf_n_samples, lf_sample_rate, add_spikes=False
-    )
+    lf_data = generate_synthetic_neural_data(n_channels, lf_n_samples, lf_sample_rate, add_spikes=False)
 
     # Save LF binary file
     lf_bin_path = output_dir / f"{base_name}.lf.bin"
@@ -219,7 +214,7 @@ def generate_toy_spikeglx_dataset(output_dir: Path):
 
     print("\n✓ Toy SpikeGLX dataset generated successfully!")
     print(f"  Total size: {sum(f.stat().st_size for f in output_dir.glob('*')) / 1024 / 1024:.2f} MB")
-    print(f"\nFiles created:")
+    print("\nFiles created:")
     for file in sorted(output_dir.glob("*")):
         print(f"  - {file.name}")
 
@@ -250,9 +245,7 @@ def generate_toy_neuropixels_dataset(output_dir: Path):
     ap_n_samples = int(duration_sec * ap_sample_rate)
     print(f"  Generating IMEC probe data ({ap_sample_rate} Hz)...")
 
-    imec_data = generate_synthetic_neural_data(
-        n_channels_imec, ap_n_samples, ap_sample_rate, add_spikes=True
-    )
+    imec_data = generate_synthetic_neural_data(n_channels_imec, ap_n_samples, ap_sample_rate, add_spikes=True)
 
     # Save IMEC binary file
     imec_bin_path = output_dir / f"{base_name}.imec0.ap.bin"
@@ -276,9 +269,7 @@ def generate_toy_neuropixels_dataset(output_dir: Path):
     nidq_n_samples = int(duration_sec * nidq_sample_rate)
     print(f"  Generating NIDQ sync data ({nidq_sample_rate} Hz)...")
 
-    nidq_data = generate_synthetic_neural_data(
-        n_channels_nidq, nidq_n_samples, nidq_sample_rate, add_spikes=False
-    )
+    nidq_data = generate_synthetic_neural_data(n_channels_nidq, nidq_n_samples, nidq_sample_rate, add_spikes=False)
 
     # Save NIDQ binary file
     nidq_bin_path = output_dir / f"{base_name}.nidq.bin"
@@ -299,7 +290,7 @@ def generate_toy_neuropixels_dataset(output_dir: Path):
 
     print("\n✓ Toy Neuropixels dataset generated successfully!")
     print(f"  Total size: {sum(f.stat().st_size for f in output_dir.glob('*')) / 1024 / 1024:.2f} MB")
-    print(f"\nFiles created:")
+    print("\nFiles created:")
     for file in sorted(output_dir.glob("*")):
         print(f"  - {file.name}")
 

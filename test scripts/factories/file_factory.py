@@ -4,20 +4,16 @@ Factory for generating mock data files.
 Provides programmatic generation of mock neuroscience data files
 for testing without requiring real recordings.
 """
-from pathlib import Path
-from typing import Optional
+
 import struct
+from pathlib import Path
 
 
 class FileFactory:
     """Factory for generating mock data files."""
 
     @staticmethod
-    def create_spikeglx_binary(
-        output_path: Path,
-        num_samples: int = 1000,
-        num_channels: int = 384
-    ) -> Path:
+    def create_spikeglx_binary(output_path: Path, num_samples: int = 1000, num_channels: int = 384) -> Path:
         """Create a mock SpikeGLX binary file.
 
         Args:
@@ -36,17 +32,13 @@ class FileFactory:
             for channel in range(num_channels):
                 # Generate mock data (simple sawtooth wave)
                 value = (sample + channel) % 32768
-                data.extend(struct.pack('<h', value))  # Little-endian int16
+                data.extend(struct.pack("<h", value))  # Little-endian int16
 
         output_path.write_bytes(data)
         return output_path
 
     @staticmethod
-    def create_spikeglx_meta(
-        output_path: Path,
-        num_channels: int = 384,
-        sampling_rate: int = 30000
-    ) -> Path:
+    def create_spikeglx_meta(output_path: Path, num_channels: int = 384, sampling_rate: int = 30000) -> Path:
         """Create a mock SpikeGLX .meta file.
 
         Args:
@@ -75,10 +67,7 @@ imRoFile=test_g0_t0.imec0.ap.imRoFile
         return output_path
 
     @staticmethod
-    def create_nwb_file(
-        output_path: Path,
-        size_bytes: int = 1024
-    ) -> Path:
+    def create_nwb_file(output_path: Path, size_bytes: int = 1024) -> Path:
         """Create a mock NWB file.
 
         Args:
@@ -90,8 +79,8 @@ imRoFile=test_g0_t0.imec0.ap.imRoFile
         """
         # NWB files are HDF5, but for testing we just create a placeholder
         # Real NWB validation would require pynwb, which is tested separately
-        mock_nwb_header = b'\x89HDF\r\n\x1a\n'  # HDF5 magic number
-        mock_data = b'x' * (size_bytes - len(mock_nwb_header))
+        mock_nwb_header = b"\x89HDF\r\n\x1a\n"  # HDF5 magic number
+        mock_data = b"x" * (size_bytes - len(mock_nwb_header))
 
         output_path.write_bytes(mock_nwb_header + mock_data)
         return output_path
@@ -108,8 +97,8 @@ imRoFile=test_g0_t0.imec0.ap.imRoFile
         """
         # ABF files have specific header format
         # This is a minimal mock for testing detection
-        abf_header = b'ABF2'  # ABF2 format identifier
-        mock_data = b'\x00' * 1024
+        abf_header = b"ABF2"  # ABF2 format identifier
+        mock_data = b"\x00" * 1024
 
         output_path.write_bytes(abf_header + mock_data)
         return output_path
@@ -129,10 +118,7 @@ imRoFile=test_g0_t0.imec0.ap.imRoFile
         return FileFactory.create_spikeglx_binary(output_path)
 
     @staticmethod
-    def create_test_data_directory(
-        base_path: Path,
-        format_type: str = "spikeglx"
-    ) -> Path:
+    def create_test_data_directory(base_path: Path, format_type: str = "spikeglx") -> Path:
         """Create a complete test data directory.
 
         Args:
@@ -163,10 +149,7 @@ imRoFile=test_g0_t0.imec0.ap.imRoFile
         return base_path
 
     @staticmethod
-    def create_minimal_binary_file(
-        output_path: Path,
-        size_bytes: int = 100
-    ) -> Path:
+    def create_minimal_binary_file(output_path: Path, size_bytes: int = 100) -> Path:
         """Create a minimal binary file for basic testing.
 
         Args:
@@ -176,7 +159,7 @@ imRoFile=test_g0_t0.imec0.ap.imRoFile
         Returns:
             Path to created file
         """
-        output_path.write_bytes(b'test_data' * (size_bytes // 9))
+        output_path.write_bytes(b"test_data" * (size_bytes // 9))
         return output_path
 
     @staticmethod
@@ -190,7 +173,7 @@ imRoFile=test_g0_t0.imec0.ap.imRoFile
             Path to created file
         """
         # Create file with invalid/corrupted data
-        corrupted_data = b'\xff\xfe\xfd\xfc' * 256
+        corrupted_data = b"\xff\xfe\xfd\xfc" * 256
         output_path.write_bytes(corrupted_data)
         return output_path
 

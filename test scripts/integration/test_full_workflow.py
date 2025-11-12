@@ -9,17 +9,17 @@ This tests:
 4. Validation
 5. Report generation
 """
-import asyncio
+
 import sys
 from pathlib import Path
 
 # Add backend to path
 sys.path.insert(0, str(Path(__file__).parent / "backend" / "src"))
 
+from models.mcp import MCPMessage
 from models.state import GlobalState
 from services.llm_service import MockLLMService
 from services.mcp_server import MCPServer
-from models.mcp import MCPMessage
 
 
 async def test_full_workflow():
@@ -40,9 +40,9 @@ async def test_full_workflow():
     mcp_server = MCPServer()
 
     # Import and register agents
+    from agents.conversation_agent import ConversationAgent
     from agents.conversion_agent import ConversionAgent
     from agents.evaluation_agent import EvaluationAgent
-    from agents.conversation_agent import ConversationAgent
 
     print("✓ Registered conversation agent")
     conversation_agent = ConversationAgent(mcp_server=mcp_server, llm_service=llm_service)
@@ -67,7 +67,7 @@ async def test_full_workflow():
         return False
 
     print(f"📋 Step 2: Testing with file: {test_file.name}")
-    print(f"   File size: {test_file.stat().st_size / (1024*1024):.2f} MB")
+    print(f"   File size: {test_file.stat().st_size / (1024 * 1024):.2f} MB")
     print()
 
     # Step 3: Start conversion (with metadata inference)
@@ -87,13 +87,13 @@ async def test_full_workflow():
         response = await conversation_agent.handle_start_conversion(start_message, state)
 
         if response.success:
-            print(f"✓ Conversion started successfully")
+            print("✓ Conversion started successfully")
             print(f"  Status: {response.result.get('status')}")
 
             # Check if metadata was inferred
             if "_inference_result" in state.metadata:
                 inference = state.metadata["_inference_result"]
-                print(f"\n🧠 METADATA INFERENCE RESULTS:")
+                print("\n🧠 METADATA INFERENCE RESULTS:")
                 print(f"   Inferred fields: {list(inference.get('inferred_metadata', {}).keys())}")
                 print(f"   Confidence scores: {inference.get('confidence_scores', {})}")
                 print(f"   Suggestions: {inference.get('suggestions', [])}")
@@ -102,12 +102,12 @@ async def test_full_workflow():
             if "nwb_file_path" in response.result:
                 nwb_path = Path(response.result["nwb_file_path"])
                 print(f"\n✓ NWB file created: {nwb_path.name}")
-                print(f"  Size: {nwb_path.stat().st_size / (1024*1024):.2f} MB")
+                print(f"  Size: {nwb_path.stat().st_size / (1024 * 1024):.2f} MB")
 
             # Check validation
             if "validation_result" in response.result:
                 val_result = response.result["validation_result"]
-                print(f"\n✓ Validation completed")
+                print("\n✓ Validation completed")
                 print(f"  Status: {val_result.get('status')}")
                 print(f"  Issue count: {len(val_result.get('issues', []))}")
 
@@ -118,6 +118,7 @@ async def test_full_workflow():
     except Exception as e:
         print(f"❌ Exception during conversion: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 

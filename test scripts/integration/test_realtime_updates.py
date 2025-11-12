@@ -6,14 +6,10 @@ Validates that all progress stages broadcast to connected clients.
 Addresses Critical Gap: Current WebSocket tests are placeholders only.
 This implements comprehensive real-time update testing for Epic 10.
 """
-import pytest
-import asyncio
-from unittest.mock import Mock, AsyncMock, patch
-from pathlib import Path
-from fastapi.testclient import TestClient
 
+import pytest
 from api.main import app
-from models import GlobalState, ConversionStatus
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture
@@ -34,11 +30,10 @@ class TestWebSocketProgressBroadcasting:
 
     def test_websocket_multiple_connections(self, api_client):
         """Test multiple WebSocket connections can coexist."""
-        with api_client.websocket_connect("/ws") as ws1:
-            with api_client.websocket_connect("/ws") as ws2:
-                assert ws1 is not None
-                assert ws2 is not None
-                # Both connections active
+        with api_client.websocket_connect("/ws") as ws1, api_client.websocket_connect("/ws") as ws2:
+            assert ws1 is not None
+            assert ws2 is not None
+            # Both connections active
 
     @pytest.mark.asyncio
     async def test_websocket_receives_upload_notification(self, api_client):

@@ -5,17 +5,15 @@ Tests validation history learning system that learns from past validation sessio
 """
 
 import asyncio
-import pytest
 import json
 from pathlib import Path
-from unittest.mock import AsyncMock, mock_open, patch
-from datetime import datetime
+from unittest.mock import AsyncMock
 
+import pytest
 from agents.validation_history_learning import ValidationHistoryLearner
-from models import GlobalState, LogLevel, ValidationResult
+from models import ValidationResult
 from models.validation import ValidationIssue, ValidationSeverity
 from services.llm_service import MockLLMService
-
 
 # Note: The following fixtures are provided by conftest files:
 # - global_state: from root conftest.py (Fresh GlobalState for each test)
@@ -449,9 +447,7 @@ class TestBasicRecommendations:
         """Test basic recommendations for missing field issues."""
         learner = ValidationHistoryLearner(history_path=str(tmp_path))
 
-        common_issues = [
-            {"issue_pattern": "missing experimenter", "percentage": 75.0}
-        ]
+        common_issues = [{"issue_pattern": "missing experimenter", "percentage": 75.0}]
 
         recommendations = learner._basic_recommendations(common_issues)
 
@@ -463,9 +459,7 @@ class TestBasicRecommendations:
         """Test basic recommendations for invalid format issues."""
         learner = ValidationHistoryLearner(history_path=str(tmp_path))
 
-        common_issues = [
-            {"issue_pattern": "invalid timestamp", "percentage": 50.0}
-        ]
+        common_issues = [{"issue_pattern": "invalid timestamp", "percentage": 50.0}]
 
         recommendations = learner._basic_recommendations(common_issues)
 
@@ -516,11 +510,14 @@ class TestAnalyzePatterns:
         for i in range(3):
             session_file = tmp_path / f"session_2024010{i}_120000.json"
             with open(session_file, "w") as f:
-                json.dump({
-                    "file_info": {"format": "NWB", "size_mb": 100},
-                    "validation": {"is_valid": i % 2 == 0},
-                    "issues": [{"message": "Missing experimenter", "severity": "ERROR"}],
-                }, f)
+                json.dump(
+                    {
+                        "file_info": {"format": "NWB", "size_mb": 100},
+                        "validation": {"is_valid": i % 2 == 0},
+                        "issues": [{"message": "Missing experimenter", "severity": "ERROR"}],
+                    },
+                    f,
+                )
 
         result = await learner.analyze_patterns(global_state)
 
@@ -536,11 +533,14 @@ class TestAnalyzePatterns:
         for i in range(2):
             session_file = tmp_path / f"session_2024010{i}_120000.json"
             with open(session_file, "w") as f:
-                json.dump({
-                    "file_info": {"format": "NWB"},
-                    "validation": {"is_valid": False},
-                    "issues": [{"message": "Missing experimenter", "severity": "ERROR"}],
-                }, f)
+                json.dump(
+                    {
+                        "file_info": {"format": "NWB"},
+                        "validation": {"is_valid": False},
+                        "issues": [{"message": "Missing experimenter", "severity": "ERROR"}],
+                    },
+                    f,
+                )
 
         result = await learner.analyze_patterns(global_state)
 
@@ -660,10 +660,13 @@ class TestPredictIssues:
         for i in range(3):
             session_file = tmp_path / f"session_2024010{i}_120000.json"
             with open(session_file, "w") as f:
-                json.dump({
-                    "file_info": {"format": "SpikeGLX", "size_mb": 100},
-                    "issues": [{"message": "Missing experimenter"}],
-                }, f)
+                json.dump(
+                    {
+                        "file_info": {"format": "SpikeGLX", "size_mb": 100},
+                        "issues": [{"message": "Missing experimenter"}],
+                    },
+                    f,
+                )
 
         result = await learner.predict_issues(
             file_context={"format": "SpikeGLX", "file_size_mb": 100},
@@ -682,10 +685,13 @@ class TestPredictIssues:
         for i in range(3):
             session_file = tmp_path / f"session_2024010{i}_120000.json"
             with open(session_file, "w") as f:
-                json.dump({
-                    "file_info": {"format": "NWB", "size_mb": 100},
-                    "issues": [{"message": "Missing metadata"}],
-                }, f)
+                json.dump(
+                    {
+                        "file_info": {"format": "NWB", "size_mb": 100},
+                        "issues": [{"message": "Missing metadata"}],
+                    },
+                    f,
+                )
 
         result = await learner.predict_issues(
             file_context={"format": "NWB", "file_size_mb": 100},

@@ -4,14 +4,14 @@ Unit tests for pending_conversion_input_path feature.
 Tests the bug fix where system now properly stores and uses
 pending_conversion_input_path to resume conversion after metadata skip.
 """
-import pytest
-from models.state import GlobalState, ConversionStatus
+
+from models.state import GlobalState
 
 
 def test_pending_conversion_input_path_field_exists():
     """Test that pending_conversion_input_path field exists in GlobalState."""
     state = GlobalState()
-    assert hasattr(state, 'pending_conversion_input_path')
+    assert hasattr(state, "pending_conversion_input_path")
     assert state.pending_conversion_input_path is None
 
 

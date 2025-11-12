@@ -4,14 +4,11 @@ Unit tests for SmartValidationAnalyzer.
 Tests intelligent validation result analysis with LLM-powered insights.
 """
 
+from unittest.mock import AsyncMock
+
 import pytest
-from unittest.mock import Mock, AsyncMock
-from typing import Dict, Any
-
 from agents.smart_validation import SmartValidationAnalyzer
-from models import GlobalState, ConversionStatus, LogLevel
-from services import LLMService
-
+from models import LogLevel
 
 # Note: The following fixtures are provided by conftest files:
 # - mock_llm_quality_assessor: from root conftest.py (for quality/validation assessment)
@@ -233,9 +230,7 @@ class TestAnalyzeValidationResultsWithLLM:
         """Test that LLM analysis includes file context in prompt."""
         analyzer = SmartValidationAnalyzer(llm_service=mock_llm_quality_assessor)
 
-        validation_result = {
-            "issues": [{"severity": "ERROR", "message": "Test issue"}]
-        }
+        validation_result = {"issues": [{"severity": "ERROR", "message": "Test issue"}]}
 
         file_context = {"format": "SpikeGLX", "size_mb": 100.5}
 
@@ -261,9 +256,7 @@ class TestAnalyzeValidationResultsWithLLM:
         analyzer = SmartValidationAnalyzer(llm_service=mock_llm_quality_assessor)
 
         # Create 50 issues (should limit to 20 in prompt)
-        validation_result = {
-            "issues": [{"severity": "WARNING", "message": f"Issue {i}"} for i in range(50)]
-        }
+        validation_result = {"issues": [{"severity": "WARNING", "message": f"Issue {i}"} for i in range(50)]}
 
         file_context = {"format": "NWB", "size_mb": 5.0}
 
@@ -284,9 +277,7 @@ class TestAnalyzeValidationResultsWithLLM:
         """Test that LLM analysis includes expert system prompt."""
         analyzer = SmartValidationAnalyzer(llm_service=mock_llm_quality_assessor)
 
-        validation_result = {
-            "issues": [{"severity": "ERROR", "message": "Test issue"}]
-        }
+        validation_result = {"issues": [{"severity": "ERROR", "message": "Test issue"}]}
 
         file_context = {"format": "NWB", "size_mb": 1.0}
 
@@ -313,9 +304,7 @@ class TestAnalyzeValidationResultsErrorHandling:
     async def test_analyze_llm_failure_fallback(self, mock_llm_quality_assessor, global_state):
         """Test that LLM failure triggers fallback to basic analysis."""
         # Configure LLM to raise exception
-        mock_llm_quality_assessor.generate_structured_output = AsyncMock(
-            side_effect=Exception("LLM API error")
-        )
+        mock_llm_quality_assessor.generate_structured_output = AsyncMock(side_effect=Exception("LLM API error"))
 
         analyzer = SmartValidationAnalyzer(llm_service=mock_llm_quality_assessor)
 

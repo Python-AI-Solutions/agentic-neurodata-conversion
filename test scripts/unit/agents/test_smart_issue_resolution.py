@@ -4,11 +4,10 @@ Unit tests for SmartIssueResolution.
 Tests intelligent resolution plan generation for NWB validation issues.
 """
 
-import pytest
 from unittest.mock import AsyncMock
 
+import pytest
 from agents.smart_issue_resolution import SmartIssueResolution
-from models import GlobalState, LogLevel
 from services.llm_service import MockLLMService
 
 
@@ -389,11 +388,7 @@ class TestAddCodeExamples:
 
         resolver = SmartIssueResolution(llm_service=llm_service)
 
-        resolution_plan = {
-            "workflows": [
-                {"issue_description": f"Missing field {i}", "steps": []} for i in range(10)
-            ]
-        }
+        resolution_plan = {"workflows": [{"issue_description": f"Missing field {i}", "steps": []} for i in range(10)]}
 
         result = await resolver._add_code_examples(resolution_plan, {}, global_state)
 

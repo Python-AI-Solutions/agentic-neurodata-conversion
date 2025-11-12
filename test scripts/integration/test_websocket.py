@@ -3,12 +3,10 @@ Integration tests for WebSocket real-time updates.
 
 Tests the /ws endpoint for real-time status broadcasts.
 """
-import pytest
-import asyncio
-import json
-from fastapi.testclient import TestClient
 
+import pytest
 from api.main import app
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture

@@ -6,17 +6,16 @@ Validates that agents work together correctly through the message bus.
 Addresses Critical Gap: No tests validate multi-agent workflows.
 This ensures agents communicate properly via MCP without direct imports.
 """
-import pytest
-import asyncio
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-from pathlib import Path
 
-from models import GlobalState, ConversionStatus, ValidationOutcome
+from unittest.mock import AsyncMock, patch
+
+import pytest
 from agents.conversation_agent import ConversationAgent
 from agents.conversion_agent import ConversionAgent
 from agents.evaluation_agent import EvaluationAgent
-from services.mcp_server import get_mcp_server
+from models import ConversionStatus
 from models.mcp import MCPMessage, MCPResponse
+from services.mcp_server import get_mcp_server
 
 
 @pytest.fixture
@@ -63,11 +62,7 @@ class TestConversationToConversionFlow:
         mcp_server_with_agents.send_message = spy_send
 
         # Trigger format detection
-        message = MCPMessage(
-            target_agent="conversion",
-            action="detect_format",
-            context={"input_path": str(test_file)}
-        )
+        message = MCPMessage(target_agent="conversion", action="detect_format", context={"input_path": str(test_file)})
 
         response = await mcp_server_with_agents.send_message(message)
 
@@ -81,10 +76,7 @@ class TestConversationToConversionFlow:
         """Test Conversation Agent forwards metadata to Conversion Agent."""
 
         # Setup metadata
-        metadata = {
-            "experimenter": "Jane Doe",
-            "subject": {"species": "Mus musculus"}
-        }
+        metadata = {"experimenter": "Jane Doe", "subject": {"species": "Mus musculus"}}
         global_state.metadata = metadata
 
         # Create MCP message for conversion with metadata
@@ -95,8 +87,8 @@ class TestConversationToConversionFlow:
                 "input_path": "/test/input.bin",
                 "output_path": "/test/output.nwb",
                 "format": "SpikeGLX",
-                "metadata": metadata
-            }
+                "metadata": metadata,
+            },
         )
 
         # Verify: Metadata included in context
@@ -120,14 +112,12 @@ class TestConversionToEvaluationFlow:
 
         # Mock conversion to succeed
         conversion_agent = mcp_server_with_agents.agents["conversion"]
-        with patch.object(conversion_agent, '_run_neuroconv_conversion', new_callable=AsyncMock) as mock_conv:
+        with patch.object(conversion_agent, "_run_neuroconv_conversion", new_callable=AsyncMock) as mock_conv:
             mock_conv.return_value = None  # Simulates successful conversion
 
             # Trigger validation
             message = MCPMessage(
-                target_agent="evaluation",
-                action="run_validation",
-                context={"nwb_file_path": str(nwb_file)}
+                target_agent="evaluation", action="run_validation", context={"nwb_file_path": str(nwb_file)}
             )
 
             # In real workflow, conversion would trigger this
@@ -143,9 +133,7 @@ class TestConversionToEvaluationFlow:
         # Mock validation result
         validation_result = {
             "is_valid": False,
-            "issues": [
-                {"severity": "CRITICAL", "message": "Missing required field"}
-            ]
+            "issues": [{"severity": "CRITICAL", "message": "Missing required field"}],
         }
 
         # Note: validation results are passed via MCP messages, not stored in global_state
@@ -155,7 +143,7 @@ class TestConversionToEvaluationFlow:
         message = MCPMessage(
             target_agent="conversation",
             action="handle_validation_result",
-            context={"validation_result": validation_result}
+            context={"validation_result": validation_result},
         )
 
         # Verify: Result forwarded to conversation agent
@@ -173,19 +161,13 @@ class TestEvaluationToConversationFlow:
         """Test failed validation triggers retry approval workflow."""
 
         # Setup failed validation result (passed via MCP, not stored in global_state)
-        validation_result = {
-            "is_valid": False,
-            "issues": [{"severity": "CRITICAL", "message": "Invalid data"}]
-        }
+        validation_result = {"is_valid": False, "issues": [{"severity": "CRITICAL", "message": "Invalid data"}]}
 
         # Evaluation agent would send this to conversation agent
         message = MCPMessage(
             target_agent="conversation",
             action="handle_validation_failure",
-            context={
-                "validation_result": validation_result,
-                "requires_approval": True
-            }
+            context={"validation_result": validation_result, "requires_approval": True},
         )
 
         # Verify: State should indicate awaiting approval
@@ -199,17 +181,14 @@ class TestEvaluationToConversationFlow:
         # Setup validation passed with warnings (passed via MCP, not stored in global_state)
         validation_result = {
             "is_valid": True,
-            "issues": [{"severity": "BEST_PRACTICE_VIOLATION", "message": "Missing recommended field"}]
+            "issues": [{"severity": "BEST_PRACTICE_VIOLATION", "message": "Missing recommended field"}],
         }
 
         # Evaluation agent would send this to conversation agent
         message = MCPMessage(
             target_agent="conversation",
             action="handle_validation_warnings",
-            context={
-                "validation_result": validation_result,
-                "improvement_possible": True
-            }
+            context={"validation_result": validation_result, "improvement_possible": True},
         )
 
         # Verify: State should offer improvement
@@ -235,11 +214,7 @@ class TestMultiAgentWorkflowChain:
 
         # Step 1: Conversation Agent receives user input
         # (Would trigger format detection)
-        msg1 = MCPMessage(
-            target_agent="conversion",
-            action="detect_format",
-            context={"input_path": str(input_file)}
-        )
+        msg1 = MCPMessage(target_agent="conversion", action="detect_format", context={"input_path": str(input_file)})
 
         assert msg1.target_agent == "conversion"
 
@@ -252,8 +227,8 @@ class TestMultiAgentWorkflowChain:
                 "input_path": str(input_file),
                 "output_path": str(output_file),
                 "format": "SpikeGLX",
-                "metadata": {}
-            }
+                "metadata": {},
+            },
         )
 
         assert msg2.target_agent == "conversion"
@@ -261,9 +236,7 @@ class TestMultiAgentWorkflowChain:
         # Step 3: After conversion, trigger validation
         # (Would be sent by Conversion Agent)
         msg3 = MCPMessage(
-            target_agent="evaluation",
-            action="run_validation",
-            context={"nwb_file_path": str(output_file)}
+            target_agent="evaluation", action="run_validation", context={"nwb_file_path": str(output_file)}
         )
 
         assert msg3.target_agent == "evaluation"
@@ -273,7 +246,7 @@ class TestMultiAgentWorkflowChain:
         msg4 = MCPMessage(
             target_agent="conversation",
             action="handle_validation_result",
-            context={"validation_result": {"is_valid": True}}
+            context={"validation_result": {"is_valid": True}},
         )
 
         assert msg4.target_agent == "conversation"
@@ -290,9 +263,7 @@ class TestMCPMessageValidation:
     def test_mcp_message_has_required_fields(self):
         """Test MCP messages have all required fields."""
         message = MCPMessage(
-            target_agent="conversion",
-            action="detect_format",
-            context={"input_path": "/test/file.bin"}
+            target_agent="conversion", action="detect_format", context={"input_path": "/test/file.bin"}
         )
 
         assert hasattr(message, "target_agent")
@@ -301,12 +272,7 @@ class TestMCPMessageValidation:
 
     def test_mcp_response_has_required_fields(self):
         """Test MCP responses have all required fields."""
-        response = MCPResponse(
-            reply_to="test-message-id",
-            success=True,
-            result={"format": "SpikeGLX"},
-            error=None
-        )
+        response = MCPResponse(reply_to="test-message-id", success=True, result={"format": "SpikeGLX"}, error=None)
 
         assert hasattr(response, "reply_to")
         assert hasattr(response, "success")
@@ -343,16 +309,12 @@ class TestAgentIsolation:
 
         # Message for conversion agent
         msg_conversion = MCPMessage(
-            target_agent="conversion",
-            action="detect_format",
-            context={"input_path": str(test_file)}
+            target_agent="conversion", action="detect_format", context={"input_path": str(test_file)}
         )
 
         # Message for evaluation agent
         msg_evaluation = MCPMessage(
-            target_agent="evaluation",
-            action="run_validation",
-            context={"nwb_file_path": str(test_file)}
+            target_agent="evaluation", action="run_validation", context={"nwb_file_path": str(test_file)}
         )
 
         # Verify: Correct routing
@@ -383,10 +345,7 @@ class TestRetryLoopCoordination:
         msg_retry = MCPMessage(
             target_agent="conversion",
             action="run_conversion",
-            context={
-                "retry_attempt": 1,
-                "previous_issues": [{"severity": "CRITICAL"}]
-            }
+            context={"retry_attempt": 1, "previous_issues": [{"severity": "CRITICAL"}]},
         )
 
         assert msg_retry.context["retry_attempt"] == 1
@@ -394,9 +353,7 @@ class TestRetryLoopCoordination:
         # Step 3: After retry, validate again
         # Conversion would send this
         msg_validate = MCPMessage(
-            target_agent="evaluation",
-            action="run_validation",
-            context={"nwb_file_path": "/test/output.nwb"}
+            target_agent="evaluation", action="run_validation", context={"nwb_file_path": "/test/output.nwb"}
         )
 
         assert msg_validate.target_agent == "evaluation"
@@ -406,7 +363,7 @@ class TestRetryLoopCoordination:
         msg_success = MCPMessage(
             target_agent="conversation",
             action="handle_validation_success",
-            context={"validation_result": {"is_valid": True}}
+            context={"validation_result": {"is_valid": True}},
         )
 
         assert msg_success.context["validation_result"]["is_valid"] is True

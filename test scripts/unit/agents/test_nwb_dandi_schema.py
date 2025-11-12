@@ -5,7 +5,6 @@ Tests schema definitions and metadata field management for NWB and DANDI complia
 """
 
 import pytest
-
 from agents.nwb_dandi_schema import (
     FieldRequirementLevel,
     FieldType,
@@ -563,6 +562,6 @@ class TestNWBDANDISchemaIntegration:
         assert len(missing) == 0
 
         # Step 4: Get display info for each field
-        for field_name in metadata.keys():
+        for field_name in metadata:
             info = NWBDANDISchema.get_field_display_info(field_name)
             assert info["name"] != "Unknown field"

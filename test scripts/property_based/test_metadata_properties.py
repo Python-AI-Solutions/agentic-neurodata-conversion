@@ -8,43 +8,55 @@ Addresses Phase 4 (Week 10-12): Property-Based Testing from TEST_STRATEGY.
 
 Note: The `hypothesis` package is installed via pixi.toml dependencies.
 """
-import pytest
-from datetime import datetime, timedelta
+
 import re
+from datetime import datetime
 
 # Conditional import of hypothesis - skip tests if not installed
 try:
-    from hypothesis import given, strategies as st, assume, settings, HealthCheck
+    from hypothesis import HealthCheck, assume, given, settings
+    from hypothesis import strategies as st
+
     HYPOTHESIS_AVAILABLE = True
 except ImportError:
     HYPOTHESIS_AVAILABLE = False
+
     # Create dummy decorators/functions for when hypothesis is not available
     def given(*args, **kwargs):
         return lambda f: f
+
     def settings(*args, **kwargs):
         return lambda f: f
+
     def assume(*args, **kwargs):
         pass
+
     # Dummy strategies object
     class st:
         @staticmethod
         def text(*args, **kwargs):
             return None
+
         @staticmethod
         def integers(*args, **kwargs):
             return None
+
         @staticmethod
         def booleans(*args, **kwargs):
             return None
+
         @staticmethod
         def lists(*args, **kwargs):
             return None
+
         @staticmethod
         def sampled_from(*args, **kwargs):
             return None
+
         @staticmethod
         def characters(*args, **kwargs):
             return None
+
     class HealthCheck:
         function_scoped_fixture = None
 
@@ -56,12 +68,14 @@ except ImportError:
 # Metadata Invariants Tests
 # ========================================
 
+
 @given(
     session_description=st.text(min_size=1, max_size=500),
-    identifier=st.text(min_size=1, max_size=100, alphabet=st.characters(
-        whitelist_categories=('Lu', 'Ll', 'Nd'),
-        whitelist_characters='_-'
-    ))
+    identifier=st.text(
+        min_size=1,
+        max_size=100,
+        alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd"), whitelist_characters="_-"),
+    ),
 )
 @settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
 def test_minimal_metadata_always_valid(session_description, identifier):
@@ -76,7 +90,7 @@ def test_minimal_metadata_always_valid(session_description, identifier):
     metadata = {
         "session_description": session_description,
         "identifier": identifier,
-        "session_start_time": datetime.now().isoformat()
+        "session_start_time": datetime.now().isoformat(),
     }
 
     # Invariant: Metadata should have all required fields
@@ -90,7 +104,7 @@ def test_minimal_metadata_always_valid(session_description, identifier):
 
 
 @given(
-    age_days=st.integers(min_value=0, max_value=365*10)  # 0 to 10 years
+    age_days=st.integers(min_value=0, max_value=365 * 10)  # 0 to 10 years
 )
 @settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
 def test_age_iso8601_format_always_valid(age_days):
@@ -112,12 +126,11 @@ def test_age_iso8601_format_always_valid(age_days):
 
 @given(
     experimenter_list=st.lists(
-        st.text(min_size=1, max_size=50, alphabet=st.characters(
-            whitelist_categories=('Lu', 'Ll'),
-            whitelist_characters=' '
-        )),
+        st.text(
+            min_size=1, max_size=50, alphabet=st.characters(whitelist_categories=("Lu", "Ll"), whitelist_characters=" ")
+        ),
         min_size=1,
-        max_size=10
+        max_size=10,
     )
 )
 @settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
@@ -128,9 +141,7 @@ def test_experimenter_list_preserves_order(experimenter_list):
     """
     assume(all(name.strip() for name in experimenter_list))
 
-    metadata = {
-        "experimenter": experimenter_list
-    }
+    metadata = {"experimenter": experimenter_list}
 
     # Invariant: Order preserved
     assert metadata["experimenter"] == experimenter_list
@@ -143,10 +154,8 @@ def test_experimenter_list_preserves_order(experimenter_list):
 # Validation Result Properties Tests
 # ========================================
 
-@given(
-    critical_count=st.integers(min_value=0, max_value=100),
-    warning_count=st.integers(min_value=0, max_value=100)
-)
+
+@given(critical_count=st.integers(min_value=0, max_value=100), warning_count=st.integers(min_value=0, max_value=100))
 @settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
 def test_validation_severity_ordering(critical_count, warning_count):
     """Test that validation results correctly categorize by severity.
@@ -157,17 +166,11 @@ def test_validation_severity_ordering(critical_count, warning_count):
 
     # Add critical issues
     for i in range(critical_count):
-        issues.append({
-            "severity": "CRITICAL",
-            "message": f"Critical {i}"
-        })
+        issues.append({"severity": "CRITICAL", "message": f"Critical {i}"})
 
     # Add warnings
     for i in range(warning_count):
-        issues.append({
-            "severity": "BEST_PRACTICE_VIOLATION",
-            "message": f"Warning {i}"
-        })
+        issues.append({"severity": "BEST_PRACTICE_VIOLATION", "message": f"Warning {i}"})
 
     # Invariant: Count matches
     assert len(issues) == critical_count + warning_count
@@ -177,10 +180,7 @@ def test_validation_severity_ordering(critical_count, warning_count):
     assert len(critical_issues) == critical_count
 
 
-@given(
-    is_valid=st.booleans(),
-    has_issues=st.booleans()
-)
+@given(is_valid=st.booleans(), has_issues=st.booleans())
 @settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
 def test_validation_consistency(is_valid, has_issues):
     """Test validation result consistency.
@@ -191,7 +191,7 @@ def test_validation_consistency(is_valid, has_issues):
         # Failed validation must have issues
         validation_result = {
             "is_valid": False,
-            "issues": [{"severity": "CRITICAL", "message": "Error"}] if has_issues else []
+            "issues": [{"severity": "CRITICAL", "message": "Error"}] if has_issues else [],
         }
 
         # Invariant: Failed validation should have at least one issue
@@ -202,16 +202,10 @@ def test_validation_consistency(is_valid, has_issues):
 
     else:
         # Passed validation
-        validation_result = {
-            "is_valid": True,
-            "issues": []
-        }
+        validation_result = {"is_valid": True, "issues": []}
 
         # Invariant: Passed validation should not have critical issues
-        critical_count = sum(
-            1 for issue in validation_result["issues"]
-            if issue.get("severity") == "CRITICAL"
-        )
+        critical_count = sum(1 for issue in validation_result["issues"] if issue.get("severity") == "CRITICAL")
         assert critical_count == 0
 
 
@@ -219,12 +213,14 @@ def test_validation_consistency(is_valid, has_issues):
 # File Path Properties Tests
 # ========================================
 
+
 @given(
-    filename=st.text(min_size=1, max_size=255, alphabet=st.characters(
-        whitelist_categories=('Lu', 'Ll', 'Nd'),
-        whitelist_characters='_-.'
-    )),
-    extension=st.sampled_from(['.bin', '.nwb', '.abf', '.dat'])
+    filename=st.text(
+        min_size=1,
+        max_size=255,
+        alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd"), whitelist_characters="_-."),
+    ),
+    extension=st.sampled_from([".bin", ".nwb", ".abf", ".dat"]),
 )
 @settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
 def test_filename_sanitization_removes_path_traversal(filename, extension):
@@ -234,7 +230,7 @@ def test_filename_sanitization_removes_path_traversal(filename, extension):
     """
     assume(filename.strip())
     # Avoid filenames ending with "." which creates "..extension" after path traversal
-    assume(not filename.endswith('.'))
+    assume(not filename.endswith("."))
 
     # Add path traversal attempt
     malicious_filename = f"../../{filename}{extension}"
@@ -286,9 +282,8 @@ def test_file_size_formatting_monotonic(file_size_bytes):
 # Retry Count Properties Tests
 # ========================================
 
-@given(
-    retry_count=st.integers(min_value=0, max_value=1000)
-)
+
+@given(retry_count=st.integers(min_value=0, max_value=1000))
 @settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
 def test_retry_count_never_negative(retry_count):
     """Test that retry count is never negative.
@@ -304,9 +299,7 @@ def test_retry_count_never_negative(retry_count):
     assert next_retry >= 0
 
 
-@given(
-    retry_count=st.integers(min_value=0, max_value=100)
-)
+@given(retry_count=st.integers(min_value=0, max_value=100))
 @settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
 def test_unlimited_retries_property(retry_count):
     """Test that system allows unlimited retries.

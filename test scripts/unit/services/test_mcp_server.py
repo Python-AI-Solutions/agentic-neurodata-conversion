@@ -3,12 +3,11 @@ Unit tests for MCP Server.
 
 Tests the core message routing and state management functionality.
 """
-import pytest
 
+import pytest
 from models import (
     ConversionStatus,
     GlobalState,
-    LogLevel,
     MCPEvent,
     MCPMessage,
     MCPResponse,

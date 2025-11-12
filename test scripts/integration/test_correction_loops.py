@@ -6,16 +6,12 @@ Validates Epic 8: User-Controlled Retry Loop requirements.
 Addresses Critical Gap: No tests for retry workflows - a core feature.
 This implements comprehensive retry loop testing including unlimited retries.
 """
-import pytest
-import asyncio
-from unittest.mock import Mock, AsyncMock, patch
-from pathlib import Path
 
-from models import GlobalState, ConversionStatus, ValidationOutcome
+import pytest
 from agents.conversation_agent import ConversationAgent
 from agents.conversion_agent import ConversionAgent
 from agents.evaluation_agent import EvaluationAgent
-from models.mcp import MCPMessage
+from models import ConversionStatus
 from services.mcp_server import get_mcp_server
 
 
@@ -26,7 +22,7 @@ def mock_agents(mock_llm_service):
     return {
         "conversation": ConversationAgent(mcp_server=server, llm_service=mock_llm_service),
         "conversion": ConversionAgent(llm_service=mock_llm_service),
-        "evaluation": EvaluationAgent(llm_service=mock_llm_service)
+        "evaluation": EvaluationAgent(llm_service=mock_llm_service),
     }
 
 
@@ -210,10 +206,7 @@ class TestRetryStateManagement:
         """Test metadata is preserved across retry attempts."""
 
         # Initial metadata
-        global_state.metadata = {
-            "experimenter": "Jane Doe",
-            "subject": {"species": "Mus musculus"}
-        }
+        global_state.metadata = {"experimenter": "Jane Doe", "subject": {"species": "Mus musculus"}}
 
         # After first retry
         global_state.correction_attempt = 1
@@ -344,7 +337,7 @@ class TestRetryNotificationMessages:
         issues = [
             {"severity": "CRITICAL", "message": "Error 1"},
             {"severity": "CRITICAL", "message": "Error 2"},
-            {"severity": "BEST_PRACTICE_VIOLATION", "message": "Warning 1"}
+            {"severity": "BEST_PRACTICE_VIOLATION", "message": "Warning 1"},
         ]
 
         # Count issues
@@ -362,7 +355,7 @@ class TestRetryNotificationMessages:
         # Validation result passed via MCP - simulate issue categorization
         issues = [
             {"severity": "CRITICAL", "message": "Missing session_description", "auto_fixable": False},
-            {"severity": "CRITICAL", "message": "Invalid timestamp format", "auto_fixable": True}
+            {"severity": "CRITICAL", "message": "Invalid timestamp format", "auto_fixable": True},
         ]
 
         # Categorize

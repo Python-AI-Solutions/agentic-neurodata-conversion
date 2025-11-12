@@ -4,11 +4,11 @@ Unit tests for NWBMetadata Pydantic model.
 Tests strict validation for all metadata fields with custom validators.
 """
 
-import pytest
 from datetime import datetime
-from pydantic import ValidationError
 
+import pytest
 from models.metadata import NWBMetadata
+from pydantic import ValidationError
 
 
 @pytest.mark.unit

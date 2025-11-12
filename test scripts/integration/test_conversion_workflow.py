@@ -3,11 +3,11 @@ Integration tests for the complete conversion workflow.
 
 Tests the full agent interaction through MCP server.
 """
+
 import tempfile
 from pathlib import Path
 
 import pytest
-
 from agents import (
     register_conversation_agent,
     register_conversion_agent,
@@ -272,9 +272,7 @@ class TestCorrectionLoopIntegration:
         # Create a mock validation result with issues
         mock_validation_result = {
             "is_valid": False,
-            "issues": [
-                {"severity": "error", "message": "Missing species", "location": "/general"}
-            ],
+            "issues": [{"severity": "error", "message": "Missing species", "location": "/general"}],
             "summary": {"critical": 0, "error": 1, "warning": 0, "info": 0},
             "overall_status": "FAILED",
         }
@@ -387,9 +385,7 @@ class TestReportGeneration:
         # Create a mock FAILED validation result
         mock_validation_result = {
             "is_valid": False,
-            "issues": [
-                {"severity": "error", "message": "Missing required field", "location": "/general"}
-            ],
+            "issues": [{"severity": "error", "message": "Missing required field", "location": "/general"}],
             "summary": {"critical": 0, "error": 1, "warning": 0, "info": 0},
             "overall_status": "FAILED",
         }
