@@ -40,14 +40,36 @@ python-dotenv = ">=1.0.0"
 # Development tasks
 dev = "sh -c 'cd backend/src && uvicorn api.main:app --reload --host 0.0.0.0 --port 8000'"
 
-# Test tasks
+# Test tasks - Primary
 test = "pytest 'test scripts' -v"
 test-cov = "pytest 'test scripts' -v --cov=backend/src --cov-report=term-missing --cov-report=html"
-test-unit = "pytest 'test scripts/unit' -v"
-test-integration = "pytest 'test scripts/integration' -v"
-test-critical = "pytest 'test scripts' -v -m critical"
-test-fast = "pytest 'test scripts' -v -m 'not slow and not llm'"
+
+# Test by scope (Tier 1)
+test-unit = "pytest 'test scripts' -v -m unit"
+test-integration = "pytest 'test scripts' -v -m integration"
+test-e2e = "pytest 'test scripts' -v -m e2e"
+
+# Test by component (Tier 2)
+test-agent-conversation = "pytest 'test scripts' -v -m agent_conversation"
+test-agent-conversion = "pytest 'test scripts' -v -m agent_conversion"
+test-agent-evaluation = "pytest 'test scripts' -v -m agent_evaluation"
+test-service = "pytest 'test scripts' -v -m service"
+test-model = "pytest 'test scripts' -v -m model"
+test-api = "pytest 'test scripts' -v -m api"
+test-websocket = "pytest 'test scripts' -v -m websocket"
+
+# Test by characteristics (Tier 3)
+test-slow = "pytest 'test scripts' -v -m slow"
+test-property = "pytest 'test scripts' -v -m property"
+test-fast = "pytest 'test scripts' -v -m 'not slow'"
+
+# CI/CD (Tier 4)
 test-smoke = "pytest 'test scripts' -v -m smoke"
+
+# Development status (Tier 5)
+test-aspirational = "pytest 'test scripts' -v -m aspirational"
+test-wip = "pytest 'test scripts' -v -m wip"
+test-blocked = "pytest 'test scripts' -v -m blocked"
 
 # Code quality tasks
 lint = "ruff check backend/ 'test scripts/'"

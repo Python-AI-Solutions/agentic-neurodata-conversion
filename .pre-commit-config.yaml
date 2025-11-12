@@ -59,12 +59,12 @@ repos:
         additional_dependencies: ['bandit[toml]']
 
 
-  # Run fast smoke tests (optional - comment out if too slow)
+  # Run fast smoke tests (critical path validation)
   - repo: local
     hooks:
       - id: pytest-smoke
         name: Run smoke tests
-        entry: bash -c 'pixi run pytest "test scripts/unit" -v -m "smoke" --tb=short -x || true'
+        entry: pixi run test-smoke
         language: system
         pass_filenames: false
         always_run: false  # Only run when Python files change

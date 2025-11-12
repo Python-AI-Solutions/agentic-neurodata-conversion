@@ -248,17 +248,31 @@ pythonpath = [".", "backend/src"]
 
 # Markers for test categorization
 markers = [
-    "unit: Unit tests for individual components (fast, no external dependencies)",
-    "integration: Integration tests between multiple components",
-    "e2e: End-to-end tests for complete workflows",
-    "property: Property-based tests using Hypothesis for robust validation",
-    "slow: Tests that take more than 5 seconds to run",
-    "llm: Tests that involve LLM API calls (may incur costs)",
+    # Tier 1: Test Scope (REQUIRED - every test needs exactly one)
+    "unit: Fast isolated tests (<1s), mocked dependencies",
+    "integration: Component integration tests (<5s), may use real in-memory services",
+    "e2e: End-to-end workflow tests (5-30s), full system integration",
+
+    # Tier 2: Component Under Test (for focused testing)
+    "agent_conversation: Tests for ConversationAgent and conversational handling",
+    "agent_conversion: Tests for ConversionAgent and format detection",
+    "agent_evaluation: Tests for EvaluationAgent and validation",
+    "service: Tests for services (LLM, MCP, Report, Log, Metadata)",
+    "model: Tests for data models and state management",
     "api: Tests for REST API endpoints",
-    "security: Security and vulnerability tests",
-    "performance: Performance and benchmark tests",
-    "smoke: Quick smoke tests for basic functionality",
-    "critical: Tests for critical production paths",
+    "websocket: Tests for WebSocket real-time communication",
+
+    # Tier 3: Test Characteristics (for filtering)
+    "slow: Test takes >5 seconds (consider optimization)",
+    "property: Property-based tests using Hypothesis",
+
+    # Tier 4: CI/CD Strategy (for pipeline stages)
+    "smoke: Critical path tests for fast feedback (must pass before commit)",
+
+    # Tier 5: Development Status (for tracking work)
+    "aspirational: Tests for future/unimplemented features (TDD approach)",
+    "wip: Work in progress - tests under active development",
+    "blocked: Tests blocked by external dependencies or bugs",
 ]
 
 # Asyncio configuration

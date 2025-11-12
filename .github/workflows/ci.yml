@@ -57,6 +57,10 @@ jobs:
       - name: Install dependencies
         run: pixi install
 
+      - name: Run smoke tests (fast fail)
+        run: pixi run test-smoke
+        continue-on-error: false  # Fast fail on critical path issues
+
       - name: Run unit tests
         run: pixi run test-unit
         continue-on-error: false
