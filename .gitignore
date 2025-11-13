@@ -47,6 +47,11 @@ pixi.lock
 
 # Test data (large files - keep locally, not in Git)
 test_data/
+tests/fixtures/**/*.bin
+tests/fixtures/**/*.meta
+
+# Hypothesis property-based testing cache
+tests/property_based/.hypothesis/
 
 # Logs
 *.log
@@ -60,19 +65,19 @@ temp/
 # Test outputs
 test_*.html
 test_*.json
-test_*.py
 
 # Validation history (runtime generated)
 outputs/validation_history/
-backend/src/outputs/validation_history/
+tests/integration/outputs/validation_history/
 
 # Runtime outputs (test results, generated files)
-*.pdfgs
-
 outputs/*.json
 outputs/*.pdf
 outputs/*.txt
 test_output/*.nwb
+tests/integration/outputs/*.json
+tests/integration/outputs/*.pdf
+tests/integration/outputs/*.txt
 
 # Local shell scripts (developer-specific)
 test_e2e_three_agent_workflow.sh
@@ -81,8 +86,20 @@ start-backend.sh
 # Development documentation (keep locally, not in Git)
 md docs/
 
-# Test scripts (keep locally, not in Git)
-test scripts/
-
 # Claude settings
 .claude/settings.local.json
+
+# Coverage reports
+coverage.xml
+htmlcov/
+.coverage
+.coverage.*
+
+# Cache directories
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
+
+# Outputs directory
+outputs/
