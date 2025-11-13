@@ -352,23 +352,10 @@ agentic-neurodata-conversion-14/
 ├── frontend/
 │   └── public/
 │       ├── chat-ui.html                  # Modern chat interface (114KB)
-│       ├── CHAT_UI_README.md            # Frontend docs
-│       └── LOGS_SIDEBAR_IMPLEMENTATION.md
-├── test_data/                            # Sample datasets
-│   ├── spikeglx/
-│   ├── dh/
-│   └── ...
-├── md docs/                              # Comprehensive documentation
-│   ├── README.md
-│   ├── PROJECT_REQUIREMENTS_AND_SPECIFICATIONS.md
-│   ├── TECHNICAL_ARCHITECTURE_AS_BUILT.md
-│   ├── DESIGN_PATTERNS_AND_BEST_PRACTICES.md
-│   └── ... (125+ documentation files)
 ├── specs/                                # Spec-kit specifications
 ├── pixi.toml                             # Dependencies & tasks
 ├── pixi.lock                             # Locked dependencies
 ├── run_server.py                         # Server startup script
-├── start-backend.sh                      # Backend launcher
 └── .env.example                          # Environment template
 ```
 
