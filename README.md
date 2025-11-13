@@ -130,7 +130,7 @@ Access at http://localhost:3000/chat-ui.html
 **Alternative (All-in-one):**
 
 ```bash
-python start_app.py
+run python file inside scripts/startup/start_app.py
 ```
 
 ---
@@ -257,55 +257,23 @@ curl http://localhost:8000/api/download/report -o report.pdf
 
 **Automatic Extraction from:**
 
-- Filenames (dates, subject IDs, experimenter names)
-- File headers (sampling rates, channels, device info)
-- Companion files (.meta, .xml, .json)
-- Historical patterns
+
 
 ### 4. Adaptive Retry Logic
 
 **Smart Error Recovery:**
 
-- Automatic issue categorization
-- AI-suggested corrections
-- User-guided fixes for complex issues
-- Maximum retry limits (3 attempts)
-- Version tracking (output_v1.nwb, output_v2.nwb)
+
 
 ### 5. Validation Intelligence
 
 **NWBInspector + AI Analysis:**
 
-- Categorize by severity (Critical/Violation/Suggestion)
-- User-friendly explanations
-- Specific fix recommendations
-- DANDI compliance scoring
-- Prioritized issue lists
+
 
 ### 6. Comprehensive Reporting
 
-**Three Report Formats:**
 
-**PDF Report:**
-
-- Professional formatting with color coding
-- Executive summary
-- Complete metadata display
-- Issue tables with locations
-- Workflow trace for reproducibility
-- DANDI readiness assessment
-
-**JSON Report:**
-
-- Machine-readable structure
-- Complete validation results
-- Workflow provenance
-- Statistics and metrics
-
-**Text Report:**
-
-- Quick terminal viewing
-- All sections in plain text
 
 ---
 
