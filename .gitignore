@@ -1,0 +1,105 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# Environment variables
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Pixi
+.pixi/
+pixi.lock
+
+# Test data (large files - keep locally, not in Git)
+test_data/
+tests/fixtures/**/*.bin
+tests/fixtures/**/*.meta
+
+# Hypothesis property-based testing cache
+tests/property_based/.hypothesis/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+tmp/
+temp/
+
+# Test outputs
+test_*.html
+test_*.json
+
+# Validation history (runtime generated)
+outputs/validation_history/
+tests/integration/outputs/validation_history/
+
+# Runtime outputs (test results, generated files)
+outputs/*.json
+outputs/*.pdf
+outputs/*.txt
+test_output/*.nwb
+tests/integration/outputs/*.json
+tests/integration/outputs/*.pdf
+tests/integration/outputs/*.txt
+
+# Local shell scripts (developer-specific)
+test_e2e_three_agent_workflow.sh
+start-backend.sh
+
+# Development documentation (keep locally, not in Git)
+md docs/
+
+# Claude settings
+.claude/settings.local.json
+
+# Coverage reports
+coverage.xml
+htmlcov/
+.coverage
+.coverage.*
+
+# Cache directories
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
+
+# Outputs directory
+outputs/
