@@ -2,6 +2,8 @@
 
 **AI-Powered NWB Conversion with Natural Language Interface**
 
+[![CI/CD Pipeline](https://github.com/Python-AI-Solutions/agentic-neurodata-conversion/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Python-AI-Solutions/agentic-neurodata-conversion/actions/workflows/ci.yml)
+
 Transform neuroscience electrophysiology data to standardized NWB format through intelligent conversation, automated format detection, and comprehensive validation.
 
 ---
