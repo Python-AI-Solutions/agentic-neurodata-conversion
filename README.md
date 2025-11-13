@@ -282,4 +282,4 @@ curl http://localhost:8000/api/download/report -o report.pdf
 
 **Built with the spec-kit methodology** 📋
 
-For complete specifications, see [`specs/001-agentic-neurodata-conversion/`](specs/001-agentic-neurodata-conversion/)
+For complete specifications, see [`specs/001-agentic-neurodata-conversion`]
