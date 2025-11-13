@@ -1,0 +1,53 @@
+{# Report Header Component #}
+<header class="report-header">
+    <div class="header-content">
+        <div class="header-top">
+            <h1 class="report-title">
+                <span class="icon">📊</span>
+                NWB Conversion Evaluation Report
+            </h1>
+            <div class="status-badge status-{{ report_data.status | lower }}">
+                {% if report_data.status == 'VALID' %}
+                    ✓ Valid
+                {% elif report_data.status == 'VALID_WITH_WARNINGS' %}
+                    ⚠ Valid with Warnings
+                {% elif report_data.status == 'INVALID' %}
+                    ✗ Invalid
+                {% elif report_data.status == 'INCOMPLETE' %}
+                    ⏸ Incomplete
+                {% else %}
+                    • {{ report_data.status }}
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="header-metadata">
+            <div class="metadata-item">
+                <span class="metadata-label">Session ID:</span>
+                <span class="metadata-value">{{ report_data.session_id }}</span>
+            </div>
+            <div class="metadata-item">
+                <span class="metadata-label">Generated:</span>
+                <span class="metadata-value">{{ report_data.timestamp | format_timestamp }}</span>
+            </div>
+            {% if report_data.file_name %}
+            <div class="metadata-item">
+                <span class="metadata-label">Source File:</span>
+                <span class="metadata-value">{{ report_data.file_name }}</span>
+            </div>
+            {% endif %}
+            {% if report_data.file_format %}
+            <div class="metadata-item">
+                <span class="metadata-label">Format:</span>
+                <span class="metadata-value">{{ report_data.file_format }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if report_data.summary %}
+        <div class="header-summary">
+            <p>{{ report_data.summary }}</p>
+        </div>
+        {% endif %}
+    </div>
+</header>
