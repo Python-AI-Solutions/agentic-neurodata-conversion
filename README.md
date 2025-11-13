@@ -365,20 +365,20 @@ agentic-neurodata-conversion-14/
 
 ### Backend
 
-| Component                 | Technology       | Version    | Purpose                     |
-| ------------------------- | ---------------- | ---------- | --------------------------- |
-| **Language**        | Python           | 3.13+      | Core language               |
-| **Framework**       | FastAPI          | 0.115.0+   | REST API & WebSocket        |
-| **AI/LLM**          | Anthropic Claude | Sonnet 3.5 | Natural language processing |
-| **Conversion**      | NeuroConv        | 0.6.3+     | Data conversion             |
-| **Data Reading**    | SpikeInterface   | 0.101.0+   | Electrophysiology I/O       |
-| **NWB I/O**         | PyNWB            | 2.8.2+     | NWB file operations         |
-| **Validation**      | NWBInspector     | 0.4.36+    | NWB compliance checking     |
-| **PDF Reports**     | ReportLab        | 4.2.5+     | PDF generation              |
-| **Package Manager** | Pixi             | Latest     | Dependency management       |
-| **Server**          | Uvicorn          | 0.32.0+    | ASGI server                 |
-| **Validation**      | Pydantic         | 2.9.0+     | Data validation             |
-| **Testing**         | pytest           | 8.3.3+     | Test framework              |
+| Component                 | Technology       |
+| ------------------------- | ---------------- | 
+| **Language**        | Python           |
+| **Framework**       | FastAPI          | 
+| **AI/LLM**          | Anthropic Claude | 
+| **Conversion**      | NeuroConv        | 
+| **Data Reading**    | SpikeInterface   | 
+| **NWB I/O**         | PyNWB            |
+| **Validation**      | NWBInspector     |
+| **PDF Reports**     | ReportLab        | 
+| **Package Manager** | Pixi             |
+| **Server**          | Uvicorn          | 
+| **Validation**      | Pydantic         | 
+| **Testing**         | pytest           | 
 
 ### Frontend
 
