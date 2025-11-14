@@ -35,8 +35,8 @@ External services (LLM, storage, etc.) accessed through abstract interfaces only
 
 ## Technology Philosophy
 
-- **Python 3.11+** for backend (NeuroConv, PyNWB, NWB Inspector, FastAPI, Pydantic)
-- **React + TypeScript** for frontend
+- **Python 3.13+** for backend (NeuroConv, PyNWB, NWB Inspector, FastAPI, Pydantic)
+- **Static HTML + JavaScript** for frontend (MVP implementation)
 - **Single session MVP** (in-memory state, local files, no authentication)
 - **Type safety** via Pydantic models throughout
 - **Environment-based configuration** (no hardcoded values)

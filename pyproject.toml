@@ -1,0 +1,331 @@
+# pyproject.toml - Tool Configuration & Package Metadata
+# Dependencies managed by pixi.toml - see that file for all package versions
+# This file is still needed for:
+#   1. Building/installing the local package in editable mode (via setuptools)
+#   2. CLI entry points (nwb-convert command)
+#   3. Tool configurations (pytest, ruff, mypy, coverage, etc.)
+
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentic-neurodata-conversion"
+version = "0.1.0"
+description = "AI-powered neurophysiology data conversion to NWB format using multi-agent architecture with Claude Sonnet 4.5"
+readme = "README.md"
+requires-python = ">=3.13"
+license = {text = "MIT"}
+authors = [
+    {name = "Aditya Patane", email = "aditya@pythonaisolutions.com"}
+]
+
+keywords = [
+    "neuroscience",
+    "nwb",
+    "neurodata",
+    "conversion",
+    "ai",
+    "multi-agent",
+    "claude",
+    "neurophysiology"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+]
+
+# NO dependencies section - all dependencies managed by pixi.toml
+# This project uses Pixi for dependency management
+# See: pixi.toml for runtime and development dependencies
+
+[project.urls]
+Homepage = "https://github.com/python-ai-solutions/agentic-neurodata-conversion"
+Repository = "https://github.com/python-ai-solutions/agentic-neurodata-conversion"
+Issues = "https://github.com/python-ai-solutions/agentic-neurodata-conversion/issues"
+
+[project.scripts]
+nwb-convert = "agentic_neurodata_conversion.cli:main"
+
+# ============================================================================
+# Tool Configurations
+# ============================================================================
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["agentic_neurodata_conversion*"]
+exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+"*" = [
+    "*.yaml",
+    "*.yml",
+    "*.json",
+    "*.txt",
+    "*.md",
+    "templates/**/*",
+    "prompts/**/*"
+]
+
+# ============================================================================
+# Ruff - Fast Linter and Formatter (replaces flake8, pylint, black, isort)
+# ============================================================================
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+# Exclude files/directories
+exclude = [
+    ".git",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    "venv",
+    ".venv",
+    "build",
+    "dist",
+    "*.egg-info",
+]
+
+[tool.ruff.lint]
+# Enable specific rule sets
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "UP",   # pyupgrade
+    "ARG",  # flake8-unused-arguments
+    "SIM",  # flake8-simplify
+    "TRY",  # tryceratops
+    "D",    # pydocstyle - docstring conventions
+]
+
+ignore = [
+    "E501",   # Line too long (handled by ruff format)
+    "B008",   # Do not perform function call in argument defaults
+    "TRY003", # Avoid specifying long messages outside exception class
+    "ARG002", # Unused method argument
+    "ARG001", # Unused function argument
+    "TRY300", # Consider moving statement to else block (stylistic)
+    "TRY400", # Use logging.exception instead of logging.error (stylistic)
+    "TRY401", # Redundant exception object in logging.exception (stylistic)
+    "TRY301", # Abstract raise to inner function (stylistic)
+    "TRY004", # Prefer TypeError (stylistic)
+    "B904",   # Raise from err (stylistic - was TRY200)
+    "F841",   # Local variable assigned but never used (TODO: fix later)
+    "SIM108", # Use ternary operator (stylistic)
+    "SIM102", # Use single if statement instead of nested (stylistic)
+    "C401",   # Unnecessary generator (stylistic)
+    "E402",   # Module level import not at top (intentional in some files)
+    "F821",   # Undefined name (TYPE_CHECKING imports)
+    "SIM105", # Use contextlib.suppress (stylistic)
+    "D100",   # Missing docstring in public module
+    "D104",   # Missing docstring in public package
+    "D107",   # Missing docstring in __init__
+    "D202",   # No blank lines allowed after function docstring (stylistic)
+    "D203",   # 1 blank line required before class docstring (conflicts with D211)
+    "D212",   # Multi-line docstring summary should start at the first line
+    "D213",   # Multi-line docstring summary should start at the second line (conflicts with D212)
+    "D417",   # Missing argument descriptions (can be fixed incrementally)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401", "D"]  # Allow unused imports and skip docstrings in __init__.py
+"tests/**/*.py" = ["ARG", "S101", "D", "SIM"]  # Allow unused args, assert, skip docstrings and simplify rules in tests
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"  # Enforce Google-style docstrings
+
+# ============================================================================
+# mypy - Static Type Checker
+# ============================================================================
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false  # Set to true for stricter typing
+ignore_missing_imports = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+check_untyped_defs = true
+strict_optional = false
+
+# Exclude specific paths
+exclude = [
+    "venv/",
+    ".venv/",
+    "build/",
+    "dist/",
+    "tests/",
+]
+
+[[tool.mypy.overrides]]
+module = [
+    "neuroconv.*",
+    "pynwb.*",
+    "nwbinspector.*",
+    "spikeinterface.*",
+    "anthropic.*",
+]
+ignore_missing_imports = true
+
+# ============================================================================
+# pytest - Testing Framework
+# ============================================================================
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+pythonpath = ["."]
+
+# Markers for test categorization
+markers = [
+    # Tier 1: Test Scope (REQUIRED - every test needs exactly one)
+    "unit: Fast isolated tests (<1s), mocked dependencies",
+    "integration: Component integration tests (<5s), may use real in-memory services",
+    "e2e: End-to-end workflow tests (5-30s), full system integration",
+
+    # Tier 2: Component Under Test (for focused testing)
+    "agent_conversation: Tests for ConversationAgent and conversational handling",
+    "agent_conversion: Tests for ConversionAgent and format detection",
+    "agent_evaluation: Tests for EvaluationAgent and validation",
+    "service: Tests for services (LLM, MCP, Report, Log, Metadata)",
+    "model: Tests for data models and state management",
+    "api: Tests for REST API endpoints",
+    "websocket: Tests for WebSocket real-time communication",
+
+    # Tier 3: Test Characteristics (for filtering)
+    "slow: Test takes >5 seconds (consider optimization)",
+    "property: Property-based tests using Hypothesis",
+
+    # Tier 4: CI/CD Strategy (for pipeline stages)
+    "smoke: Critical path tests for fast feedback (must pass before commit)",
+
+    # Tier 5: Development Status (for tracking work)
+    "aspirational: Tests for future/unimplemented features (TDD approach)",
+    "wip: Work in progress - tests under active development",
+    "blocked: Tests blocked by external dependencies or bugs",
+]
+
+# Asyncio configuration
+asyncio_mode = "auto"
+
+# Output options
+addopts = [
+    "--verbose",
+    "--tb=short",
+    "--strict-markers",
+    "--disable-warnings",
+    "-ra",
+    "--maxfail=5",
+    "--durations=10",
+]
+
+# Logging
+log_cli = true
+log_cli_level = "INFO"
+log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+
+# Timeout for individual tests
+timeout = 300
+
+# Ignore warnings
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+
+# ============================================================================
+# Coverage.py - Code Coverage
+# ============================================================================
+[tool.coverage.run]
+source = ["agentic_neurodata_conversion"]
+omit = [
+    "tests/*",
+    "*/test_*.py",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "*/env/*",
+    "*/migrations/*",
+    "*/conftest.py",
+    "*/.pytest_cache/*",
+]
+branch = true
+parallel = false
+
+[tool.coverage.report]
+fail_under = 60  # Minimum 60% coverage (your project has 80%, can increase)
+show_missing = true
+skip_covered = false
+skip_empty = true
+precision = 2
+sort = "Cover"
+
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "def __str__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "if typing.TYPE_CHECKING:",
+    "@abstractmethod",
+    "@abc.abstractmethod",
+    "@runtime_checkable",
+    "class .*\\bProtocol\\):",
+    "pass",
+    "\\.\\.\\.",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
+title = "Agentic Neurodata Conversion - Test Coverage Report"
+
+[tool.coverage.xml]
+output = "coverage.xml"
+
+[tool.coverage.json]
+output = "coverage.json"
+pretty_print = true
+
+# ============================================================================
+# Bandit - Security Linter
+# ============================================================================
+[tool.bandit]
+targets = ["agentic_neurodata_conversion"]
+exclude_dirs = [
+    "tests",
+    "*/test_*.py",
+    "*/.venv/*",
+    "*/venv/*",
+]
+skips = [
+    "B101",  # assert_used (we use asserts in tests)
+    "B601",  # paramiko_calls
+]
+
+# ============================================================================
+# pydocstyle - Docstring Style Checker
+# ============================================================================
+[tool.pydocstyle]
+convention = "google"
+add_ignore = ["D100", "D104", "D107", "D212"]  # Missing docstrings, D212: Multi-line docstring summary
+match = "(?!test_).*\\.py"
+match_dir = "^(?!tests|migrations).*"

@@ -9,6 +9,7 @@
 This specification defines a complete agentic system with three specialized agents:
 
 ### Complete Feature Set
+
 - ✅ **Full MCP Server Infrastructure** - JSON-RPC 2.0 protocol, agent registry, message routing
 - ✅ **LLM Integration** - Anthropic Claude for intelligent decision making and report generation
 - ✅ **Three Specialized Agents** - Conversation, Conversion, and Evaluation Agents with clean separation
@@ -16,14 +17,15 @@ This specification defines a complete agentic system with three specialized agen
 - ✅ **Conversion Agent** - Pure technical conversion logic, format detection, NeuroConv execution
 - ✅ **Evaluation Agent** - NWB validation, Inspector integration, report generation
 - ✅ **User-Controlled Retry Loop** - User approves correction attempts, unlimited retries with permission
-- ✅ **Web User Interface** - Modern React-based UI with real-time progress
+- ✅ **Web User Interface** - Static HTML UI with WebSocket real-time progress (MVP implementation)
 - ✅ **Global State Management** - Single conversion tracking with stage progression
 - ✅ **Intelligent Reporting** - LLM-generated scientific assessments
 
 ### Scope Constraints
+
 - 🎯 **Directory-Based Input**: Agents work on directories containing neurophysiology data (delegates format detection to NeuroConv)
 - 🎯 **Single Session**: One conversion at a time (simplifies state management)
-- 🎯 **Web UI Primary Interface**: React-based interface for file upload, progress tracking, and results download
+- 🎯 **Web UI Primary Interface**: Static HTML interface for file upload, progress tracking, and results download (MVP)
 - 📈 **Scalable Architecture**: Easy to add multi-session support post-MVP
 
 ---
@@ -33,7 +35,7 @@ This specification defines a complete agentic system with three specialized agen
 ```
 ┌─────────────────────────────────────────────────────┐
 │              User Interface Layer                    │
-│  Web Browser (React) - File upload, Progress, Results│
+│  Web Browser (HTML/JS) - File upload, Progress, Results│
 └─────────────────┬───────────────────────────────────┘
                   │ HTTP/WebSocket
                   ▼
@@ -80,16 +82,16 @@ Three-Agent Architecture Flow:
 4. Conversion Agent → Evaluation Agent: "Validate this NWB"
 5. Evaluation Agent validates with NWB Inspector
 6. IF validation PASSED (no issues at all):
-   └─→ Evaluation Agent generates PDF report → User downloads NWB + PDF → END
+   └─→ Evaluation Agent generates HTML report → User downloads NWB + report → END
 7. IF validation PASSED_WITH_ISSUES (has WARNING or BEST_PRACTICE issues):
    ├─→ Evaluation Agent generates improvement context
-   ├─→ Evaluation Agent generates PASSED report (PDF with warnings highlighted)
+   ├─→ Evaluation Agent generates PASSED report (HTML with warnings highlighted)
    ├─→ Evaluation Agent → Conversation Agent: "Validation passed with warnings, here's context"
    ├─→ Conversation Agent analyzes context (categorizes issues, uses LLM)
    ├─→ Conversation Agent → User: "File is valid but has warnings. Improve?"
    └─→ User chooses:
        ├─→ IMPROVE: Continue to step 9 (enters correction loop)
-       └─→ ACCEPT AS-IS: Conversation Agent finalizes, user downloads NWB + PDF → END
+       └─→ ACCEPT AS-IS: Conversation Agent finalizes, user downloads NWB + report → END
 8. IF validation FAILED (has CRITICAL or ERROR issues):
    ├─→ Evaluation Agent generates correction context
    ├─→ Evaluation Agent generates FAILED report (JSON)
@@ -124,12 +126,14 @@ Key Architectural Benefits:
 This specification uses **three consistent personas** to clarify who benefits from each feature.
 
 ### **Persona 1: User (Data Scientist / Researcher)**
+
 - **Role**: "As a user"
 - **Goals**: Convert neurophysiology data to NWB format, validate data quality, receive scientifically meaningful reports
 - **Technical Level**: Intermediate (understands data formats, not necessarily software architecture)
 - **Examples**: Upload files (Epic 4), view progress (Epic 10), download results (Epic 11), approve retries (Epic 8)
 
 ### **Persona 2: System (Technical Requirements)**
+
 - **Role**: "As the system"
 - **Definition**: Technical/architectural requirements that enable user-facing features
 - **Not a real user**: Represents system components, agent design, infrastructure, and internal protocols
@@ -137,6 +141,7 @@ This specification uses **three consistent personas** to clarify who benefits fr
 - **Note**: Agent responsibilities are system requirements, not user needs. Stories say "As the system" instead of "As the Evaluation Agent"
 
 ### **Persona 3: Developer/Maintainer**
+
 - **Role**: "As a developer"
 - **Goals**: Implement, test, debug, and maintain the system
 - **Technical Level**: Advanced (full-stack developer with AI/ML knowledge)
@@ -149,6 +154,7 @@ This specification uses **three consistent personas** to clarify who benefits fr
 ## Epic 1: MCP Server Infrastructure
 
 ### Story 1.1: MCP Server Foundation
+
 **Depends on**: None (foundational)
 
 **As the** system
@@ -156,6 +162,7 @@ This specification uses **three consistent personas** to clarify who benefits fr
 **So that** agents can communicate through a standardized protocol
 
 **Acceptance Criteria:**
+
 - [ ] Server accepts agent registrations with name, handler, and capabilities
 - [ ] Server maintains active registry of all registered agents
 - [ ] Server provides agent discovery (list all agents)
@@ -168,6 +175,7 @@ This specification uses **three consistent personas** to clarify who benefits fr
 ---
 
 ### Story 1.2: Message Routing System
+
 **Depends on**: Story 1.1
 
 **As the** system
@@ -175,6 +183,7 @@ This specification uses **three consistent personas** to clarify who benefits fr
 **So that** agents can invoke each other's capabilities
 
 **Acceptance Criteria:**
+
 - [ ] Messages contain target_agent, action, and context fields
 - [ ] Server validates target agent exists before routing
 - [ ] Server invokes target agent's handler with message
@@ -187,6 +196,7 @@ This specification uses **three consistent personas** to clarify who benefits fr
 ---
 
 ### Story 1.3: Context Management
+
 **Depends on**: Story 1.2, Story 2.1
 
 **As the** system
@@ -194,12 +204,13 @@ This specification uses **three consistent personas** to clarify who benefits fr
 **So that** agents have complete information for decision making
 
 **Acceptance Criteria:**
+
 - [ ] Server retrieves global state data
 - [ ] Server attaches state context to message
 - [ ] Context includes status, metadata, stages, and logs
 - [ ] Agents can update context via server
 - [ ] Context changes reflected in global state immediately
-- [ ] Context accessible by all agents
+- [X] Context accessible by all agents
 
 **Priority**: High
 
@@ -208,6 +219,7 @@ This specification uses **three consistent personas** to clarify who benefits fr
 ## Epic 2: Global State Management (Single Session)
 
 ### Story 2.1: Global State Object
+
 **Depends on**: None (foundational)
 
 **As a** developer
@@ -215,6 +227,7 @@ This specification uses **three consistent personas** to clarify who benefits fr
 **So that** state management is simple and efficient
 
 **Acceptance Criteria:**
+
 - [ ] Global state variable stores: status, validation_status, input_path, output_path, metadata, logs, stages, timestamps
 - [ ] Status tracked: idle, processing, completed, failed
 - [ ] Validation_status tracked: null (not yet validated), passed, passed_accepted, passed_improved, failed_user_declined, failed_user_abandoned
@@ -228,6 +241,7 @@ This specification uses **three consistent personas** to clarify who benefits fr
 ---
 
 ### Story 2.2: Stage Tracking
+
 **Depends on**: Story 2.1
 
 **As the** system
@@ -235,6 +249,7 @@ This specification uses **three consistent personas** to clarify who benefits fr
 **So that** users see where they are in the workflow
 
 **Acceptance Criteria:**
+
 - [ ] Global state tracks stages: conversion, evaluation, report_generation
 - [ ] Each stage has: name, status (pending/in_progress/completed/failed), start_time, end_time
 - [ ] Stage results stored (output_path, error_message, metadata)
@@ -249,6 +264,7 @@ This specification uses **three consistent personas** to clarify who benefits fr
 ## Epic 3: LLM Service Foundation
 
 ### Story 3.1: LLM Service Abstract Interface
+
 **Depends on**: None (foundational)
 
 **As a** developer
@@ -256,6 +272,7 @@ This specification uses **three consistent personas** to clarify who benefits fr
 **So that** I can swap between different LLM providers (Claude, GPT-4)
 
 **Acceptance Criteria:**
+
 - [ ] Abstract base class defines complete() and chat() methods
 - [ ] Token counting and truncation utilities
 - [ ] Error handling standardized across providers
@@ -268,6 +285,7 @@ This specification uses **three consistent personas** to clarify who benefits fr
 ---
 
 ### Story 3.2: Anthropic Claude Integration
+
 **Depends on**: Story 3.1
 
 **As the** system
@@ -275,6 +293,7 @@ This specification uses **three consistent personas** to clarify who benefits fr
 **So that** I can leverage LLM for intelligent analysis
 
 **Acceptance Criteria:**
+
 - [ ] Service authenticates with API key
 - [ ] Service sends prompts and receives completions
 - [ ] Service handles API errors (rate limits, timeouts, network errors)
@@ -289,6 +308,7 @@ This specification uses **three consistent personas** to clarify who benefits fr
 ## Epic 4: Conversation Agent - User Interaction
 
 ### Story 4.1: Conversation Agent Foundation
+
 **Depends on**: Story 1.2, Story 2.1, Story 3.2
 
 **As the** system
@@ -296,6 +316,7 @@ This specification uses **three consistent personas** to clarify who benefits fr
 **So that** user communication is separated from technical conversion logic
 
 **Acceptance Criteria:**
+
 - [ ] Agent registers with MCP server as "conversation_agent"
 - [ ] Agent exposes MCP tools for user interaction
 - [ ] Agent maintains user session state (waiting_for_approval, waiting_for_input, processing)
@@ -309,6 +330,7 @@ This specification uses **three consistent personas** to clarify who benefits fr
 ---
 
 ### Story 4.2: Initial Metadata Validation Handler
+
 **Depends on**: Story 4.1
 
 **As the** system
@@ -316,6 +338,7 @@ This specification uses **three consistent personas** to clarify who benefits fr
 **So that** I catch missing required fields early
 
 **Acceptance Criteria:**
+
 - [ ] Agent receives upload request with files + metadata from API
 - [ ] Agent validates required fields per NWB schema: subject_id, species, session_description, session_start_time
 - [ ] Agent validates recommended fields: experimenter, institution, lab
@@ -330,9 +353,11 @@ This specification uses **three consistent personas** to clarify who benefits fr
 ---
 
 ### Story 4.3: Improvement Approval Handler (Deprecated - See Stories 8.2, 8.3, 8.3a)
+
 **Depends on**: Story 4.1, Story 7.3
 
 **Note**: This story's functionality has been split into:
+
 - **Story 8.2**: User Improvement Notification (Conversation Agent notifies user)
 - **Story 8.3**: User Improvement Approval Handler (System handles decision)
 - **Story 8.3a**: User Accepts File With Warnings (User story for "Accept As-Is" path)
@@ -340,6 +365,7 @@ This specification uses **three consistent personas** to clarify who benefits fr
 This entry preserved for reference. Implementation should follow Stories 8.2, 8.3, and 8.3a.
 
 **Original Acceptance Criteria (now superseded):**
+
 - [ ] Agent receives context from Evaluation Agent via MCP (FAILED or PASSED_WITH_ISSUES)
 - [ ] Agent analyzes correction context (categorizes issues by severity)
 - [ ] For FAILED status:
@@ -363,6 +389,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 4.4: Correction Context Analysis with LLM
+
 **Depends on**: Story 3.2
 
 **As the** system
@@ -370,6 +397,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** I can explain errors clearly to users
 
 **Acceptance Criteria:**
+
 - [ ] Agent sends validation issues to LLM with context
 - [ ] LLM prompt requests:
   - Plain language explanation of each issue
@@ -391,6 +419,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 4.5: User Input Request Generator with LLM
+
 **Depends on**: Story 3.2
 
 **As the** system
@@ -398,6 +427,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** users understand what to provide and why
 
 **Acceptance Criteria:**
+
 - [ ] Agent identifies fields requiring user input from correction context
 - [ ] Agent uses LLM to generate contextual prompts:
   - Clear question: "What is X?"
@@ -414,6 +444,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 4.6: User Input Validation
+
 **Depends on**: Story 4.5
 
 **As the** system
@@ -421,6 +452,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** corrections don't introduce new errors
 
 **Acceptance Criteria:**
+
 - [ ] Agent receives user input from API
 - [ ] Agent validates input against field requirements:
   - Type checking (string, number, date, etc.)
@@ -438,6 +470,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 4.7: Correction Loop Orchestration
+
 **Depends on**: Story 4.1, Story 4.3
 
 **As the** system
@@ -445,6 +478,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** retry attempts are coordinated properly
 
 **Acceptance Criteria:**
+
 - [ ] Agent maintains correction loop state:
   - Current attempt number
   - Issues identified
@@ -471,6 +505,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 4.8: User Notification & Feedback
+
 **Depends on**: Story 4.1
 
 **As the** system
@@ -478,6 +513,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** users understand system status at all times
 
 **Acceptance Criteria:**
+
 - [ ] Agent sends real-time notifications via WebSocket:
   - "Conversion started"
   - "Validation in progress"
@@ -502,6 +538,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 4.9: LLM Prompt Engineering for User Communication
+
 **Depends on**: Story 3.2
 
 **As a** developer
@@ -509,6 +546,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** communication is clear, helpful, and domain-appropriate
 
 **Acceptance Criteria:**
+
 - [ ] Prompts structured with:
   - System role: "You are a helpful neuroscience data assistant"
   - Context: Validation issue details
@@ -527,6 +565,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ## Epic 5: Conversion Agent - Format Detection
 
 ### Story 5.1: File System Scanner
+
 **Depends on**: None (foundational)
 
 **As the** system
@@ -534,6 +573,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** I can analyze data structure for format detection
 
 **Acceptance Criteria:**
+
 - [ ] Agent accepts file path or directory path
 - [ ] Agent recursively scans directories
 - [ ] Agent catalogs files by extension
@@ -546,6 +586,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 5.2: NeuroConv Format Detection Integration
+
 **Depends on**: Story 5.1
 
 **As the** system
@@ -553,6 +594,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** agents can handle any format NeuroConv supports without manual pattern matching
 
 **Acceptance Criteria:**
+
 - [ ] Agent uses NeuroConv's automatic data interface detection
 - [ ] Agent passes directory path to NeuroConv for analysis
 - [ ] Agent receives detected interfaces and their confidence scores from NeuroConv
@@ -567,6 +609,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 5.3: LLM Analysis for Ambiguous Detection
+
 **Depends on**: Story 5.2, Story 3.2
 
 **As the** system
@@ -574,6 +617,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** agents can make informed decisions when multiple formats match
 
 **Acceptance Criteria:**
+
 - [ ] Agent invokes LLM only when NeuroConv returns multiple possible formats
 - [ ] LLM prompt includes directory structure, file listing, and NeuroConv's candidate interfaces
 - [ ] LLM prompt can reference NeuroConv documentation via MCP server
@@ -592,6 +636,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ## Epic 6: Conversion Agent - Metadata & Execution
 
 ### Story 6.1: User Metadata Collection
+
 **Depends on**: Story 4.1
 
 **As the** system
@@ -599,6 +644,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** converted files have complete information
 
 **Acceptance Criteria:**
+
 - [ ] Agent receives required fields from Conversation Agent: subject_id, species, session_description, session_start_time
 - [ ] Agent validates subject_id (non-empty, alphanumeric)
 - [ ] Agent validates species (non-empty string from approved taxonomy)
@@ -612,6 +658,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 6.2: Auto-Metadata Extraction
+
 **Depends on**: Story 5.2
 
 **As the** system
@@ -619,6 +666,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** users don't need to provide it manually
 
 **Acceptance Criteria:**
+
 - [ ] Agent extracts sampling rate from file headers
 - [ ] Agent extracts channel count
 - [ ] Agent extracts recording duration
@@ -631,6 +679,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 6.3: NeuroConv Execution
+
 **Depends on**: Story 6.1, Story 6.2, Story 5.2
 
 **As the** system
@@ -638,6 +687,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** any NeuroConv-supported format converts to NWB standardized format
 
 **Acceptance Criteria:**
+
 - [ ] Agent uses interface(s) detected by NeuroConv in Story 5.2
 - [ ] Agent initializes NeuroConv converter with detected interface and directory path
 - [ ] Agent merges auto-extracted metadata with user-provided metadata
@@ -656,6 +706,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 6.4: Conversion Agent Orchestration
+
 **Depends on**: Story 6.3, Story 1.2
 
 **As the** system
@@ -663,6 +714,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** conversion happens autonomously from start to finish
 
 **Acceptance Criteria:**
+
 - [ ] Agent receives data path, metadata, output directory from MCP
 - [ ] Agent executes: scan → detect → validate metadata → extract → convert → verify
 - [ ] Agent updates session stage status at each step
@@ -677,6 +729,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ## Epic 7: Evaluation Agent - Schema Validation & Quality Evaluation
 
 ### Story 7.1: NWB File Information Extraction
+
 **Depends on**: Story 6.3
 
 **As the** system
@@ -684,6 +737,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** reports contain complete file characterization
 
 **Acceptance Criteria:**
+
 - [ ] Agent extracts top-level attributes (NWB version, creation date, identifier)
 - [ ] Agent extracts all /general metadata (session info, experimenter, institution)
 - [ ] Agent extracts subject information (ID, species, age, sex)
@@ -700,6 +754,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 7.2: Schema Validation & Quality Evaluation
+
 **Depends on**: Story 7.1
 
 **As the** system
@@ -707,6 +762,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** files are both NWB-compliant and scientifically useful
 
 **Acceptance Criteria:**
+
 - [ ] **Schema Validation**: Agent verifies file is readable by PyNWB (confirms NWB schema compliance)
 - [ ] **Quality Evaluation**: Agent runs NWB Inspector with all checks for quality assessment
 - [ ] Agent captures all Inspector issues (these are quality warnings, not schema violations)
@@ -726,6 +782,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 7.3: Evaluation Result Processing
+
 **Depends on**: Story 7.2, Story 2.1
 
 **As the** system
@@ -733,6 +790,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** downstream agents can analyze and report on quality
 
 **Acceptance Criteria:**
+
 - [ ] Agent counts issues by severity (CRITICAL, ERROR, WARNING, BEST_PRACTICE)
 - [ ] Agent groups issues by category (missing metadata, incorrect units, etc.)
 - [ ] Agent identifies critical issues for FAILED status
@@ -748,6 +806,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ## Epic 8: Self-Correction Loop
 
 ### Story 8.1: Correction Context Generation
+
 **Depends on**: Story 7.3, Story 3.2
 
 **As the** system
@@ -755,13 +814,14 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** downstream agents can present options to users and orchestrate fixes
 
 **Acceptance Criteria:**
+
 - [ ] Evaluation Agent generates correction context when status is FAILED or PASSED_WITH_ISSUES
 - [ ] For FAILED status:
   - Context includes all CRITICAL and ERROR issues with details
   - Agent generates FAILED report (JSON) with human-readable issue descriptions
 - [ ] For PASSED_WITH_ISSUES status:
   - Context includes all WARNING and BEST_PRACTICE issues with details
-  - Agent generates PASSED report (PDF) with issue highlights
+  - Agent generates PASSED report (HTML) with issue highlights
 - [ ] Context categorizes issues by type (missing data, incorrect metadata, schema violations, etc.)
 - [ ] Context identifies auto-fixable issues vs. user-input-required issues
 - [ ] Context includes specific file locations and field names for each issue
@@ -773,6 +833,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 8.2: User Improvement Notification
+
 **Depends on**: Story 8.1, Story 4.1
 
 **As the** system
@@ -780,6 +841,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** users can make informed decisions about correction attempts
 
 **Acceptance Criteria:**
+
 - [ ] Conversation Agent receives correction context from Evaluation Agent via MCP
 - [ ] Agent analyzes context (categorizes issues by severity)
 - [ ] For FAILED status:
@@ -801,6 +863,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 8.3: User Improvement Approval Handler
+
 **Depends on**: Story 8.2
 
 **As the** system
@@ -808,6 +871,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** correction only proceeds with user consent
 
 **Acceptance Criteria:**
+
 - [ ] System displays validation summary to user (FAILED or PASSED_WITH_ISSUES)
 - [ ] System shows categorized list of issues (auto-fixable vs. needs input)
 - [ ] For FAILED status:
@@ -817,7 +881,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 - [ ] For PASSED_WITH_ISSUES status:
   - System presents "Improve File" and "Accept As-Is" options
   - IF user approves improvement: Send correction context to Conversion Agent via MCP (same as FAILED flow)
-  - IF user declines: Finalize session with PASSED status, provide NWB + PDF report for download (file is already acceptable)
+  - IF user declines: Finalize session with PASSED status, provide NWB + HTML report for download (file is already acceptable)
 - [ ] User can review full report before deciding
 - [ ] No timeout on user decision (wait indefinitely)
 - [ ] Decision logged in session history
@@ -827,6 +891,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 8.3a: User Accepts File With Warnings
+
 **Depends on**: Story 8.2
 
 **As a** user
@@ -834,9 +899,10 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** I can proceed with a usable file without further improvement
 
 **Acceptance Criteria:**
+
 - [ ] User sees "Accept As-Is" option when validation status is PASSED_WITH_ISSUES
-- [ ] User can review PDF report with all warnings before deciding
-- [ ] User can download NWB + PDF report immediately after accepting
+- [ ] User can review HTML report with all warnings before deciding
+- [ ] User can download NWB + HTML report immediately after accepting
 - [ ] System sets global validation_status to "passed_accepted"
 - [ ] No correction loop initiated (session ends successfully)
 - [ ] Decision logged: "User accepted file with N warnings at [timestamp]"
@@ -847,6 +913,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 8.4: Conversion Agent Self-Correction Handler
+
 **Depends on**: Story 8.3, Story 1.2
 
 **As the** system
@@ -854,6 +921,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** I can automatically correct conversion issues
 
 **Acceptance Criteria:**
+
 - [ ] Agent receives correction context via MCP ONLY after user approval
 - [ ] Agent analyzes correction context to determine fix strategy
 - [ ] Agent distinguishes between auto-fixable and user-input-required issues
@@ -866,6 +934,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 8.5: Automatic Issue Correction
+
 **Depends on**: Story 8.4
 
 **As the** system
@@ -873,6 +942,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** the system is truly autonomous
 
 **Acceptance Criteria:**
+
 - [ ] Agent identifies auto-fixable issue types:
   - Missing optional metadata (use defaults or infer from data)
   - Incorrect data types (auto-convert when safe)
@@ -889,6 +959,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 8.6: User Input Request for Unfixable Issues
+
 **Depends on**: Story 8.4, Story 4.5
 
 **As the** system
@@ -896,6 +967,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** conversions can succeed even with complex problems
 
 **Acceptance Criteria:**
+
 - [ ] Agent identifies issues requiring user input:
   - Missing required metadata (subject_id, species, etc.)
   - Ambiguous data interpretations
@@ -913,6 +985,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 8.7: Reconversion Orchestration
+
 **Depends on**: Story 8.5, Story 8.6, Story 6.3
 
 **As the** system
@@ -920,6 +993,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** the self-correction loop completes successfully
 
 **Acceptance Criteria:**
+
 - [ ] Agent applies all automatic fixes to conversion parameters
 - [ ] Agent incorporates any user-provided data
 - [ ] Agent invokes NeuroConv with corrected parameters
@@ -939,6 +1013,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 8.8: Self-Correction Loop Termination
+
 **Depends on**: Story 8.7
 
 **As the** system
@@ -946,6 +1021,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** loops end appropriately based on user decisions
 
 **Acceptance Criteria:**
+
 - [ ] Loop terminates on PASSED validation status (no issues - success case)
 - [ ] Loop terminates on PASSED_WITH_ISSUES when user chooses "Accept As-Is" (acceptable file)
 - [ ] Loop terminates when user declines retry approval on FAILED (user choice)
@@ -965,6 +1041,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 8.9: User Improvement Approval UI
+
 **Depends on**: Story 8.2
 
 **As a** user
@@ -972,6 +1049,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** I control the improvement process
 
 **Acceptance Criteria:**
+
 - [ ] When validation FAILED, UI shows "Validation Failed" with clear summary:
   - Prominent red banner with CRITICAL/ERROR count
   - "Approve Retry" and "Decline Retry" buttons
@@ -979,7 +1057,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 - [ ] When validation PASSED_WITH_ISSUES, UI shows "Validation Passed with Warnings":
   - Prominent yellow banner with WARNING/BEST_PRACTICE count
   - "Improve File" and "Accept As-Is" buttons
-  - "Accept As-Is" allows downloading NWB file + PDF report immediately
+  - "Accept As-Is" allows downloading NWB file + HTML report immediately
   - Message: "File is valid and usable, but can be improved"
 - [ ] UI displays categorized issues for both cases:
   - "Auto-fixable issues" (system will handle automatically)
@@ -1001,13 +1079,15 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ## Epic 9: LLM-Enhanced Evaluation Reporting
 
 **Pattern**: This epic defines how LLM analysis integrates into evaluation reporting:
+
 1. **Stories 9.1-9.2**: Define prompt templates (system configuration)
 2. **Stories 9.3-9.4**: Implement agent logic that uses templates
-3. **Stories 9.5-9.6**: Format output (PDF for PASSED/PASSED_WITH_ISSUES, JSON for FAILED)
+3. **Stories 9.5-9.6**: Format output (HTML for PASSED/PASSED_WITH_ISSUES, JSON for FAILED)
 
 ---
 
 ### Story 9.1: Prompt Template for Quality Evaluation (PASSED/PASSED_WITH_ISSUES)
+
 **Depends on**: Story 3.2
 
 **As the** system
@@ -1015,6 +1095,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** the Evaluation Agent can generate consistent scientific assessments
 
 **Acceptance Criteria:**
+
 - [ ] Template stored as configuration (e.g., YAML, JSON, or Python f-string)
 - [ ] Template includes placeholders for: file_info, evaluation_status, issues_list, issue_counts
 - [ ] Template structure:
@@ -1036,6 +1117,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 9.2: Prompt Template for Correction Guidance (FAILED)
+
 **Depends on**: Story 3.2
 
 **As the** system
@@ -1043,6 +1125,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** the Conversation Agent can generate actionable correction guidance
 
 **Acceptance Criteria:**
+
 - [ ] Template stored as configuration (e.g., `src/prompts/evaluation_failed.yaml`)
 - [ ] Template includes placeholders for: critical_issues, error_details, file_context
 - [ ] Template structure:
@@ -1067,6 +1150,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 9.3: Evaluation Agent - LLM Report Generation (PASSED/PASSED_WITH_ISSUES)
+
 **Depends on**: Story 9.1, Story 7.3
 
 **As the** system
@@ -1074,6 +1158,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** I can generate scientific assessment reports
 
 **Acceptance Criteria:**
+
 - [ ] Agent loads prompt template from Story 9.1 (`src/prompts/evaluation_passed.yaml`)
 - [ ] Agent populates template with evaluation results from Story 7.3
 - [ ] Agent calls LLM service (Story 3.2) with populated prompt
@@ -1091,6 +1176,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 9.4: Conversation Agent - LLM Correction Analysis (FAILED)
+
 **Depends on**: Story 9.2, Story 7.3, Story 4.4
 
 **As the** system
@@ -1098,6 +1184,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** I can orchestrate the self-correction loop with actionable fix strategies
 
 **Acceptance Criteria:**
+
 - [ ] Agent loads prompt template from Story 9.2 (`src/prompts/evaluation_failed.yaml`)
 - [ ] Agent populates template with failed evaluation results from Story 7.3
 - [ ] Agent calls LLM service (Story 3.2) with populated prompt
@@ -1115,34 +1202,37 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 
 ---
 
-### Story 9.5: PDF Report Generation with LLM Content
+### Story 9.5: HTML Report Generation with LLM Content
+
 **Depends on**: Story 9.3
 
 **As the** system
-**I want** to generate professional PDF reports with LLM analysis for PASSED/PASSED_WITH_ISSUES files
+**I want** to generate professional HTML reports with LLM analysis for PASSED/PASSED_WITH_ISSUES files
 **So that** users get comprehensive, human-readable assessments
 
 **Acceptance Criteria:**
+
 - [ ] Agent uses LLM-generated content from Story 9.3 (`EvaluationReport` schema)
-- [ ] PDF includes:
-  - Cover page: status, file info, date, NWB version
+- [ ] HTML includes:
+  - Header: status, file info, date, NWB version
   - Executive summary from LLM analysis
   - File information table (metadata, data contents, statistics)
   - Evaluation results table (issue counts by severity)
   - Issues list (if PASSED_WITH_ISSUES): each warning with LLM explanation
   - LLM analysis sections: quality assessment, scientific insights, recommendations
   - Conclusions
-- [ ] PDF professionally formatted with sections, tables, page numbers
-- [ ] PDF filename: `<nwb_filename>_evaluation_report.pdf`
-- [ ] PDF written to output directory alongside NWB file
-- [ ] PDF path stored in global state for download/access
-- [ ] Agent raises exception if PDF generation fails (defensive)
+- [ ] HTML professionally formatted with CSS styling, sections, tables
+- [ ] HTML filename: `<nwb_filename>_evaluation_report.html`
+- [ ] HTML written to output directory alongside NWB file
+- [ ] HTML path stored in global state for download/access
+- [ ] Agent raises exception if HTML generation fails (defensive)
 
 **Priority**: Critical
 
 ---
 
 ### Story 9.6: JSON Context Generation with LLM Content
+
 **Depends on**: Story 9.4
 
 **As the** system
@@ -1150,6 +1240,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** users have machine-readable fix instructions
 
 **Acceptance Criteria:**
+
 - [ ] Agent uses LLM-generated content from Story 9.4 (`CorrectionContext` schema)
 - [ ] JSON includes:
   - Evaluation metadata (ID, status, timestamp)
@@ -1172,18 +1263,20 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ## Epic 10: Web API Layer
 
 ### Story 10.1: FastAPI Application Setup
+
 **Depends on**: None (foundational)
 
 **As a** developer
 **I want** a FastAPI application with CORS enabled
-**So that** React frontend can communicate with backend
+**So that** frontend can communicate with backend
 
 **Acceptance Criteria:**
+
 - [ ] FastAPI app initialized with title, description, version
 - [ ] CORS middleware configured for localhost:3000
 - [ ] Health check endpoint returns server status
 - [ ] API info endpoint returns version and capabilities
-- [ ] Static file serving configured for React build
+- [ ] Static file serving configured for frontend files
 - [ ] API documentation auto-generated at /docs
 
 **Priority**: Critical
@@ -1191,6 +1284,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 10.2: File Upload Endpoint
+
 **Depends on**: Story 10.1, Story 2.1
 
 **As a** user
@@ -1198,6 +1292,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** I can start conversion without CLI
 
 **Acceptance Criteria:**
+
 - [ ] Endpoint accepts multiple file uploads
 - [ ] Endpoint accepts metadata form fields (subject_id, species, description, date)
 - [ ] Endpoint validates all files uploaded successfully
@@ -1213,6 +1308,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 10.3: Background Task Processing
+
 **Depends on**: Story 10.2, Story 1.2
 
 **As the** system
@@ -1220,6 +1316,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** API remains responsive during long operations
 
 **Acceptance Criteria:**
+
 - [ ] Background task invokes conversion agent via MCP
 - [ ] Task waits for conversion completion
 - [ ] Task invokes evaluation agent with NWB file path
@@ -1233,6 +1330,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 10.4: Status API
+
 **Depends on**: Story 2.1
 
 **As a** user
@@ -1240,6 +1338,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** I can see progress and results
 
 **Acceptance Criteria:**
+
 - [ ] GET /api/status returns global state
 - [ ] Response includes status, validation_status, stages, metadata
 - [ ] Response includes output paths if available
@@ -1254,6 +1353,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 10.5: WebSocket Progress Streaming
+
 **Depends on**: Story 2.1
 
 **As a** user
@@ -1261,6 +1361,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** I see conversion happening live
 
 **Acceptance Criteria:**
+
 - [ ] WebSocket endpoint at /ws
 - [ ] Client receives progress updates as they occur
 - [ ] Updates include stage, status, message
@@ -1274,6 +1375,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 10.6: Download Endpoints
+
 **Depends on**: Story 6.4, Story 9.5, Story 9.6
 
 **As a** user
@@ -1281,8 +1383,9 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** I can use the results
 
 **Acceptance Criteria:**
+
 - [ ] GET /api/download/nwb downloads current NWB file
-- [ ] GET /api/download/report downloads PDF or JSON report
+- [ ] GET /api/download/report downloads HTML or JSON report
 - [ ] Correct Content-Type headers set
 - [ ] Proper filename in Content-Disposition
 - [ ] 404 returned if file not found or conversion incomplete
@@ -1293,6 +1396,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 10.7: Logs API
+
 **Depends on**: Story 2.1
 
 **As a** user
@@ -1300,6 +1404,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** I can debug issues or understand what happened
 
 **Acceptance Criteria:**
+
 - [ ] GET /api/logs returns logs from global state
 - [ ] Logs ordered chronologically
 - [ ] Logs include timestamp, level, component, message
@@ -1314,6 +1419,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ## Epic 11: React Web UI
 
 ### Story 11.1: React Application Setup
+
 **Depends on**: None (foundational)
 
 **As a** developer
@@ -1321,6 +1427,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** I can build a modern, type-safe UI
 
 **Acceptance Criteria:**
+
 - [ ] React app created with TypeScript template
 - [ ] Material-UI (MUI) installed and configured
 - [ ] Theme configured (colors, typography)
@@ -1334,6 +1441,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 11.2: File Upload Component
+
 **Depends on**: Story 11.1
 
 **As a** user
@@ -1341,6 +1449,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** I can easily provide my data
 
 **Acceptance Criteria:**
+
 - [ ] Component accepts drag-and-drop
 - [ ] Component has file browse button
 - [ ] Component shows file list after selection
@@ -1355,6 +1464,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 11.3: Metadata Form
+
 **Depends on**: Story 11.1
 
 **As a** user
@@ -1362,6 +1472,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** my NWB file has complete information
 
 **Acceptance Criteria:**
+
 - [ ] Form has fields for subject_id, species, description, session_date
 - [ ] All fields have labels and helper text
 - [ ] Species field has autocomplete suggestions (Mus musculus, Rattus norvegicus, Homo sapiens)
@@ -1376,6 +1487,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 11.4: Progress View Component
+
 **Depends on**: Story 11.1, Story 10.5
 
 **As a** user
@@ -1383,6 +1495,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** I know the system is working and how long it will take
 
 **Acceptance Criteria:**
+
 - [ ] Component connects to WebSocket /ws on mount
 - [ ] Component displays current stage (conversion, evaluation, report_generation)
 - [ ] Component shows stage status indicators
@@ -1397,6 +1510,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 11.5: Results Display Component
+
 **Depends on**: Story 11.1, Story 10.4
 
 **As a** user
@@ -1404,6 +1518,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** I can access my converted files
 
 **Acceptance Criteria:**
+
 - [ ] Component fetches status from /api/status after completion
 - [ ] Component displays validation status prominently with visual indicators:
   - PASSED (no issues): Green checkmark icon + "Perfect! No issues found."
@@ -1416,7 +1531,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
   - WARNING: Z issues
   - BEST_PRACTICE: W suggestions
 - [ ] Component has download buttons appropriate for validation status:
-  - PASSED/PASSED_WITH_ISSUES: "Download NWB" + "Download PDF Report"
+  - PASSED/PASSED_WITH_ISSUES: "Download NWB" + "Download HTML Report"
   - FAILED: "Download NWB (with errors)" + "Download JSON Report"
 - [ ] Component displays context-appropriate success messages:
   - PASSED: "Your file is perfect and ready to use!"
@@ -1430,6 +1545,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 11.6: Log Viewer Component
+
 **Depends on**: Story 11.1, Story 10.7
 
 **As a** user
@@ -1437,6 +1553,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** I can understand what happened or debug issues
 
 **Acceptance Criteria:**
+
 - [ ] Component fetches logs from /api/logs
 - [ ] Logs displayed in reverse chronological order (newest first)
 - [ ] Each log entry shows timestamp, level, component, message
@@ -1450,6 +1567,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 11.7: Basic Error Handling in UI
+
 **Depends on**: Story 11.1
 
 **As a** user
@@ -1457,6 +1575,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** I understand what happened
 
 **Acceptance Criteria:**
+
 - [ ] Upload failures show error message from API
 - [ ] 409 Conflict shows "System is busy processing another conversion"
 - [ ] Network errors show "Connection error - check your internet"
@@ -1470,9 +1589,24 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 
 ---
 
+**Implementation Note**: The Frontend UI was implemented using **static HTML + vanilla JavaScript** ([frontend/public/chat-ui.html](../../frontend/public/chat-ui.html)) instead of React + TypeScript + Material-UI for faster MVP delivery. The implementation meets all core functional requirements:
+
+- ✅ File upload with drag-and-drop
+- ✅ Metadata form with validation
+- ✅ Real-time progress via WebSocket
+- ✅ Results display with status indicators
+- ✅ Download buttons for NWB and reports
+- ✅ Log viewer
+- ✅ Error handling
+
+Stories 11.1-11.7 describe the original React architecture but were not executed. A React migration may be considered for v2.0 to improve maintainability and provide a more polished UI experience.
+
+---
+
 ## Epic 12: Integration & Polish
 
 ### Story 12.1: End-to-End Integration Test
+
 **Depends on**: All previous stories
 
 **As a** developer
@@ -1480,15 +1614,16 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** I know the system works end-to-end
 
 **Acceptance Criteria:**
+
 - [ ] Test registers agents with MCP server
 - [ ] Test initializes global state
 - [ ] Test invokes conversion agent with sample data
 - [ ] Test verifies NWB file created
 - [ ] Test invokes evaluation agent
 - [ ] Test verifies report generated for all validation statuses:
-  - PASSED (no issues): PDF report generated
-  - PASSED_WITH_ISSUES: PDF with warnings, user accepts as-is, validation_status="passed_accepted"
-  - PASSED_WITH_ISSUES: PDF with warnings, user improves file, validation_status="passed_improved"
+  - PASSED (no issues): HTML report generated
+  - PASSED_WITH_ISSUES: HTML report with warnings, user accepts as-is, validation_status="passed_accepted"
+  - PASSED_WITH_ISSUES: HTML report with warnings, user improves file, validation_status="passed_improved"
   - FAILED: JSON report generated, user declines retry, validation_status="failed_user_declined"
 - [ ] Test checks global state is completed with correct validation_status
 - [ ] Test verifies all three validation paths (PASSED, PASSED_WITH_ISSUES, FAILED)
@@ -1500,6 +1635,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 12.2: Sample Dataset Creation
+
 **Depends on**: None (foundational)
 
 **As a** developer
@@ -1507,6 +1643,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** I don't need access to real large files
 
 **Acceptance Criteria:**
+
 - [ ] Script creates one minimal toy dataset in a directory (e.g., SpikeGLX format)
 - [ ] Dataset: 10 seconds, 32-64 channels (small for fast testing)
 - [ ] Dataset size <10 MB (toy data for integration test timeout validation)
@@ -1519,8 +1656,8 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 
 ---
 
-
 ### Story 12.3: Installation Script
+
 **Depends on**: None (foundational)
 
 **As a** user
@@ -1528,6 +1665,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** setup is easy and error-free
 
 **Acceptance Criteria:**
+
 - [ ] Script installs system dependencies
 - [ ] Script sets up Python environment via Pixi
 - [ ] Script creates necessary directories (uploads, outputs)
@@ -1540,6 +1678,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 12.4: Quick Start Script
+
 **Depends on**: Story 12.3
 
 **As a** user
@@ -1547,6 +1686,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** I can verify installation and see it working
 
 **Acceptance Criteria:**
+
 - [ ] Script creates sample data if not present
 - [ ] Script starts backend server
 - [ ] Script starts frontend server
@@ -1560,6 +1700,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 12.5: Error Recovery Testing
+
 **Depends on**: Story 12.1
 
 **As a** developer
@@ -1567,6 +1708,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** the system handles failures gracefully
 
 **Acceptance Criteria:**
+
 - [ ] Test invalid file format handling
 - [ ] Test network errors (API unreachable)
 - [ ] Test LLM API failures
@@ -1581,6 +1723,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ---
 
 ### Story 12.6: Integration Test Timeouts
+
 **Depends on**: Story 12.1
 
 **As a** developer
@@ -1588,6 +1731,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 **So that** I can detect context engineering problems early
 
 **Acceptance Criteria:**
+
 - [ ] End-to-end integration test uses toy dataset (<10 MB)
 - [ ] Complete pipeline (scan → detect → convert → evaluate → report) has reasonable timeout (5-10 minutes)
 - [ ] Test fails with timeout error if agents are "stuck" (indicates context engineering issue)
@@ -1605,17 +1749,19 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ### Functional Requirements
 
 **Core Capabilities:**
+
 - [ ] Accept directory upload containing neurophysiology data via web interface
 - [ ] Convert any NeuroConv-supported format to NWB (delegates format detection to NeuroConv)
 - [ ] Validate schema compliance (PyNWB read test)
 - [ ] Evaluate quality using NWB Inspector (metadata completeness, best practices)
-- [ ] Generate LLM-enhanced evaluation reports (PDF for PASSED/PASSED_WITH_ISSUES, JSON for FAILED)
+- [ ] Generate LLM-enhanced evaluation reports (HTML for PASSED/PASSED_WITH_ISSUES, JSON for FAILED)
 - [ ] Provide structured logs for provenance tracking
 - [ ] Provide web UI for file upload, progress monitoring, and downloads
 - [ ] Provide REST API for programmatic access
 - [ ] Track single-session state in memory
 
 **User Experience:**
+
 - [ ] Users upload files/directories via drag-and-drop in web UI
 - [ ] Users fill in required metadata through web form
 - [ ] Users see real-time conversion progress via WebSocket updates
@@ -1624,6 +1770,7 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 - [ ] Users receive clear feedback on validation status (PASSED/PASSED_WITH_ISSUES/FAILED)
 
 **System Behavior:**
+
 - [ ] MCP server routes messages between agents
 - [ ] Agents communicate via standardized protocol
 - [ ] Global state tracks single conversion in memory
@@ -1633,11 +1780,13 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ### Non-Functional Requirements
 
 **Performance (MVP - "Good Enough to Work"):**
+
 - [ ] Integration tests with **toy dataset** (≤10 MB, simple SpikeGLX recording) complete in **≤10 minutes** (generous timeout for LLM latency)
 - [ ] No memory/CPU/disk limits enforced—system uses whatever resources available (optimize post-MVP)
 - [ ] No performance benchmarks for large files in MVP
 
 **Reliability (Defensive Error Handling):**
+
 - [ ] System raises exceptions **immediately** when something is wrong (no silent failures, no default values that hide problems)
 - [ ] All exceptions include **full diagnostic context** in structured JSON format:
   ```json
@@ -1665,17 +1814,20 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 - [ ] All agent communication errors include MCP message ID, sender, receiver, and payload
 
 **Scalability:**
+
 - [ ] **Single conversion at a time** (MVP constraint)—concurrent uploads blocked with simple error message
 - [ ] Global state is **in-memory** (Python dict)—no database needed
 - [ ] File system handles uploaded files (no enforced size limit in MVP)
 
 **Usability (MVP - Basic Functionality):**
+
 - [ ] Web UI allows file upload, shows progress, provides download links
 - [ ] Progress updates via WebSocket (no latency requirement—just working updates)
 - [ ] Error messages shown in UI (simple text display—fancy formatting optional)
 - [ ] Validation status displayed with basic indicators (text or simple colored badges)
 
 **Maintainability:**
+
 - [ ] Code coverage **≥80%** (measured by pytest-cov, excluding MCP boilerplate)
 - [ ] All agents are **independent Python modules** (no direct imports between agents, only MCP communication)
 - [ ] Logging uses **structured JSON format** (JSON Lines `.jsonl` files) with fields: `timestamp`, `level`, `component`, `event`, `data`
@@ -1688,12 +1840,14 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 - [ ] Format support updates require **only NeuroConv version bump** (no code changes in agents)—tested by upgrading NeuroConv in isolated test
 
 **Security (MVP - Basic Safety):**
+
 - [ ] API keys in environment variables (never hardcoded)
 - [ ] File upload has **reasonable size limit** (e.g., 50 GB—prevent system crashes from huge uploads)
 - [ ] Basic path validation: reject paths with `..` (prevent directory traversal)
 - [ ] No authentication in MVP (local deployment only)
 
 **Notes:**
+
 - ✅ **Priority**: Make it work first, optimize later
 - ✅ **"Good enough"**: Basic error handling, simple logging, minimal validation
 - ✅ **Defer optimization**: Memory limits, fancy error schemas, test coverage >50%, multi-browser testing—all post-MVP
@@ -1703,32 +1857,35 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ## Dependencies
 
 ### External Services
+
 - **Anthropic Claude API**: For LLM-powered analysis and reports
   - Requires API key (ANTHROPIC_API_KEY environment variable)
   - Rate limits apply
   - **Required**: System throws errors if LLM unavailable (no fallback)
 
 ### Python Libraries
-- **NeuroConv** (≥0.4.0): Data format conversion and auto-detection
-- **PyNWB** (≥2.6.0): NWB file handling and schema validation
-- **NWB Inspector** (≥0.4.30): Quality evaluation
+
+- **NeuroConv** (≥0.7.3): Data format conversion and auto-detection
+- **PyNWB** (≥3.0.0): NWB file handling and schema validation
+- **NWB Inspector** (≥0.6.0): Quality evaluation
 - **FastAPI**: Web framework for REST API and WebSocket support
 - **Uvicorn**: ASGI server for FastAPI
 - **Anthropic SDK** (≥0.18.0): Claude API client for LLM analysis
 - **Pydantic** (≥2.0): Type-safe data schemas (MCP messages, global state)
-- **ReportLab** (≥3.6.0) or **Quarto**: PDF report generation (Quarto recommended to avoid vendor lock-in)
+- **Jinja2**: HTML report generation with templating
 
-### Frontend Libraries
-- **React** (18+): UI framework
-- **TypeScript**: Type safety
-- **Material-UI (MUI)** (≥5.0): Component library with pre-built UI elements
-  - `@mui/material`: Core components (Button, TextField, Card, etc.)
-  - `@mui/icons-material`: Icon library (CheckCircle, Warning, Error, etc.)
-  - `@emotion/react` + `@emotion/styled`: Required peer dependencies for MUI
-- **Axios**: HTTP client for API communication
-- **React-Dropzone**: File upload with drag-and-drop
+### Frontend Libraries (MVP Implementation)
+
+- **Static HTML + Vanilla JavaScript**: Implemented for MVP instead of React
+  - HTML5 for structure
+  - CSS3 for styling
+  - Native JavaScript for WebSocket and API communication
+  - Native File API for drag-and-drop file upload
+
+**Note**: Original specification called for React 18+ with TypeScript and Material-UI. Static HTML was chosen for faster MVP delivery. See Epic 11 implementation note for migration considerations.
 
 ### Infrastructure
+
 - **Pixi**: Python environment management
 
 ---
@@ -1738,17 +1895,19 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 ### MVP is DONE when:
 
 **Core Three-Agent Loop Works:**
+
 1. ✅ User uploads directory via web UI
 2. ✅ User fills in required metadata via web form
 3. ✅ Conversion Agent detects format via NeuroConv and converts to NWB
 4. ✅ Evaluation Agent validates schema (PyNWB) and evaluates quality (Inspector)
 5. ✅ Conversation Agent orchestrates user-controlled correction loop
-6. ✅ LLM analyzes evaluation results and generates actionable reports (PDF/JSON)
+6. ✅ LLM analyzes evaluation results and generates actionable reports (HTML/JSON)
 7. ✅ Self-correction loop completes (user approves retry → reconvert → re-evaluate)
 8. ✅ User sees real-time progress via WebSocket updates in UI
 9. ✅ User downloads NWB file and report via web UI
 
 **Quality Standards:**
+
 1. ✅ End-to-end integration test passes with toy dataset (<2 min)
 2. ✅ All agent interactions use MCP protocol
 3. ✅ System raises defensive errors (no silent failures)
@@ -1756,15 +1915,17 @@ This entry preserved for reference. Implementation should follow Stories 8.2, 8.
 5. ✅ Sample toy dataset available for testing
 
 **Deliverables:**
+
 1. ✅ Three-agent system (Conversation, Conversion, Evaluation)
 2. ✅ MCP server with message routing
-3. ✅ Web UI (React + TypeScript + Tailwind CSS)
+3. ✅ Web UI (Static HTML + JavaScript with WebSocket)
 4. ✅ FastAPI backend with WebSocket support
 5. ✅ Integration tests with timeouts
 6. ✅ Pixi environment configuration
 7. ✅ Sample toy dataset for testing
 
 **Explicitly NOT Required for MVP:**
+
 - README documentation (add later)
 - Performance optimization for large files
 - Deployment/containerization (local development only)

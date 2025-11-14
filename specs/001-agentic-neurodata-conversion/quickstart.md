@@ -22,10 +22,10 @@
 ## System Requirements
 
 ### Required Software
-- **Python**: 3.11 or higher
-- **Node.js**: 18+ (for React frontend)
+- **Python**: 3.13 or higher
 - **Pixi**: Python environment manager ([install](https://pixi.sh))
 - **Git**: For version control
+- **Web Browser**: Modern browser with JavaScript enabled (for frontend UI)
 
 ### Recommended Hardware
 - **RAM**: 8 GB minimum (16 GB for large conversions)
@@ -240,22 +240,27 @@ mcp_server.send_message(MCPMessage(
 
 ### Frontend Development
 
-Components in `frontend/src/components/`:
+**MVP Implementation**: Static HTML in `frontend/public/chat-ui.html`
 
 **Example: Modify Upload Form**
 
-1. Open `frontend/src/components/MetadataForm.tsx`
-2. Make changes (TypeScript will catch type errors)
-3. Hot reload in browser (automatic)
+1. Open `frontend/public/chat-ui.html`
+2. Make changes to HTML structure, CSS styles, or JavaScript
+3. Refresh browser to see changes
 
 **API Integration**:
-```typescript
-// Use API client service
-import { api } from '../services/api';
+```javascript
+// Native fetch API for backend communication
+const formData = new FormData();
+formData.append('file', file);
 
-// Upload files
-const response = await api.post('/api/upload', formData);
+const response = await fetch('http://localhost:8000/api/upload', {
+    method: 'POST',
+    body: formData
+});
 ```
+
+**Note**: Original plan called for React + TypeScript architecture. Static HTML was chosen for MVP speed. See [plan.md](plan.md#phase-8-frontend-ui) for migration considerations.
 
 ---
 
@@ -368,10 +373,9 @@ backend/src/
 ├── api/                 # FastAPI endpoints and WebSocket
 └── utils/               # Logging, exceptions
 
-frontend/src/
-├── components/          # React UI components
-├── services/            # API client, WebSocket client
-└── types/               # TypeScript interfaces
+frontend/public/
+├── chat-ui.html         # Static HTML UI (MVP implementation)
+└── assets/              # CSS and JavaScript files
 
 specs/001-agentic-neurodata-conversion/
 ├── plan.md              # Implementation plan

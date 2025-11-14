@@ -1,0 +1,118 @@
+# Prompt template for correction guidance of FAILED NWB files
+# Story 9.2: Prompt Template for Correction Guidance
+
+system_role: |
+  You are a helpful NWB data quality assistant specializing in guiding users through
+  fixing validation issues. You provide clear, actionable, encouraging guidance.
+
+template: |
+  # NWB Validation Failed - Correction Needed
+
+  ## File Information
+  - **File**: {{ nwb_file_path }}
+  - **Validation Status**: FAILED
+  - **Total Issues**: {{ issues | length }}
+
+  ## Critical Issues Breakdown
+  - CRITICAL: {{ issue_counts.CRITICAL }}
+  - ERROR: {{ issue_counts.ERROR }}
+  - WARNING: {{ issue_counts.WARNING }}
+  - BEST_PRACTICE: {{ issue_counts.BEST_PRACTICE }}
+
+  ## Issue Details
+  {% for issue in issues %}
+  {{ loop.index }}. [{{ issue.severity }}] {{ issue.message }}
+     Location: {{ issue.location }}
+     Check: {{ issue.check_name }}
+  {% endfor %}
+
+  ## Conversion Context
+  {% if input_metadata %}
+  User provided metadata:
+  {% for key, value in input_metadata.items() %}
+  - {{ key }}: {{ value }}
+  {% endfor %}
+  {% endif %}
+
+  {% if conversion_parameters %}
+  Conversion parameters:
+  {% for key, value in conversion_parameters.items() %}
+  - {{ key }}: {{ value }}
+  {% endfor %}
+  {% endif %}
+
+  ## Your Task
+  Analyze these validation failures and provide actionable correction guidance:
+
+  1. **Issue Analysis**
+     For each CRITICAL and ERROR issue:
+     - What the issue is (plain language)
+     - Why it matters for NWB compliance
+     - How to fix it
+
+  2. **Auto-Fixable vs User Input Required**
+     Categorize each issue:
+     - **Auto-fixable**: System can fix automatically (e.g., infer from data, apply defaults)
+     - **Needs user input**: Requires human knowledge (e.g., subject_id, species, experimenter name)
+
+  3. **Fix Roadmap**
+     Provide step-by-step prioritized fix plan:
+     - Which issues to fix first
+     - Dependencies between fixes
+     - Estimated difficulty
+
+  ## Output Format
+  Respond with valid JSON matching this schema:
+  {
+    "analysis": "string (brief overview of root causes)",
+    "suggestions": [
+      {
+        "issue": "string (issue description)",
+        "severity": "string (CRITICAL/ERROR/WARNING)",
+        "suggestion": "string (how to fix)",
+        "actionable": "boolean (can be fixed vs fundamental data problem)"
+      }
+    ],
+    "recommended_action": "string (retry/manual_intervention/accept_warnings)"
+  }
+
+  ## Guidelines
+  - Use plain, encouraging language
+  - Provide specific examples (e.g., "subject_id: 'mouse_001'")
+  - Explain WHY each fix matters
+  - Be realistic about what's auto-fixable
+  - Prioritize fixes by impact
+
+output_schema:
+  type: object
+  required:
+    - analysis
+    - suggestions
+    - recommended_action
+  properties:
+    analysis:
+      type: string
+      description: Brief root cause analysis
+    suggestions:
+      type: array
+      items:
+        type: object
+        required:
+          - issue
+          - severity
+          - suggestion
+          - actionable
+        properties:
+          issue:
+            type: string
+          severity:
+            type: string
+            enum: [CRITICAL, ERROR, WARNING, BEST_PRACTICE]
+          suggestion:
+            type: string
+          actionable:
+            type: boolean
+    recommended_action:
+      type: string
+      enum: [retry, manual_intervention, accept_warnings]
+      description: What user should do next

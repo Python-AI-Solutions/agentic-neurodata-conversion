@@ -57,48 +57,53 @@ This document resolves all technical decisions identified as "NEEDS CLARIFICATIO
 
 ---
 
-## Decision 2: PDF Report Generation Library
+## Decision 2: HTML Report Generation Library
 
 ### Decision
-**Use ReportLab** for PDF generation (not Quarto).
+**Use Jinja2** for HTML report generation (not PDF/ReportLab or Quarto).
 
 ### Rationale
-1. **Pure Python**: ReportLab is native Python, no external dependencies (Quarto requires R/Pandoc)
-2. **Programmatic Control**: Full control over PDF layout, styling, and content from Python code
-3. **LLM Integration**: Easy to integrate LLM-generated content (Stories 9.3, 9.5) directly into PDF without intermediate markdown conversion
-4. **Deployment Simplicity**: No external tools needed (Pixi environment installs ReportLab via pip)
-5. **Scientific Reports**: ReportLab widely used for scientific report generation in Python ecosystem
+1. **Pure Python**: Jinja2 is native Python with no external dependencies
+2. **Faster MVP Delivery**: HTML templates are simpler than PDF generation, reducing implementation time
+3. **Browser-Native Viewing**: No special software required, works on all platforms
+4. **LLM Integration**: Easy to integrate LLM-generated content directly into HTML templates
+5. **Styling Flexibility**: CSS provides rich styling without complex PDF layout APIs
+6. **Future-Proof**: Easy to add PDF export later via browser print or HTML-to-PDF libraries
 
 ### Alternatives Considered
 
-**Alternative A: Quarto**
+**Alternative A: ReportLab (PDF)**
 - **Pros**:
-  - Avoids vendor lock-in (mentioned in requirements line 1719)
-  - Markdown-based templates easier to edit
+  - Professional PDF output
+  - Programmatic control over layout
+- **Cons**:
+  - More complex API than HTML templating
+  - Requires PDF viewer software
+  - Slower implementation time
+  - Harder to style compared to CSS
+- **Rejected because**: HTML simpler for MVP, PDF can be added post-MVP if needed
+
+**Alternative B: Quarto**
+- **Pros**:
+  - Avoids vendor lock-in
   - Reproducible research standard
 - **Cons**:
   - Requires external Quarto installation (not pip-installable)
   - Requires Pandoc dependency
-  - LLM content needs conversion to markdown first
-  - Adds complexity to Pixi environment setup
   - Overkill for programmatic report generation
-- **Rejected because**: "Avoid vendor lock-in" concern is minimal (ReportLab is open-source, widely used), and operational complexity outweighs benefits
-
-**Alternative B: WeasyPrint (HTML to PDF)**
-- **Pros**: HTML/CSS templates easier than ReportLab's canvas API
-- **Cons**: Requires CSS layout expertise, adds web rendering engine dependency
-- **Rejected because**: ReportLab's API is simpler for structured scientific reports
+- **Rejected because**: Too complex for MVP needs
 
 ### Implementation Notes
-- Install: `reportlab>=3.6.0` in `pixi.toml`
-- PDF template structure (Story 9.5):
-  - Cover page with status badge
+- Install: `jinja2>=3.1.4` in `pixi.toml`
+- HTML template structure (Story 9.5):
+  - Header with status badge
   - Executive summary (LLM-generated)
   - File information table
   - Evaluation results (issue counts by severity)
   - Issues detail list (if PASSED_WITH_ISSUES)
   - Quality assessment (LLM analysis)
   - Recommendations
+- CSS styling for professional appearance
 - Generate in `src/services/report_service.py` (abstraction for future flexibility)
 
 ---
@@ -395,7 +400,7 @@ tests/fixtures/toy_spikeglx/
 | # | Decision | Chosen Solution | Key Rationale |
 |---|----------|----------------|---------------|
 | 1 | MCP Server | Custom implementation | Simplicity for 3-agent system, full control |
-| 2 | PDF Generation | ReportLab | Pure Python, programmatic control, simple deployment |
+| 2 | HTML Report Generation | Jinja2 | Pure Python, faster MVP, browser-native viewing |
 | 3 | WebSocket | FastAPI native | Built-in, sufficient for MVP, no extra dependencies |
 | 4 | Agent Isolation | Package structure + testing | Convention over enforcement, simple and effective |
 | 5 | File Versioning | SHA256-based immutable | Integrity verification, traceability |
