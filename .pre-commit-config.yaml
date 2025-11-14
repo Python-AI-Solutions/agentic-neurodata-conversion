@@ -59,9 +59,19 @@ repos:
         additional_dependencies: ['bandit[toml]']
 
 
-  # Run fast smoke tests (critical path validation)
+  # Custom local hooks
   - repo: local
     hooks:
+      # Enforce pixi.toml as single source of truth for dependencies
+      - id: check-pyproject-deps
+        name: Check pyproject.toml has no dependencies
+        entry: python .local/check_pyproject_deps.py
+        language: system
+        pass_filenames: false
+        files: ^pyproject\.toml$
+        always_run: false
+
+      # Run fast smoke tests (critical path validation)
       - id: pytest-smoke
         name: Run smoke tests
         entry: pixi run test-smoke

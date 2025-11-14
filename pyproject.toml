@@ -1,8 +1,12 @@
-# pyproject.toml - Python Package Configuration
-# Standard PEP 518/621 compliant configuration
+# pyproject.toml - Tool Configuration & Package Metadata
+# Dependencies managed by pixi.toml - see that file for all package versions
+# This file is still needed for:
+#   1. Building/installing the local package in editable mode (via setuptools)
+#   2. CLI entry points (nwb-convert command)
+#   3. Tool configurations (pytest, ruff, mypy, coverage, etc.)
 
 [build-system]
-requires = ["setuptools>=68.0", "wheel", "setuptools-scm>=8.0"]
+requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -13,11 +17,9 @@ readme = "README.md"
 requires-python = ">=3.13"
 license = {text = "MIT"}
 authors = [
-    {name = "Aditya Patane", email = "aditya@example.com"}
+    {name = "Aditya Patane", email = "aditya@pythonaisolutions.com"}
 ]
-maintainers = [
-    {name = "Aditya Patane", email = "aditya@example.com"}
-]
+
 keywords = [
     "neuroscience",
     "nwb",
@@ -37,70 +39,16 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 
-# Core dependencies
-dependencies = [
-    "fastapi>=0.115.0",
-    "uvicorn>=0.32.0",
-    "pydantic>=2.9.0",
-    "neuroconv>=0.7.3",
-    "pynwb>=3.0.0",
-    "nwbinspector>=0.6.0",
-    "anthropic>=0.39.0",
-    "websockets>=13.1",
-    "spikeinterface>=0.101.0",
-    "python-dotenv>=1.0.0",
-    "reportlab>=4.2.5",
-    "jinja2>=3.1.4",
-    "pyyaml>=6.0.2",
-    "numpy>=2.1.3",
-    "h5py>=3.12.1",
-    "httpx>=0.27.2",
-]
-
-# Optional dependencies
-[project.optional-dependencies]
-dev = [
-    "pytest>=8.3.3",
-    "pytest-cov>=6.0.0",
-    "pytest-asyncio>=0.24.0",
-    "pytest-timeout>=2.2.0",
-    "pytest-mock>=3.12.0",
-    "pytest-xdist>=3.5.0",  # Parallel test execution
-    "hypothesis>=6.0.0",
-    "pre-commit>=4.3.0,<5",
-    "ruff>=0.14.4",
-    "mypy>=1.18.2",
-    "bandit>=1.7.6",
-    "pydocstyle>=6.3.0",
-    "ipython>=8.29.0",
-]
-
-test = [
-    "pytest>=8.3.3",
-    "pytest-cov>=6.0.0",
-    "pytest-asyncio>=0.24.0",
-    "pytest-timeout>=2.2.0",
-    "pytest-mock>=3.12.0",
-]
-
-docs = [
-    "sphinx>=7.2.0",
-    "sphinx-rtd-theme>=2.0.0",
-    "myst-parser>=2.0.0",
-]
-
-all = [
-    "agentic-neurodata-conversion[dev,test,docs]"
-]
+# NO dependencies section - all dependencies managed by pixi.toml
+# This project uses Pixi for dependency management
+# See: pixi.toml for runtime and development dependencies
 
 [project.urls]
-Homepage = "https://github.com/your-org/agentic-neurodata-conversion"
-Documentation = "https://github.com/your-org/agentic-neurodata-conversion#readme"
-Repository = "https://github.com/your-org/agentic-neurodata-conversion"
-Issues = "https://github.com/your-org/agentic-neurodata-conversion/issues"
+Homepage = "https://github.com/python-ai-solutions/agentic-neurodata-conversion"
+Repository = "https://github.com/python-ai-solutions/agentic-neurodata-conversion"
+Issues = "https://github.com/python-ai-solutions/agentic-neurodata-conversion/issues"
 
 [project.scripts]
-# CLI entry points
 nwb-convert = "agentic_neurodata_conversion.cli:main"
 
 # ============================================================================

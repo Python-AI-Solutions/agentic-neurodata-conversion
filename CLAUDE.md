@@ -2,6 +2,8 @@
 
 **Setup**: Python 3.13+ via Pixi (not pip). Copy `.env.example` → `.env`, add `ANTHROPIC_API_KEY`
 
+**Dependencies**: Single source of truth in `pixi.toml` - runtime deps in `[dependencies]`, dev/test tools in `[feature.dev.dependencies]`. `pyproject.toml` has NO dependencies (tool configs only). Never duplicate deps. Pre-commit hook enforces this.
+
 **Start**: `pixi run dev` (backend) | `cd frontend/public && python3 -m http.server 3000` (frontend)
 
 **Full Restart**: Kill processes (`lsof -ti:8000 | xargs kill`, `lsof -ti:3000 | xargs kill`) → Start backend → Start frontend

@@ -90,17 +90,22 @@ The Agentic Neurodata Conversion System is a production-ready platform that revo
 
 ### Prerequisites
 
-- **Pixi Package Manager**: [Install Pixi](https://pixi.sh/)
-- **Python 3.13+**: Managed by Pixi
+- **Pixi Package Manager**: [Install Pixi](https://pixi.sh/) (required)
+- **Python 3.13+**: Managed automatically by Pixi
 - **Anthropic API Key**: For AI features (required)
+
+> **Note**: This project uses **Pixi for all dependency management**. pip/conda install is not supported. All dependencies are defined in `pixi.toml`.
 
 ### Installation
 
 ```bash
-# Clone repository
-cd agentic-neurodata-conversion-14
+# Install Pixi if you don't have it
+curl -fsSL https://pixi.sh/install.sh | bash
 
-# Install all dependencies (Python, libraries, etc.)
+# Clone repository
+cd agentic-neurodata-conversion
+
+# Install all dependencies (Python, libraries, dev tools)
 pixi install
 
 # Set up environment variables
