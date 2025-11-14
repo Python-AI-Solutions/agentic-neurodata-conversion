@@ -2,9 +2,7 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main, try2_full_prj_adi_v2]
-  pull_request:
-    branches: [main]
+    branches: ['**']  # Run on all branch pushes
 
 # Least privilege permissions
 permissions:
