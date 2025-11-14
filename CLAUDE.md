@@ -6,7 +6,7 @@
 
 **Full Restart**: Kill processes (`lsof -ti:8000 | xargs kill`, `lsof -ti:3000 | xargs kill`) → Start backend → Start frontend
 
-**Docs**: [TESTING.md](docs/guides/TESTING.md) | [Constitution](.specify/memory/constitution.md)
+**Docs**: [Constitution](.specify/memory/constitution.md)
 
 ---
 
@@ -60,7 +60,6 @@
 - ✅ Use fixtures from [conftest.py](tests/conftest.py) (mock_llm_service, global_state, tmp_path)
 - ✅ `@pytest.mark.asyncio` for async tests | `AsyncMock` for async methods
 - ❌ NO `if __name__ == "__main__"` blocks | NO hardcoded paths | NO shared mutable state
-
 
 ### Running Services
 

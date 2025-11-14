@@ -325,7 +325,7 @@ class ValidationResult(BaseModel):
 **Usage**:
 - Evaluation Agent generates after running NWB Inspector (Story 7.2)
 - Sent to Conversation Agent via MCP for user notification (Story 8.2)
-- Used by Report Service to generate PDF/JSON reports (Stories 9.5, 9.6)
+- Used by Report Service to generate HTML/JSON reports (Stories 9.5, 9.6)
 
 ---
 

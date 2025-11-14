@@ -13,8 +13,8 @@ Build a three-agent system (Conversation, Conversion, Evaluation) that converts 
 
 **Language/Version**: Python 3.13+
 **Primary Dependencies**:
-- Backend: NeuroConv (≥0.4.0), PyNWB (≥2.6.0), NWB Inspector (≥0.4.30), FastAPI, Pydantic (≥2.0), Anthropic SDK (≥0.18.0)
-- Frontend: React 18+, TypeScript, Material-UI (≥5.0), Axios
+- Backend: NeuroConv (≥0.7.3), PyNWB (≥3.0.0), NWB Inspector (≥0.6.0), FastAPI, Pydantic (≥2.0), Anthropic SDK (≥0.18.0), Jinja2
+- Frontend: Static HTML + JavaScript (MVP implementation)
 
 **Storage**:
 - Files: Local filesystem (uploads/, outputs/, logs/)
@@ -26,7 +26,7 @@ Build a three-agent system (Conversation, Conversion, Evaluation) that converts 
 - Backend: Local server (macOS/Linux)
 - Frontend: Modern browsers (Chrome, Firefox, Safari)
 
-**Project Type**: Web application (React frontend + FastAPI backend)
+**Project Type**: Web application (Static HTML frontend + FastAPI backend)
 
 **Performance Goals**:
 - Integration tests complete in ≤10 minutes on toy datasets
@@ -82,8 +82,8 @@ Build a three-agent system (Conversation, Conversion, Evaluation) that converts 
 ### Technology Philosophy Alignment ✅
 **Status**: PASS
 **Evidence**:
-- Python 3.11+ backend with specified libraries
-- React + TypeScript frontend
+- Python 3.13+ backend with specified libraries
+- Static HTML + JavaScript frontend (MVP implementation)
 - Single session MVP (in-memory state, local files)
 - Pydantic models throughout (Appendix B)
 - Environment-based configuration (lines 1682-1688)
@@ -185,6 +185,8 @@ pyproject.toml                       # Python project config
 
 **Structure Decision**: Web application structure selected based on requirements specifying React frontend (Epic 11) + FastAPI backend (Epic 10). Backend organized by agent modules (Epic 1-9), MCP infrastructure (Epic 1), and API layer (Epic 10). Frontend organized by UI components (Epic 11). Testing split by scope (unit, integration, fixtures).
 
+**Implementation Note**: The directory structure above shows the originally planned React architecture. In the actual MVP implementation, the frontend was simplified to static HTML (`frontend/public/chat-ui.html`) for faster delivery. The backend structure remains as planned.
+
 ## Complexity Tracking
 
 *No constitution violations detected. This section intentionally left empty.*
@@ -200,10 +202,10 @@ Based on requirements.md analysis, the following technical decisions require res
    - Research: Anthropic MCP SDK vs custom implementation
    - Rationale: Requirements specify JSON-RPC 2.0, but implementation approach undefined
 
-2. **PDF Report Generation Library**
-   - Decision needed: ReportLab vs Quarto (line 1719 mentions both)
-   - Research: Best practices for scientific PDF reports in Python
-   - Rationale: Requirements recommend Quarto to avoid vendor lock-in
+2. **HTML Report Generation Library** ✅ RESOLVED
+   - Decision: Use Jinja2 for HTML templating
+   - Rationale: Simpler implementation for MVP, no PDF dependencies, browser-native viewing
+   - Implementation: HTML reports with CSS styling via ReportService
 
 3. **WebSocket Integration with FastAPI**
    - Decision needed: FastAPI native WebSocket vs external library?
