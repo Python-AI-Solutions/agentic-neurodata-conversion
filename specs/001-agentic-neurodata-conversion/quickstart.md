@@ -22,7 +22,7 @@
 ## System Requirements
 
 ### Required Software
-- **Python**: 3.11 or higher
+- **Python**: 3.13 or higher
 - **Node.js**: 18+ (for React frontend)
 - **Pixi**: Python environment manager ([install](https://pixi.sh))
 - **Git**: For version control

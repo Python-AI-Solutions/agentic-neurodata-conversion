@@ -11,7 +11,7 @@ Build a three-agent system (Conversation, Conversion, Evaluation) that converts 
 
 ## Technical Context
 
-**Language/Version**: Python 3.11+
+**Language/Version**: Python 3.13+
 **Primary Dependencies**:
 - Backend: NeuroConv (≥0.4.0), PyNWB (≥2.6.0), NWB Inspector (≥0.4.30), FastAPI, Pydantic (≥2.0), Anthropic SDK (≥0.18.0)
 - Frontend: React 18+, TypeScript, Material-UI (≥5.0), Axios
