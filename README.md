@@ -30,16 +30,16 @@ The Agentic Neurodata Conversion System is a production-ready platform that revo
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                   FastAPI Backend Server                     │
+│                  FastAPI Backend Server                     │
 │  WebSocket + REST API + Session Management                  │
 └───────────────────────┬─────────────────────────────────────┘
                         │
 ┌───────────────────────▼─────────────────────────────────────┐
-│              MCP Server (Message Bus)                        │
+│             MCP Server (Message Bus)                        │
 │  Agent registration • Message routing • State management    │
 └─────┬───────────────┬───────────────┬───────────────────────┘
       │               │               │
-┌─────▼─────┐  ┌──────▼──────┐  ┌────▼──────┐
+┌─────▼──────┐  ┌─────▼───────┐  ┌────▼──────┐
 │Conversation│  │ Conversion  │  │Evaluation │
 │   Agent    │  │   Agent     │  │  Agent    │
 └────────────┘  └─────────────┘  └───────────┘
@@ -175,6 +175,7 @@ run python file inside scripts/startup/start_app.py
    - All DANDI-ready
 
 ### API Usage
+
 
 **Upload File:**
 
