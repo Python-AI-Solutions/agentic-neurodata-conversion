@@ -202,7 +202,7 @@ def start_backend() -> subprocess.Popen | None:
         print_info("Starting backend with pixi run dev...")
 
         # Open log file for output
-        log_file = open("/tmp/backend.log", "w")  # nosec B108 - temporary log file for dev tool
+        log_file = open("/tmp/backend.log", "w")  # nosec B108 - temporary log file for dev tool  # noqa: SIM115
 
         process = subprocess.Popen(  # nosec B607, B602 - safe: pixi command is hardcoded, no user input
             "pixi run dev",
@@ -250,7 +250,7 @@ def start_frontend() -> subprocess.Popen | None:
         print_info("Starting frontend HTTP server...")
 
         # Open log file for output
-        log_file = open("/tmp/frontend.log", "w")  # nosec B108 - temporary log file for dev tool
+        log_file = open("/tmp/frontend.log", "w")  # nosec B108 - temporary log file for dev tool  # noqa: SIM115
 
         # Change to frontend/public directory and start server
         process = subprocess.Popen(  # nosec B607, B602 - safe: python3 command and port are hardcoded, no user input
