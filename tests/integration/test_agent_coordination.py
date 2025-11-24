@@ -7,8 +7,6 @@ Addresses Critical Gap: No tests validate multi-agent workflows.
 This ensures agents communicate properly via MCP without direct imports.
 """
 
-from unittest.mock import AsyncMock, patch
-
 import pytest
 
 from agentic_neurodata_conversion.agents.conversation_agent import ConversationAgent
@@ -113,21 +111,16 @@ class TestConversionToEvaluationFlow:
 
         global_state.output_path = str(nwb_file)
 
-        # Mock conversion to succeed
-        conversion_agent = mcp_server_with_agents.agents["conversion"]
-        with patch.object(conversion_agent, "_run_neuroconv_conversion", new_callable=AsyncMock) as mock_conv:
-            mock_conv.return_value = None  # Simulates successful conversion
+        # Trigger validation
+        message = MCPMessage(
+            target_agent="evaluation", action="run_validation", context={"nwb_file_path": str(nwb_file)}
+        )
 
-            # Trigger validation
-            message = MCPMessage(
-                target_agent="evaluation", action="run_validation", context={"nwb_file_path": str(nwb_file)}
-            )
-
-            # In real workflow, conversion would trigger this
-            # Here we verify the message format is correct
-            assert message.target_agent == "evaluation"
-            assert message.action == "run_validation"
-            assert message.context["nwb_file_path"] == str(nwb_file)
+        # In real workflow, conversion would trigger this
+        # Here we verify the message format is correct
+        assert message.target_agent == "evaluation"
+        assert message.action == "run_validation"
+        assert message.context["nwb_file_path"] == str(nwb_file)
 
     @pytest.mark.asyncio
     async def test_validation_results_sent_to_conversation(self, mcp_server_with_agents, global_state):

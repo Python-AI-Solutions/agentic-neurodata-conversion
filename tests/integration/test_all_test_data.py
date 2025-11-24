@@ -132,7 +132,7 @@ class TestAllRawDataFormats:
         assert lf_meta.exists(), "LF band meta file missing"
 
         # Verify format detection
-        assert self.agent._is_spikeglx(test_dir), "Should detect as SpikeGLX"
+        assert self.agent._format_detector._is_spikeglx(test_dir), "Should detect as SpikeGLX"
 
         # Verify file sizes
         print(f"  AP band: {ap_bin.stat().st_size / 1024 / 1024:.1f} MB")
@@ -153,7 +153,7 @@ class TestAllRawDataFormats:
         assert lf_meta.exists(), "LF band meta file missing"
 
         # Verify format detection
-        assert self.agent._is_spikeglx(test_dir), "Should detect as SpikeGLX"
+        assert self.agent._format_detector._is_spikeglx(test_dir), "Should detect as SpikeGLX"
 
         # This is real hardware-recorded data
         print(f"  Real SpikeGLX sample: {lf_bin.stat().st_size / 1024 / 1024:.1f} MB")
@@ -178,7 +178,7 @@ class TestAllRawDataFormats:
         assert len(nidq_bin) > 0, "Should have NIDQ sync files"
 
         # Verify format detection
-        assert self.agent._is_neuropixels(test_dir), "Should detect as Neuropixels"
+        assert self.agent._format_detector._is_neuropixels(test_dir), "Should detect as Neuropixels"
 
         print(f"  IMEC files: {len(imec_bin)}")
         print(f"  NIDQ files: {len(nidq_bin)}")
@@ -195,7 +195,7 @@ class TestAllRawDataFormats:
         assert oebin_file.exists(), "structure.oebin file missing"
 
         # Verify format detection
-        assert self.agent._is_openephys(test_dir), "Should detect as OpenEphys"
+        assert self.agent._format_detector._is_openephys(test_dir), "Should detect as OpenEphys"
 
         # Verify JSON structure
         import json
@@ -219,7 +219,7 @@ class TestAllRawDataFormats:
         assert settings_file.exists(), "settings.xml file missing"
 
         # Verify format detection
-        assert self.agent._is_openephys(test_dir), "Should detect as OpenEphys"
+        assert self.agent._format_detector._is_openephys(test_dir), "Should detect as OpenEphys"
 
         # Verify XML structure
         import xml.etree.ElementTree as ET
