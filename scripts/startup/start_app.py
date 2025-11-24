@@ -201,10 +201,13 @@ def start_backend() -> subprocess.Popen | None:
         # Start backend with pixi
         print_info("Starting backend with pixi run dev...")
 
+        # Open log file for output
+        log_file = open("/tmp/backend.log", "w")  # nosec B108 - temporary log file for dev tool
+
         process = subprocess.Popen(  # nosec B607, B602 - safe: pixi command is hardcoded, no user input
             "pixi run dev",
             shell=True,  # Required for pixi subprocess management
-            stdout=subprocess.PIPE,
+            stdout=log_file,
             stderr=subprocess.STDOUT,
             text=True,
             preexec_fn=os.setsid,  # Create new process group
@@ -222,6 +225,7 @@ def start_backend() -> subprocess.Popen | None:
             return process
         else:
             print_error("Backend server failed to start (health check failed)")
+            log_file.close()
             return None
 
     except Exception as e:
@@ -245,11 +249,14 @@ def start_frontend() -> subprocess.Popen | None:
 
         print_info("Starting frontend HTTP server...")
 
+        # Open log file for output
+        log_file = open("/tmp/frontend.log", "w")  # nosec B108 - temporary log file for dev tool
+
         # Change to frontend/public directory and start server
         process = subprocess.Popen(  # nosec B607, B602 - safe: python3 command and port are hardcoded, no user input
             "cd frontend/public && python3 -m http.server 3000",
             shell=True,  # Required for module execution and cd command
-            stdout=subprocess.PIPE,
+            stdout=log_file,
             stderr=subprocess.STDOUT,
             text=True,
             preexec_fn=os.setsid,  # Create new process group
@@ -264,6 +271,7 @@ def start_frontend() -> subprocess.Popen | None:
             return process
         else:
             print_error("Frontend server failed to start")
+            log_file.close()
             return None
 
     except Exception as e:
