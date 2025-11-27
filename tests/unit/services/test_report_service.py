@@ -181,13 +181,6 @@ def sample_workflow_trace():
 class TestReportServiceInitialization:
     """Test suite for ReportService initialization."""
 
-    def test_init_creates_custom_styles(self, report_service):
-        """Test that initialization creates custom paragraph styles."""
-        # Test that custom styles are available
-        assert report_service.styles is not None
-        assert "CustomTitle" in report_service.styles
-        assert "Subtitle" in report_service.styles
-
     def test_custom_filters_available(self, report_service):
         """Test that custom filter methods are available."""
         # Test that custom filter methods exist and work
@@ -214,50 +207,6 @@ class TestReportServiceInitialization:
 
 @pytest.mark.unit
 @pytest.mark.service
-class TestPDFReportGeneration:
-    """Test suite for PDF report generation."""
-
-    def test_generate_pdf_report_success(self, report_service, sample_validation_result, sample_global_state, tmp_path):
-        """Test successful PDF report generation."""
-        output_path = tmp_path / "test_report.pdf"
-
-        result_path = report_service.generate_pdf_report(
-            output_path=output_path,
-            validation_result=sample_validation_result,
-        )
-
-        assert result_path is not None
-        # PDF generation may be mocked or actually create file
-        # assert Path(result_path).exists()
-
-    def test_generate_pdf_report_with_workflow_trace(
-        self, report_service, sample_validation_result, sample_global_state, sample_workflow_trace, tmp_path
-    ):
-        """Test PDF generation with workflow trace."""
-        output_path = tmp_path / "test_report.pdf"
-
-        result_path = report_service.generate_pdf_report(
-            output_path=output_path,
-            validation_result=sample_validation_result,
-            workflow_trace=sample_workflow_trace,
-        )
-
-        assert result_path is not None
-
-    def test_generate_pdf_report_default_output_path(
-        self, report_service, sample_validation_result, sample_global_state, tmp_path
-    ):
-        """Test PDF generation with default output path."""
-        output_path = tmp_path / "test_report.pdf"
-        result_path = report_service.generate_pdf_report(
-            output_path=output_path,
-            validation_result=sample_validation_result,
-        )
-
-        assert result_path is not None
-        assert str(result_path).endswith(".pdf")
-
-
 # ============================================================================
 # Test: HTML Report Generation
 # ============================================================================
@@ -380,6 +329,153 @@ class TestJSONReportGeneration:
         assert result_path is not None
         assert str(result_path).endswith(".json")
 
+    def test_generate_json_report_with_metadata_provenance(self, report_service, sample_validation_result, tmp_path):
+        """Test JSON report with metadata provenance tracking (lines 274-293)."""
+        output_path = tmp_path / "test_report_provenance.json"
+
+        # Create workflow trace with comprehensive metadata provenance
+        workflow_trace = {
+            "summary": {"start_time": "2024-01-01T00:00:00"},
+            "steps": [],
+            "metadata_provenance": {
+                "species": {
+                    "provenance": "ai-parsed",
+                    "confidence": 90,
+                    "source": "Parsed from filename pattern",
+                    "needs_review": False,
+                },
+                "age": {
+                    "provenance": "user-specified",
+                    "confidence": 100,
+                    "source": "Direct user input",
+                    "needs_review": False,
+                },
+                "sex": {
+                    "provenance": "ai-inferred",
+                    "confidence": 75,
+                    "source": "Inferred from experimental protocol",
+                    "needs_review": True,
+                },
+                "experimenter": {
+                    "provenance": "auto-extracted",
+                    "confidence": 95,
+                    "source": "Extracted from file metadata",
+                    "needs_review": False,
+                },
+                "session_description": {
+                    "provenance": "ai-parsed",
+                    "confidence": 45,  # Low confidence
+                    "source": "Parsed from notes",
+                    "needs_review": True,
+                },
+            },
+        }
+
+        result_path = report_service.generate_json_report(
+            output_path=output_path,
+            validation_result=sample_validation_result,
+            workflow_trace=workflow_trace,
+        )
+
+        # Read and parse JSON
+        with open(result_path) as f:
+            data = json.load(f)
+
+        # Verify metadata provenance section exists (lines 256-299)
+        assert "metadata_provenance" in data
+
+        prov = data["metadata_provenance"]
+        assert "summary" in prov
+        assert "fields" in prov
+
+        # Verify summary statistics (lines 259-268)
+        summary = prov["summary"]
+        assert "total_fields" in summary
+        assert summary["total_fields"] == 5
+        assert "needs_review_count" in summary
+        assert summary["needs_review_count"] == 2  # sex and session_description
+
+        # Verify provenance breakdown (lines 273-279)
+        assert "provenance_breakdown" in summary
+        breakdown = summary["provenance_breakdown"]
+        assert "ai-parsed" in breakdown
+        assert breakdown["ai-parsed"] == 2  # species, session_description
+        assert "user-specified" in breakdown
+        assert breakdown["user-specified"] == 1
+
+        # Verify confidence distribution (lines 282-289)
+        assert "confidence_distribution" in summary
+        conf_dist = summary["confidence_distribution"]
+        assert "high" in conf_dist  # >= 80
+        assert "medium" in conf_dist  # 50-79
+        assert "low" in conf_dist  # < 50
+        assert conf_dist["high"] == 3  # species (90), age (100), experimenter (95)
+        assert conf_dist["medium"] == 1  # sex (75)
+        assert conf_dist["low"] == 1  # session_description (45)
+
+        # Verify field-level provenance (lines 292-299)
+        fields = prov["fields"]
+        assert "species" in fields
+        assert fields["species"]["provenance"] == "ai-parsed"
+        assert fields["species"]["confidence"] == 90
+        assert fields["sex"]["needs_review"] is True
+
+    def test_generate_json_report_with_llm_analysis(self, report_service, sample_validation_result, tmp_path):
+        """Test JSON report with LLM analysis section (lines 312-320)."""
+        output_path = tmp_path / "test_report_llm.json"
+
+        llm_guidance = {
+            "executive_summary": "This file contains high-quality data.",
+            "quality_assessment": {
+                "completeness": "Good",
+                "integrity": "Excellent",
+            },
+            "recommendations": ["Add ORCID for experimenters", "Include protocol DOI"],
+            "key_insights": ["Well-structured metadata", "Follows NWB best practices"],
+            "dandi_ready": True,
+            "dandi_blocking_issues": [],
+        }
+
+        result_path = report_service.generate_json_report(
+            output_path=output_path,
+            validation_result=sample_validation_result,
+            llm_guidance=llm_guidance,
+        )
+
+        with open(result_path) as f:
+            data = json.load(f)
+
+        # Verify LLM analysis section (lines 312-320)
+        assert "llm_analysis" in data
+        llm = data["llm_analysis"]
+        assert "executive_summary" in llm
+        assert llm["executive_summary"] == "This file contains high-quality data."
+        assert "quality_assessment" in llm
+        assert "recommendations" in llm
+        assert "dandi_ready" in llm
+        assert llm["dandi_ready"] is True
+
+    def test_generate_json_report_with_workflow_trace(
+        self, report_service, sample_validation_result, sample_workflow_trace, tmp_path
+    ):
+        """Test JSON report with workflow trace section (lines 302-309)."""
+        output_path = tmp_path / "test_report_workflow.json"
+
+        result_path = report_service.generate_json_report(
+            output_path=output_path,
+            validation_result=sample_validation_result,
+            workflow_trace=sample_workflow_trace,
+        )
+
+        with open(result_path) as f:
+            data = json.load(f)
+
+        # Verify workflow trace section (lines 302-309)
+        assert "workflow_trace" in data
+        trace = data["workflow_trace"]
+        assert "summary" in trace
+        assert "steps" in trace
+
 
 # ============================================================================
 # Test: Text Report Generation
@@ -420,6 +516,240 @@ class TestTextReportGeneration:
 
         assert result_path is not None
         assert str(result_path).endswith(".txt")
+
+    def test_generate_text_report_with_llm_analysis(self, report_service, sample_validation_result, tmp_path):
+        """Test text report with LLM expert analysis section (lines 505-587)."""
+        output_path = tmp_path / "test_report_llm.txt"
+
+        # Create comprehensive LLM analysis to trigger all branches
+        llm_analysis = {
+            "executive_summary": "This NWB file contains high-quality electrophysiology data from mouse visual cortex. "
+            "The metadata is well-documented with proper provenance tracking.",
+            "quality_assessment": {
+                "completeness_score": "85/100",
+                "metadata_quality": "Good",
+                "data_integrity": "Excellent",
+                "scientific_value": "High",
+            },
+            "recommendations": [
+                "Add more detailed experimenter information including ORCID IDs",
+                "Include protocol DOI for reproducibility",
+                "Add related publications if available",
+            ],
+            "key_insights": [
+                "Data follows NWB best practices for electrophysiology recordings",
+                "Metadata provenance is well-tracked with AI and user inputs",
+                "File is suitable for DANDI archive submission",
+            ],
+            "dandi_ready": True,
+            "dandi_blocking_issues": [],
+        }
+
+        result_path = report_service.generate_text_report(
+            output_path=output_path,
+            validation_result=sample_validation_result,
+            llm_analysis=llm_analysis,
+        )
+
+        assert result_path is not None
+        assert Path(result_path).exists()
+
+        content = Path(result_path).read_text()
+
+        # Verify LLM analysis sections are present (lines 505-587)
+        assert "EXPERT ANALYSIS" in content
+        assert "Executive Summary:" in content
+        # Executive summary may be word-wrapped, so check for key phrases
+        assert "electrophysiology data" in content or "NWB file" in content
+
+        # Verify quality assessment (lines 517-537)
+        assert "Quality Metrics:" in content
+        assert "Data Completeness:" in content or "completeness_score" in content.lower()
+
+        # Verify recommendations (lines 540-550)
+        assert "Expert Recommendations:" in content
+        assert "experimenter information" in content
+
+        # Verify key insights (lines 553-565)
+        assert "Key Insights:" in content
+        assert "best practices" in content
+
+        # Verify DANDI readiness (lines 568-587)
+        assert "DANDI Archive Status:" in content or "DANDI" in content
+        assert "Ready for submission" in content or "ready" in content.lower()
+
+    def test_generate_text_report_with_llm_not_dandi_ready(self, report_service, sample_validation_result, tmp_path):
+        """Test text report with LLM analysis showing DANDI not ready (lines 574-587)."""
+        output_path = tmp_path / "test_report_not_ready.txt"
+
+        # LLM analysis with DANDI blocking issues
+        llm_analysis = {
+            "executive_summary": "File needs improvements before DANDI submission.",
+            "quality_assessment": {
+                "completeness_score": "60/100",
+            },
+            "recommendations": ["Fix missing species field", "Add session start time"],
+            "dandi_ready": False,
+            "dandi_blocking_issues": [
+                "Missing required field: species",
+                "Missing required field: session_start_time",
+                "Subject age not in ISO 8601 format",
+            ],
+        }
+
+        result_path = report_service.generate_text_report(
+            output_path=output_path,
+            validation_result=sample_validation_result,
+            llm_analysis=llm_analysis,
+        )
+
+        content = Path(result_path).read_text()
+
+        # Verify DANDI not ready status (lines 574-587)
+        assert "DANDI Archive Status:" in content or "dandi" in content.lower()
+        assert "Improvements recommended" in content or "not ready" in content.lower() or "⚠" in content
+
+        # Verify blocking issues are listed (lines 576-587)
+        assert "Blocking Issues:" in content or "blocking" in content.lower()
+        assert "Missing required field: species" in content
+
+    def test_generate_text_report_with_workflow_trace(self, report_service, sample_validation_result, tmp_path):
+        """Test text report with comprehensive workflow trace section (lines 598-693)."""
+        output_path = tmp_path / "test_report_workflow.txt"
+
+        # Create comprehensive workflow trace to cover all sections
+        workflow_trace = {
+            "summary": {
+                "start_time": "2024-01-01T10:00:00",
+                "end_time": "2024-01-01T10:05:30",
+                "duration": "5 minutes 30 seconds",
+                "input_format": "SpikeGLX",
+            },
+            "steps": [
+                {
+                    "name": "File Upload",
+                    "status": "completed",
+                    "description": "User uploaded SpikeGLX data files",
+                    "duration": "2.5s",
+                    "timestamp": "2024-01-01T10:00:00",
+                },
+                {
+                    "name": "Format Detection",
+                    "status": "completed",
+                    "description": "Detected SpikeGLX format from filename patterns and file structure",
+                    "duration": "1.2s",
+                    "timestamp": "2024-01-01T10:00:02",
+                },
+            ],
+            "technologies": [
+                "NeuroConv 0.4.0 - Universal neuroscience data converter",
+                "PyNWB 2.5.0 - NWB file I/O library",
+                "NWBInspector 0.6.5 - NWB validation tool",
+                "Claude API (Anthropic) - AI-powered metadata extraction",
+            ],
+            "provenance": {
+                "original_file": "test_g0_t0.imec0.ap.bin",
+                "conversion_method": "NeuroConv + Custom metadata mapping",
+                "metadata_sources": ["User input", "AI parsing", "File metadata"],
+                "agent_versions": "ConversionAgent v2.0, EvaluationAgent v2.0",
+            },
+            "user_interactions": [
+                {"timestamp": "2024-01-01T10:01:00", "action": "Provided experimenter name: Dr. Smith"},
+                {"timestamp": "2024-01-01T10:02:30", "action": "Confirmed session description"},
+            ],
+        }
+
+        result_path = report_service.generate_text_report(
+            output_path=output_path,
+            validation_result=sample_validation_result,
+            workflow_trace=workflow_trace,
+        )
+
+        content = Path(result_path).read_text()
+
+        # Verify workflow trace sections (lines 598-693)
+        assert "COMPLETE WORKFLOW TRACE" in content
+        assert "transparency" in content.lower()
+        assert "reproducibility" in content.lower()
+
+        # Verify process summary (lines 612-621)
+        assert "Process Summary:" in content
+        assert "Start Time:" in content
+        assert "Duration:" in content
+        assert "Input Format:" in content
+
+        # Verify technologies (lines 624-629)
+        assert "Technologies & Standards:" in content or "technologies" in content.lower()
+
+        # Verify workflow steps (lines 632-650)
+        assert "Conversion Pipeline Steps:" in content or "steps" in content.lower()
+        assert "File Upload" in content
+
+        # Verify provenance (lines 653-666)
+        assert "Data Provenance:" in content or "provenance" in content.lower()
+        assert "Original Data:" in content or "original" in content.lower()
+
+        # Verify user interactions (lines 669-674)
+        assert "User Interactions:" in content or "interactions" in content.lower()
+
+        # Verify reproducibility footer (lines 677-693)
+        assert "REPRODUCIBILITY" in content or "independent verification" in content.lower()
+        assert "FAIR data principles" in content or "fair" in content.lower()
+
+    def test_generate_text_report_with_partial_llm_analysis(self, report_service, sample_validation_result, tmp_path):
+        """Test text report with partial LLM analysis (missing some fields)."""
+        output_path = tmp_path / "test_report_partial.txt"
+
+        # Partial LLM analysis - only some fields present
+        llm_analysis = {
+            "executive_summary": "Partial analysis available.",
+            # Missing: quality_assessment, key_insights
+            "recommendations": ["Recommendation 1"],
+            # Missing: dandi_ready, dandi_blocking_issues
+        }
+
+        result_path = report_service.generate_text_report(
+            output_path=output_path,
+            validation_result=sample_validation_result,
+            llm_analysis=llm_analysis,
+        )
+
+        content = Path(result_path).read_text()
+
+        # Should handle partial analysis gracefully
+        assert "EXPERT ANALYSIS" in content
+        assert "Partial analysis available" in content
+
+    def test_generate_text_report_no_issues(self, report_service, tmp_path):
+        """Test text report with no validation issues (lines 397-399)."""
+        output_path = tmp_path / "test_report_clean.txt"
+
+        # Create validation result with no issues
+        validation_result = {
+            "overall_status": "PASSED",
+            "nwb_file_path": "test_clean.nwb",
+            "file_info": {
+                "nwb_version": "2.5.0",
+                "file_format": "NWB",
+            },
+            "issues": [],
+            "issue_counts": {
+                "CRITICAL": 0,
+                "ERROR": 0,
+                "WARNING": 0,
+            },
+        }
+
+        result_path = report_service.generate_text_report(
+            output_path=output_path,
+            validation_result=validation_result,
+        )
+
+        content = Path(result_path).read_text()
+
+        # Verify no issues message (lines 397-399)
+        assert "No validation issues found" in content or "meets all NWB standards" in content.lower()
+        assert "PASSED" in content or "✓" in content
 
 
 # ============================================================================

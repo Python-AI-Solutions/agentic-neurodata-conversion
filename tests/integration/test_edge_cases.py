@@ -28,8 +28,7 @@ def patch_llm_service(mock_llm_conversational):
     with patch(
         "agentic_neurodata_conversion.services.llm_service.create_llm_service", return_value=mock_llm_conversational
     ):
-        with patch("agentic_neurodata_conversion.api.main.create_llm_service", return_value=mock_llm_conversational):
-            yield
+        yield
 
 
 @pytest.mark.integration
@@ -39,7 +38,7 @@ class TestSystemBusyScenarios:
 
     def test_upload_while_system_busy(self, api_test_client):
         """Test upload attempt while system is processing."""
-        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.routers.conversion.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.status = ConversionStatus.CONVERTING  # Busy
@@ -63,7 +62,7 @@ class TestSystemBusyScenarios:
     def test_multiple_concurrent_uploads(self, api_test_client):
         """Test that multiple simultaneous uploads are prevented."""
         # First upload starts processing
-        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.routers.conversion.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.status = ConversionStatus.CONVERTING
@@ -173,7 +172,7 @@ class TestMissingLLMService:
 
     def test_smart_chat_without_llm(self, api_test_client):
         """Test smart chat when LLM service is unavailable."""
-        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.dependencies.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_server.global_state = GlobalState()
             # No LLM service
@@ -241,7 +240,7 @@ class TestStateTransitions:
 
     def test_retry_approval_when_not_awaiting(self, api_test_client):
         """Test retry approval when system is not awaiting approval."""
-        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.dependencies.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.status = ConversionStatus.IDLE  # Not awaiting
@@ -256,7 +255,7 @@ class TestStateTransitions:
 
     def test_user_input_when_not_requested(self, api_test_client):
         """Test user input submission when not requested."""
-        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.dependencies.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.status = ConversionStatus.IDLE  # Not awaiting input
@@ -326,7 +325,7 @@ class TestRaceConditions:
 
     def test_concurrent_status_checks(self, api_test_client):
         """Test concurrent status endpoint requests."""
-        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.dependencies.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_server.global_state = mock_state

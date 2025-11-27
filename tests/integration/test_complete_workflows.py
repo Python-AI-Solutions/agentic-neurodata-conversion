@@ -22,8 +22,8 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend", "src"))
 
 from agentic_neurodata_conversion.agents.evaluation_agent import EvaluationAgent
-from agentic_neurodata_conversion.agents.intelligent_format_detector import IntelligentFormatDetector
-from agentic_neurodata_conversion.agents.intelligent_metadata_mapper import IntelligentMetadataMapper
+from agentic_neurodata_conversion.agents.metadata.intelligent_mapper import IntelligentMetadataMapper
+from agentic_neurodata_conversion.agents.utils.format_detector import IntelligentFormatDetector
 from agentic_neurodata_conversion.models import (
     ConversionStatus,
     GlobalState,

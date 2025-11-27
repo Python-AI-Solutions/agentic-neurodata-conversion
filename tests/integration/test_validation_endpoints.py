@@ -26,8 +26,7 @@ def patch_llm_service(mock_llm_quality_assessor):
     with patch(
         "agentic_neurodata_conversion.services.llm_service.create_llm_service", return_value=mock_llm_quality_assessor
     ):
-        with patch("agentic_neurodata_conversion.api.main.create_llm_service", return_value=mock_llm_quality_assessor):
-            yield
+        yield
 
 
 @pytest.mark.integration
@@ -47,7 +46,7 @@ class TestValidationEndpoint:
 
     def test_validation_endpoint_with_passed_result(self, api_test_client):
         """Test validation endpoint with PASSED validation."""
-        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.dependencies.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.status = ConversionStatus.COMPLETED
@@ -67,7 +66,7 @@ class TestValidationEndpoint:
 
     def test_validation_endpoint_with_passed_with_issues(self, api_test_client):
         """Test validation endpoint with PASSED_WITH_ISSUES result."""
-        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.dependencies.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.status = ConversionStatus.AWAITING_RETRY_APPROVAL
@@ -85,7 +84,7 @@ class TestValidationEndpoint:
 
     def test_validation_endpoint_with_failed_result(self, api_test_client):
         """Test validation endpoint with FAILED validation."""
-        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.dependencies.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.status = ConversionStatus.AWAITING_RETRY_APPROVAL
@@ -103,7 +102,7 @@ class TestValidationEndpoint:
 
     def test_validation_endpoint_includes_issue_details(self, api_test_client):
         """Test that validation endpoint includes detailed issue information."""
-        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.dependencies.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.status = ConversionStatus.COMPLETED
@@ -135,7 +134,7 @@ class TestCorrectionContextEndpoint:
 
     def test_correction_context_for_failed_validation(self, api_test_client):
         """Test correction context with FAILED validation."""
-        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.dependencies.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.status = ConversionStatus.AWAITING_RETRY_APPROVAL
@@ -153,7 +152,7 @@ class TestCorrectionContextEndpoint:
 
     def test_correction_context_includes_auto_fixable_issues(self, api_test_client):
         """Test that correction context identifies auto-fixable issues."""
-        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.dependencies.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.status = ConversionStatus.AWAITING_RETRY_APPROVAL
@@ -170,7 +169,7 @@ class TestCorrectionContextEndpoint:
 
     def test_correction_context_includes_user_input_required(self, api_test_client):
         """Test that correction context identifies issues needing user input."""
-        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.dependencies.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.status = ConversionStatus.AWAITING_USER_INPUT
@@ -187,7 +186,7 @@ class TestCorrectionContextEndpoint:
 
     def test_correction_context_for_multiple_retry_attempts(self, api_test_client):
         """Test correction context after multiple retry attempts."""
-        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.dependencies.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.status = ConversionStatus.AWAITING_RETRY_APPROVAL
@@ -211,7 +210,7 @@ class TestValidationAndCorrectionIntegration:
 
     def test_validation_and_correction_context_consistency(self, api_test_client):
         """Test that validation and correction context endpoints are consistent."""
-        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.dependencies.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.status = ConversionStatus.AWAITING_RETRY_APPROVAL
@@ -247,7 +246,7 @@ class TestEndpointsWithAllValidationStatuses:
     )
     def test_validation_endpoint_all_statuses(self, api_test_client, validation_status, overall_status):
         """Test validation endpoint with all possible validation statuses."""
-        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.dependencies.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.validation_status = validation_status
@@ -269,7 +268,7 @@ class TestEndpointsErrorHandling:
 
     def test_validation_endpoint_during_conversion(self, api_test_client):
         """Test validation endpoint while conversion is in progress."""
-        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.dependencies.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.status = ConversionStatus.CONVERTING
@@ -285,7 +284,7 @@ class TestEndpointsErrorHandling:
 
     def test_correction_context_during_conversion(self, api_test_client):
         """Test correction context endpoint while conversion is in progress."""
-        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.dependencies.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.status = ConversionStatus.CONVERTING
@@ -305,7 +304,7 @@ class TestConcurrentRequests:
 
     def test_multiple_concurrent_validation_requests(self, api_test_client):
         """Test multiple concurrent validation endpoint requests."""
-        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.dependencies.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.status = ConversionStatus.COMPLETED
@@ -327,7 +326,7 @@ class TestConcurrentRequests:
 
     def test_mixed_concurrent_requests(self, api_test_client):
         """Test concurrent requests to different endpoints."""
-        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.dependencies.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.status = ConversionStatus.AWAITING_RETRY_APPROVAL
