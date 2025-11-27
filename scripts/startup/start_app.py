@@ -82,6 +82,41 @@ def kill_process_on_port(port: int) -> bool:
         return False
 
 
+def clean_temp_directories() -> None:
+    """Clean temporary upload and conversion directories."""
+    import shutil
+    import tempfile
+
+    temp_dir = tempfile.gettempdir()
+    upload_dir = Path(temp_dir) / "nwb_uploads"
+    conversion_dir = Path(temp_dir) / "nwb_conversions"
+
+    cleaned = False
+
+    # Clean upload directory
+    if upload_dir.exists():
+        try:
+            shutil.rmtree(upload_dir)
+            upload_dir.mkdir(parents=True, exist_ok=True)
+            print_success(f"Cleaned upload directory: {upload_dir}")
+            cleaned = True
+        except Exception as e:
+            print_warning(f"Could not clean upload directory: {e}")
+
+    # Clean conversion directory
+    if conversion_dir.exists():
+        try:
+            shutil.rmtree(conversion_dir)
+            conversion_dir.mkdir(parents=True, exist_ok=True)
+            print_success(f"Cleaned conversion directory: {conversion_dir}")
+            cleaned = True
+        except Exception as e:
+            print_warning(f"Could not clean conversion directory: {e}")
+
+    if not cleaned:
+        print_info("No temp directories to clean")
+
+
 def check_env_file() -> bool:
     """Check if .env file exists and has API key configured."""
     env_path = Path(".env")
@@ -166,10 +201,13 @@ def start_backend() -> subprocess.Popen | None:
         # Start backend with pixi
         print_info("Starting backend with pixi run dev...")
 
+        # Open log file for output
+        log_file = open("/tmp/backend.log", "w")  # nosec B108 - temporary log file for dev tool  # noqa: SIM115
+
         process = subprocess.Popen(  # nosec B607, B602 - safe: pixi command is hardcoded, no user input
             "pixi run dev",
             shell=True,  # Required for pixi subprocess management
-            stdout=subprocess.PIPE,
+            stdout=log_file,
             stderr=subprocess.STDOUT,
             text=True,
             preexec_fn=os.setsid,  # Create new process group
@@ -187,6 +225,7 @@ def start_backend() -> subprocess.Popen | None:
             return process
         else:
             print_error("Backend server failed to start (health check failed)")
+            log_file.close()
             return None
 
     except Exception as e:
@@ -210,11 +249,14 @@ def start_frontend() -> subprocess.Popen | None:
 
         print_info("Starting frontend HTTP server...")
 
+        # Open log file for output
+        log_file = open("/tmp/frontend.log", "w")  # nosec B108 - temporary log file for dev tool  # noqa: SIM115
+
         # Change to frontend/public directory and start server
         process = subprocess.Popen(  # nosec B607, B602 - safe: python3 command and port are hardcoded, no user input
             "cd frontend/public && python3 -m http.server 3000",
             shell=True,  # Required for module execution and cd command
-            stdout=subprocess.PIPE,
+            stdout=log_file,
             stderr=subprocess.STDOUT,
             text=True,
             preexec_fn=os.setsid,  # Create new process group
@@ -229,6 +271,7 @@ def start_frontend() -> subprocess.Popen | None:
             return process
         else:
             print_error("Frontend server failed to start")
+            log_file.close()
             return None
 
     except Exception as e:
@@ -270,9 +313,10 @@ def main() -> None:
     print(f"{Colors.BOLD}This script will:{Colors.END}")
     print("  1. Configure your environment (.env file)")
     print("  2. Clean up old processes")
-    print("  3. Start backend server (FastAPI + Uvicorn)")
-    print("  4. Start frontend server (HTTP server)")
-    print("  5. Display application URLs")
+    print("  3. Clean temporary directories")
+    print("  4. Start backend server (FastAPI + Uvicorn)")
+    print("  5. Start frontend server (HTTP server)")
+    print("  6. Display application URLs")
     print()
 
     backend_process = None
@@ -294,18 +338,23 @@ def main() -> None:
 
         time.sleep(2)  # Give OS time to release ports
 
-        # Step 3: Start backend
+        # Step 3: Clean temp directories
+        print_header("Cleaning Temp Directories")
+        clean_temp_directories()
+        time.sleep(1)
+
+        # Step 4: Start backend
         backend_process = start_backend()
         if not backend_process:
             print_error("Cannot continue without backend server")
             sys.exit(1)
 
-        # Step 4: Start frontend
+        # Step 5: Start frontend
         frontend_process = start_frontend()
         if not frontend_process:
             print_warning("Frontend failed to start, but backend is running")
 
-        # Step 5: Display status
+        # Step 6: Display status
         display_status()
 
         # Keep script running and monitor processes

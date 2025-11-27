@@ -7,10 +7,10 @@ instead of rigid predefined workflows.
 import json
 from typing import Any
 
-from agentic_neurodata_conversion.agents.context_manager import ConversationContextManager
-from agentic_neurodata_conversion.agents.intelligent_metadata_parser import IntelligentMetadataParser
-from agentic_neurodata_conversion.agents.metadata_strategy import MetadataRequestStrategy
-from agentic_neurodata_conversion.agents.nwb_dandi_schema import NWBDANDISchema
+from agentic_neurodata_conversion.agents.metadata.intelligent_parser import IntelligentMetadataParser
+from agentic_neurodata_conversion.agents.metadata.schema import NWBDANDISchema
+from agentic_neurodata_conversion.agents.metadata.strategy import MetadataRequestStrategy
+from agentic_neurodata_conversion.agents.utils.context_manager import ConversationContextManager
 from agentic_neurodata_conversion.models import GlobalState, LogLevel, MetadataRequestPolicy
 from agentic_neurodata_conversion.services import LLMService
 

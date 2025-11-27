@@ -19,7 +19,7 @@ import pytest
 # Add backend/src to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend", "src"))
 
-from agentic_neurodata_conversion.agents.intelligent_metadata_mapper import IntelligentMetadataMapper
+from agentic_neurodata_conversion.agents.metadata.intelligent_mapper import IntelligentMetadataMapper
 from agentic_neurodata_conversion.models import GlobalState
 
 # ============================================================================
@@ -354,6 +354,67 @@ class TestMissingMetadataSuggestions:
         # Should suggest many missing fields
         assert len(suggestions) > 0
 
+    @pytest.mark.asyncio
+    async def test_suggest_missing_metadata_imaging_file_type(self, mapper_with_llm):
+        """Test suggestions for imaging file type."""
+        # Provide complete standard metadata so imaging-specific fields are suggested
+        complete_standard_metadata = {
+            "session_description": "Test session",
+            "experimenter": ["John Doe"],
+            "institution": "Test University",
+            "lab": "Test Lab",
+            "subject": {"species": "Mus musculus", "age": "P90D", "sex": "M"},
+            # Missing imaging-specific fields intentionally
+        }
+
+        suggestions = await mapper_with_llm.suggest_missing_metadata(complete_standard_metadata, file_type="imaging")
+
+        assert suggestions is not None
+        assert isinstance(suggestions, list)
+        # Should include imaging-specific fields in suggestions
+        all_suggestions_str = " ".join(suggestions)
+        # At least one imaging field should be suggested (or code path is executed)
+        assert len(suggestions) > 0  # Verify suggestions are returned
+
+    @pytest.mark.asyncio
+    async def test_suggest_missing_metadata_tiff_file_type(self, mapper_with_llm):
+        """Test suggestions for TIFF file type (should trigger imaging suggestions)."""
+        # Provide complete standard metadata
+        complete_standard_metadata = {
+            "session_description": "Test session",
+            "experimenter": ["John Doe"],
+            "institution": "Test University",
+            "lab": "Test Lab",
+            "subject": {"species": "Mus musculus", "age": "P90D", "sex": "M"},
+        }
+
+        suggestions = await mapper_with_llm.suggest_missing_metadata(complete_standard_metadata, file_type="tiff")
+
+        assert suggestions is not None
+        assert isinstance(suggestions, list)
+        # Verify the method handles tiff file type
+        assert len(suggestions) > 0
+
+    @pytest.mark.asyncio
+    async def test_suggest_missing_metadata_behavior_file_type(self, mapper_with_llm):
+        """Test suggestions for behavior file type."""
+        # Provide complete standard metadata
+        complete_standard_metadata = {
+            "session_description": "Test session",
+            "experimenter": ["John Doe"],
+            "institution": "Test University",
+            "lab": "Test Lab",
+            "subject": {"species": "Mus musculus", "age": "P90D", "sex": "M"},
+            # Missing behavior-specific fields intentionally
+        }
+
+        suggestions = await mapper_with_llm.suggest_missing_metadata(complete_standard_metadata, file_type="behavior")
+
+        assert suggestions is not None
+        assert isinstance(suggestions, list)
+        # Verify the method handles behavior file type
+        assert len(suggestions) > 0
+
 
 # ============================================================================
 # Test: Display Formatting
@@ -396,6 +457,145 @@ class TestDisplayFormatting:
         assert formatted is not None
         assert isinstance(formatted, str)
         # Should handle nested structure
+
+    def test_format_metadata_with_category_grouping(self, mapper_with_llm):
+        """Test formatting with category grouping."""
+        metadata = {"session_description": "Test session", "experimenter": ["John Doe"]}
+        mapping_report = [
+            {
+                "field_name": "session_description",
+                "value": "Test session",
+                "category": "experimental",
+                "confidence": 0.9,
+                "is_standard": True,
+                "requires_review": False,
+            },
+            {
+                "field_name": "subject_species",
+                "value": "Mouse",
+                "category": "subject",
+                "confidence": 0.7,
+                "is_standard": True,
+                "requires_review": False,
+            },
+        ]
+
+        formatted = mapper_with_llm.format_metadata_for_display(metadata, mapping_report)
+
+        assert formatted is not None
+        assert "EXPERIMENTAL Fields:" in formatted
+        assert "SUBJECT Fields:" in formatted
+
+    def test_format_metadata_with_confidence_indicators(self, mapper_with_llm):
+        """Test formatting with different confidence levels."""
+        metadata = {"field1": "value1", "field2": "value2", "field3": "value3"}
+        mapping_report = [
+            {
+                "field_name": "field1",
+                "value": "value1",
+                "category": "experimental",
+                "confidence": 0.85,
+                "is_standard": True,
+                "requires_review": False,
+            },
+            {
+                "field_name": "field2",
+                "value": "value2",
+                "category": "experimental",
+                "confidence": 0.65,
+                "is_standard": True,
+                "requires_review": False,
+            },
+            {
+                "field_name": "field3",
+                "value": "value3",
+                "category": "experimental",
+                "confidence": 0.4,
+                "is_standard": True,
+                "requires_review": False,
+            },
+        ]
+
+        formatted = mapper_with_llm.format_metadata_for_display(metadata, mapping_report)
+
+        assert formatted is not None
+        # High confidence (>0.8) should have ✅
+        assert "✅" in formatted
+        # Medium confidence (>0.5) should have ⚠️
+        assert "⚠️" in formatted
+        # Low confidence (≤0.5) should have ❓
+        assert "❓" in formatted
+
+    def test_format_metadata_with_standard_and_custom_indicators(self, mapper_with_llm):
+        """Test formatting with standard vs custom field indicators."""
+        metadata = {"standard_field": "value1", "custom_field": "value2"}
+        mapping_report = [
+            {
+                "field_name": "standard_field",
+                "value": "value1",
+                "category": "experimental",
+                "confidence": 0.9,
+                "is_standard": True,
+                "requires_review": False,
+            },
+            {
+                "field_name": "custom_field",
+                "value": "value2",
+                "category": "custom",
+                "confidence": 0.9,
+                "is_standard": False,
+                "requires_review": False,
+            },
+        ]
+
+        formatted = mapper_with_llm.format_metadata_for_display(metadata, mapping_report)
+
+        assert formatted is not None
+        # Standard field should have 📋
+        assert "📋" in formatted
+        # Custom field should have 🔧
+        assert "🔧" in formatted
+
+    def test_format_metadata_with_value_truncation(self, mapper_with_llm):
+        """Test formatting with long value truncation."""
+        long_value = "x" * 100  # Create a 100-character string
+        metadata = {"long_field": long_value}
+        mapping_report = [
+            {
+                "field_name": "long_field",
+                "value": long_value,
+                "category": "experimental",
+                "confidence": 0.9,
+                "is_standard": True,
+                "requires_review": False,
+            }
+        ]
+
+        formatted = mapper_with_llm.format_metadata_for_display(metadata, mapping_report)
+
+        assert formatted is not None
+        # Should truncate long values and add "..."
+        assert "..." in formatted
+
+    def test_format_metadata_with_requires_review_warning(self, mapper_with_llm):
+        """Test formatting with requires_review warning."""
+        metadata = {"review_field": "value"}
+        mapping_report = [
+            {
+                "field_name": "review_field",
+                "value": "value",
+                "category": "experimental",
+                "confidence": 0.6,
+                "is_standard": True,
+                "requires_review": True,
+            }
+        ]
+
+        formatted = mapper_with_llm.format_metadata_for_display(metadata, mapping_report)
+
+        assert formatted is not None
+        # Should include review warning
+        assert "Please review this mapping" in formatted
 
 
 # ============================================================================

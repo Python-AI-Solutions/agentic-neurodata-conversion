@@ -28,7 +28,7 @@ class TestMetadataMapping:
             "keywords": "electrophysiology, mouse",
         }
 
-        result = self.agent._map_flat_to_nested_metadata(flat_metadata)
+        result = self.agent._helpers.map_flat_to_nested_metadata(flat_metadata)
 
         assert "NWBFile" in result
         assert result["NWBFile"]["experimenter"] == ["Dr. Jane Smith"]
@@ -45,7 +45,7 @@ class TestMetadataMapping:
             "sex": "M",
         }
 
-        result = self.agent._map_flat_to_nested_metadata(flat_metadata)
+        result = self.agent._helpers.map_flat_to_nested_metadata(flat_metadata)
 
         assert "Subject" in result
         assert result["Subject"]["subject_id"] == "mouse001"
@@ -62,7 +62,7 @@ class TestMetadataMapping:
             "species": "Rattus norvegicus",
         }
 
-        result = self.agent._map_flat_to_nested_metadata(flat_metadata)
+        result = self.agent._helpers.map_flat_to_nested_metadata(flat_metadata)
 
         assert "NWBFile" in result
         assert "Subject" in result
@@ -78,7 +78,7 @@ class TestMetadataMapping:
             "keywords": "single keyword",
         }
 
-        result = self.agent._map_flat_to_nested_metadata(flat_metadata)
+        result = self.agent._helpers.map_flat_to_nested_metadata(flat_metadata)
 
         # Should convert strings to lists
         assert isinstance(result["NWBFile"]["experimenter"], list)
@@ -93,7 +93,7 @@ class TestMetadataMapping:
             "keywords": ["ephys", "behavior", "optogenetics"],
         }
 
-        result = self.agent._map_flat_to_nested_metadata(flat_metadata)
+        result = self.agent._helpers.map_flat_to_nested_metadata(flat_metadata)
 
         # Should preserve existing lists
         assert result["NWBFile"]["experimenter"] == ["Dr. Smith", "Dr. Jones"]
@@ -101,7 +101,7 @@ class TestMetadataMapping:
 
     def test_empty_metadata(self):
         """Test handling of empty metadata dict."""
-        result = self.agent._map_flat_to_nested_metadata({})
+        result = self.agent._helpers.map_flat_to_nested_metadata({})
 
         # Should return empty dict, not fail
         assert result == {}
@@ -113,7 +113,7 @@ class TestMetadataMapping:
             "another_unknown": 42,
         }
 
-        result = self.agent._map_flat_to_nested_metadata(flat_metadata)
+        result = self.agent._helpers.map_flat_to_nested_metadata(flat_metadata)
 
         # Unknown fields should go to NWBFile as fallback
         assert "NWBFile" in result
@@ -132,7 +132,7 @@ class TestMetadataMapping:
             "related_publications": "DOI:10.1234/test",
         }
 
-        result = self.agent._map_flat_to_nested_metadata(nwbfile_fields)
+        result = self.agent._helpers.map_flat_to_nested_metadata(nwbfile_fields)
 
         assert "NWBFile" in result
         assert "Subject" not in result  # Should not create Subject section
@@ -156,7 +156,7 @@ class TestMetadataMapping:
             "genotype": "WT",
         }
 
-        result = self.agent._map_flat_to_nested_metadata(subject_fields)
+        result = self.agent._helpers.map_flat_to_nested_metadata(subject_fields)
 
         assert "Subject" in result
         assert "NWBFile" not in result  # Should not create NWBFile section
@@ -180,7 +180,7 @@ class TestMetadataMapping:
         }
 
         # Apply the transformation
-        structured = self.agent._map_flat_to_nested_metadata(user_input)
+        structured = self.agent._helpers.map_flat_to_nested_metadata(user_input)
 
         # Verify the structure matches what NeuroConv expects
         assert "NWBFile" in structured, "Missing NWBFile section"

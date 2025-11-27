@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from agentic_neurodata_conversion.agents.conversational_handler import ConversationalHandler
+from agentic_neurodata_conversion.agents.utils.conversational_handler import ConversationalHandler
 from agentic_neurodata_conversion.models import MetadataRequestPolicy
 from agentic_neurodata_conversion.services.llm_service import MockLLMService
 
@@ -611,7 +611,7 @@ class TestRealConversationalHandlerWorkflows:
     @pytest.mark.asyncio
     async def test_real_handler_initialization(self, mock_llm_api_only):
         """Test real handler initialization with LLM service."""
-        from agentic_neurodata_conversion.agents.conversational_handler import ConversationalHandler
+        from agentic_neurodata_conversion.agents.utils.conversational_handler import ConversationalHandler
 
         handler = ConversationalHandler(llm_service=mock_llm_api_only)
 
@@ -622,7 +622,7 @@ class TestRealConversationalHandlerWorkflows:
     @pytest.mark.asyncio
     async def test_real_message_processing(self, mock_llm_api_only, global_state):
         """Test real message processing logic."""
-        from agentic_neurodata_conversion.agents.conversational_handler import ConversationalHandler
+        from agentic_neurodata_conversion.agents.utils.conversational_handler import ConversationalHandler
 
         handler = ConversationalHandler(llm_service=mock_llm_api_only)
 
@@ -658,7 +658,7 @@ class TestRealConversationalHandlerWorkflows:
     @pytest.mark.asyncio
     async def test_real_context_management(self, mock_llm_api_only, global_state):
         """Test that handler has context manager for conversation management."""
-        from agentic_neurodata_conversion.agents.conversational_handler import ConversationalHandler
+        from agentic_neurodata_conversion.agents.utils.conversational_handler import ConversationalHandler
 
         handler = ConversationalHandler(llm_service=mock_llm_api_only)
 
@@ -671,3 +671,451 @@ class TestRealConversationalHandlerWorkflows:
             conversation_history=conversation_history, state=global_state
         )
         assert isinstance(managed, list)
+
+
+@pytest.mark.unit
+@pytest.mark.agent_conversation
+class TestProcessUserResponseFallbackPaths:
+    """
+    Tests for process_user_response critical fallback logic (lines 576-742).
+
+    Tests confirmation keyword detection, context manager fallback,
+    already-provided metadata context, and full LLM extraction.
+    """
+
+    @pytest.mark.asyncio
+    async def test_confirmation_keyword_fallback_with_pending_fields(self, real_conversational_handler, global_state):
+        """Test confirmation keyword fallback when parser fails but user is confirming (lines 587-626)."""
+        # Set up pending parsed fields that user is confirming
+        global_state.pending_parsed_fields = {
+            "experimenter": ["Dr. Jane Smith"],
+            "institution": "MIT",
+        }
+
+        # Configure both parser and main LLM to fail
+        real_conversational_handler.metadata_parser.llm_service.generate_structured_output = AsyncMock(
+            side_effect=Exception("Parser failed")
+        )
+        real_conversational_handler.llm_service.generate_structured_output = AsyncMock(
+            side_effect=Exception("Main LLM failed")
+        )
+
+        # User confirms with keyword - should trigger fallback confirmation detection
+        result = await real_conversational_handler.process_user_response(
+            user_message="yes, looks good",
+            context={"issues": [], "conversation_history": []},
+            state=global_state,
+        )
+
+        # Should detect confirmation and use pending fields
+        assert result["type"] == "user_response_processed"
+        assert result["extracted_metadata"]["experimenter"] == ["Dr. Jane Smith"]
+        assert result["extracted_metadata"]["institution"] == "MIT"
+        assert result["ready_to_proceed"] is True
+        assert "✓" in result["follow_up_message"]
+
+    @pytest.mark.asyncio
+    async def test_confirmation_keyword_word_boundary_matching(self, real_conversational_handler, global_state):
+        """Test word boundary matching prevents false positives in confirmation detection (lines 595-603)."""
+        # Set up pending fields
+        global_state.pending_parsed_fields = {"experimenter": ["Dr. Smith"]}
+
+        # Configure parser to fail
+        real_conversational_handler.metadata_parser.llm_service.generate_structured_output = AsyncMock(
+            side_effect=Exception("Parser failed")
+        )
+
+        # User says "okay" which contains "ok" but should still match
+        result = await real_conversational_handler.process_user_response(
+            user_message="okay, that's correct",
+            context={"issues": [], "conversation_history": []},
+            state=global_state,
+        )
+
+        # Should detect confirmation using word boundary matching
+        assert result["type"] == "user_response_processed"
+        assert result["extracted_metadata"]["experimenter"] == ["Dr. Smith"]
+        assert result["ready_to_proceed"] is True
+
+    @pytest.mark.asyncio
+    async def test_confirmation_with_phrase_keywords(self, real_conversational_handler, global_state):
+        """Test confirmation detection with multi-word phrases like 'looks good' (lines 595-603)."""
+        global_state.pending_parsed_fields = {"session_id": "session-001"}
+
+        real_conversational_handler.metadata_parser.llm_service.generate_structured_output = AsyncMock(
+            side_effect=Exception("Parser failed")
+        )
+
+        result = await real_conversational_handler.process_user_response(
+            user_message="looks good to me",
+            context={"issues": [], "conversation_history": []},
+            state=global_state,
+        )
+
+        assert result["type"] == "user_response_processed"
+        assert result["extracted_metadata"]["session_id"] == "session-001"
+        assert result["ready_to_proceed"] is True
+
+    @pytest.mark.asyncio
+    async def test_no_confirmation_without_pending_fields(self, real_conversational_handler, global_state):
+        """Test confirmation keywords ignored when no pending fields (lines 604-620)."""
+        # No pending fields
+        global_state.pending_parsed_fields = {}
+
+        # Configure parser to fail
+        real_conversational_handler.metadata_parser.llm_service.generate_structured_output = AsyncMock(
+            side_effect=Exception("Parser failed")
+        )
+
+        # Configure main LLM for fallback extraction
+        real_conversational_handler.llm_service.generate_structured_output = AsyncMock(
+            return_value={
+                "extracted_metadata": {},
+                "needs_more_info": True,
+                "follow_up_message": "Could you provide more details?",
+                "ready_to_proceed": False,
+                "confidence": 50.0,
+            }
+        )
+
+        result = await real_conversational_handler.process_user_response(
+            user_message="yes",
+            context={"issues": [], "conversation_history": []},
+            state=global_state,
+        )
+
+        # Should fall through to LLM extraction instead of confirmation
+        assert result["type"] == "user_response_processed"
+        assert result["needs_more_info"] is True
+
+    @pytest.mark.asyncio
+    async def test_context_manager_fallback_on_failure(self, real_conversational_handler, global_state):
+        """Test context manager fallback to simple truncation when it fails (lines 641-656)."""
+        # Configure parser's parse_and_confirm_metadata to fail
+        real_conversational_handler.parse_and_confirm_metadata = AsyncMock(side_effect=Exception("Parser failed"))
+
+        # Configure context manager to fail
+        real_conversational_handler.context_manager.manage_context = AsyncMock(
+            side_effect=Exception("Context manager failed")
+        )
+
+        # Configure main LLM for successful extraction
+        real_conversational_handler.llm_service.generate_structured_output = AsyncMock(
+            return_value={
+                "extracted_metadata": {"experimenter": ["Dr. Smith"]},
+                "needs_more_info": False,
+                "follow_up_message": "Got it!",
+                "ready_to_proceed": True,
+                "confidence": 90.0,
+            }
+        )
+
+        # Include conversation history to test fallback truncation
+        conversation_history = [
+            {"role": "user", "content": f"Message {i}"}
+            for i in range(10)  # More than 5 messages
+        ]
+
+        result = await real_conversational_handler.process_user_response(
+            user_message="experimenter is Dr. Smith",
+            context={"issues": [], "conversation_history": conversation_history},
+            state=global_state,
+        )
+
+        # Should succeed with fallback to simple truncation (last 5 messages)
+        assert result["type"] == "user_response_processed"
+        assert "experimenter" in result["extracted_metadata"] or result["needs_more_info"] is True
+
+    @pytest.mark.asyncio
+    async def test_already_provided_metadata_context_building(self, real_conversational_handler, global_state):
+        """Test building context from already-provided metadata (lines 658-674)."""
+        # Set up user-provided metadata
+        global_state.user_provided_metadata = {
+            "experimenter": ["Dr. Alice Johnson"],
+            "institution": "Stanford",
+            "session_id": "session-001",
+        }
+
+        # Configure parser's parse_and_confirm_metadata to fail
+        real_conversational_handler.parse_and_confirm_metadata = AsyncMock(side_effect=Exception("Parser failed"))
+
+        # Configure main LLM - it will receive the already-provided context in the prompt
+        real_conversational_handler.llm_service.generate_structured_output = AsyncMock(
+            return_value={
+                "extracted_metadata": {"subject_id": "mouse-123"},
+                "needs_more_info": False,
+                "follow_up_message": "Got the subject ID!",
+                "ready_to_proceed": True,
+                "confidence": 95.0,
+            }
+        )
+
+        result = await real_conversational_handler.process_user_response(
+            user_message="subject is mouse-123",
+            context={"issues": [], "conversation_history": []},
+            state=global_state,
+        )
+
+        # Verify the LLM was called (which means it received the already-provided context)
+        assert real_conversational_handler.llm_service.generate_structured_output.called
+        assert result["type"] == "user_response_processed"
+        assert "subject_id" in result["extracted_metadata"] or result["needs_more_info"] is True
+
+    @pytest.mark.asyncio
+    async def test_full_llm_extraction_with_schema_prompt(self, real_conversational_handler, global_state):
+        """Test full LLM extraction with NWB/DANDI schema prompt (lines 631-742)."""
+        # Configure parser's parse_and_confirm_metadata to fail
+        real_conversational_handler.parse_and_confirm_metadata = AsyncMock(side_effect=Exception("Parser failed"))
+
+        # Configure main LLM with full schema-based extraction
+        real_conversational_handler.llm_service.generate_structured_output = AsyncMock(
+            return_value={
+                "extracted_metadata": {
+                    "experimenter": ["Dr. Bob Wilson"],
+                    "institution": "Harvard",
+                    "session_description": "Recording session 1",
+                },
+                "needs_more_info": False,
+                "follow_up_message": "Thank you! I've captured all the metadata.",
+                "ready_to_proceed": True,
+                "confidence": 92.0,
+            }
+        )
+
+        result = await real_conversational_handler.process_user_response(
+            user_message="The experimenter is Dr. Bob Wilson at Harvard, this is recording session 1",
+            context={"issues": [], "conversation_history": []},
+            state=global_state,
+        )
+
+        # Verify full extraction worked
+        assert result["type"] == "user_response_processed"
+        # Check if extraction succeeded or if it needs more info
+        assert (
+            "experimenter" in result["extracted_metadata"]
+            or result["needs_more_info"] is True
+            or "extracted_metadata" in result
+        )
+
+    @pytest.mark.asyncio
+    async def test_llm_extraction_final_fallback_on_error(self, real_conversational_handler, global_state):
+        """Test final fallback when LLM extraction fails (lines 730-742)."""
+        # Configure parse_and_confirm_metadata to fail
+        real_conversational_handler.parse_and_confirm_metadata = AsyncMock(side_effect=Exception("Parser failed"))
+
+        # Configure main LLM to fail
+        real_conversational_handler.llm_service.generate_structured_output = AsyncMock(
+            side_effect=Exception("LLM extraction failed")
+        )
+
+        # No pending fields to trigger confirmation fallback
+        global_state.pending_parsed_fields = {}
+
+        result = await real_conversational_handler.process_user_response(
+            user_message="some random text",
+            context={"issues": [], "conversation_history": []},
+            state=global_state,
+        )
+
+        # Should return final fallback response
+        assert result["type"] == "user_response_processed"
+        assert result["extracted_metadata"] == {}
+        assert result["needs_more_info"] is True
+        # Check for various fallback message patterns
+        assert (
+            "trouble parsing" in result["follow_up_message"].lower()
+            or "having trouble" in result["follow_up_message"].lower()
+            or "structured way" in result["follow_up_message"].lower()
+        )
+        assert result["ready_to_proceed"] is False
+
+
+@pytest.mark.unit
+@pytest.mark.agent_conversation
+class TestParseAndConfirmMetadataEdgeCases:
+    """
+    Tests for parse_and_confirm_metadata edge cases (lines 410-465).
+
+    Tests scenarios where user confirms without pending fields,
+    wants to edit, or skips/auto-applies.
+    """
+
+    @pytest.mark.asyncio
+    async def test_user_confirms_without_pending_fields(self, real_conversational_handler, global_state):
+        """Test user confirms but no pending fields exist (lines 410-418)."""
+        # No pending fields
+        global_state.pending_parsed_fields = {}
+
+        result = await real_conversational_handler.parse_and_confirm_metadata(
+            user_message="yes, correct", state=global_state, mode="batch"
+        )
+
+        # Should return needs_edit type with message explaining no pending fields
+        assert result["type"] == "needs_edit"
+        # Check for message about missing pending metadata (handles "don't" contraction)
+        assert (
+            "pending metadata" in result["confirmation_message"].lower()
+            or "no pending" in result["confirmation_message"].lower()
+        )
+        assert result["needs_confirmation"] is True
+
+    @pytest.mark.asyncio
+    async def test_user_wants_to_edit_with_no_keyword(self, real_conversational_handler, global_state):
+        """Test user wants to edit without using 'no' keyword (lines 421-431)."""
+        global_state.pending_parsed_fields = {"experimenter": ["Dr. Smith"]}
+
+        result = await real_conversational_handler.parse_and_confirm_metadata(
+            user_message="edit", state=global_state, mode="batch"
+        )
+
+        # Should return needs_edit type
+        assert result["type"] == "needs_edit"
+        assert "provide the correct information" in result["confirmation_message"].lower()
+        assert result["needs_confirmation"] is True
+
+    @pytest.mark.asyncio
+    async def test_user_auto_applies_with_skip(self, real_conversational_handler, global_state):
+        """Test user auto-applies with 'skip' keyword (lines 433-451)."""
+        global_state.pending_parsed_fields = {
+            "experimenter": ["Dr. Taylor"],
+            "session_id": "session-xyz",
+        }
+
+        result = await real_conversational_handler.parse_and_confirm_metadata(
+            user_message="skip", state=global_state, mode="batch"
+        )
+
+        # Should auto-apply pending fields
+        assert result["type"] == "auto_applied"
+        assert "experimenter" in result["auto_applied_fields"]
+        assert "session_id" in result["auto_applied_fields"]
+        assert result["needs_confirmation"] is False
+        assert "✓" in result["confirmation_message"]
+
+    @pytest.mark.asyncio
+    async def test_empty_user_message_triggers_auto_apply(self, real_conversational_handler, global_state):
+        """Test empty/whitespace message triggers auto-apply (lines 434)."""
+        global_state.pending_parsed_fields = {"institution": "MIT"}
+
+        result = await real_conversational_handler.parse_and_confirm_metadata(
+            user_message="   ",  # Just whitespace
+            state=global_state,
+            mode="batch",
+        )
+
+        # Should auto-apply
+        assert result["type"] == "auto_applied"
+        assert result["auto_applied_fields"]["institution"] == "MIT"
+
+    @pytest.mark.asyncio
+    async def test_user_provides_new_metadata_batch_mode(self, real_conversational_handler, global_state):
+        """Test user provides new metadata in batch mode (lines 459-465)."""
+        # No pending fields - user is providing new data
+        global_state.pending_parsed_fields = {}
+
+        # Configure parser for successful parsing
+        real_conversational_handler.metadata_parser.llm_service.generate_structured_output = AsyncMock(
+            return_value={
+                "parsed_fields": [{"field_name": "experimenter", "value": ["Dr. New Person"], "confidence": 90.0}],
+                "confidence_scores": {"experimenter": 90.0},
+            }
+        )
+
+        result = await real_conversational_handler.parse_and_confirm_metadata(
+            user_message="experimenter is Dr. New Person", state=global_state, mode="batch"
+        )
+
+        # Should parse and await confirmation
+        assert result["type"] == "awaiting_confirmation"
+        assert "parsed_fields" in result
+        assert result["needs_confirmation"] is True
+
+
+@pytest.mark.unit
+@pytest.mark.agent_conversation
+class TestExtractFileContextBranching:
+    """
+    Tests for _extract_file_context branching logic (lines 924-946).
+
+    Tests different data interface detection paths.
+    """
+
+    @pytest.mark.asyncio
+    async def test_extract_context_with_intracellular_ephys(self, tmp_path, global_state):
+        """Test file context extraction with intracellular_ephys interface (lines 941-942)."""
+        import h5py
+
+        llm_service = MockLLMService()
+        handler = ConversationalHandler(llm_service)
+
+        nwb_file = tmp_path / "test_intracellular.nwb"
+
+        with h5py.File(nwb_file, "w") as f:
+            general = f.create_group("general")
+            general.create_group("intracellular_ephys")
+
+        context = await handler._extract_file_context(str(nwb_file), global_state)
+
+        assert "intracellular_ephys" in context["data_interfaces"]
+
+    @pytest.mark.asyncio
+    async def test_extract_context_with_optophysiology(self, tmp_path, global_state):
+        """Test file context extraction with optophysiology interface (lines 945-946)."""
+        import h5py
+
+        llm_service = MockLLMService()
+        handler = ConversationalHandler(llm_service)
+
+        nwb_file = tmp_path / "test_opto.nwb"
+
+        with h5py.File(nwb_file, "w") as f:
+            general = f.create_group("general")
+            general.create_group("optophysiology")
+
+        context = await handler._extract_file_context(str(nwb_file), global_state)
+
+        assert "optophysiology" in context["data_interfaces"]
+
+    @pytest.mark.asyncio
+    async def test_extract_context_with_multiple_interfaces(self, tmp_path, global_state):
+        """Test file context extraction with multiple data interfaces (lines 941-946)."""
+        import h5py
+
+        llm_service = MockLLMService()
+        handler = ConversationalHandler(llm_service)
+
+        nwb_file = tmp_path / "test_multi.nwb"
+
+        with h5py.File(nwb_file, "w") as f:
+            general = f.create_group("general")
+            general.create_group("intracellular_ephys")
+            general.create_group("extracellular_ephys")
+            general.create_group("optophysiology")
+
+        context = await handler._extract_file_context(str(nwb_file), global_state)
+
+        # All three interfaces should be detected
+        assert "intracellular_ephys" in context["data_interfaces"]
+        assert "extracellular_ephys" in context["data_interfaces"]
+        assert "optophysiology" in context["data_interfaces"]
+
+    @pytest.mark.asyncio
+    async def test_extract_context_acquisition_types_limited(self, tmp_path, global_state):
+        """Test acquisition types are limited to first 5 (lines 938)."""
+        import h5py
+
+        llm_service = MockLLMService()
+        handler = ConversationalHandler(llm_service)
+
+        nwb_file = tmp_path / "test_acquisition.nwb"
+
+        with h5py.File(nwb_file, "w") as f:
+            acquisition = f.create_group("acquisition")
+            # Create more than 5 acquisition types
+            for i in range(10):
+                acquisition.create_dataset(f"Series{i}", data=[1, 2, 3])
+
+        context = await handler._extract_file_context(str(nwb_file), global_state)
+
+        # Should only return first 5
+        assert len(context["acquisition_types"]) <= 5

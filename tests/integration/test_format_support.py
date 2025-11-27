@@ -30,7 +30,7 @@ class TestFormatDetection:
         if not test_dir.exists():
             pytest.skip("SpikeGLX test data not available")
 
-        assert self.agent._is_spikeglx(test_dir)
+        assert self.agent._format_detector._is_spikeglx(test_dir)
 
     def test_openephys_detection_new_format(self):
         """Test detection of new OpenEphys format (structure.oebin)."""
@@ -38,7 +38,7 @@ class TestFormatDetection:
         if not test_dir.exists():
             pytest.skip("OpenEphys test data not available")
 
-        assert self.agent._is_openephys(test_dir)
+        assert self.agent._format_detector._is_openephys(test_dir)
 
     def test_openephys_detection_old_format(self):
         """Test detection of old OpenEphys format (settings.xml)."""
@@ -46,7 +46,7 @@ class TestFormatDetection:
         if not test_dir.exists():
             pytest.skip("OpenEphys old format test data not available")
 
-        assert self.agent._is_openephys(test_dir)
+        assert self.agent._format_detector._is_openephys(test_dir)
 
     def test_neuropixels_detection(self):
         """Test that Neuropixels format is correctly detected."""
@@ -54,7 +54,7 @@ class TestFormatDetection:
         if not test_dir.exists():
             pytest.skip("Neuropixels test data not available")
 
-        assert self.agent._is_neuropixels(test_dir)
+        assert self.agent._format_detector._is_neuropixels(test_dir)
 
     def test_false_positive_prevention(self):
         """Test that random directories aren't detected as valid formats."""
@@ -64,9 +64,9 @@ class TestFormatDetection:
         # Create a random file that shouldn't match any format
         (random_dir / "random_file.txt").write_text("random content")
 
-        assert not self.agent._is_spikeglx(random_dir)
-        assert not self.agent._is_openephys(random_dir)
-        assert not self.agent._is_neuropixels(random_dir)
+        assert not self.agent._format_detector._is_spikeglx(random_dir)
+        assert not self.agent._format_detector._is_openephys(random_dir)
+        assert not self.agent._format_detector._is_neuropixels(random_dir)
 
         # Cleanup
         (random_dir / "random_file.txt").unlink()

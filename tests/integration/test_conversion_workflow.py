@@ -351,8 +351,8 @@ class TestReportGeneration:
     """Test report generation for different validation outcomes."""
 
     @pytest.mark.asyncio
-    async def test_pdf_report_for_passed_validation(self, mcp_server_with_agents):
-        """Test PDF report generation for PASSED validation."""
+    async def test_html_report_for_passed_validation(self, mcp_server_with_agents):
+        """Test HTML report generation for PASSED validation."""
         server = mcp_server_with_agents
 
         # Create a mock PASSED validation result
@@ -381,10 +381,10 @@ class TestReportGeneration:
 
             assert response.success is True
             assert "report_path" in response.result
-            # The actual implementation returns "html_pdf_and_text" for PASSED validations
-            assert response.result["report_type"] in ["pdf", "html_pdf_and_text"]
-            # The report path might be HTML or PDF depending on implementation
-            assert response.result["report_path"].endswith((".pdf", ".html"))
+            # The actual implementation returns "html_and_text" for PASSED validations
+            assert response.result["report_type"] == "html_and_text"
+            # The report path should be HTML
+            assert response.result["report_path"].endswith(".html")
 
     @pytest.mark.asyncio
     async def test_json_report_for_failed_validation(self, mcp_server_with_agents):
