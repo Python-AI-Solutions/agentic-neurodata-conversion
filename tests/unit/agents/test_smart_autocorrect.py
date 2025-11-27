@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from agentic_neurodata_conversion.agents.error_handling.autocorrect import SmartAutoCorrectionSystem
+from agentic_neurodata_conversion.agents.smart_autocorrect import SmartAutoCorrectionSystem
 from agentic_neurodata_conversion.services.llm_service import MockLLMService
 
 # Note: The following fixtures are provided by conftest files:

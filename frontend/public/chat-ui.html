@@ -1646,7 +1646,8 @@
                         data.message || '✅ File accepted! Ready for download.',
                         [
                             { text: '⬇️ Download NWB File', onClick: () => downloadNWB(), variant: 'success' },
-                            { text: '👁️ View Report', onClick: () => viewReport(), variant: 'primary' }
+                            { text: '👁️ View Report', onClick: () => viewReport(), variant: 'primary' },
+                            { text: '📥 Download Report', onClick: () => downloadReport(), variant: 'secondary' }
                         ]
                     );
                     conversionInProgress = false;
@@ -2197,6 +2198,7 @@
                     [
                         { text: '⬇️ Download NWB File', onClick: () => downloadNWB(), variant: 'success' },
                         { text: '👁️ View Report', onClick: () => viewReport(), variant: 'primary' },
+                        { text: '📥 Download Report', onClick: () => downloadReport(), variant: 'secondary' },
                         { text: '🔄 New Conversion', onClick: () => resetConversation(), variant: 'secondary' }
                     ]
                 );
@@ -2205,7 +2207,8 @@
                     '✅ Conversion completed! Your NWB file is ready.',
                     [
                         { text: '⬇️ Download NWB File', onClick: () => downloadNWB(), variant: 'success' },
-                        { text: '👁️ View Report', onClick: () => viewReport(), variant: 'primary' }
+                        { text: '👁️ View Report', onClick: () => viewReport(), variant: 'primary' },
+                        { text: '📥 Download Report', onClick: () => downloadReport(), variant: 'secondary' }
                     ]
                 );
             }

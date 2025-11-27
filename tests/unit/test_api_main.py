@@ -10,9 +10,7 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 # Import after path is set in conftest
-from agentic_neurodata_conversion.api.dependencies import sanitize_filename, validate_safe_path
-from agentic_neurodata_conversion.api.main import app
-from agentic_neurodata_conversion.api.middleware.rate_limiter import SimpleRateLimiter
+from agentic_neurodata_conversion.api.main import SimpleRateLimiter, app, sanitize_filename, validate_safe_path
 from agentic_neurodata_conversion.models import ConversionStatus, GlobalState
 
 
@@ -36,13 +34,13 @@ def mock_mcp_server():
 def mock_rate_limiter():
     """Mock the global rate limiter to prevent 429 errors in tests.
 
-    The global _rate_limiter singleton in api/middleware/rate_limiter.py persists across all tests,
+    The global _rate_limiter singleton in api/main.py persists across all tests,
     causing tests to hit rate limits (429 Too Many Requests) which prevents
     endpoint code from executing and results in decreased coverage.
 
     This fixture patches the rate limiter to always allow requests.
     """
-    with patch("agentic_neurodata_conversion.api.middleware.rate_limiter._rate_limiter") as mock_limiter:
+    with patch("agentic_neurodata_conversion.api.main._rate_limiter") as mock_limiter:
         # Create a mock that always allows requests
         mock_limiter.is_allowed.return_value = True
         yield mock_limiter
@@ -274,9 +272,7 @@ class TestSuccessfulWorkflows:
         # Create a valid file
         files = {"file": ("test.bin", b"x" * 1000, "application/octet-stream")}
 
-        with patch(
-            "agentic_neurodata_conversion.api.dependencies.get_or_create_mcp_server", return_value=mock_mcp_server
-        ):
+        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server", return_value=mock_mcp_server):
             response = api_client.post("/api/upload", files=files)
 
         assert response.status_code == 200
@@ -295,9 +291,7 @@ class TestSuccessfulWorkflows:
         files = {"file": ("test.bin", b"x" * 1000, "application/octet-stream")}
         metadata = {"session_description": "Test session"}
 
-        with patch(
-            "agentic_neurodata_conversion.api.dependencies.get_or_create_mcp_server", return_value=mock_mcp_server
-        ):
+        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server", return_value=mock_mcp_server):
             response = api_client.post("/api/upload", files=files, data={"metadata": json.dumps(metadata)})
 
         # Should succeed with valid metadata
@@ -425,9 +419,7 @@ class TestFileValidation:
 
         files = {"file": ("test.exe", b"x" * 100, "application/octet-stream")}
 
-        with patch(
-            "agentic_neurodata_conversion.api.dependencies.get_or_create_mcp_server", return_value=mock_mcp_server
-        ):
+        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server", return_value=mock_mcp_server):
             response = api_client.post("/api/upload", files=files)
 
         assert response.status_code == 400
@@ -439,9 +431,7 @@ class TestFileValidation:
 
         files = {"file": ("test.bin", b"", "application/octet-stream")}
 
-        with patch(
-            "agentic_neurodata_conversion.api.dependencies.get_or_create_mcp_server", return_value=mock_mcp_server
-        ):
+        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server", return_value=mock_mcp_server):
             response = api_client.post("/api/upload", files=files)
 
         assert response.status_code == 400
@@ -455,9 +445,7 @@ class TestFileValidation:
         files = {"file": ("test.bin", b"x" * 100, "application/octet-stream")}
         additional = [("additional_files", (f"file{i}.bin", b"x" * 100, "application/octet-stream")) for i in range(10)]
 
-        with patch(
-            "agentic_neurodata_conversion.api.dependencies.get_or_create_mcp_server", return_value=mock_mcp_server
-        ):
+        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server", return_value=mock_mcp_server):
             response = api_client.post("/api/upload", files=files, data=additional)
 
         # Should reject due to too many files
@@ -545,9 +533,7 @@ class TestConversionEndpoints:
         # Mock the send_message as AsyncMock
         mock_mcp_server.send_message = AsyncMock(return_value=Mock(success=True, result={}))
 
-        with patch(
-            "agentic_neurodata_conversion.api.dependencies.get_or_create_mcp_server", return_value=mock_mcp_server
-        ):
+        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server", return_value=mock_mcp_server):
             api_client.post("/api/upload", files=files)
 
             # Then start conversion
@@ -629,10 +615,7 @@ class TestWorkflowStateManager:
 
         files = {"file": ("test.bin", b"x" * 100, "application/octet-stream")}
 
-        # Patch where the function is USED (conversion router), not where it's defined
-        with patch(
-            "agentic_neurodata_conversion.api.routers.conversion.get_or_create_mcp_server", return_value=mock_mcp_server
-        ):
+        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server", return_value=mock_mcp_server):
             response = api_client.post("/api/upload", files=files)
 
         # Should reject upload when busy
@@ -645,23 +628,25 @@ class TestMCPServerInitialization:
 
     def test_get_or_create_mcp_server(self):
         """Test MCP server is created once."""
-        import agentic_neurodata_conversion.api.dependencies as api_deps
-        from agentic_neurodata_conversion.api.dependencies import get_or_create_mcp_server
+        import agentic_neurodata_conversion.api.main as api_main
+        from agentic_neurodata_conversion.api.main import get_or_create_mcp_server
 
         # Reset global server to ensure fresh test
-        original_server = api_deps._mcp_server
-        api_deps._mcp_server = None
+        original_server = api_main._mcp_server
+        api_main._mcp_server = None
 
         try:
             with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-ant-test123"}):
                 with (
-                    patch("agentic_neurodata_conversion.api.dependencies.get_mcp_server") as mock_get_server,
-                    patch("agentic_neurodata_conversion.api.dependencies.register_conversion_agent"),
-                    patch("agentic_neurodata_conversion.api.dependencies.register_evaluation_agent"),
-                    patch("agentic_neurodata_conversion.api.dependencies.register_conversation_agent"),
+                    patch("agentic_neurodata_conversion.api.main.get_mcp_server") as mock_get_server,
+                    patch("agentic_neurodata_conversion.api.main.create_llm_service") as mock_create_llm,
+                    patch("agentic_neurodata_conversion.api.main.register_conversion_agent"),
+                    patch("agentic_neurodata_conversion.api.main.register_evaluation_agent"),
+                    patch("agentic_neurodata_conversion.api.main.register_conversation_agent"),
                 ):
                     mock_mcp = Mock()
                     mock_get_server.return_value = mock_mcp
+                    mock_create_llm.return_value = Mock()
 
                     # First call should create
                     server1 = get_or_create_mcp_server()
@@ -670,24 +655,24 @@ class TestMCPServerInitialization:
                     assert mock_get_server.called
         finally:
             # Restore original server state
-            api_deps._mcp_server = original_server
+            api_main._mcp_server = original_server
 
     def test_mcp_server_without_api_key(self):
         """Test MCP server creation without API key."""
-        import agentic_neurodata_conversion.api.dependencies as api_deps
-        from agentic_neurodata_conversion.api.dependencies import get_or_create_mcp_server
+        import agentic_neurodata_conversion.api.main as api_main
+        from agentic_neurodata_conversion.api.main import get_or_create_mcp_server
 
         # Reset global server to ensure fresh test
-        original_server = api_deps._mcp_server
-        api_deps._mcp_server = None
+        original_server = api_main._mcp_server
+        api_main._mcp_server = None
 
         try:
             with patch.dict(os.environ, {}, clear=True):
                 with (
-                    patch("agentic_neurodata_conversion.api.dependencies.get_mcp_server") as mock_get_server,
-                    patch("agentic_neurodata_conversion.api.dependencies.register_conversion_agent"),
-                    patch("agentic_neurodata_conversion.api.dependencies.register_evaluation_agent"),
-                    patch("agentic_neurodata_conversion.api.dependencies.register_conversation_agent"),
+                    patch("agentic_neurodata_conversion.api.main.get_mcp_server") as mock_get_server,
+                    patch("agentic_neurodata_conversion.api.main.register_conversion_agent"),
+                    patch("agentic_neurodata_conversion.api.main.register_evaluation_agent"),
+                    patch("agentic_neurodata_conversion.api.main.register_conversation_agent"),
                 ):
                     mock_mcp = Mock()
                     mock_get_server.return_value = mock_mcp
@@ -697,273 +682,4 @@ class TestMCPServerInitialization:
                     assert server is not None
         finally:
             # Restore original server state
-            api_deps._mcp_server = original_server
-
-
-@pytest.mark.unit
-class TestCORSSpecificOrigins:
-    """Test CORS configuration with specific origins (lines 89-92)."""
-
-    def test_cors_with_specific_origins(self):
-        """Test CORS configuration when CORS_ORIGINS env var is set to specific origins."""
-        # Test the CORS configuration logic with specific origins
-        with patch.dict(os.environ, {"CORS_ORIGINS": "http://localhost:3000,https://example.com"}):
-            # Re-import to trigger CORS configuration with new env var
-            import importlib
-
-            import agentic_neurodata_conversion.api.main as main_module
-
-            importlib.reload(main_module)
-
-            # Verify the app was configured
-            from fastapi.testclient import TestClient
-
-            test_app = main_module.app
-            client = TestClient(test_app)
-
-            # Make a request to verify CORS is configured
-            response = client.get("/api/health")
-            assert response.status_code == 200
-
-    def test_cors_wildcard_warning(self):
-        """Test CORS wildcard configuration triggers warning."""
-        with patch.dict(os.environ, {"CORS_ORIGINS": "*"}):
-            # Re-import to trigger CORS configuration
-            import importlib
-
-            import agentic_neurodata_conversion.api.main as main_module
-
-            importlib.reload(main_module)
-
-            # The wildcard config should work
-            from fastapi.testclient import TestClient
-
-            test_app = main_module.app
-            client = TestClient(test_app)
-
-            response = client.get("/api/health")
-            assert response.status_code == 200
-
-
-@pytest.mark.unit
-class TestValidationErrorHandler:
-    """Test ValidationError exception handler (lines 118-127)."""
-
-    def test_validation_error_handler_structure(self, api_client):
-        """Test ValidationError handler returns structured error response."""
-        # Trigger a ValidationError by sending invalid data
-        response = api_client.post("/api/chat", json={"message": 123})  # message should be string
-
-        assert response.status_code == 422
-        data = response.json()
-
-        # Verify structured error response (lines 127-135)
-        assert "detail" in data
-        assert "errors" in data or "detail" in data
-        assert "error_type" in data or "detail" in data
-        assert "path" in data or "detail" in data
-
-    def test_validation_error_multiple_fields(self, api_client):
-        """Test ValidationError handler with multiple field errors."""
-        # Send completely invalid payload
-        response = api_client.post("/api/chat", json={"wrong_field": "value", "another_wrong": 123})
-
-        assert response.status_code == 422
-        data = response.json()
-
-        # Should have error details
-        assert "detail" in data
-
-    def test_validation_error_handler_field_details(self, api_client):
-        """Test ValidationError handler includes field-level details (lines 120-125)."""
-        # Trigger validation error with missing required field
-        response = api_client.post("/api/chat", json={})
-
-        assert response.status_code == 422
-        data = response.json()
-
-        # Verify error structure includes field information
-        assert "detail" in data
-
-    def test_validation_error_handler_actual_pydantic_error(self):
-        """Test ValidationError handler by directly triggering Pydantic validation."""
-        import asyncio
-        import json
-        from unittest.mock import Mock
-
-        from pydantic import BaseModel
-        from pydantic import ValidationError as PydanticValidationError
-
-        from agentic_neurodata_conversion.api.main import validation_exception_handler
-
-        # Create a mock request
-        mock_request = Mock()
-        mock_request.method = "POST"
-        mock_request.url.path = "/test/path"
-
-        # Create a Pydantic model and trigger validation error
-        class TestModel(BaseModel):
-            required_field: str
-            number_field: int
-
-        # Trigger validation error
-        try:
-            TestModel(required_field=123, number_field="not a number")  # Wrong types
-        except PydanticValidationError as exc:
-            # Call the handler directly
-            response = asyncio.run(validation_exception_handler(mock_request, exc))
-
-            # Verify response structure (lines 127-135)
-            assert response.status_code == 422
-            assert hasattr(response, "body")
-
-            # The response body is JSON bytes
-            body_data = json.loads(response.body)
-            assert "detail" in body_data
-            assert "errors" in body_data
-            assert "error_type" in body_data
-            assert body_data["error_type"] == "ValidationError"
-            assert "path" in body_data
-            assert body_data["path"] == "/test/path"
-
-            # Verify error field details (lines 120-125)
-            assert len(body_data["errors"]) > 0
-            for error in body_data["errors"]:
-                assert "field" in error
-                assert "message" in error
-
-
-@pytest.mark.unit
-class TestGlobalExceptionHandler:
-    """Test global exception handler (lines 144-149)."""
-
-    def test_global_exception_handler_debug_mode(self):
-        """Test exception handler in DEBUG mode shows error details."""
-        with patch.dict(os.environ, {"DEBUG": "true"}):
-            # Import fresh app with DEBUG mode
-            import importlib
-
-            import agentic_neurodata_conversion.api.main as main_module
-
-            importlib.reload(main_module)
-
-            from fastapi.testclient import TestClient
-
-            test_app = main_module.app
-            client = TestClient(test_app, raise_server_exceptions=False)
-
-            # Trigger an error by accessing invalid endpoint
-            response = client.get("/api/trigger-error-nonexistent")
-
-            # Should return 404 for non-existent endpoint
-            assert response.status_code == 404
-
-    def test_global_exception_handler_production_mode(self):
-        """Test exception handler in production mode hides error details (lines 144-149)."""
-        with patch.dict(os.environ, {"DEBUG": "false"}):
-            # Import fresh app without DEBUG mode
-            import importlib
-
-            import agentic_neurodata_conversion.api.main as main_module
-
-            importlib.reload(main_module)
-
-            from fastapi.testclient import TestClient
-
-            test_app = main_module.app
-            client = TestClient(test_app, raise_server_exceptions=False)
-
-            # Make a request that would normally work
-            response = client.get("/api/health")
-
-            # Should still work normally
-            assert response.status_code == 200
-
-    def test_global_exception_handler_no_debug_env(self):
-        """Test exception handler when DEBUG env var is not set (lines 147)."""
-        # Remove DEBUG from environment
-        env_copy = os.environ.copy()
-        if "DEBUG" in env_copy:
-            del env_copy["DEBUG"]
-
-        with patch.dict(os.environ, env_copy, clear=True):
-            # Import fresh app
-            import importlib
-
-            import agentic_neurodata_conversion.api.main as main_module
-
-            importlib.reload(main_module)
-
-            from fastapi.testclient import TestClient
-
-            test_app = main_module.app
-            client = TestClient(test_app, raise_server_exceptions=False)
-
-            # Normal request should still work
-            response = client.get("/api/health")
-            assert response.status_code == 200
-
-    def test_global_exception_handler_actual_exception_debug(self):
-        """Test global exception handler with actual exception in DEBUG mode (line 147)."""
-        import asyncio
-        import json
-
-        from agentic_neurodata_conversion.api.main import global_exception_handler
-
-        # Create a mock request
-        mock_request = Mock()
-        mock_request.method = "GET"
-        mock_request.url.path = "/test/error"
-
-        # Create a test exception
-        test_exception = ValueError("Test error message for debugging")
-
-        # Test with DEBUG=true (line 147)
-        with patch.dict(os.environ, {"DEBUG": "true"}):
-            response = asyncio.run(global_exception_handler(mock_request, test_exception))
-
-            # Verify response structure (lines 149-152)
-            assert response.status_code == 500
-            assert hasattr(response, "body")
-
-            # The response body is JSON bytes
-            body_data = json.loads(response.body)
-            assert "detail" in body_data
-            assert body_data["detail"] == "Test error message for debugging"  # Shows detail in DEBUG mode
-            assert "error_type" in body_data
-            assert body_data["error_type"] == "ValueError"
-            assert "path" in body_data
-            assert body_data["path"] == "/test/error"
-
-    def test_global_exception_handler_actual_exception_production(self):
-        """Test global exception handler hides details in production mode (lines 144-149)."""
-        import asyncio
-        import json
-
-        from agentic_neurodata_conversion.api.main import global_exception_handler
-
-        # Create a mock request
-        mock_request = Mock()
-        mock_request.method = "POST"
-        mock_request.url.path = "/test/production-error"
-
-        # Create a test exception with sensitive info
-        test_exception = RuntimeError("Sensitive internal error details")
-
-        # Test with DEBUG=false (lines 147-149)
-        with patch.dict(os.environ, {"DEBUG": "false"}):
-            response = asyncio.run(global_exception_handler(mock_request, test_exception))
-
-            # Verify response structure
-            assert response.status_code == 500
-            assert hasattr(response, "body")
-
-            # The response body is JSON bytes
-            body_data = json.loads(response.body)
-            assert "detail" in body_data
-            # In production mode, should return generic error message (line 147)
-            assert body_data["detail"] == "An internal server error occurred"
-            assert "Sensitive" not in body_data["detail"]  # Should NOT expose actual error
-            assert "error_type" in body_data
-            assert body_data["error_type"] == "RuntimeError"
-            assert "path" in body_data
+            api_main._mcp_server = original_server

@@ -20,7 +20,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from agentic_neurodata_conversion.agents.utils.conversational_handler import ConversationalHandler
+from agentic_neurodata_conversion.agents.conversational_handler import ConversationalHandler
 
 
 @pytest.fixture

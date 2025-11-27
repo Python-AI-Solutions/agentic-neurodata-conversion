@@ -6,7 +6,7 @@ Tests schema definitions and metadata field management for NWB and DANDI complia
 
 import pytest
 
-from agentic_neurodata_conversion.agents.metadata.schema import (
+from agentic_neurodata_conversion.agents.nwb_dandi_schema import (
     FieldRequirementLevel,
     FieldType,
     MetadataFieldSchema,

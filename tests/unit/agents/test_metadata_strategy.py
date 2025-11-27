@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from agentic_neurodata_conversion.agents.metadata.strategy import (
+from agentic_neurodata_conversion.agents.metadata_strategy import (
     METADATA_FIELDS,
     FieldPriority,
     MetadataField,
@@ -617,7 +617,7 @@ class TestRealMetadataStrategyWorkflows:
     @pytest.mark.asyncio
     async def test_real_strategy_initialization(self, mock_llm_api_only):
         """Test real metadata strategy initialization."""
-        from agentic_neurodata_conversion.agents.metadata.strategy import MetadataRequestStrategy
+        from agentic_neurodata_conversion.agents.metadata_strategy import MetadataRequestStrategy
 
         strategy = MetadataRequestStrategy(llm_service=mock_llm_api_only)
 
@@ -627,7 +627,7 @@ class TestRealMetadataStrategyWorkflows:
     @pytest.mark.asyncio
     async def test_real_metadata_request_policy_decision(self, global_state):
         """Test real metadata strategy has get_next_request method."""
-        from agentic_neurodata_conversion.agents.metadata.strategy import MetadataRequestStrategy
+        from agentic_neurodata_conversion.agents.metadata_strategy import MetadataRequestStrategy
 
         strategy = MetadataRequestStrategy(llm_service=None, state=global_state)
 
@@ -638,7 +638,7 @@ class TestRealMetadataStrategyWorkflows:
     @pytest.mark.asyncio
     async def test_real_strategy_with_llm(self, mock_llm_api_only, global_state):
         """Test real strategy with LLM for skip detection."""
-        from agentic_neurodata_conversion.agents.metadata.strategy import MetadataRequestStrategy
+        from agentic_neurodata_conversion.agents.metadata_strategy import MetadataRequestStrategy
 
         strategy = MetadataRequestStrategy(llm_service=mock_llm_api_only, state=global_state)
 

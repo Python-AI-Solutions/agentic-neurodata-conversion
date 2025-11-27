@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from agentic_neurodata_conversion.agents.error_handling.adaptive_retry import AdaptiveRetryStrategy
+from agentic_neurodata_conversion.agents.adaptive_retry import AdaptiveRetryStrategy
 from agentic_neurodata_conversion.services.llm_service import MockLLMService
 
 # Note: The following fixtures are provided by conftest files:
@@ -583,7 +583,7 @@ class TestRealAdaptiveRetryWorkflows:
     @pytest.mark.asyncio
     async def test_real_retry_strategy_initialization(self, mock_llm_api_only):
         """Test real adaptive retry strategy initialization."""
-        from agentic_neurodata_conversion.agents.error_handling.adaptive_retry import AdaptiveRetryStrategy
+        from agentic_neurodata_conversion.agents.adaptive_retry import AdaptiveRetryStrategy
 
         strategy = AdaptiveRetryStrategy(llm_service=mock_llm_api_only)
 
@@ -593,7 +593,7 @@ class TestRealAdaptiveRetryWorkflows:
     @pytest.mark.asyncio
     async def test_real_should_retry_decision(self, global_state):
         """Test real should_retry decision logic."""
-        from agentic_neurodata_conversion.agents.error_handling.adaptive_retry import AdaptiveRetryStrategy
+        from agentic_neurodata_conversion.agents.adaptive_retry import AdaptiveRetryStrategy
 
         strategy = AdaptiveRetryStrategy(llm_service=None)
 
@@ -611,7 +611,7 @@ class TestRealAdaptiveRetryWorkflows:
     @pytest.mark.asyncio
     async def test_real_max_attempts_logic(self, global_state):
         """Test real max attempts enforcement."""
-        from agentic_neurodata_conversion.agents.error_handling.adaptive_retry import AdaptiveRetryStrategy
+        from agentic_neurodata_conversion.agents.adaptive_retry import AdaptiveRetryStrategy
 
         strategy = AdaptiveRetryStrategy(llm_service=None)
 
@@ -628,7 +628,7 @@ class TestRealAdaptiveRetryWorkflows:
     @pytest.mark.asyncio
     async def test_real_analyze_and_recommend(self, mock_llm_api_only, global_state):
         """Test real analyze and recommend strategy."""
-        from agentic_neurodata_conversion.agents.error_handling.adaptive_retry import AdaptiveRetryStrategy
+        from agentic_neurodata_conversion.agents.adaptive_retry import AdaptiveRetryStrategy
 
         # Configure mock LLM to return proper structured output
         mock_llm_api_only.generate_structured_output = AsyncMock(

@@ -27,7 +27,8 @@ def patch_llm_service(mock_llm_format_detector):
     with patch(
         "agentic_neurodata_conversion.services.llm_service.create_llm_service", return_value=mock_llm_format_detector
     ):
-        yield
+        with patch("agentic_neurodata_conversion.api.main.create_llm_service", return_value=mock_llm_format_detector):
+            yield
 
 
 @pytest.fixture
@@ -139,7 +140,7 @@ class TestUploadEndpoint:
         assert response1.status_code == 200
 
         # Directly set state to a blocking status to test concurrent prevention
-        from agentic_neurodata_conversion.api.dependencies import get_or_create_mcp_server
+        from agentic_neurodata_conversion.api.main import get_or_create_mcp_server
         from agentic_neurodata_conversion.models import ConversionStatus
 
         mcp_server = get_or_create_mcp_server()
@@ -315,179 +316,3 @@ class TestUserInputEndpoint:
 
         # Expected to fail with 400 unless we're in AWAITING_USER_INPUT state
         assert response.status_code in [200, 400]
-
-
-@pytest.mark.integration
-@pytest.mark.api
-class TestStartConversionEndpoint:
-    """Test start-conversion endpoint error handling."""
-
-    def test_start_conversion_already_in_progress(self, api_test_client, toy_dataset_path):
-        """Test starting conversion when already in progress (lines 436-437)."""
-        # Reset first
-        api_test_client.post("/api/reset")
-
-        # Upload a file first
-        bin_files = list(toy_dataset_path.glob("*.ap.bin"))
-        if not bin_files:
-            pytest.skip("No .bin file found in toy dataset")
-
-        test_file = bin_files[0]
-        meta_file = test_file.with_suffix(".meta")
-        if not meta_file.exists():
-            pytest.skip(f"No .meta file found for {test_file.name}")
-
-        with open(test_file, "rb") as bin_f, open(meta_file, "rb") as meta_f:
-            files = [
-                ("file", (test_file.name, bin_f, "application/octet-stream")),
-                ("file", (meta_file.name, meta_f, "application/octet-stream")),
-            ]
-            metadata = {"session_description": "Recording of V1 neurons during visual stimulation experiment"}
-            upload_response = api_test_client.post(
-                "/api/upload",
-                files=files,
-                data={"metadata": json.dumps(metadata)},
-            )
-
-        assert upload_response.status_code == 200
-
-        # Manually set state to a blocking status (CONVERTING) to test lines 436-437
-        from agentic_neurodata_conversion.api.dependencies import get_or_create_mcp_server
-        from agentic_neurodata_conversion.models import ConversionStatus
-
-        mcp_server = get_or_create_mcp_server()
-        # Ensure input_path exists but status is blocking
-        assert mcp_server.global_state.input_path is not None
-        mcp_server.global_state.status = ConversionStatus.CONVERTING
-
-        # Try to start conversion (should fail with 409 - conversion already in progress)
-        response = api_test_client.post("/api/start-conversion")
-
-        # Should get 409 error with status in message (lines 436-437)
-        assert response.status_code == 409
-        assert "Conversion already in progress" in response.json()["detail"]
-        assert "converting" in response.json()["detail"].lower()
-
-    def test_start_conversion_mcp_error_without_context(self, api_test_client, toy_dataset_path):
-        """Test MCP server returning unsuccessful response without error_context (lines 456-465)."""
-        from unittest.mock import AsyncMock
-
-        # Reset first
-        api_test_client.post("/api/reset")
-
-        # Upload a file
-        bin_files = list(toy_dataset_path.glob("*.ap.bin"))
-        if not bin_files:
-            pytest.skip("No .bin file found in toy dataset")
-
-        test_file = bin_files[0]
-        meta_file = test_file.with_suffix(".meta")
-        if not meta_file.exists():
-            pytest.skip(f"No .meta file found for {test_file.name}")
-
-        with open(test_file, "rb") as bin_f, open(meta_file, "rb") as meta_f:
-            files = [
-                ("file", (test_file.name, bin_f, "application/octet-stream")),
-                ("file", (meta_file.name, meta_f, "application/octet-stream")),
-            ]
-            metadata = {"session_description": "Recording of V1 neurons during visual stimulation experiment"}
-            upload_response = api_test_client.post(
-                "/api/upload",
-                files=files,
-                data={"metadata": json.dumps(metadata)},
-            )
-
-        assert upload_response.status_code == 200
-
-        # Mock MCP server send_message to return unsuccessful response (lines 456-465)
-        from agentic_neurodata_conversion.api.dependencies import get_or_create_mcp_server
-        from agentic_neurodata_conversion.models.mcp import MCPResponse
-
-        mock_response = MCPResponse(
-            reply_to="test_message_id",
-            success=False,
-            error={
-                "message": "Test conversion failure",
-                "error_code": "TEST_ERROR",
-            },
-        )
-
-        # Get the real MCP server and mock its send_message method
-        mcp_server = get_or_create_mcp_server()
-        mcp_server.send_message = AsyncMock(return_value=mock_response)
-
-        # Try to start conversion (should fail with 500 due to MCP error)
-        response = api_test_client.post("/api/start-conversion")
-
-        # Should get 500 error with error details from MCP response (lines 456-465)
-        assert response.status_code == 500
-        error_detail = response.json()["detail"]
-        assert error_detail["message"] == "Test conversion failure"
-        assert error_detail["error_code"] == "TEST_ERROR"
-        # error_context should not be present since we didn't include it
-        assert "context" not in error_detail
-
-    def test_start_conversion_mcp_error_with_context(self, api_test_client, toy_dataset_path):
-        """Test MCP server returning unsuccessful response with error_context (lines 462-463)."""
-        from unittest.mock import AsyncMock
-
-        # Reset first
-        api_test_client.post("/api/reset")
-
-        # Upload a file
-        bin_files = list(toy_dataset_path.glob("*.ap.bin"))
-        if not bin_files:
-            pytest.skip("No .bin file found in toy dataset")
-
-        test_file = bin_files[0]
-        meta_file = test_file.with_suffix(".meta")
-        if not meta_file.exists():
-            pytest.skip(f"No .meta file found for {test_file.name}")
-
-        with open(test_file, "rb") as bin_f, open(meta_file, "rb") as meta_f:
-            files = [
-                ("file", (test_file.name, bin_f, "application/octet-stream")),
-                ("file", (meta_file.name, meta_f, "application/octet-stream")),
-            ]
-            metadata = {"session_description": "Recording of V1 neurons during visual stimulation experiment"}
-            upload_response = api_test_client.post(
-                "/api/upload",
-                files=files,
-                data={"metadata": json.dumps(metadata)},
-            )
-
-        assert upload_response.status_code == 200
-
-        # Mock MCP server send_message to return unsuccessful response with error_context
-        from agentic_neurodata_conversion.api.dependencies import get_or_create_mcp_server
-        from agentic_neurodata_conversion.models.mcp import MCPResponse
-
-        mock_response = MCPResponse(
-            reply_to="test_message_id",
-            success=False,
-            error={
-                "message": "Validation failed",
-                "error_code": "VALIDATION_ERROR",
-                "error_context": {
-                    "field": "session_description",
-                    "reason": "Too short",
-                },
-            },
-        )
-
-        # Get the real MCP server and mock its send_message method
-        mcp_server = get_or_create_mcp_server()
-        mcp_server.send_message = AsyncMock(return_value=mock_response)
-
-        # Try to start conversion (should fail with 500 due to MCP error)
-        response = api_test_client.post("/api/start-conversion")
-
-        # Should get 500 error with error details including context (lines 462-463)
-        assert response.status_code == 500
-        error_detail = response.json()["detail"]
-        assert error_detail["message"] == "Validation failed"
-        assert error_detail["error_code"] == "VALIDATION_ERROR"
-        # error_context should be present (lines 462-463)
-        assert "context" in error_detail
-        assert error_detail["context"]["field"] == "session_description"
-        assert error_detail["context"]["reason"] == "Too short"

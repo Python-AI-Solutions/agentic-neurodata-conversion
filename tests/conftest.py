@@ -433,7 +433,7 @@ def real_conversational_handler(mock_llm_service):
         - mock_llm_service: Used internally by this fixture
         - global_state: Use with this fixture for state management
     """
-    from agentic_neurodata_conversion.agents.utils.conversational_handler import ConversationalHandler
+    from agentic_neurodata_conversion.agents.conversational_handler import ConversationalHandler
 
     return ConversationalHandler(llm_service=mock_llm_service)
 

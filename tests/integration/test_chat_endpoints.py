@@ -27,7 +27,8 @@ def patch_llm_service(mock_llm_conversational):
     with patch(
         "agentic_neurodata_conversion.services.llm_service.create_llm_service", return_value=mock_llm_conversational
     ):
-        yield
+        with patch("agentic_neurodata_conversion.api.main.create_llm_service", return_value=mock_llm_conversational):
+            yield
 
 
 @pytest.mark.integration
@@ -100,7 +101,7 @@ class TestSmartChatEndpoint:
 
     def test_smart_chat_with_llm_service(self, api_test_client):
         """Test smart chat when LLM service is available."""
-        with patch("agentic_neurodata_conversion.api.dependencies.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.status = ConversionStatus.AWAITING_USER_INPUT
@@ -124,7 +125,7 @@ class TestSmartChatEndpoint:
 
     def test_smart_chat_without_llm_service(self, api_test_client):
         """Test smart chat when LLM service is not available."""
-        with patch("agentic_neurodata_conversion.api.dependencies.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_server.global_state = mock_state
@@ -144,29 +145,28 @@ class TestSmartChatEndpoint:
 
     def test_smart_chat_during_conversion(self, api_test_client):
         """Test smart chat while conversion is in progress."""
-        from agentic_neurodata_conversion.api.dependencies import get_or_create_mcp_server
+        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
+            mock_server = Mock()
+            mock_state = GlobalState()
+            mock_state.status = ConversionStatus.CONVERTING
+            mock_server.global_state = mock_state
 
-        # Use the real MCP server and set its state
-        mcp_server = get_or_create_mcp_server()
-        original_status = mcp_server.global_state.status
+            # Mock send_message - must be AsyncMock since send_message is awaited
+            mock_server.send_message = AsyncMock(
+                return_value=Mock(success=True, result={"response": "Conversion is in progress."})
+            )
 
-        try:
-            # Set state to CONVERTING
-            mcp_server.global_state.status = ConversionStatus.CONVERTING
+            mock_get_server.return_value = mock_server
 
             # API expects form data, not JSON
             response = api_test_client.post("/api/chat/smart", data={"message": "What's the status?"})
 
             # Should allow status queries during conversion
-            # 500 is acceptable if LLM service unavailable or fails
-            assert response.status_code in [200, 400, 500]
-        finally:
-            # Restore original state
-            mcp_server.global_state.status = original_status
+            assert response.status_code in [200, 400]
 
     def test_smart_chat_metadata_collection(self, api_test_client):
         """Test smart chat for metadata collection workflow."""
-        with patch("agentic_neurodata_conversion.api.dependencies.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.status = ConversionStatus.AWAITING_USER_INPUT
@@ -189,28 +189,29 @@ class TestSmartChatEndpoint:
 
     def test_smart_chat_cancellation_keywords(self, api_test_client):
         """Test smart chat with cancellation keywords."""
-        from agentic_neurodata_conversion.api.dependencies import get_or_create_mcp_server
-
         cancellation_keywords = ["cancel", "quit", "stop", "abort", "exit"]
 
-        # Use the real MCP server and set its state
-        mcp_server = get_or_create_mcp_server()
-        original_status = mcp_server.global_state.status
+        for keyword in cancellation_keywords:
+            with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
+                mock_server = Mock()
+                mock_state = GlobalState()
+                mock_state.status = ConversionStatus.AWAITING_USER_INPUT
+                mock_server.global_state = mock_state
 
-        try:
-            for keyword in cancellation_keywords:
-                # Set state to AWAITING_USER_INPUT for each test
-                mcp_server.global_state.status = ConversionStatus.AWAITING_USER_INPUT
+                # Mock MCP response for cancellation - must be AsyncMock since send_message is awaited
+                mock_server.send_message = AsyncMock(
+                    return_value=Mock(
+                        success=True, result={"status": "failed", "validation_status": "failed_user_abandoned"}
+                    )
+                )
+
+                mock_get_server.return_value = mock_server
 
                 # API expects form data, not JSON
                 response = api_test_client.post("/api/chat/smart", data={"message": keyword})
 
                 # Should handle cancellation (or rate limiting)
-                # 500 is acceptable if LLM service unavailable or fails
-                assert response.status_code in [200, 400, 429, 500]
-        finally:
-            # Restore original state
-            mcp_server.global_state.status = original_status
+                assert response.status_code in [200, 400, 429]
 
 
 @pytest.mark.integration
@@ -220,7 +221,7 @@ class TestChatContextHandling:
 
     def test_smart_chat_maintains_context(self, api_test_client):
         """Test that smart chat maintains conversation context."""
-        with patch("agentic_neurodata_conversion.api.dependencies.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.status = ConversionStatus.AWAITING_USER_INPUT
@@ -285,7 +286,7 @@ class TestChatConcurrency:
 
     def test_multiple_concurrent_chat_requests(self, api_test_client):
         """Test multiple concurrent chat requests."""
-        with patch("agentic_neurodata_conversion.api.dependencies.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.status = ConversionStatus.IDLE
@@ -308,127 +309,3 @@ class TestChatConcurrency:
             # All should return valid status codes (or rate limiting)
             for response in responses:
                 assert response.status_code in [200, 400, 429, 500]
-
-
-@pytest.mark.integration
-@pytest.mark.api
-class TestUserInputEndpoint:
-    """Test POST /api/user-input endpoint for format selection.
-
-    Tests lines 53-67 which handle format selection during AWAITING_USER_INPUT state.
-    """
-
-    def test_user_input_format_selection_success(self, api_test_client):
-        """Test successful format selection (lines 53-67)."""
-        with patch("agentic_neurodata_conversion.api.routers.chat.get_or_create_mcp_server") as mock_get_server:
-            mock_server = Mock()
-            mock_state = GlobalState()
-            mock_state.status = ConversionStatus.AWAITING_USER_INPUT
-            mock_server.global_state = mock_state
-
-            # Mock successful format selection response (lines 59-65)
-            mock_server.send_message = AsyncMock(return_value=Mock(success=True, result={"status": "converting"}))
-
-            mock_get_server.return_value = mock_server
-
-            response = api_test_client.post(
-                "/api/user-input",
-                json={"input_data": {"format": "Calcium Imaging"}},
-            )
-
-            # Should accept format and return success (lines 67-71)
-            assert response.status_code == 200
-            data = response.json()
-            assert data["accepted"] is True
-            assert "Format selection accepted" in data["message"]
-            # API returns enum value as lowercase string
-            assert data["new_status"] == "converting"
-
-    def test_user_input_format_selection_failure(self, api_test_client):
-        """Test format selection when agent returns error (lines 61-65)."""
-        with patch("agentic_neurodata_conversion.api.routers.chat.get_or_create_mcp_server") as mock_get_server:
-            mock_server = Mock()
-            mock_state = GlobalState()
-            mock_state.status = ConversionStatus.AWAITING_USER_INPUT
-            mock_server.global_state = mock_state
-
-            # Mock failed format selection response (line 61: not response.success)
-            mock_server.send_message = AsyncMock(
-                return_value=Mock(
-                    success=False,
-                    error={"message": "Invalid format specified"},
-                )
-            )
-
-            mock_get_server.return_value = mock_server
-
-            response = api_test_client.post(
-                "/api/user-input",
-                json={"input_data": {"format": "InvalidFormat"}},
-            )
-
-            # Should return 400 error (lines 62-65)
-            assert response.status_code == 400
-            data = response.json()
-            assert "Invalid format specified" in data["detail"]
-
-    def test_user_input_wrong_state(self, api_test_client):
-        """Test user input in wrong state (lines 73-76)."""
-        with patch("agentic_neurodata_conversion.api.routers.chat.get_or_create_mcp_server") as mock_get_server:
-            mock_server = Mock()
-            mock_state = GlobalState()
-            # Wrong state - should be AWAITING_USER_INPUT
-            mock_state.status = ConversionStatus.CONVERTING
-            mock_server.global_state = mock_state
-
-            mock_get_server.return_value = mock_server
-
-            response = api_test_client.post(
-                "/api/user-input",
-                json={"input_data": {"format": "Calcium Imaging"}},
-            )
-
-            # Should return 400 error (lines 73-76)
-            assert response.status_code == 400
-            data = response.json()
-            assert "Invalid state" in data["detail"]
-
-    def test_user_input_missing_format(self, api_test_client):
-        """Test user input without format field (lines 73-76)."""
-        with patch("agentic_neurodata_conversion.api.routers.chat.get_or_create_mcp_server") as mock_get_server:
-            mock_server = Mock()
-            mock_state = GlobalState()
-            mock_state.status = ConversionStatus.AWAITING_USER_INPUT
-            mock_server.global_state = mock_state
-
-            mock_get_server.return_value = mock_server
-
-            response = api_test_client.post(
-                "/api/user-input",
-                json={"input_data": {"other_field": "value"}},
-            )
-
-            # Should return 400 error (lines 73-76)
-            assert response.status_code == 400
-            data = response.json()
-            assert "Invalid state" in data["detail"]
-
-    def test_user_input_correct_state_no_format(self, api_test_client):
-        """Test that format key must exist in input_data (line 51 condition)."""
-        with patch("agentic_neurodata_conversion.api.routers.chat.get_or_create_mcp_server") as mock_get_server:
-            mock_server = Mock()
-            mock_state = GlobalState()
-            mock_state.status = ConversionStatus.AWAITING_USER_INPUT
-            mock_server.global_state = mock_state
-
-            mock_get_server.return_value = mock_server
-
-            response = api_test_client.post(
-                "/api/user-input",
-                json={"input_data": {}},  # Empty input_data, no format key
-            )
-
-            # Should return 400 error because "format" not in input_data (line 51 fails)
-            assert response.status_code == 400
-            data = response.json()
-            assert "Invalid state" in data["detail"]

@@ -11,7 +11,7 @@ from typing import Any
 
 from dateutil import parser as date_parser
 
-from agentic_neurodata_conversion.agents.metadata.schema import MetadataFieldSchema, NWBDANDISchema
+from agentic_neurodata_conversion.agents.nwb_dandi_schema import MetadataFieldSchema, NWBDANDISchema
 from agentic_neurodata_conversion.models import GlobalState, LogLevel
 from agentic_neurodata_conversion.services import LLMService
 

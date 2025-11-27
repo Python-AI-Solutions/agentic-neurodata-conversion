@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from agentic_neurodata_conversion.agents.utils.validation_history import ValidationHistoryLearner
+from agentic_neurodata_conversion.agents.validation_history_learning import ValidationHistoryLearner
 from agentic_neurodata_conversion.models import ValidationResult
 from agentic_neurodata_conversion.models.validation import ValidationIssue, ValidationSeverity
 from agentic_neurodata_conversion.services.llm_service import MockLLMService

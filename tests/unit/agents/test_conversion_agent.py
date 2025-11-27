@@ -30,11 +30,9 @@ class TestConversionAgentInitialization:
         agent = ConversionAgent(llm_service=None)
 
         assert agent._llm_service is None
-        # _supported_formats is now in _format_detector module
-        assert agent._format_detector._supported_formats is not None
-        assert isinstance(agent._format_detector._supported_formats, list)
-        # _format_detector module exists, even without LLM
-        assert agent._format_detector is not None
+        assert agent._supported_formats is not None
+        assert isinstance(agent._supported_formats, list)
+        assert agent._format_detector is None
 
     def test_init_with_llm_service(self):
         """Test agent initializes with LLM service."""
@@ -42,8 +40,7 @@ class TestConversionAgentInitialization:
         agent = ConversionAgent(llm_service=mock_llm)
 
         assert agent._llm_service is mock_llm
-        # _supported_formats is now in _format_detector module
-        assert agent._format_detector._supported_formats is not None
+        assert agent._supported_formats is not None
         assert agent._format_detector is not None
 
     def test_get_supported_formats_fallback(self):
@@ -53,12 +50,12 @@ class TestConversionAgentInitialization:
             # Create new agent which will trigger fallback
             agent = ConversionAgent(llm_service=None)
 
-            # Should still have formats from fallback list (_supported_formats now in _format_detector)
-            assert len(agent._format_detector._supported_formats) > 0
+            # Should still have formats from fallback list
+            assert len(agent._supported_formats) > 0
             # Should include common formats like SpikeGLX from fallback
-            assert "SpikeGLX" in agent._format_detector._supported_formats
+            assert "SpikeGLX" in agent._supported_formats
             # Should have the full fallback list (84 formats)
-            assert len(agent._format_detector._supported_formats) >= 80
+            assert len(agent._supported_formats) >= 80
 
 
 @pytest.mark.unit
@@ -90,7 +87,7 @@ class TestFormatDetection:
         (temp_dir / "test.ap.meta").touch()
 
         state = GlobalState()
-        result = await agent_no_llm._format_detector.detect_format(str(temp_dir), state)
+        result = await agent_no_llm._detect_format(str(temp_dir), state)
 
         assert result == "SpikeGLX"
         assert any("pattern matching" in log.message for log in state.logs)
@@ -102,7 +99,7 @@ class TestFormatDetection:
         (temp_dir / "structure.oebin").touch()
 
         state = GlobalState()
-        result = await agent_no_llm._format_detector.detect_format(str(temp_dir), state)
+        result = await agent_no_llm._detect_format(str(temp_dir), state)
 
         assert result == "OpenEphys"
         assert any("pattern matching" in log.message for log in state.logs)
@@ -116,7 +113,7 @@ class TestFormatDetection:
         (temp_dir / "test.imec0.ap.bin").touch()
 
         state = GlobalState()
-        result = await agent_no_llm._format_detector.detect_format(str(temp_dir / "test.imec0.ap.bin"), state)
+        result = await agent_no_llm._detect_format(str(temp_dir / "test.imec0.ap.bin"), state)
 
         # Expect SpikeGLX since .ap. pattern matches SpikeGLX check (runs before Neuropixels check)
         assert result == "SpikeGLX"
@@ -127,18 +124,23 @@ class TestFormatDetection:
         # Create ambiguous file
         (temp_dir / "data.bin").touch()
 
-        # Mock _supported_formats to include "SpikeGLX" for validation
-        agent_with_llm._format_detector._supported_formats = ["SpikeGLX", "OpenEphys", "Neuropixels", "AlphaOmega"]
-
-        # Mock LLM response with high confidence
-        with patch.object(
-            agent_with_llm._format_detector,
-            "_detect_format_with_llm",
-            new_callable=AsyncMock,
-            return_value={"format": "SpikeGLX", "confidence": 85},
+        # Fixed: Use patch.object with AsyncMock for proper async method mocking
+        # Also mock _get_supported_formats to include "SpikeGLX" for validation
+        with (
+            patch.object(
+                agent_with_llm,
+                "_detect_format_with_llm",
+                new_callable=AsyncMock,
+                return_value={"format": "SpikeGLX", "confidence": 85},
+            ),
+            patch.object(
+                agent_with_llm,
+                "_get_supported_formats",
+                return_value=["SpikeGLX", "OpenEphys", "Neuropixels", "AlphaOmega"],
+            ),
         ):
             state = GlobalState()
-            result = await agent_with_llm._format_detector.detect_format(str(temp_dir / "data.bin"), state)
+            result = await agent_with_llm._detect_format(str(temp_dir / "data.bin"), state)
 
             # Should use LLM result due to high confidence
             assert result == "SpikeGLX", f"Expected SpikeGLX but got {result}"
@@ -153,13 +155,13 @@ class TestFormatDetection:
 
         # Mock LLM to return low confidence using patch.object
         with patch.object(
-            agent_with_llm._format_detector,
+            agent_with_llm,
             "_detect_format_with_llm",
             new_callable=AsyncMock,
             return_value={"format": "Unknown", "confidence": 50},
         ):
             state = GlobalState()
-            result = await agent_with_llm._format_detector.detect_format(str(temp_dir), state)
+            result = await agent_with_llm._detect_format(str(temp_dir), state)
 
             # Should fallback to pattern matching
             assert result == "SpikeGLX"
@@ -172,7 +174,7 @@ class TestFormatDetection:
         (temp_dir / "unknown.dat").touch()
 
         state = GlobalState()
-        result = await agent_no_llm._format_detector.detect_format(str(temp_dir / "unknown.dat"), state)
+        result = await agent_no_llm._detect_format(str(temp_dir / "unknown.dat"), state)
 
         assert result is None
 
@@ -181,7 +183,7 @@ class TestFormatDetection:
         (temp_dir / "test.ap.bin").touch()
         (temp_dir / "test.ap.meta").touch()
 
-        result = agent_no_llm._format_detector._is_spikeglx(temp_dir)
+        result = agent_no_llm._is_spikeglx(temp_dir)
 
         assert result is True
 
@@ -190,7 +192,7 @@ class TestFormatDetection:
         file_path = temp_dir / "test.ap.bin"
         file_path.touch()
 
-        result = agent_no_llm._format_detector._is_spikeglx(file_path)
+        result = agent_no_llm._is_spikeglx(file_path)
 
         assert result is True
 
@@ -198,7 +200,7 @@ class TestFormatDetection:
         """Test SpikeGLX detection returns False for non-matching."""
         (temp_dir / "data.bin").touch()
 
-        result = agent_no_llm._format_detector._is_spikeglx(temp_dir)
+        result = agent_no_llm._is_spikeglx(temp_dir)
 
         assert result is False
 
@@ -206,7 +208,7 @@ class TestFormatDetection:
         """Test OpenEphys detection."""
         (temp_dir / "structure.oebin").touch()
 
-        result = agent_no_llm._format_detector._is_openephys(temp_dir)
+        result = agent_no_llm._is_openephys(temp_dir)
 
         assert result is True
 
@@ -214,7 +216,7 @@ class TestFormatDetection:
         """Test OpenEphys detection with settings.xml."""
         (temp_dir / "settings.xml").touch()
 
-        result = agent_no_llm._format_detector._is_openephys(temp_dir)
+        result = agent_no_llm._is_openephys(temp_dir)
 
         assert result is True
 
@@ -223,13 +225,13 @@ class TestFormatDetection:
         file_path = temp_dir / "data.nidq.bin"
         file_path.touch()
 
-        result = agent_no_llm._format_detector._is_neuropixels(file_path)
+        result = agent_no_llm._is_neuropixels(file_path)
 
         assert result is True
 
     @pytest.mark.asyncio
     async def test_detect_neuropixels_pattern_match(self, agent_no_llm, temp_dir):
-        """Test Neuropixels detection via pattern matching in detect_format.
+        """Test Neuropixels detection via pattern matching in _detect_format.
 
         Note: .nidq.bin files match SpikeGLX pattern first (which is correct),
         since Neuropixels uses SpikeGLX for acquisition. The _is_neuropixels
@@ -239,7 +241,7 @@ class TestFormatDetection:
         (temp_dir / "recording.nidq.bin").touch()
 
         state = GlobalState()
-        result = await agent_no_llm._format_detector.detect_format(str(temp_dir / "recording.nidq.bin"), state)
+        result = await agent_no_llm._detect_format(str(temp_dir / "recording.nidq.bin"), state)
 
         # .nidq files are detected as SpikeGLX (which is the correct format interface)
         assert result == "SpikeGLX"
@@ -255,7 +257,7 @@ class TestFormatDetection:
         abf_file.touch()
 
         state = GlobalState()
-        result = await agent_no_llm._format_detector.detect_format(str(abf_file), state)
+        result = await agent_no_llm._detect_format(str(abf_file), state)
 
         assert result == "Axon"
         # Verify log mentions Axon and .abf
@@ -293,7 +295,7 @@ class TestParameterOptimization:
 
         agent_with_llm._llm_service.generate_structured_output = mock_generate_structured
 
-        result = await agent_with_llm._runner._optimize_conversion_parameters(
+        result = await agent_with_llm._optimize_conversion_parameters(
             format_name="SpikeGLX",
             file_size_mb=100.0,
             state=state,
@@ -309,7 +311,7 @@ class TestParameterOptimization:
         """Test parameter optimization fallback without LLM."""
         state = GlobalState()
 
-        result = await agent_no_llm._runner._optimize_conversion_parameters(
+        result = await agent_no_llm._optimize_conversion_parameters(
             format_name="SpikeGLX",
             file_size_mb=100.0,
             state=state,
@@ -329,7 +331,7 @@ class TestParameterOptimization:
 
         agent_with_llm._llm_service.generate_structured_output = mock_generate_error
 
-        result = await agent_with_llm._runner._optimize_conversion_parameters(
+        result = await agent_with_llm._optimize_conversion_parameters(
             format_name="SpikeGLX",
             file_size_mb=100.0,
             state=state,
@@ -366,7 +368,7 @@ class TestProgressNarration:
 
         agent_with_llm._llm_service.generate_completion = mock_generate_completion
 
-        result = await agent_with_llm._helpers.narrate_progress(
+        result = await agent_with_llm._narrate_progress(
             stage="starting",
             format_name="SpikeGLX",
             context={"file_size_mb": 100},
@@ -387,7 +389,7 @@ class TestProgressNarration:
 
         agent_with_llm._llm_service.generate_completion = mock_generate_completion
 
-        result = await agent_with_llm._helpers.narrate_progress(
+        result = await agent_with_llm._narrate_progress(
             stage="processing",
             format_name="SpikeGLX",
             context={"progress_percent": 50},
@@ -407,7 +409,7 @@ class TestProgressNarration:
 
         agent_with_llm._llm_service.generate_completion = mock_generate_completion
 
-        result = await agent_with_llm._helpers.narrate_progress(
+        result = await agent_with_llm._narrate_progress(
             stage="complete",
             format_name="SpikeGLX",
             context={"output_path": "/path/to/output.nwb"},
@@ -421,7 +423,7 @@ class TestProgressNarration:
         """Test progress narration fallback without LLM."""
         state = GlobalState()
 
-        result = await agent_no_llm._helpers.narrate_progress(
+        result = await agent_no_llm._narrate_progress(
             stage="starting",
             format_name="SpikeGLX",
             context={},
@@ -443,7 +445,7 @@ class TestProgressNarration:
 
         agent_with_llm._llm_service.generate_completion = mock_generate_error
 
-        result = await agent_with_llm._helpers.narrate_progress(
+        result = await agent_with_llm._narrate_progress(
             stage="processing",
             format_name="SpikeGLX",
             context={},
@@ -522,11 +524,11 @@ class TestHandleDetectFormat:
         test_file = tmp_path / "test.dat"
         test_file.touch()
 
-        # Mock detect_format to raise an exception (now in _format_detector module)
+        # Mock _detect_format to raise an exception
         async def mock_detect_error(*args, **kwargs):
             raise RuntimeError("Simulated detection error")
 
-        with patch.object(agent._format_detector, "detect_format", side_effect=mock_detect_error):
+        with patch.object(agent, "_detect_format", side_effect=mock_detect_error):
             message = MCPMessage(
                 target_agent="conversion",
                 action="detect_format",
@@ -614,7 +616,7 @@ class TestChecksumCalculation:
         test_file = tmp_path / "test.bin"
         test_file.write_bytes(b"test data content")
 
-        checksum = agent._helpers.calculate_checksum(str(test_file))
+        checksum = agent._calculate_checksum(str(test_file))
 
         # Verify checksum format (64 hex characters)
         assert isinstance(checksum, str)
@@ -626,8 +628,8 @@ class TestChecksumCalculation:
         test_file = tmp_path / "test.bin"
         test_file.write_bytes(b"consistent data")
 
-        checksum1 = agent._helpers.calculate_checksum(str(test_file))
-        checksum2 = agent._helpers.calculate_checksum(str(test_file))
+        checksum1 = agent._calculate_checksum(str(test_file))
+        checksum2 = agent._calculate_checksum(str(test_file))
 
         assert checksum1 == checksum2
 
@@ -668,7 +670,7 @@ class TestFileSizeFormatting:
             state = GlobalState()
 
             # Mock the actual conversion to avoid NeuroConv
-            with patch.object(agent._runner, "_run_neuroconv_conversion"):
+            with patch.object(agent, "_run_neuroconv_conversion"):
                 response = await agent.handle_run_conversion(message, state)
 
             # Check logs contain GB formatting
@@ -699,7 +701,7 @@ class TestFileSizeFormatting:
             )
             state = GlobalState()
 
-            with patch.object(agent._runner, "_run_neuroconv_conversion"):
+            with patch.object(agent, "_run_neuroconv_conversion"):
                 response = await agent.handle_run_conversion(message, state)
 
             log_messages = [log.message for log in state.logs]
@@ -726,7 +728,7 @@ class TestFileSizeFormatting:
         )
         state = GlobalState()
 
-        with patch.object(agent._runner, "_run_neuroconv_conversion"):
+        with patch.object(agent, "_run_neuroconv_conversion"):
             response = await agent.handle_run_conversion(message, state)
 
         log_messages = [log.message for log in state.logs]
@@ -765,7 +767,7 @@ class TestDurationFormatting:
         state = GlobalState()
 
         # Mock fast conversion
-        with patch.object(agent._runner, "_run_neuroconv_conversion"):
+        with patch.object(agent, "_run_neuroconv_conversion"):
             response = await agent.handle_run_conversion(message, state)
 
         # Should have duration in seconds
@@ -798,10 +800,7 @@ class TestDurationFormatting:
         start_time = 1000.0
         end_time = start_time + 90  # 90 seconds = 1.5 minutes
 
-        with (
-            patch("time.time", side_effect=[start_time, end_time]),
-            patch.object(agent._runner, "_run_neuroconv_conversion"),
-        ):
+        with patch("time.time", side_effect=[start_time, end_time]), patch.object(agent, "_run_neuroconv_conversion"):
             response = await agent.handle_run_conversion(message, state)
 
         # Should show minutes and seconds
@@ -839,7 +838,7 @@ class TestCompressionRatioCalculation:
         )
         state = GlobalState()
 
-        with patch.object(agent._runner, "_run_neuroconv_conversion"):
+        with patch.object(agent, "_run_neuroconv_conversion"):
             response = await agent.handle_run_conversion(message, state)
 
         log_messages = [log.message for log in state.logs]
@@ -867,7 +866,7 @@ class TestCompressionRatioCalculation:
         )
         state = GlobalState()
 
-        with patch.object(agent._runner, "_run_neuroconv_conversion"):
+        with patch.object(agent, "_run_neuroconv_conversion"):
             response = await agent.handle_run_conversion(message, state)
 
         log_messages = [log.message for log in state.logs]
@@ -902,7 +901,7 @@ class TestErrorExplanation:
         agent_with_llm._llm_service.generate_completion = mock_generate_completion
 
         error = Exception("There is no Probe attached to this recording")
-        explanation = await agent_with_llm._error_handler.explain_conversion_error(
+        explanation = await agent_with_llm._explain_conversion_error(
             error=error,
             format_name="SpikeGLX",
             input_path="/test/data",
@@ -917,7 +916,7 @@ class TestErrorExplanation:
         state = GlobalState()
 
         error = Exception("Conversion failed")
-        explanation = await agent_no_llm._error_handler.explain_conversion_error(
+        explanation = await agent_no_llm._explain_conversion_error(
             error=error,
             format_name="SpikeGLX",
             input_path="/test/data",
@@ -939,7 +938,7 @@ class TestErrorExplanation:
         agent_with_llm._llm_service.generate_completion = mock_generate_error
 
         error = RuntimeError("Conversion failed")
-        explanation = await agent_with_llm._error_handler.explain_conversion_error(
+        explanation = await agent_with_llm._explain_conversion_error(
             error=error,
             format_name="SpikeGLX",
             input_path="/test/data",
@@ -972,7 +971,7 @@ class TestRealWorkflows:
         (spikeglx_dir / "recording_g0_t0.imec0.ap.meta").write_text("imSampRate=30000\n")
 
         # Test real detection logic
-        detected_format = await conversion_agent_real._format_detector.detect_format(str(spikeglx_dir), global_state)
+        detected_format = await conversion_agent_real._detect_format(str(spikeglx_dir), global_state)
 
         # Verify real code executed
         assert detected_format == "SpikeGLX"
@@ -986,7 +985,7 @@ class TestRealWorkflows:
         openephys_dir.mkdir()
         (openephys_dir / "structure.oebin").write_text('{"format": "openephys"}')
 
-        detected_format = await conversion_agent_real._format_detector.detect_format(str(openephys_dir), global_state)
+        detected_format = await conversion_agent_real._detect_format(str(openephys_dir), global_state)
 
         assert detected_format == "OpenEphys"
         assert any("OpenEphys" in log.message for log in global_state.logs)
@@ -997,7 +996,7 @@ class TestRealWorkflows:
         unknown_file = tmp_path / "unknown.dat"
         unknown_file.write_bytes(b"unknown data")
 
-        detected_format = await conversion_agent_real._format_detector.detect_format(str(unknown_file), global_state)
+        detected_format = await conversion_agent_real._detect_format(str(unknown_file), global_state)
 
         # Should return None for unknown format
         assert detected_format is None
@@ -1012,12 +1011,12 @@ class TestRealWorkflows:
     @pytest.mark.asyncio
     async def test_real_supported_formats_loading(self, conversion_agent_real):
         """Test that real supported formats list is loaded."""
-        # Agent should have real supported formats from NeuroConv (now in _format_detector)
-        assert len(conversion_agent_real._format_detector._supported_formats) > 0
+        # Agent should have real supported formats from NeuroConv
+        assert len(conversion_agent_real._supported_formats) > 0
         # Check for common format interfaces (real names from NeuroConv)
         common_formats = ["SpikeGLXRecordingInterface", "OpenEphysRecordingInterface"]
         for fmt in common_formats:
-            assert fmt in conversion_agent_real._format_detector._supported_formats
+            assert fmt in conversion_agent_real._supported_formats
 
     def test_real_is_spikeglx_helper_with_various_patterns(self, conversion_agent_real, tmp_path):
         """Test real _is_spikeglx helper with various file patterns."""
@@ -1032,7 +1031,7 @@ class TestRealWorkflows:
         for filename, expected in test_cases:
             test_file = tmp_path / filename
             test_file.touch()
-            result = conversion_agent_real._format_detector._is_spikeglx(test_file)
+            result = conversion_agent_real._is_spikeglx(test_file)
             assert result == expected, f"Failed for {filename}: expected {expected}, got {result}"
 
     def test_real_is_openephys_helper_with_various_files(self, conversion_agent_real, tmp_path):
@@ -1042,31 +1041,31 @@ class TestRealWorkflows:
 
         # Test with structure.oebin
         (test_dir / "structure.oebin").touch()
-        assert conversion_agent_real._format_detector._is_openephys(test_dir) is True
+        assert conversion_agent_real._is_openephys(test_dir) is True
 
         # Clean up and test with settings.xml
         (test_dir / "structure.oebin").unlink()
         (test_dir / "settings.xml").touch()
-        assert conversion_agent_real._format_detector._is_openephys(test_dir) is True
+        assert conversion_agent_real._is_openephys(test_dir) is True
 
     def test_real_is_neuropixels_helper(self, conversion_agent_real, tmp_path):
         """Test real _is_neuropixels helper."""
         # Neuropixels file
         neuropixels_file = tmp_path / "recording.nidq.bin"
         neuropixels_file.touch()
-        assert conversion_agent_real._format_detector._is_neuropixels(neuropixels_file) is True
+        assert conversion_agent_real._is_neuropixels(neuropixels_file) is True
 
         # Non-neuropixels file
         other_file = tmp_path / "recording.dat"
         other_file.touch()
-        assert conversion_agent_real._format_detector._is_neuropixels(other_file) is False
+        assert conversion_agent_real._is_neuropixels(other_file) is False
 
     @pytest.mark.asyncio
     async def test_real_error_handling_for_missing_path(self, conversion_agent_real, global_state):
         """Test real error handling when path doesn't exist."""
         non_existent_path = "/tmp/non_existent_path_12345"
 
-        detected_format = await conversion_agent_real._format_detector.detect_format(non_existent_path, global_state)
+        detected_format = await conversion_agent_real._detect_format(non_existent_path, global_state)
 
         # Should handle error gracefully
         assert detected_format is None

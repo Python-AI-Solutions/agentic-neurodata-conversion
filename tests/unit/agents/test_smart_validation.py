@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from agentic_neurodata_conversion.agents.validation.smart_validator import SmartValidationAnalyzer
+from agentic_neurodata_conversion.agents.smart_validation import SmartValidationAnalyzer
 from agentic_neurodata_conversion.models import LogLevel
 
 # Note: The following fixtures are provided by conftest files:

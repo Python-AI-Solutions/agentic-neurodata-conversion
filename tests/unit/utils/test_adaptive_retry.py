@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from agentic_neurodata_conversion.agents.error_handling.adaptive_retry import AdaptiveRetryStrategy
+from agentic_neurodata_conversion.agents.adaptive_retry import AdaptiveRetryStrategy
 from agentic_neurodata_conversion.models.state import GlobalState
 
 

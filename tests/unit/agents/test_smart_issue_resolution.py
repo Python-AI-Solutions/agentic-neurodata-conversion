@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from agentic_neurodata_conversion.agents.validation.issue_resolution import SmartIssueResolution
+from agentic_neurodata_conversion.agents.smart_issue_resolution import SmartIssueResolution
 from agentic_neurodata_conversion.services.llm_service import MockLLMService
 
 

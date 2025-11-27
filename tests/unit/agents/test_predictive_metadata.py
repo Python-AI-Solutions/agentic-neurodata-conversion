@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from agentic_neurodata_conversion.agents.metadata.predictive import PredictiveMetadataSystem
+from agentic_neurodata_conversion.agents.predictive_metadata import PredictiveMetadataSystem
 from agentic_neurodata_conversion.services.llm_service import MockLLMService
 
 # Note: The following fixtures are provided by conftest files:

@@ -19,7 +19,7 @@ from agentic_neurodata_conversion.agents import (
     ConversionAgent,
     EvaluationAgent,
 )
-from agentic_neurodata_conversion.agents.utils.conversational_handler import ConversationalHandler
+from agentic_neurodata_conversion.agents.conversational_handler import ConversationalHandler
 from agentic_neurodata_conversion.models import ConversationPhase, ConversionStatus, GlobalState, MCPMessage
 
 # ============================================================================

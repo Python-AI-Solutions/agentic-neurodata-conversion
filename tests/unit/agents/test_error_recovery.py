@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from agentic_neurodata_conversion.agents.error_handling.recovery import IntelligentErrorRecovery
+from agentic_neurodata_conversion.agents.error_recovery import IntelligentErrorRecovery
 from agentic_neurodata_conversion.services.llm_service import MockLLMService
 
 # Note: The following fixtures are provided by conftest files:
@@ -484,7 +484,7 @@ class TestRealErrorRecoveryWorkflows:
     @pytest.mark.asyncio
     async def test_real_error_recovery_initialization(self, mock_llm_api_only):
         """Test real error recovery initialization."""
-        from agentic_neurodata_conversion.agents.error_handling.recovery import IntelligentErrorRecovery
+        from agentic_neurodata_conversion.agents.error_recovery import IntelligentErrorRecovery
 
         recovery = IntelligentErrorRecovery(llm_service=mock_llm_api_only)
 
@@ -494,7 +494,7 @@ class TestRealErrorRecoveryWorkflows:
     @pytest.mark.asyncio
     async def test_real_error_analysis_without_llm(self):
         """Test real error recovery can work without LLM."""
-        from agentic_neurodata_conversion.agents.error_handling.recovery import IntelligentErrorRecovery
+        from agentic_neurodata_conversion.agents.error_recovery import IntelligentErrorRecovery
 
         recovery = IntelligentErrorRecovery(llm_service=None)
 
@@ -505,7 +505,7 @@ class TestRealErrorRecoveryWorkflows:
     @pytest.mark.asyncio
     async def test_real_error_categorization(self, mock_llm_api_only, global_state):
         """Test real error analysis with LLM."""
-        from agentic_neurodata_conversion.agents.error_handling.recovery import IntelligentErrorRecovery
+        from agentic_neurodata_conversion.agents.error_recovery import IntelligentErrorRecovery
 
         recovery = IntelligentErrorRecovery(llm_service=mock_llm_api_only)
 

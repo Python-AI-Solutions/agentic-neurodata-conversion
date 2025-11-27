@@ -20,7 +20,7 @@ import pytest
 # Add backend/src to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend", "src"))
 
-from agentic_neurodata_conversion.agents.validation.intelligent_analyzer import IntelligentValidationAnalyzer
+from agentic_neurodata_conversion.agents.intelligent_validation_analyzer import IntelligentValidationAnalyzer
 from agentic_neurodata_conversion.models import GlobalState, ValidationResult, ValidationStatus
 
 # ============================================================================

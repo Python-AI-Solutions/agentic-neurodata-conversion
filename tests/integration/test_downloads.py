@@ -28,7 +28,8 @@ def patch_llm_service(mock_llm_conversational):
     with patch(
         "agentic_neurodata_conversion.services.llm_service.create_llm_service", return_value=mock_llm_conversational
     ):
-        yield
+        with patch("agentic_neurodata_conversion.api.main.create_llm_service", return_value=mock_llm_conversational):
+            yield
 
 
 @pytest.fixture
@@ -93,7 +94,7 @@ class TestDownloadNWBEndpoint:
         api_test_client.post("/api/reset")
 
         # Mock the global state to have output_path
-        with patch("agentic_neurodata_conversion.api.routers.downloads.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.output_path = str(mock_nwb_file)
@@ -112,7 +113,7 @@ class TestDownloadNWBEndpoint:
 
     def test_download_nwb_file_content(self, api_test_client, mock_nwb_file):
         """Test that downloaded NWB file contains correct content."""
-        with patch("agentic_neurodata_conversion.api.routers.downloads.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.output_path = str(mock_nwb_file)
@@ -155,7 +156,7 @@ class TestDownloadReportEndpoint:
         report_html = tmp_path / "output_evaluation_report.html"
         report_html.write_text("<html><body>Report</body></html>")
 
-        with patch("agentic_neurodata_conversion.api.routers.downloads.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.output_path = str(output_nwb)
@@ -180,7 +181,7 @@ class TestDownloadReportEndpoint:
         report_html = tmp_path / "output_evaluation_report.html"
         report_html.write_text("<html><body>Report</body></html>")
 
-        with patch("agentic_neurodata_conversion.api.routers.downloads.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.output_path = str(output_nwb)
@@ -205,7 +206,7 @@ class TestDownloadReportEndpoint:
         report_html = tmp_path / "output_evaluation_report.html"
         report_html.write_text("<html><body>Report</body></html>")
 
-        with patch("agentic_neurodata_conversion.api.routers.downloads.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.output_path = str(output_nwb)
@@ -238,9 +239,7 @@ class TestDownloadEndpointsWithVersionedFiles:
         v3_path.write_text("Version 3 content")
 
         try:
-            with patch(
-                "agentic_neurodata_conversion.api.routers.downloads.get_or_create_mcp_server"
-            ) as mock_get_server:
+            with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
                 mock_server = Mock()
                 mock_state = GlobalState()
                 mock_state.output_path = str(v3_path)  # Latest version
@@ -268,7 +267,7 @@ class TestDownloadEndpointsErrorHandling:
 
     def test_download_nwb_with_corrupted_file(self, api_test_client):
         """Test download NWB when file path exists but file is corrupted/unreadable."""
-        with patch("agentic_neurodata_conversion.api.routers.downloads.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.output_path = "/nonexistent/corrupted.nwb"
@@ -283,7 +282,7 @@ class TestDownloadEndpointsErrorHandling:
 
     def test_download_with_system_busy(self, api_test_client):
         """Test download attempts while system is processing."""
-        with patch("agentic_neurodata_conversion.api.routers.downloads.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.output_path = None
@@ -314,7 +313,7 @@ class TestDownloadEndpointsWithAllValidationStatuses:
     )
     def test_download_nwb_with_all_validation_statuses(self, api_test_client, mock_nwb_file, validation_status):
         """Test that NWB can be downloaded regardless of validation status."""
-        with patch("agentic_neurodata_conversion.api.routers.downloads.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.output_path = str(mock_nwb_file)
@@ -336,7 +335,7 @@ class TestConcurrentDownloads:
 
     def test_multiple_concurrent_download_requests(self, api_test_client, mock_nwb_file):
         """Test that multiple concurrent download requests work."""
-        with patch("agentic_neurodata_conversion.api.routers.downloads.get_or_create_mcp_server") as mock_get_server:
+        with patch("agentic_neurodata_conversion.api.main.get_or_create_mcp_server") as mock_get_server:
             mock_server = Mock()
             mock_state = GlobalState()
             mock_state.output_path = str(mock_nwb_file)
