@@ -1,0 +1,147 @@
+{
+  "ontology": "UBERON",
+  "version": "2024-01",
+  "total_terms": 20,
+  "terms": [
+    {
+      "term_id": "UBERON:0001954",
+      "label": "Ammon's horn",
+      "definition": "Hippocampus proper - memory formation region",
+      "synonyms": ["hippocampus", "hippocampal formation", "cornu ammonis", "CA fields"],
+      "parent_terms": ["UBERON:0002421"]
+    },
+    {
+      "term_id": "UBERON:0000956",
+      "label": "cerebral cortex",
+      "definition": "Outer layer of cerebrum - higher cognitive functions",
+      "synonyms": ["cortex", "neocortex", "cerebral mantle"],
+      "parent_terms": ["UBERON:0000955"]
+    },
+    {
+      "term_id": "UBERON:0002435",
+      "label": "striatum",
+      "definition": "Basal ganglia component - motor and reward learning",
+      "synonyms": ["dorsal striatum", "corpus striatum"],
+      "parent_terms": ["UBERON:0010011"]
+    },
+    {
+      "term_id": "UBERON:0001950",
+      "label": "neocortex",
+      "definition": "Six-layered cortex - mammalian innovation",
+      "synonyms": ["isocortex", "neopallium"],
+      "parent_terms": ["UBERON:0000956"]
+    },
+    {
+      "term_id": "UBERON:0002421",
+      "label": "hippocampal formation",
+      "definition": "Medial temporal lobe structure - memory processing",
+      "synonyms": ["hippocampus proper", "hippocampal region"],
+      "parent_terms": ["UBERON:0000956"]
+    },
+    {
+      "term_id": "UBERON:0001950",
+      "label": "prefrontal cortex",
+      "definition": "Frontal lobe region - executive function",
+      "synonyms": ["PFC", "frontal cortex"],
+      "parent_terms": ["UBERON:0000956"]
+    },
+    {
+      "term_id": "UBERON:0000006",
+      "label": "islets of Langerhans",
+      "definition": "Pancreatic endocrine tissue - insulin production",
+      "synonyms": ["pancreatic islet", "islet"],
+      "parent_terms": ["UBERON:0001264"]
+    },
+    {
+      "term_id": "UBERON:0001017",
+      "label": "central nervous system",
+      "definition": "Brain and spinal cord",
+      "synonyms": ["CNS", "systema nervosum centrale"],
+      "parent_terms": ["UBERON:0001016"]
+    },
+    {
+      "term_id": "UBERON:0000955",
+      "label": "brain",
+      "definition": "Central organ of nervous system",
+      "synonyms": ["encephalon", "whole brain"],
+      "parent_terms": ["UBERON:0001017"]
+    },
+    {
+      "term_id": "UBERON:0002037",
+      "label": "cerebellum",
+      "definition": "Hindbrain structure - motor coordination",
+      "synonyms": ["cerebellar hemisphere", "cerebellar cortex"],
+      "parent_terms": ["UBERON:0000955"]
+    },
+    {
+      "term_id": "UBERON:0001869",
+      "label": "thalamus",
+      "definition": "Diencephalon relay station - sensory processing",
+      "synonyms": ["dorsal thalamus"],
+      "parent_terms": ["UBERON:0001894"]
+    },
+    {
+      "term_id": "UBERON:0001894",
+      "label": "diencephalon",
+      "definition": "Forebrain division - thalamus and hypothalamus",
+      "synonyms": ["interbrain", "betweenbrain"],
+      "parent_terms": ["UBERON:0001890"]
+    },
+    {
+      "term_id": "UBERON:0001890",
+      "label": "forebrain",
+      "definition": "Anterior brain division - cerebrum and diencephalon",
+      "synonyms": ["prosencephalon"],
+      "parent_terms": ["UBERON:0000955"]
+    },
+    {
+      "term_id": "UBERON:0002298",
+      "label": "brainstem",
+      "definition": "Midbrain, pons, and medulla - vital functions",
+      "synonyms": ["brain stem"],
+      "parent_terms": ["UBERON:0000955"]
+    },
+    {
+      "term_id": "UBERON:0001384",
+      "label": "primary motor cortex",
+      "definition": "Precentral gyrus - voluntary movement control",
+      "synonyms": ["M1", "motor cortex", "precentral gyrus"],
+      "parent_terms": ["UBERON:0000956"]
+    },
+    {
+      "term_id": "UBERON:0001385",
+      "label": "primary somatosensory cortex",
+      "definition": "Postcentral gyrus - tactile sensation processing",
+      "synonyms": ["S1", "somatosensory cortex", "postcentral gyrus"],
+      "parent_terms": ["UBERON:0000956"]
+    },
+    {
+      "term_id": "UBERON:0002285",
+      "label": "telencephalon",
+      "definition": "Cerebral hemispheres - highest brain division",
+      "synonyms": ["cerebrum", "endbrain"],
+      "parent_terms": ["UBERON:0001890"]
+    },
+    {
+      "term_id": "UBERON:0000010",
+      "label": "peripheral nervous system",
+      "definition": "Nervous system outside brain and spinal cord",
+      "synonyms": ["PNS"],
+      "parent_terms": ["UBERON:0001016"]
+    },
+    {
+      "term_id": "UBERON:0001871",
+      "label": "temporal lobe",
+      "definition": "Lateral cerebral lobe - auditory and memory processing",
+      "synonyms": ["temporal cortex"],
+      "parent_terms": ["UBERON:0000956"]
+    },
+    {
+      "term_id": "UBERON:0001873",
+      "label": "caudate nucleus",
+      "definition": "C-shaped striatal nucleus - motor and cognitive control",
+      "synonyms": ["caudate", "nucleus caudatus"],
+      "parent_terms": ["UBERON:0002435"]
+    }
+  ]
+}

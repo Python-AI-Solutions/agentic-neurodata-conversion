@@ -20,6 +20,8 @@ reportlab = ">=4.2.5"
 jinja2 = ">=3.1.4"
 # HTTP client
 httpx = ">=0.27.2"
+# Settings management for configuration
+pydantic-settings = ">=2.1.0"
 # Data handling
 pyyaml = ">=6.0.2"
 numpy = ">=2.1.3"
@@ -36,6 +38,8 @@ anthropic = ">=0.39.0"
 websockets = ">=13.1"
 # Configuration
 python-dotenv = ">=1.0.0"
+# Knowledge Graph (future implementation)
+neo4j = ">=5.15.0,<6"
 
 [tasks]
 # Development tasks
