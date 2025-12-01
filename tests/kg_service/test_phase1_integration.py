@@ -12,6 +12,13 @@ import pytest
 @pytest.fixture
 async def neo4j_connection():
     """Fixture for Neo4j connection."""
+    import os
+
+    # Skip if NEO4J_PASSWORD not set (e.g., in CI)
+    password = os.getenv("NEO4J_PASSWORD")
+    if not password:
+        pytest.skip("NEO4J_PASSWORD not set - Neo4j tests require local Neo4j instance")
+
     from kg_service.config import get_settings
     from kg_service.db.neo4j_connection import get_neo4j_connection, reset_neo4j_connection
 
@@ -20,7 +27,13 @@ async def neo4j_connection():
 
     settings = get_settings()
     conn = get_neo4j_connection(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password)
-    await conn.connect()
+
+    # Try to connect, skip if Neo4j isn't running
+    try:
+        await conn.connect()
+    except Exception as e:
+        pytest.skip(f"Neo4j not accessible: {e}")
+
     yield conn
     await conn.close()
 
