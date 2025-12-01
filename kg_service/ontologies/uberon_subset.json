@@ -39,7 +39,7 @@
       "parent_terms": ["UBERON:0000956"]
     },
     {
-      "term_id": "UBERON:0001950",
+      "term_id": "UBERON:0000451",
       "label": "prefrontal cortex",
       "definition": "Frontal lobe region - executive function",
       "synonyms": ["PFC", "frontal cortex"],
