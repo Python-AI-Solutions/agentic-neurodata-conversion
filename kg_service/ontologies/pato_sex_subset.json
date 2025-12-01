@@ -1,0 +1,35 @@
+{
+  "ontology": "PATO",
+  "version": "2024-01",
+  "total_terms": 4,
+  "terms": [
+    {
+      "term_id": "PATO:0000384",
+      "label": "male",
+      "definition": "Biological sex - produces small gametes (sperm)",
+      "synonyms": ["male sex", "masculine", "m"],
+      "parent_terms": ["PATO:0000047"]
+    },
+    {
+      "term_id": "PATO:0000383",
+      "label": "female",
+      "definition": "Biological sex - produces large gametes (eggs)",
+      "synonyms": ["female sex", "feminine", "f"],
+      "parent_terms": ["PATO:0000047"]
+    },
+    {
+      "term_id": "PATO:0001340",
+      "label": "hermaphrodite",
+      "definition": "Organism with both male and female reproductive organs",
+      "synonyms": ["hermaphroditic", "intersex"],
+      "parent_terms": ["PATO:0000047"]
+    },
+    {
+      "term_id": "PATO:0001894",
+      "label": "sex unknown",
+      "definition": "Biological sex has not been determined",
+      "synonyms": ["unknown sex", "undetermined sex", "not specified", "unknown"],
+      "parent_terms": ["PATO:0000047"]
+    }
+  ]
+}
