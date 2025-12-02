@@ -252,8 +252,10 @@ async def test_endpoints_accept_json():
     from agentic_neurodata_conversion.kg_service.main import app
 
     # Mock settings and Neo4j connection to avoid requiring NEO4J_PASSWORD in CI
+    # Need to mock both main.get_settings and config.get_settings since endpoints call config directly
     with (
-        patch("agentic_neurodata_conversion.kg_service.main.get_settings") as mock_get_settings,
+        patch("agentic_neurodata_conversion.kg_service.main.get_settings") as mock_get_settings_main,
+        patch("agentic_neurodata_conversion.kg_service.config.get_settings") as mock_get_settings_config,
         patch("agentic_neurodata_conversion.kg_service.main.get_neo4j_connection") as mock_get_conn,
     ):
         # Mock settings
@@ -261,7 +263,8 @@ async def test_endpoints_accept_json():
         mock_settings.neo4j_uri = "bolt://localhost:7687"
         mock_settings.neo4j_user = "neo4j"
         mock_settings.neo4j_password = "password"
-        mock_get_settings.return_value = mock_settings
+        mock_get_settings_main.return_value = mock_settings
+        mock_get_settings_config.return_value = mock_settings
 
         # Mock Neo4j connection
         mock_conn = Mock()

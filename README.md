@@ -185,32 +185,32 @@ Access the interface at [http://localhost:3000/chat-ui.html](http://localhost:30
 
 ### File Upload and Format Detection
 
-![File Upload Interface](docs/images/chat-interface-upload.png)
+![File Upload Interface](images/chat-interface-upload.png)
 *Add file with attach button with automatic format detection*
 
 ### Natural Language Metadata Collection
 
-![Metadata Collection](docs/images/chat-interface-metadata.png)
+![Metadata Collection](images/chat-interface-metadata.png)
 *Conversational interface for collecting experimental metadata - system extracts structured fields from natural language*
 
 ### Conversion Progress and Results
 
-![Conversion Workflow](docs/images/chat-interface-conversion.png)
+![Conversion Workflow](images/chat-interface-conversion.png)
 *Real-time conversion updates with validation results and download options*
 
 ### Validation Report - Overview
 
-![Validation Report Overview](docs/images/report-validation-overview.png)
+![Validation Report Overview](images/report-validation-overview.png)
 *Comprehensive validation report showing NWBInspector results with issue classification and DANDI compliance status*
 
 ### Validation Report - Detailed Analysis
 
-![Validation Details](docs/images/report-validation-details.png)
+![Validation Details](images/report-validation-details.png)
 *Detailed breakdown of validation issues with severity levels, affected fields, and actionable recommendations*
 
 ### Provenance Tracking
 
-![Provenance Tracking](docs/images/report-provenance-tracking.png)
+![Provenance Tracking](images/report-provenance-tracking.png)
 *Complete traceability of metadata sources - tracks whether each field came from user input, filename inference or defaults*
 
 ## Technical Stack
