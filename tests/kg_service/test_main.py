@@ -11,29 +11,53 @@ import pytest
 @pytest.mark.asyncio
 async def test_app_initialization():
     """Test FastAPI app is initialized correctly."""
-    from agentic_neurodata_conversion.kg_service.main import app
+    # Mock settings to avoid requiring NEO4J_PASSWORD in CI
+    with (
+        patch("agentic_neurodata_conversion.kg_service.config.get_settings") as mock_get_settings,
+        patch("agentic_neurodata_conversion.kg_service.main.get_settings") as mock_get_settings_main,
+    ):
+        mock_settings = Mock()
+        mock_settings.neo4j_uri = "bolt://localhost:7687"
+        mock_settings.neo4j_user = "neo4j"
+        mock_settings.neo4j_password = "password"
+        mock_get_settings.return_value = mock_settings
+        mock_get_settings_main.return_value = mock_settings
 
-    assert app.title == "NWB Knowledge Graph Service"
-    assert app.version == "1.0.0"
-    assert "Ontology-based metadata validation" in app.description
+        from agentic_neurodata_conversion.kg_service.main import app
+
+        assert app.title == "NWB Knowledge Graph Service"
+        assert app.version == "1.0.0"
+        assert "Ontology-based metadata validation" in app.description
 
 
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_app_routes_registered():
     """Test all routes are registered."""
-    from agentic_neurodata_conversion.kg_service.main import app
+    # Mock settings to avoid requiring NEO4J_PASSWORD in CI
+    with (
+        patch("agentic_neurodata_conversion.kg_service.config.get_settings") as mock_get_settings,
+        patch("agentic_neurodata_conversion.kg_service.main.get_settings") as mock_get_settings_main,
+    ):
+        mock_settings = Mock()
+        mock_settings.neo4j_uri = "bolt://localhost:7687"
+        mock_settings.neo4j_user = "neo4j"
+        mock_settings.neo4j_password = "password"
+        mock_get_settings.return_value = mock_settings
+        mock_get_settings_main.return_value = mock_settings
 
-    routes = [route.path for route in app.routes]
+        from agentic_neurodata_conversion.kg_service.main import app
 
-    # Check main endpoints
-    assert "/" in routes
-    assert "/health" in routes
+        routes = [route.path for route in app.routes]
 
-    # Check API v1 endpoints
-    assert "/api/v1/normalize" in routes
-    assert "/api/v1/validate" in routes
-    assert "/api/v1/observations" in routes
+        # Check main endpoints
+        assert "/" in routes
+        assert "/health" in routes
+
+        # Check API v1 endpoints
+        assert "/api/v1/normalize" in routes
+        assert "/api/v1/validate" in routes
+        assert "/api/v1/observations" in routes
 
 
 @pytest.mark.integration
@@ -98,11 +122,10 @@ async def test_health_check_endpoint():
 @pytest.mark.asyncio
 async def test_health_check_unhealthy_neo4j():
     """Test health check when Neo4j is unhealthy."""
-    from agentic_neurodata_conversion.kg_service.main import app
-
     # Mock settings to avoid requiring NEO4J_PASSWORD in CI
     with (
-        patch("agentic_neurodata_conversion.kg_service.main.get_settings") as mock_get_settings,
+        patch("agentic_neurodata_conversion.kg_service.config.get_settings") as mock_get_settings_config,
+        patch("agentic_neurodata_conversion.kg_service.main.get_settings") as mock_get_settings_main,
         patch("agentic_neurodata_conversion.kg_service.main.get_neo4j_connection") as mock_get_conn,
     ):
         # Mock settings
@@ -110,12 +133,15 @@ async def test_health_check_unhealthy_neo4j():
         mock_settings.neo4j_uri = "bolt://localhost:7687"
         mock_settings.neo4j_user = "neo4j"
         mock_settings.neo4j_password = "password"
-        mock_get_settings.return_value = mock_settings
+        mock_get_settings_config.return_value = mock_settings
+        mock_get_settings_main.return_value = mock_settings
 
         # Mock Neo4j connection to return unhealthy
         mock_conn = Mock()
         mock_conn.health_check = AsyncMock(return_value=False)
         mock_get_conn.return_value = mock_conn
+
+        from agentic_neurodata_conversion.kg_service.main import app
 
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
@@ -142,7 +168,8 @@ async def test_lifespan_startup_shutdown():
 
     # Mock settings and Neo4j connection
     with (
-        patch("agentic_neurodata_conversion.kg_service.main.get_settings") as mock_get_settings,
+        patch("agentic_neurodata_conversion.kg_service.config.get_settings") as mock_get_settings_config,
+        patch("agentic_neurodata_conversion.kg_service.main.get_settings") as mock_get_settings_main,
         patch("agentic_neurodata_conversion.kg_service.main.get_neo4j_connection") as mock_get_conn,
     ):
         # Mock settings
@@ -150,7 +177,8 @@ async def test_lifespan_startup_shutdown():
         mock_settings.neo4j_uri = "bolt://localhost:7687"
         mock_settings.neo4j_user = "neo4j"
         mock_settings.neo4j_password = "password"
-        mock_get_settings.return_value = mock_settings
+        mock_get_settings_config.return_value = mock_settings
+        mock_get_settings_main.return_value = mock_settings
 
         # Mock Neo4j connection
         mock_conn = Mock()
@@ -184,7 +212,8 @@ async def test_lifespan_handles_connection_error():
 
     # Mock settings and Neo4j connection that fails to connect
     with (
-        patch("agentic_neurodata_conversion.kg_service.main.get_settings") as mock_get_settings,
+        patch("agentic_neurodata_conversion.kg_service.config.get_settings") as mock_get_settings_config,
+        patch("agentic_neurodata_conversion.kg_service.main.get_settings") as mock_get_settings_main,
         patch("agentic_neurodata_conversion.kg_service.main.get_neo4j_connection") as mock_get_conn,
     ):
         # Mock settings
@@ -192,7 +221,8 @@ async def test_lifespan_handles_connection_error():
         mock_settings.neo4j_uri = "bolt://localhost:7687"
         mock_settings.neo4j_user = "neo4j"
         mock_settings.neo4j_password = "password"
-        mock_get_settings.return_value = mock_settings
+        mock_get_settings_config.return_value = mock_settings
+        mock_get_settings_main.return_value = mock_settings
 
         # Mock Neo4j connection that fails to connect
         mock_conn = Mock()
@@ -236,13 +266,25 @@ async def test_cors_headers():
 @pytest.mark.unit
 def test_app_import_does_not_fail():
     """Test that importing the app doesn't fail."""
-    try:
-        from agentic_neurodata_conversion.kg_service.main import app
+    # Mock settings to avoid requiring NEO4J_PASSWORD in CI
+    with (
+        patch("agentic_neurodata_conversion.kg_service.config.get_settings") as mock_get_settings,
+        patch("agentic_neurodata_conversion.kg_service.main.get_settings") as mock_get_settings_main,
+    ):
+        mock_settings = Mock()
+        mock_settings.neo4j_uri = "bolt://localhost:7687"
+        mock_settings.neo4j_user = "neo4j"
+        mock_settings.neo4j_password = "password"
+        mock_get_settings.return_value = mock_settings
+        mock_get_settings_main.return_value = mock_settings
 
-        assert app is not None
-        assert hasattr(app, "routes")
-    except Exception as e:
-        pytest.fail(f"Failed to import app: {e}")
+        try:
+            from agentic_neurodata_conversion.kg_service.main import app
+
+            assert app is not None
+            assert hasattr(app, "routes")
+        except Exception as e:
+            pytest.fail(f"Failed to import app: {e}")
 
 
 @pytest.mark.unit
