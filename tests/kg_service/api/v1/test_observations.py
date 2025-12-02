@@ -116,3 +116,28 @@ async def test_create_observation_with_provenance():
 
     assert response.observation_id == "obs-999"
     assert response.status == "stored"
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_create_observation_invalid_ontology_term():
+    """Test API returns 400 for invalid ontology term."""
+    mock_service = Mock()
+    mock_service.store_observation = AsyncMock(
+        side_effect=ValueError("Ontology term 'NCBITaxon:99999' not found in knowledge graph")
+    )
+
+    request = ObservationCreateRequest(
+        field_path="subject.species",
+        raw_value="mouse",
+        ontology_term_id="NCBITaxon:99999",
+        source_type="user",
+        confidence=0.95,
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await create_observation(request, mock_service)
+
+    assert exc_info.value.status_code == 400
+    assert "NCBITaxon:99999" in exc_info.value.detail
+    assert "not found" in exc_info.value.detail

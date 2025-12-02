@@ -16,6 +16,7 @@ from agentic_neurodata_conversion.kg_service.services.observation_service import
 async def test_store_observation():
     """Test observation storage logic."""
     mock_neo4j_connection = Mock()
+    mock_neo4j_connection.execute_read = AsyncMock(return_value=[{"term_id": "NCBITaxon:10090"}])
     mock_neo4j_connection.execute_write = AsyncMock(return_value=[{"observation_id": "obs-123"}])
 
     service = ObservationService(mock_neo4j_connection)
@@ -34,6 +35,7 @@ async def test_store_observation():
     result = await service.store_observation(obs)
 
     assert result == "obs-123"
+    assert mock_neo4j_connection.execute_read.called
     assert mock_neo4j_connection.execute_write.called
 
 
@@ -42,6 +44,7 @@ async def test_store_observation():
 async def test_store_observation_with_empty_provenance():
     """Test storing observation with empty provenance."""
     mock_neo4j_connection = Mock()
+    mock_neo4j_connection.execute_read = AsyncMock(return_value=[{"term_id": "NCBITaxon:10090"}])
     mock_neo4j_connection.execute_write = AsyncMock(return_value=[{"observation_id": "obs-456"}])
 
     service = ObservationService(mock_neo4j_connection)
@@ -66,6 +69,7 @@ async def test_store_observation_with_empty_provenance():
 async def test_store_observation_error_handling():
     """Test error handling in observation storage."""
     mock_neo4j_connection = Mock()
+    mock_neo4j_connection.execute_read = AsyncMock(return_value=[{"term_id": "NCBITaxon:10090"}])
     mock_neo4j_connection.execute_write = AsyncMock(side_effect=Exception("Database error"))
 
     service = ObservationService(mock_neo4j_connection)
@@ -130,6 +134,7 @@ async def test_supersede_observations_empty_result():
 async def test_store_observation_brain_region():
     """Test storing observation for brain region."""
     mock_neo4j_connection = Mock()
+    mock_neo4j_connection.execute_read = AsyncMock(return_value=[{"term_id": "UBERON:0002421"}])
     mock_neo4j_connection.execute_write = AsyncMock(return_value=[{"observation_id": "obs-789"}])
 
     service = ObservationService(mock_neo4j_connection)
@@ -148,3 +153,31 @@ async def test_store_observation_brain_region():
     result = await service.store_observation(obs)
 
     assert result == "obs-789"
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_store_observation_invalid_ontology_term():
+    """Test storing observation with invalid ontology term raises ValueError."""
+    mock_neo4j_connection = Mock()
+    # Mock empty result for term check (term not found)
+    mock_neo4j_connection.execute_read = AsyncMock(return_value=[])
+
+    service = ObservationService(mock_neo4j_connection)
+
+    obs = Observation(
+        field_path="subject.species",
+        raw_value="mouse",
+        normalized_value="Mus musculus",
+        ontology_term_id="NCBITaxon:99999",  # Invalid term ID
+        source_type="user",
+        confidence=0.95,
+    )
+
+    with pytest.raises(ValueError) as exc_info:
+        await service.store_observation(obs)
+
+    assert "NCBITaxon:99999" in str(exc_info.value)
+    assert "not found" in str(exc_info.value)
+    # Verify execute_write was never called since validation failed
+    assert not mock_neo4j_connection.execute_write.called

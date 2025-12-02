@@ -24,7 +24,19 @@ class ObservationService:
         Store observation in Neo4j.
 
         Creates Observation node and NORMALIZED_TO relationship.
+
+        Raises:
+            ValueError: If ontology_term_id is provided but term doesn't exist in graph.
         """
+        # Validate ontology term exists before creating observation
+        if obs.ontology_term_id:
+            term_check = await self.neo4j_conn.execute_read(
+                "MATCH (t:OntologyTerm {term_id: $term_id}) RETURN t.term_id AS term_id",
+                {"term_id": obs.ontology_term_id},
+            )
+            if not term_check:
+                raise ValueError(f"Ontology term '{obs.ontology_term_id}' not found in knowledge graph")
+
         # Handle optional ontology_term_id - only create relationship if term exists
         if obs.ontology_term_id:
             query = """
