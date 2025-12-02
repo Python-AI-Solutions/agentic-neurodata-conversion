@@ -39,6 +39,11 @@ async def create_observation(
         obs = Observation(**request.dict())
         observation_id = await service.store_observation(obs)
         return ObservationResponse(observation_id=observation_id, status="stored")
+    except ValueError as e:
+        # Validation errors (e.g., invalid ontology term)
+        logger.warning(f"Validation error creating observation: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        # Unexpected errors (e.g., database connection issues)
         logger.error(f"Failed to create observation: {e}")
         raise HTTPException(status_code=500, detail=f"Observation creation failed: {str(e)}")
