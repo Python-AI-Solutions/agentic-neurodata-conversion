@@ -100,8 +100,19 @@ async def test_health_check_unhealthy_neo4j():
     """Test health check when Neo4j is unhealthy."""
     from agentic_neurodata_conversion.kg_service.main import app
 
-    # Mock Neo4j connection to return unhealthy
-    with patch("agentic_neurodata_conversion.kg_service.main.get_neo4j_connection") as mock_get_conn:
+    # Mock settings to avoid requiring NEO4J_PASSWORD in CI
+    with (
+        patch("agentic_neurodata_conversion.kg_service.main.get_settings") as mock_get_settings,
+        patch("agentic_neurodata_conversion.kg_service.main.get_neo4j_connection") as mock_get_conn,
+    ):
+        # Mock settings
+        mock_settings = Mock()
+        mock_settings.neo4j_uri = "bolt://localhost:7687"
+        mock_settings.neo4j_user = "neo4j"
+        mock_settings.neo4j_password = "password"
+        mock_get_settings.return_value = mock_settings
+
+        # Mock Neo4j connection to return unhealthy
         mock_conn = Mock()
         mock_conn.health_check = AsyncMock(return_value=False)
         mock_get_conn.return_value = mock_conn
@@ -129,8 +140,19 @@ async def test_lifespan_startup_shutdown():
     reset_settings()
     reset_neo4j_connection()
 
-    # Mock Neo4j connection
-    with patch("agentic_neurodata_conversion.kg_service.main.get_neo4j_connection") as mock_get_conn:
+    # Mock settings and Neo4j connection
+    with (
+        patch("agentic_neurodata_conversion.kg_service.main.get_settings") as mock_get_settings,
+        patch("agentic_neurodata_conversion.kg_service.main.get_neo4j_connection") as mock_get_conn,
+    ):
+        # Mock settings
+        mock_settings = Mock()
+        mock_settings.neo4j_uri = "bolt://localhost:7687"
+        mock_settings.neo4j_user = "neo4j"
+        mock_settings.neo4j_password = "password"
+        mock_get_settings.return_value = mock_settings
+
+        # Mock Neo4j connection
         mock_conn = Mock()
         mock_conn.connect = AsyncMock()
         mock_conn.close = AsyncMock()
@@ -160,8 +182,19 @@ async def test_lifespan_handles_connection_error():
     reset_settings()
     reset_neo4j_connection()
 
-    # Mock Neo4j connection that fails to connect
-    with patch("agentic_neurodata_conversion.kg_service.main.get_neo4j_connection") as mock_get_conn:
+    # Mock settings and Neo4j connection that fails to connect
+    with (
+        patch("agentic_neurodata_conversion.kg_service.main.get_settings") as mock_get_settings,
+        patch("agentic_neurodata_conversion.kg_service.main.get_neo4j_connection") as mock_get_conn,
+    ):
+        # Mock settings
+        mock_settings = Mock()
+        mock_settings.neo4j_uri = "bolt://localhost:7687"
+        mock_settings.neo4j_user = "neo4j"
+        mock_settings.neo4j_password = "password"
+        mock_get_settings.return_value = mock_settings
+
+        # Mock Neo4j connection that fails to connect
         mock_conn = Mock()
         mock_conn.connect = AsyncMock(side_effect=Exception("Connection failed"))
         mock_conn.close = AsyncMock()
@@ -218,15 +251,33 @@ async def test_endpoints_accept_json():
     """Test API endpoints accept JSON content type."""
     from agentic_neurodata_conversion.kg_service.main import app
 
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-        # Test that normalize endpoint exists and accepts JSON
-        response = await client.post(
-            "/api/v1/normalize",
-            json={"field_path": "subject.species", "value": "Mus musculus"},
-            headers={"Content-Type": "application/json"},
-        )
+    # Mock settings and Neo4j connection to avoid requiring NEO4J_PASSWORD in CI
+    with (
+        patch("agentic_neurodata_conversion.kg_service.main.get_settings") as mock_get_settings,
+        patch("agentic_neurodata_conversion.kg_service.main.get_neo4j_connection") as mock_get_conn,
+    ):
+        # Mock settings
+        mock_settings = Mock()
+        mock_settings.neo4j_uri = "bolt://localhost:7687"
+        mock_settings.neo4j_user = "neo4j"
+        mock_settings.neo4j_password = "password"
+        mock_get_settings.return_value = mock_settings
 
-        # Should not be 404 or 415 (Unsupported Media Type)
-        assert response.status_code != 404
-        assert response.status_code != 415
+        # Mock Neo4j connection
+        mock_conn = Mock()
+        mock_conn.connect = AsyncMock()
+        mock_conn.close = AsyncMock()
+        mock_get_conn.return_value = mock_conn
+
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            # Test that normalize endpoint exists and accepts JSON
+            response = await client.post(
+                "/api/v1/normalize",
+                json={"field_path": "subject.species", "value": "Mus musculus"},
+                headers={"Content-Type": "application/json"},
+            )
+
+            # Should not be 404 or 415 (Unsupported Media Type)
+            assert response.status_code != 404
+            assert response.status_code != 415
