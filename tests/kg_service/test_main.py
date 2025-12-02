@@ -249,14 +249,13 @@ def test_app_import_does_not_fail():
 @pytest.mark.asyncio
 async def test_endpoints_accept_json():
     """Test API endpoints accept JSON content type."""
-    from agentic_neurodata_conversion.kg_service.main import app
-
-    # Mock settings and Neo4j connection to avoid requiring NEO4J_PASSWORD in CI
+    # Mock settings and Neo4j connection BEFORE importing app to avoid requiring NEO4J_PASSWORD in CI
     # Need to mock both main.get_settings and config.get_settings since endpoints call config directly
     with (
         patch("agentic_neurodata_conversion.kg_service.main.get_settings") as mock_get_settings_main,
         patch("agentic_neurodata_conversion.kg_service.config.get_settings") as mock_get_settings_config,
         patch("agentic_neurodata_conversion.kg_service.main.get_neo4j_connection") as mock_get_conn,
+        patch("agentic_neurodata_conversion.kg_service.db.neo4j_connection.get_neo4j_connection") as mock_get_conn_db,
     ):
         # Mock settings
         mock_settings = Mock()
@@ -270,7 +269,12 @@ async def test_endpoints_accept_json():
         mock_conn = Mock()
         mock_conn.connect = AsyncMock()
         mock_conn.close = AsyncMock()
+        mock_conn.health_check = AsyncMock(return_value=True)
         mock_get_conn.return_value = mock_conn
+        mock_get_conn_db.return_value = mock_conn
+
+        # Import app AFTER mocks are in place
+        from agentic_neurodata_conversion.kg_service.main import app
 
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
