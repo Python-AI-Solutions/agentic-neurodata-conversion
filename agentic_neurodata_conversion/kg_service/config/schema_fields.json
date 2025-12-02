@@ -1,0 +1,129 @@
+{
+  "schema_version": "1.0",
+  "total_fields": 15,
+  "fields": [
+    {
+      "field_path": "subject.species",
+      "description": "Species of experimental subject",
+      "required": true,
+      "ontology_governed": true,
+      "ontology": "NCBITaxonomy",
+      "value_type": "string",
+      "examples": ["Mus musculus", "Rattus norvegicus"]
+    },
+    {
+      "field_path": "subject.sex",
+      "description": "Biological sex of subject",
+      "required": true,
+      "ontology_governed": true,
+      "ontology": "PATO",
+      "value_type": "string",
+      "examples": ["male", "female"]
+    },
+    {
+      "field_path": "subject.age",
+      "description": "Age of subject (ISO 8601 duration)",
+      "required": true,
+      "ontology_governed": false,
+      "value_type": "string",
+      "examples": ["P90D", "P8W", "P2M"]
+    },
+    {
+      "field_path": "subject.subject_id",
+      "description": "Unique identifier for subject",
+      "required": true,
+      "ontology_governed": false,
+      "value_type": "string",
+      "examples": ["mouse_001", "M123"]
+    },
+    {
+      "field_path": "general.experiment_description",
+      "description": "Description of the experiment",
+      "required": true,
+      "ontology_governed": false,
+      "value_type": "string",
+      "examples": ["Visual cortex recordings during stimulus presentation"]
+    },
+    {
+      "field_path": "general.experimenter",
+      "description": "Person(s) who performed experiment",
+      "required": true,
+      "ontology_governed": false,
+      "value_type": "array[string]",
+      "examples": [["Smith, John"], ["Doe, Jane", "Smith, Bob"]]
+    },
+    {
+      "field_path": "general.institution",
+      "description": "Institution where experiment was performed",
+      "required": true,
+      "ontology_governed": false,
+      "value_type": "string",
+      "examples": ["Massachusetts Institute of Technology", "Stanford University"]
+    },
+    {
+      "field_path": "general.lab",
+      "description": "Laboratory where experiment was performed",
+      "required": false,
+      "ontology_governed": false,
+      "value_type": "string",
+      "examples": ["Neuroscience Lab", "Smith Lab"]
+    },
+    {
+      "field_path": "general.session_id",
+      "description": "Unique identifier for recording session",
+      "required": true,
+      "ontology_governed": false,
+      "value_type": "string",
+      "examples": ["session_001", "20240125_mouse001"]
+    },
+    {
+      "field_path": "ecephys.ElectrodeGroup.location",
+      "description": "Brain region where electrodes were placed",
+      "required": true,
+      "ontology_governed": true,
+      "ontology": "UBERON",
+      "value_type": "string",
+      "examples": ["hippocampus", "primary visual cortex", "V1"]
+    },
+    {
+      "field_path": "ecephys.ElectrodeGroup.device",
+      "description": "Recording device used",
+      "required": true,
+      "ontology_governed": false,
+      "value_type": "string",
+      "examples": ["Neuropixels 1.0", "Utah array"]
+    },
+    {
+      "field_path": "general.session_start_time",
+      "description": "Start time of recording session",
+      "required": true,
+      "ontology_governed": false,
+      "value_type": "datetime",
+      "examples": ["2024-01-25T14:30:00Z"]
+    },
+    {
+      "field_path": "general.keywords",
+      "description": "Keywords describing experiment",
+      "required": false,
+      "ontology_governed": false,
+      "value_type": "array[string]",
+      "examples": [["electrophysiology", "visual cortex", "awake"]]
+    },
+    {
+      "field_path": "subject.weight",
+      "description": "Weight of subject (with unit)",
+      "required": false,
+      "ontology_governed": false,
+      "value_type": "string",
+      "examples": ["25g", "0.025kg"]
+    },
+    {
+      "field_path": "general.related_publications",
+      "description": "DOIs of related publications",
+      "required": false,
+      "ontology_governed": false,
+      "value_type": "array[string]",
+      "examples": [["10.1038/s41586-019-1677-2"]]
+    }
+  ]
+}
