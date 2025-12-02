@@ -69,6 +69,111 @@
 
 **Frontend**: `cd frontend/public && python3 -m http.server 3000` → http://localhost:3000/chat-ui.html
 
+### Phase-Based Development Protocol
+
+**CRITICAL**: When working on multi-phase implementations (identified by phase numbers in docs/implementation guides):
+
+**Before Starting Any Phase:**
+
+1. ✅ **Read complete phase requirements** from implementation guide
+2. ✅ **List all deliverables** (files, database state, tests, verification commands)
+3. ✅ **Check current state** - what exists vs. what needs creation
+4. ✅ **Present scope to user** before beginning implementation
+
+**After Completing a Phase:**
+
+1. ✅ **Run verification checklist** against implementation guide
+2. ✅ **Verify each deliverable** in this EXACT order:
+   - **Implementation Files**: Use `ls`, `cat`, or `Read` to confirm existence and content
+   - **Database State**: Query Neo4j/DB to confirm data loaded (e.g., `MATCH (n:NodeType) RETURN count(n)`)
+   - **Services**: Start services and test endpoints/health checks
+   - **⚠️ TESTS (MANDATORY)**: If implementation guide specifies tests, they MUST be created and passing
+     - Create test files (unit + integration as specified)
+     - Run tests: `pixi run pytest tests/kg_service/test_phase*.py -v`
+     - Verify all tests pass (or skip gracefully with clear reason)
+     - ❌ Phase is NOT complete until tests exist and pass
+3. ✅ **Present verification to user** in this format:
+
+   ```
+   ## Phase X Verification
+
+   **Deliverables** (from implementation guide):
+   - [✅] Implementation File 1 - Created at path/to/file (X lines)
+   - [✅] Implementation File 2 - Created at path/to/file (X lines)
+   - [✅] Database State - Y nodes loaded (verification query result)
+   - [✅] Service Running - Health check passes
+   - [✅] **TESTS** - Z tests created and passing
+     - Unit tests: path/to/test_unit.py (N tests)
+     - Integration tests: path/to/test_integration.py (M tests)
+   - [❌] Missing item - Not found/failed
+
+   **Verification Evidence:**
+   ```bash
+   # 1. Files created
+   $ ls -lh kg_service/services/*.py tests/kg_service/*.py
+   [output showing all files including test files]
+
+   # 2. Database state
+   $ MATCH (n:NodeType) RETURN count(n)
+   [output showing node counts]
+
+   # 3. Service health
+   $ curl -s http://localhost:8001/health
+   [output showing healthy status]
+
+   # 4. TESTS PASSING (CRITICAL)
+   $ pixi run pytest tests/kg_service/test_phaseX*.py -v
+   [output showing all tests passing]
+   ```
+
+   **Status**: X of Y deliverables complete (❌ NOT COMPLETE if tests missing)
+   ```
+
+4. ✅ **Wait for user confirmation** before proceeding to next phase
+5. ✅ **Fix any gaps immediately** if verification shows missing deliverables
+
+**Absolute Rules:**
+
+- ❌ **NEVER** trust session summaries stating "Phase X Complete" without verification
+- ❌ **NEVER** proceed to next phase with incomplete deliverables
+- ❌ **NEVER** skip verification steps "to save time"
+- ❌ **NEVER** mark a phase complete without creating tests if the implementation guide specifies them
+- ❌ **NEVER** accept "I'll add tests later" - tests are part of the phase deliverables
+- ✅ **ALWAYS** verify against the source implementation guide, not memory
+- ✅ **ALWAYS** run actual commands to verify state (don't assume)
+- ✅ **ALWAYS** list test files explicitly in verification report
+
+**Example Verification Commands:**
+
+```bash
+# 1. File verification (implementation + tests)
+ls -lh kg_service/scripts/*.py tests/kg_service/test_phase*.py
+wc -l kg_service/services/kg_service.py
+
+# 2. Database verification (Neo4j)
+MATCH (t:OntologyTerm) RETURN count(t)
+MATCH (f:SchemaField) RETURN count(f)
+
+# 3. Service verification
+curl -s http://localhost:8001/health | python -m json.tool
+
+# 4. TEST VERIFICATION (MANDATORY for phase completion)
+# Count test files for this phase
+ls tests/kg_service/test_phaseX*.py tests/kg_service/**/test_*.py 2>/dev/null | wc -l
+
+# Run all phase tests
+pixi run pytest tests/kg_service/test_phaseX*.py -v --tb=short
+
+# Verify test count matches implementation guide
+pixi run pytest tests/kg_service/test_phaseX*.py --co -q | grep "collected"
+```
+
+**When to Use This Protocol:**
+
+- Any work with numbered phases (Phase 0, Phase 1, Phase 2, etc.)
+- Multi-step implementations following a guide/plan
+- When user says "proceed step by step" or "thoroughly according to [guide]"
+
 ---
 
 ## File Structure
