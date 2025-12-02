@@ -14,7 +14,7 @@ def test_settings_load_from_env(monkeypatch):
     monkeypatch.setenv("NEO4J_USER", "testuser")
     monkeypatch.setenv("NEO4J_PASSWORD", "testpass")
 
-    from kg_service.config import get_settings, reset_settings
+    from agentic_neurodata_conversion.kg_service.config import get_settings, reset_settings
 
     reset_settings()  # Clear cached settings
 
@@ -29,7 +29,7 @@ def test_settings_defaults(monkeypatch):
     # Set only required field
     monkeypatch.setenv("NEO4J_PASSWORD", "testpass")
 
-    from kg_service.config import get_settings, reset_settings
+    from agentic_neurodata_conversion.kg_service.config import get_settings, reset_settings
 
     reset_settings()
 
@@ -46,7 +46,7 @@ def test_settings_validation(monkeypatch):
     """Verify field validation works."""
     monkeypatch.setenv("NEO4J_PASSWORD", "pass")
 
-    from kg_service.config import KGServiceSettings, reset_settings
+    from agentic_neurodata_conversion.kg_service.config import KGServiceSettings, reset_settings
 
     reset_settings()
 

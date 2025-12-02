@@ -67,6 +67,10 @@
 
 **Backend**: `pixi run dev` → http://localhost:8000 (API at `/api/*`, WebSocket at `/ws`)
 
+**KG Service**: `export NEO4J_PASSWORD=<password> && pixi run uvicorn agentic_neurodata_conversion.kg_service.main:app --host 0.0.0.0 --port 8001`
+- Requires Neo4j running at bolt://localhost:7687
+- Access at http://localhost:8001 (endpoints: /api/v1/normalize, /api/v1/validate, /api/v1/observations)
+
 **Frontend**: `cd frontend/public && python3 -m http.server 3000` → http://localhost:3000/chat-ui.html
 
 ### Phase-Based Development Protocol
@@ -110,7 +114,7 @@
    **Verification Evidence:**
    ```bash
    # 1. Files created
-   $ ls -lh kg_service/services/*.py tests/kg_service/*.py
+   $ ls -lh agentic_neurodata_conversion/kg_service/services/*.py tests/kg_service/*.py
    [output showing all files including test files]
 
    # 2. Database state
@@ -147,8 +151,8 @@
 
 ```bash
 # 1. File verification (implementation + tests)
-ls -lh kg_service/scripts/*.py tests/kg_service/test_phase*.py
-wc -l kg_service/services/kg_service.py
+ls -lh agentic_neurodata_conversion/kg_service/scripts/*.py tests/kg_service/test_phase*.py
+wc -l agentic_neurodata_conversion/kg_service/services/kg_service.py
 
 # 2. Database verification (Neo4j)
 MATCH (t:OntologyTerm) RETURN count(t)
@@ -182,6 +186,12 @@ pixi run pytest tests/kg_service/test_phaseX*.py --co -q | grep "collected"
 
 - `agents/` - 3 main + 15 helpers (conversational_handler, metadata_inference, format_detector, etc.)
 - `api/main.py` - FastAPI app, agent registration
+- `kg_service/` - Knowledge Graph service (Neo4j ontology validation)
+  - `api/v1/` - normalize, validate, observations endpoints
+  - `models/` - observation, ontology_term, schema_field
+  - `services/` - kg_service, observation_service
+  - `db/` - neo4j_connection
+  - `ontologies/` - JSON ontology subsets (NCBI, UBERON, PATO)
 - `models/` - state, mcp, api, metadata, validation
 - `services/` - llm_service, mcp_server, report_service, log_manager, templates
 - `prompts/` - YAML templates
@@ -189,6 +199,7 @@ pixi run pytest tests/kg_service/test_phaseX*.py --co -q | grep "collected"
 **Frontend**: `frontend/public/chat-ui.html` (static, WebSocket client)
 
 **Tests**: `tests/` (unit, integration, conftest.py)
+- `tests/kg_service/` - KG service tests (unit + integration)
 
 **Config**: `pixi.toml`, `pyproject.toml`, `.pre-commit-config.yaml`, `.env`
 

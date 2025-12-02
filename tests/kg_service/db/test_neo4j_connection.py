@@ -10,7 +10,7 @@ import pytest
 @pytest.mark.asyncio
 async def test_connection_creation():
     """Verify connection object is created correctly."""
-    from kg_service.db.neo4j_connection import AsyncNeo4jConnection
+    from agentic_neurodata_conversion.kg_service.db.neo4j_connection import AsyncNeo4jConnection
 
     conn = AsyncNeo4jConnection("bolt://localhost:7687", "neo4j", "password")
     assert conn.uri == "bolt://localhost:7687"
@@ -22,7 +22,7 @@ async def test_connection_creation():
 @pytest.mark.asyncio
 async def test_singleton_pattern():
     """Verify get_neo4j_connection returns same instance."""
-    from kg_service.db.neo4j_connection import get_neo4j_connection, reset_neo4j_connection
+    from agentic_neurodata_conversion.kg_service.db.neo4j_connection import get_neo4j_connection, reset_neo4j_connection
 
     reset_neo4j_connection()
     conn1 = get_neo4j_connection("bolt://localhost:7687", "neo4j", "pass")
