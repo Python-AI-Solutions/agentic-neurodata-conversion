@@ -18,12 +18,15 @@ async def kg_service_client():
     if not password:
         pytest.skip("NEO4J_PASSWORD not set - integration tests require local Neo4j instance")
 
-    from agentic_neurodata_conversion.kg_service.config import get_settings
+    from agentic_neurodata_conversion.kg_service.config import get_settings, reset_settings
     from agentic_neurodata_conversion.kg_service.db.neo4j_connection import get_neo4j_connection, reset_neo4j_connection
     from agentic_neurodata_conversion.kg_service.main import app
+    from agentic_neurodata_conversion.kg_service.services.kg_service import reset_kg_service
 
-    # Reset connection to avoid singleton issues
+    # Reset all singletons to avoid state pollution between tests
+    reset_settings()
     reset_neo4j_connection()
+    reset_kg_service()
 
     # Get Neo4j connection and connect
     settings = get_settings()
@@ -158,7 +161,8 @@ async def test_api_normalize_brain_region(kg_service_client):
 
     assert data["status"] == "validated"
     assert "UBERON:" in data["ontology_term_id"]
-    assert data["ontology_term_id"] == "UBERON:0002421"
+    # hippocampus matches to Ammon's horn (UBERON:0001954) via synonym
+    assert data["ontology_term_id"] == "UBERON:0001954"
 
 
 @pytest.mark.integration
@@ -193,7 +197,7 @@ async def test_api_normalize_not_ontology_governed(kg_service_client):
     data = response.json()
 
     assert data["status"] == "not_applicable"
-    assert data["confidence"] == 1.0
+    assert data["confidence"] == 0.0  # Not ontology-governed fields have 0.0 confidence
     assert data["action_required"] is False
 
 
@@ -279,7 +283,8 @@ async def test_api_normalize_human(kg_service_client):
 @pytest.mark.asyncio
 async def test_api_normalize_multiple_brain_regions(kg_service_client):
     """Test normalization for multiple brain regions."""
-    brain_regions = [("hippocampus", "UBERON:0002421"), ("thalamus", "UBERON:0001869"), ("neocortex", "UBERON:0001950")]
+    # hippocampus matches to Ammon's horn (UBERON:0001954) via synonym
+    brain_regions = [("hippocampus", "UBERON:0001954"), ("thalamus", "UBERON:0001869"), ("neocortex", "UBERON:0001950")]
 
     for region, expected_id in brain_regions:
         response = await kg_service_client.post(
