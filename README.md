@@ -4,7 +4,7 @@
 
 [![CI/CD Pipeline](https://github.com/Python-AI-Solutions/agentic-neurodata-conversion/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Python-AI-Solutions/agentic-neurodata-conversion/actions/workflows/ci.yml)
 
-Transform neuroscience electrophysiology data to standardized NWB format through intelligent conversation, automated format detection, and comprehensive validation.
+Transform neuroscience electrophysiology data to standardized NWB format through intelligent conversation, automated format detection, and comprehensive validation .
 
 ---
 
@@ -176,7 +176,6 @@ run python file inside scripts/startup/start_app.py
 
 ### API Usage
 
-
 **Upload File:**
 
 ```bash
@@ -265,28 +264,17 @@ curl http://localhost:8000/api/download/report -o report.pdf
 
 **Automatic Extraction from:**
 
-
-
 ### 4. Adaptive Retry Logic
 
 **Smart Error Recovery:**
-
-
 
 ### 5. Validation Intelligence
 
 **NWBInspector + AI Analysis:**
 
-
-
 ### 6. Comprehensive Reporting
 
-
-
 ---
-
-
-
 
 **Built with the spec-kit methodology** 📋
 
