@@ -11,12 +11,15 @@ This project demonstrates spec-driven development of an AI system that:
 
 ---
 
-## Why It Matters
 
-NWB conversion currently requires deep knowledge of both source formats and the NWB schema.
-This system enables researchers to convert data through conversation, reducing the barrier
-to DANDI archive submission and data sharing in neuroscience.
 
+### Why This Matters
+NWB conversion currently requires deep knowledge of both source formats and the NWB schema. This system enables researchers to convert data through conversation, reducing the barrier to DANDI archive submission and data sharing in neuroscience.
+
+- **Time Savings**: Automates a tedious process that previously consumed lot of hours of highly trained scientists' time
+- **Lower Barrier**: No need to master NWB schema—just describe your data in natural language
+- **Fewer Errors**: AI-guided validation catches issues before submission
+- **Faster Science**: Researchers can focus on discovery, not data formatting
 ---
 
 ## Key Capabilities
@@ -176,7 +179,7 @@ For detailed setup, development workflow, and testing instructions, see [CONTRIB
 
 ## Usage Example
 
-1. **Upload Files**: Drag and drop electrophysiology data files (e.g., `.ap.bin` + `.meta` for SpikeGLX)
+1. **Upload Files**: Attach electrophysiology data files (e.g., `.ap.bin` + `.meta` for SpikeGLX)
 2. **Start Conversion**: Type "start conversion" in the chat interface
 3. **Provide Metadata**: Describe your experiment in natural language:
    ```
@@ -208,28 +211,32 @@ For detailed setup, development workflow, and testing instructions, see [CONTRIB
 ### Conversion Progress and Results
 
 ![Conversion Workflow](images/chat-interface-conversion.png)
+
 *Real-time conversion updates with validation results and download options*
 
 ### Validation Report - Overview
 
 ![Validation Report Overview](images/report-validation-overview.png)
+
 *Comprehensive validation report showing NWBInspector results with issue classification and DANDI compliance status*
 
 ### Validation Report - Detailed Analysis
 
 ![Validation Details](images/report-validation-details.png)
+
 *Detailed breakdown of validation issues with severity levels, affected fields, and actionable recommendations*
 
 ### Provenance Tracking
 
 ![Provenance Tracking](images/report-provenance-tracking.png)
+
 *Complete traceability of metadata sources - tracks whether each field came from user input, filename inference or defaults*
 
 ---
 
 ## Project Status
 
-**Current Phase**: Knowledge Graph Integration (Phase 2)
+**Current Phase**: 
 
 - ✓ Multi-agent conversation workflow
 - ✓ Format detection and conversion
