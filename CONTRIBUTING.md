@@ -22,7 +22,7 @@ Thank you for your interest in contributing! This document provides guidelines a
 - **Pixi Package Manager** (required) - [Install Pixi](https://pixi.sh/)
 - **Python 3.13+** (managed by Pixi automatically)
 - **Anthropic API Key** (for AI features)
-- **Neo4j** (optional, for knowledge graph features)
+
 
 ### Installation
 
@@ -274,7 +274,16 @@ git commit -m "Descriptive message"
 git push origin feature/your-feature-name
 
 # Create pull request on GitHub
+ Create PR with description:
+
+   - Summary of changes (2-3 bullets)
+   - Test plan (how you verified it works)
+   - Link to related issues
+
+Respond to review feedback promptly
 ```
+
+
 
 ### Commit Message Guidelines
 
@@ -287,55 +296,6 @@ docs: Update architecture diagram
 test: Add integration tests for conversion agent
 refactor: Simplify MCP message routing
 ```
-
-### Creating Commits
-
-**Only create commits when requested.** Follow the git safety protocol:
-
-```bash
-# 1. Check status and diff
-git status
-git diff
-git log -3 --oneline
-
-# 2. Stage files
-git add relevant/files
-
-# 3. Create commit with proper format
-git commit -m "$(cat <<'EOF'
-Your commit message here.
-
-
-EOF
-)"
-
-# 4. Verify
-git status
-```
-
-**Git Safety Rules:**
-
-- ❌ NEVER update git config
-- ❌ NEVER run destructive commands (push --force, hard reset)
-- ❌ NEVER skip hooks (--no-verify) unless explicitly requested
-- ❌ NEVER force push to main/master
-
-### Pull Request Process
-
-1. **Ensure all tests pass:**
-
-   ```bash
-   pixi run lint && pixi run typecheck && pixi run test
-   ```
-2. **Update documentation** if needed
-3. **Create PR** with description:
-
-   - Summary of changes (2-3 bullets)
-   - Test plan (how you verified it works)
-   - Link to related issues
-4. **Respond to review feedback** promptly
-5. **Squash commits** if requested before merge
-
 ---
 
 ## Additional Resources
