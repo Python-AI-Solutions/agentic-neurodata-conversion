@@ -1,32 +1,58 @@
-# Agentic Neurodata Conversion System
+# Agentic Neurodata Conversion
 
-**AI-Powered NWB Conversion with Natural Language Interface**
+Converts neuroscience electrophysiology data to NWB standard using a conversational AI interface powered by a multi-agent system.
 
 [![CI/CD Pipeline](https://github.com/Python-AI-Solutions/agentic-neurodata-conversion/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Python-AI-Solutions/agentic-neurodata-conversion/actions/workflows/ci.yml)
 
-Transform neuroscience electrophysiology data to standardized NWB format through intelligent conversation, automated format detection, and comprehensive validation .
+This project demonstrates spec-driven development of an AI system that:
+
+- Converts neuroscience data to NWB standard through a chat interface
+- Uses a three-agent architecture (Conversation, Conversion, Evaluation) with provenance tracking
 
 ---
 
-## 🎯 Overview
+## Why It Matters
 
-The Agentic Neurodata Conversion System is a production-ready platform that revolutionizes how neuroscience researchers convert their electrophysiology data. Using a three-agent AI architecture and natural language processing, it reduces conversion time for NWB format compliance and DANDI archive readiness.
-
-### Key Features
-
-- **🤖 AI-Powered Intelligence**: Natural language metadata collection using Anthropic Claude
-- **🎯 Automated Format Detection**: Automatic format detection of input data files
-- **💬 Conversational Interface**: Modern chat UI similar to Claude.ai
-- **✅ Smart Validation**: NWBInspector integration with AI-powered issue analysis
-- **📊 Comprehensive Reports**: PDF, JSON, and text reports with workflow traceability
-- **🔄 Adaptive Workflows**: Intelligent retry logic and error recovery
-- **🎓 Learning System**: Metadata inference from filenames and history
+NWB conversion currently requires deep knowledge of both source formats and the NWB schema.
+This system enables researchers to convert data through conversation, reducing the barrier
+to DANDI archive submission and data sharing in neuroscience.
 
 ---
 
-## 🏗️ Architecture
+## Key Capabilities
 
-### Three-Agent System
+**Multi-Agent Architecture**
+
+- Three specialized agents (Conversation, Conversion, Evaluation) communicate via MCP protocol
+
+**Provenance Capture**
+
+- Traceability from raw data files through metadata collection to final NWB output
+- Records metadata source (user input, filename inference or defaults) for each field
+- Maintains conversation history and validation results for reproducibility
+
+**Natural Language Metadata Collection**
+
+- Reduces manual form-filling to a conversational interaction
+- Automatic normalization to NWB/DANDI standards
+
+**Automated Format Detection**
+
+- Supports electrophysiology formats via NeuroConv integration
+
+**Comprehensive Validation**
+
+- NWBInspector integration for DANDI compliance checking
+- Automated issue classification and analysis
+- Structured validation reports with actionable feedback
+
+---
+
+## Architecture
+
+### Agent Communication
+
+Agents operate independently without cross-imports, communicating exclusively via MCP messages. This architecture enables testing agents in isolation and swapping implementations without cascading changes.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -45,237 +71,201 @@ The Agentic Neurodata Conversion System is a production-ready platform that revo
 └────────────┘  └─────────────┘  └───────────┘
       │               │               │
 ┌─────▼───────────────▼───────────────▼───────────────────────┐
-│                 Supporting Services                          │
-│ • LLM Service (Claude AI)                                   │
-│ • Intelligent Metadata Parser                               │
+│                 Supporting Services                         │
+│ • LLM Service (Claude Sonnet 4.5)                           │
+│ • Metadata Parser (NLP + Schema Validation)                 │
 │ • Format Detector • Validation Analyzer                     │
-│ • Report Generator • Schema Registry                        │
+│ • Report Generator • Log Manager                            │
 └──────────────────────┬──────────────────────────────────────┘
                        │
 ┌──────────────────────▼──────────────────────────────────────┐
-│          External Tools & Libraries                          │
+│          External Tools & Libraries                         │
 │  NeuroConv • SpikeInterface • PyNWB • NWBInspector          │
-└──────────────────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────────────────┘
 ```
+---
 
 ### Agent Responsibilities
 
-**1. Conversation Agent** (`conversation_agent.py`)
+**Conversation Agent** ([conversation_agent.py](agentic_neurodata_conversion/agents/conversation_agent.py))
 
-- Orchestrates entire workflow
-- Manages user interactions
-- Collects metadata through natural conversation
-- Routes messages between agents
+- Orchestrates workflow phases (upload → metadata → conversion → validation)
+- Manages user interactions and natural language understanding
+- Routes messages between agents based on conversation state
 - Handles retry decisions and error recovery
 
-**2. Conversion Agent** (`conversion_agent.py`)
+**Conversion Agent** ([conversion_agent.py](agentic_neurodata_conversion/agents/conversion_agent.py))
 
-- AI-powered format detection
-- Stream detection and selection
-- Metadata mapping to NWB schema
-- Data conversion using NeuroConv
-- Auto-correction application
+- Format detection using LLM analysis and rule-based validation
+- Stream detection and selection for multi-stream recordings
+- Metadata mapping to NWB schema with validation
+- Data conversion via NeuroConv with error handling
 
-**3. Evaluation Agent** (`evaluation_agent.py`)
+**Evaluation Agent** ([evaluation_agent.py](agentic_neurodata_conversion/agents/evaluation_agent.py))
 
-- NWBInspector validation
-- AI-powered issue analysis
-- Multi-format report generation (PDF/JSON/text)
-- DANDI compliance checking
-- Correction suggestion generation
+- NWBInspector validation execution
+- Issue classification (critical vs. non-critical)
+- Validation report generation with actionable feedback
+- DANDI compliance verification
 
 ---
 
-## 🚀 Quick Start
+## Development Approach:  Built using spec-driven development methodology
 
-### Prerequisites
+This project uses **spec-driven development** methodology using **Spec-Kit by GitHub** :
 
-- **Pixi Package Manager**: [Install Pixi](https://pixi.sh/) (required)
-- **Python 3.13+**: Managed automatically by Pixi
-- **Anthropic API Key**: For AI features (required)
+**Constitutional Constraints**
 
-> **Note**: This project uses **Pixi for all dependency management**. pip/conda install is not supported. All dependencies are defined in `pixi.toml`.
+- Project principles and design constraints documented in [.specify/memory/constitution.md](.specify/memory/constitution.md)
+- All implementation decisions traceable to constitutional rules
+- Prevents scope creep and ensures architectural consistency
 
-### Installation
+**Phased Implementation**
+
+- Each phase has explicit deliverables, verification criteria and tests
+- Implementation guides define file structure, dependencies and acceptance criteria
+
+**Grounding Mechanisms**
+
+- **Semantic Layer**: Agent behavior constrained by NWB schema and DANDI validation rules
+- **Testing**: Unit and integration tests created alongside implementation (60%+ coverage required)
+- **Evaluation**: NWBInspector validation on every conversion output
+- **Provenance**: Traceability of metadata sources and conversion decisions
+
+**Code Quality**
+
+- Pre-commit hooks enforce linting (Ruff), type checking (MyPy) and security scanning (Bandit)
+- All agent I/O operations use async/await patterns
+- Structured logging with correlation IDs for debugging
+
+See [requirements.md](specs/requirements.md) for complete technical reference and development workflow.
+
+---
+
+## Quick Start
+
+### Recommended: Automated Startup
+
+The easiest way to run the application is using the startup script:
 
 ```bash
-# Install Pixi if you don't have it
-curl -fsSL https://pixi.sh/install.sh | bash
-
-# Clone repository
+# Clone and navigate to project directory
+git clone https://github.com/Python-AI-Solutions/agentic-neurodata-conversion.git
 cd agentic-neurodata-conversion
 
-# Install all dependencies (Python, libraries, dev tools)
+# Install dependencies
 pixi install
 
-# Set up environment variables
-export ANTHROPIC_API_KEY="sk-ant-your-key-here"
-
-# Or create .env file
-echo "ANTHROPIC_API_KEY=sk-ant-your-key-here" > .env
+# Run the application (handles everything automatically)
+python3 scripts/startup/start_app.py
 ```
 
-### Running the System
+The script will:
 
-**Start Backend:**
+- Configure your .env file with API key (interactive prompt)
+- Clean up old processes and temp directories
+- Start backend server (port 8000)
+- Start frontend server (port 3000)
+- Display status and URLs
 
-```bash
-pixi run dev
-```
+Access the interface at [http://localhost:3000/chat-ui.html](http://localhost:3000/chat-ui.html)
 
-Server runs at http://localhost:8000
-
-**Start Frontend (new terminal):**
-
-```bash
-cd frontend/public
-python -m http.server 3000
-```
-
-Access at http://localhost:3000/chat-ui.html
-
-**Alternative (All-in-one):**
-
-```bash
-run python file inside scripts/startup/start_app.py
-```
+For detailed setup, development workflow, and testing instructions, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
-## 💡 Usage
+## Usage Example
 
-### Web UI Workflow
-
-1. **Open Browser**: Navigate to http://localhost:3000/chat-ui.html
-2. **Upload Files**: Drag & drop your data files
-
-   - SpikeGLX: `.ap.bin` + `.meta` files
-   - OpenEphys: `structure.oebin` + data files
-   - Neuropixels: `.imec*.bin` + `.meta` files
-3. **Start Conversion**: Type "start conversion" in chat
-4. **Provide Metadata**: Describe your experiment naturally
-
+1. **Upload Files**: Drag and drop electrophysiology data files (e.g., `.ap.bin` + `.meta` for SpikeGLX)
+2. **Start Conversion**: Type "start conversion" in the chat interface
+3. **Provide Metadata**: Describe your experiment in natural language:
    ```
-   "I'm Dr. Jane Smith from MIT studying 8 week old male mice
-    in visual cortex during a visual stimulation experiment"
+   "I'm Dr. Jane Smith from MIT studying 8 week old male mice in visual cortex during visual stimulation"
    ```
-5. **Confirm Understanding**: System shows parsed metadata
-
-   - Review values and confidence scores
-   - Type "yes" to confirm or "edit [field]" to change
-6. **Automatic Conversion**: System converts to NWB format
-
-   - Real-time progress updates
-   - Automatic validation
-   - Issue detection and analysis
-7. **Download Results**:
-
-   - Converted NWB file
-   - Validation reports (PDF, JSON, text)
-   - All DANDI-ready
-
-### API Usage
-
-**Upload File:**
-
-```bash
-curl -X POST http://localhost:8000/api/upload \
-  -F "file=@recording.bin" \
-  -F "file=@recording.meta"
-```
-
-**Start Conversion:**
-
-```bash
-curl -X POST http://localhost:8000/api/start-conversion
-```
-
-**Check Status:**
-
-```bash
-curl http://localhost:8000/api/status
-```
-
-**Chat with System:**
-
-```bash
-curl -X POST http://localhost:8000/api/chat \
-  -F "message=I'm Dr. Smith from MIT, studying adult mice"
-```
-
-**Download NWB:**
-
-```bash
-curl http://localhost:8000/api/download/nwb -o output.nwb
-```
-
-**Download Report:**
-
-```bash
-curl http://localhost:8000/api/download/report -o report.pdf
-```
+4. **Confirm Understanding**: System displays parsed metadata with confidence scores
+   ```
+   experimenter: "Smith, Jane" (95%)
+   institution: "Massachusetts Institute of Technology" (98%)
+   subject_age: "P56D" (92%)
+   subject_sex: "M" (100%)
+   ```
+5. **Download Results**: Converted NWB file and validation report ready for DANDI upload
 
 ---
 
-## 🧠 Intelligent Features
+## System Overview
 
-### 1. Natural Language Metadata Parsing
+### File Upload and Format Detection
 
-**Input:**
+![File Upload Interface](images/chat-interface-upload.png)
+*Add file with attach button with automatic format detection*
 
-```
-"I'm Dr. Jane Smith from MIT studying 8 week old male mice"
-```
+### Natural Language Metadata Collection
 
-**System Understanding:**
+![Metadata Collection](images/chat-interface-metadata.png)
+*Conversational interface for collecting experimental metadata - system extracts structured fields from natural language*
 
-```json
-{
-  "experimenter": "Smith, Jane" (95% confidence),
-  "institution": "Massachusetts Institute of Technology" (98%),
-  "subject_age": "P56D" (92%),
-  "subject_sex": "M" (100%),
-  "subject_species": "Mus musculus" (100%)
-}
-```
+### Conversion Progress and Results
 
-**Features:**
+![Conversion Workflow](images/chat-interface-conversion.png)
+*Real-time conversion updates with validation results and download options*
 
-- Batch or sequential metadata collection
-- Automatic normalization to NWB/DANDI standards
-- Confidence-based auto-application
-- User confirmation workflow
+### Validation Report - Overview
 
-### 2. Intelligent Format Detection
+![Validation Report Overview](images/report-validation-overview.png)
+*Comprehensive validation report showing NWBInspector results with issue classification and DANDI compliance status*
 
-**Two-Stage Detection:**
+### Validation Report - Detailed Analysis
 
-1. **AI Analysis**: Claude AI analyzes filename, companion files, file headers
-2. **Rule-Based Fallback**: Regex patterns and file structure analysis
+![Validation Details](images/report-validation-details.png)
+*Detailed breakdown of validation issues with severity levels, affected fields, and actionable recommendations*
 
-**Supported Formats:**
+### Provenance Tracking
 
-- SpikeGLX (Neuropixels)
-- OpenEphys (structure.oebin, settings.xml)
-- Neuropixels probe recordings
-- Generic formats via NeuroConv
-
-### 3. Metadata Inference
-
-**Automatic Extraction from:**
-
-### 4. Adaptive Retry Logic
-
-**Smart Error Recovery:**
-
-### 5. Validation Intelligence
-
-**NWBInspector + AI Analysis:**
-
-### 6. Comprehensive Reporting
+![Provenance Tracking](images/report-provenance-tracking.png)
+*Complete traceability of metadata sources - tracks whether each field came from user input, filename inference or defaults*
 
 ---
 
-**Built with the spec-kit methodology** 📋
+## Project Status
 
-For complete specifications, see [`specs/001-agentic-neurodata-conversion`]
+**Current Phase**: Knowledge Graph Integration (Phase 2)
+
+- ✓ Multi-agent conversation workflow
+- ✓ Format detection and conversion
+- ✓ Validation and reporting
+- In progress: Schema field normalization via knowledge graph
+
+**Known Limitations**:
+
+- Batch processing not yet supported
+- Format detection may require confirmation for ambiguous cases
+
+---
+
+## Technical Stack
+
+- **Backend**: FastAPI, Python 3.13+, Pixi package management
+- **AI**: Anthropic Claude Sonnet 4.5 via claude-ai-client
+- **Data Conversion**: NeuroConv, PyNWB, SpikeInterface
+- **Validation**: NWBInspector, pynwb
+- **Testing**: pytest, pytest-asyncio, pytest-mock
+- **Code Quality**: Ruff, MyPy, Bandit, pre-commit hooks
+
+---
+
+## Documentation
+
+- [CONTRIBUTING.md](CONTRIBUTING.md) - Development workflow and contribution guidelines
+- [.specify/memory/constitution.md](.specify/memory/constitution.md) - Project principles
+- [requirements.md](specs/requirements.md) - Project requirements
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+Copyright (c) 2024 Agentic Neurodata Conversion Team
+
+---
