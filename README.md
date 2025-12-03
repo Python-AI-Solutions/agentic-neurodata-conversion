@@ -236,7 +236,7 @@ For detailed setup, development workflow, and testing instructions, see [CONTRIB
 
 ## Project Status
 
-**Current Phase**: 
+**Current Phase**:
 
 - ✓ Multi-agent conversation workflow
 - ✓ Format detection and conversion
