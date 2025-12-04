@@ -4,7 +4,7 @@ Tests for SchemaField Pydantic model.
 Validates model creation for NWB metadata field definitions.
 """
 
-from kg_service.models.schema_field import SchemaField
+from agentic_neurodata_conversion.kg_service.models.schema_field import SchemaField
 
 
 def test_schema_field_creation():

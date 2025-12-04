@@ -20,15 +20,15 @@ import pytest
 
 def test_ontology_files_exist():
     """Verify all 3 ontology JSON files exist."""
-    assert Path("kg_service/ontologies/ncbi_taxonomy_subset.json").exists()
-    assert Path("kg_service/ontologies/uberon_subset.json").exists()
-    assert Path("kg_service/ontologies/pato_sex_subset.json").exists()
+    assert Path("agentic_neurodata_conversion/kg_service/ontologies/ncbi_taxonomy_subset.json").exists()
+    assert Path("agentic_neurodata_conversion/kg_service/ontologies/uberon_subset.json").exists()
+    assert Path("agentic_neurodata_conversion/kg_service/ontologies/pato_sex_subset.json").exists()
 
 
 def test_ontology_files_valid_json():
     """Verify ontology files are valid JSON with required keys."""
     for file in ["ncbi_taxonomy_subset.json", "uberon_subset.json", "pato_sex_subset.json"]:
-        path = Path(f"kg_service/ontologies/{file}")
+        path = Path(f"agentic_neurodata_conversion/kg_service/ontologies/{file}")
         with open(path) as f:
             data = json.load(f)
             assert "ontology" in data, f"{file} missing 'ontology' key"
@@ -38,9 +38,9 @@ def test_ontology_files_valid_json():
 
 def test_ontology_term_counts():
     """Verify correct number of terms in each ontology."""
-    ncbi = json.load(open("kg_service/ontologies/ncbi_taxonomy_subset.json"))
-    uberon = json.load(open("kg_service/ontologies/uberon_subset.json"))
-    pato = json.load(open("kg_service/ontologies/pato_sex_subset.json"))
+    ncbi = json.load(open("agentic_neurodata_conversion/kg_service/ontologies/ncbi_taxonomy_subset.json"))
+    uberon = json.load(open("agentic_neurodata_conversion/kg_service/ontologies/uberon_subset.json"))
+    pato = json.load(open("agentic_neurodata_conversion/kg_service/ontologies/pato_sex_subset.json"))
 
     assert len(ncbi["terms"]) == 20, f"Expected 20 NCBITaxonomy terms, got {len(ncbi['terms'])}"
     assert len(uberon["terms"]) == 20, f"Expected 20 UBERON terms, got {len(uberon['terms'])}"
@@ -50,7 +50,7 @@ def test_ontology_term_counts():
 def test_no_duplicate_term_ids():
     """Verify no duplicate term_ids within each ontology file."""
     for file in ["ncbi_taxonomy_subset.json", "uberon_subset.json", "pato_sex_subset.json"]:
-        path = Path(f"kg_service/ontologies/{file}")
+        path = Path(f"agentic_neurodata_conversion/kg_service/ontologies/{file}")
         data = json.load(open(path))
         term_ids = [t["term_id"] for t in data["terms"]]
         duplicates = [tid for tid in term_ids if term_ids.count(tid) > 1]
@@ -59,7 +59,7 @@ def test_no_duplicate_term_ids():
 
 def test_ontology_term_schema():
     """Verify each term has required fields."""
-    ncbi = json.load(open("kg_service/ontologies/ncbi_taxonomy_subset.json"))
+    ncbi = json.load(open("agentic_neurodata_conversion/kg_service/ontologies/ncbi_taxonomy_subset.json"))
     for term in ncbi["terms"]:
         assert "term_id" in term, "Missing term_id field"
         assert "label" in term, "Missing label field"

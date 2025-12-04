@@ -36,6 +36,8 @@ jobs:
     env:
       # Set dummy API key for tests (tests use mocks, but FastAPI startup event requires it)
       ANTHROPIC_API_KEY: sk-ant-test-key-for-ci-only-not-used-in-tests
+      # Set dummy Neo4j password for tests (tests use mocks, but KGServiceSettings validation requires it)
+      NEO4J_PASSWORD: test-neo4j-password-for-ci-only-not-used-in-tests
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

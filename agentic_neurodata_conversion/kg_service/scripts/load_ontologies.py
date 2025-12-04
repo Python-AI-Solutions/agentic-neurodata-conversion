@@ -21,8 +21,8 @@ import json
 import logging
 from pathlib import Path
 
-from kg_service.config import get_settings
-from kg_service.db.neo4j_connection import get_neo4j_connection
+from agentic_neurodata_conversion.kg_service.config import get_settings
+from agentic_neurodata_conversion.kg_service.db.neo4j_connection import get_neo4j_connection
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -107,7 +107,7 @@ async def load_ontology_file(conn, file_path: Path) -> int:
             "definition": term.get("definition"),
             "synonyms": term.get("synonyms", []),
             "ontology_name": ontology_name,
-            "parent_terms": term.get("parent_terms", [])
+            "parent_terms": term.get("parent_terms", []),
         }
 
         await conn.execute_write(query, params)
@@ -159,11 +159,7 @@ async def main() -> None:
     settings = get_settings()
 
     # Connect to Neo4j
-    conn = get_neo4j_connection(
-        uri=settings.neo4j_uri,
-        user=settings.neo4j_user,
-        password=settings.neo4j_password
-    )
+    conn = get_neo4j_connection(uri=settings.neo4j_uri, user=settings.neo4j_user, password=settings.neo4j_password)
     await conn.connect()
 
     try:
@@ -175,7 +171,7 @@ async def main() -> None:
         files = [
             ontology_dir / "ncbi_taxonomy_subset.json",
             ontology_dir / "uberon_subset.json",
-            ontology_dir / "pato_sex_subset.json"
+            ontology_dir / "pato_sex_subset.json",
         ]
 
         total_terms = 0

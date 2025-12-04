@@ -331,7 +331,7 @@ def mock_llm_corrector():
     return service
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def mock_llm_conversational():
     """
     Create a mock LLM service specialized for conversational interactions.

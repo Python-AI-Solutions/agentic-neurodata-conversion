@@ -12,22 +12,10 @@ from agentic_neurodata_conversion.models import ConversionStatus, GlobalState
 
 # Note: The following fixtures are provided by conftest files:
 # - mock_llm_conversational: from root conftest.py (for chat/conversational responses)
-# - api_test_client: from integration/conftest.py (FastAPI test client)
-
-
-@pytest.mark.integration
-@pytest.fixture(autouse=True)
-def patch_llm_service(mock_llm_conversational):
-    """
-    Automatically patch LLM service for all tests in this module.
-
-    Uses mock_llm_conversational from root conftest.py which provides
-    chat-oriented responses suitable for conversational testing.
-    """
-    with patch(
-        "agentic_neurodata_conversion.services.llm_service.create_llm_service", return_value=mock_llm_conversational
-    ):
-        yield
+# - api_test_client: from integration/conftest.py (FastAPI test client with LLM mocked)
+#
+# The api_test_client fixture automatically patches LLM services BEFORE app creation,
+# ensuring no real API calls are made during integration tests.
 
 
 @pytest.mark.integration

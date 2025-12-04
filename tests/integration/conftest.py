@@ -8,12 +8,61 @@ These fixtures are available to all tests in the integration/ directory
 and inherit from the root conftest.py fixtures.
 """
 
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from anthropic.types import Message, TextBlock, Usage
 from fastapi.testclient import TestClient
 
 from agentic_neurodata_conversion.models import ConversionStatus
+
+# ============================================================================
+# LLM Mocking - Prevent Real API Calls
+# ============================================================================
+
+# Global patch - must be applied before ANY imports
+_anthropic_patcher = None
+
+
+def pytest_configure(config):
+    """
+    Pytest hook called before test collection.
+
+    Patches Anthropic client BEFORE any app imports to prevent real API calls.
+    """
+    global _anthropic_patcher
+
+    # Create proper mock response with actual Anthropic types
+    mock_text_block = TextBlock(
+        type="text", text='{"answer": "Mock LLM response", "follow_up_suggestions": [], "relevant_action": "none"}'
+    )
+    mock_message = Message(
+        id="msg_test123",
+        type="message",
+        role="assistant",
+        content=[mock_text_block],
+        model="claude-sonnet-4-20250514",
+        stop_reason="end_turn",
+        stop_sequence=None,
+        usage=Usage(input_tokens=10, output_tokens=20),
+    )
+
+    mock_client = Mock()
+    mock_client.messages = Mock()
+    mock_client.messages.create = AsyncMock(return_value=mock_message)
+
+    _anthropic_patcher = patch(
+        "agentic_neurodata_conversion.services.llm_service.AsyncAnthropic", return_value=mock_client
+    )
+    _anthropic_patcher.start()
+
+
+def pytest_unconfigure(config):
+    """Stop the Anthropic patch after tests complete."""
+    global _anthropic_patcher
+    if _anthropic_patcher:
+        _anthropic_patcher.stop()
+
 
 # ============================================================================
 # API Test Client Fixtures
@@ -43,6 +92,9 @@ def api_test_client():
         This imports from api.main which registers all agents and routes.
         State persists between tests in same module - use api_test_client_with_state
         for isolated tests.
+
+        Anthropic client is mocked globally by mock_anthropic_globally fixture
+        to prevent real API calls.
     """
     from agentic_neurodata_conversion.api.main import app
 

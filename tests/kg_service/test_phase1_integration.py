@@ -19,8 +19,8 @@ async def neo4j_connection():
     if not password:
         pytest.skip("NEO4J_PASSWORD not set - Neo4j tests require local Neo4j instance")
 
-    from kg_service.config import get_settings
-    from kg_service.db.neo4j_connection import get_neo4j_connection, reset_neo4j_connection
+    from agentic_neurodata_conversion.kg_service.config import get_settings
+    from agentic_neurodata_conversion.kg_service.db.neo4j_connection import get_neo4j_connection, reset_neo4j_connection
 
     # Reset connection to avoid singleton issues
     reset_neo4j_connection()

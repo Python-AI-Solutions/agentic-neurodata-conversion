@@ -4,7 +4,7 @@ Tests for OntologyTerm Pydantic model.
 Validates model creation, defaults, and field types.
 """
 
-from kg_service.models.ontology import OntologyTerm
+from agentic_neurodata_conversion.kg_service.models.ontology import OntologyTerm
 
 
 def test_ontology_term_creation():

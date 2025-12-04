@@ -8,8 +8,6 @@ requirements, including whether they're required, ontology-governed, and what
 types of values are expected.
 """
 
-from typing import List, Optional
-
 from pydantic import BaseModel, Field
 
 
@@ -33,37 +31,20 @@ class SchemaField(BaseModel):
     field_path: str = Field(
         ...,
         description="Dot-notation path to field (e.g., subject.species)",
-        examples=["subject.species", "subject.sex", "general.surgery"]
+        examples=["subject.species", "subject.sex", "general.surgery"],
     )
-    description: str = Field(
-        ...,
-        description="Human-readable description of the field"
+    description: str = Field(..., description="Human-readable description of the field")
+    required: bool = Field(..., description="Whether this field is required in NWB files")
+    ontology_governed: bool = Field(..., description="Whether this field should be validated against an ontology")
+    ontology: str | None = Field(
+        None, description="Which ontology to use for validation", examples=["NCBITaxonomy", "UBERON", "PATO"]
     )
-    required: bool = Field(
-        ...,
-        description="Whether this field is required in NWB files"
-    )
-    ontology_governed: bool = Field(
-        ...,
-        description="Whether this field should be validated against an ontology"
-    )
-    ontology: Optional[str] = Field(
-        None,
-        description="Which ontology to use for validation",
-        examples=["NCBITaxonomy", "UBERON", "PATO"]
-    )
-    value_type: str = Field(
-        ...,
-        description="Expected value type",
-        examples=["string", "array[string]", "datetime"]
-    )
-    examples: List[str] = Field(
-        default_factory=list,
-        description="Example values for this field"
-    )
+    value_type: str = Field(..., description="Expected value type", examples=["string", "array[string]", "datetime"])
+    examples: list[str] = Field(default_factory=list, description="Example values for this field")
 
     class Config:
         """Pydantic model configuration with example."""
+
         json_schema_extra = {
             "example": {
                 "field_path": "subject.species",
@@ -72,6 +53,6 @@ class SchemaField(BaseModel):
                 "ontology_governed": True,
                 "ontology": "NCBITaxonomy",
                 "value_type": "string",
-                "examples": ["Mus musculus", "Rattus norvegicus"]
+                "examples": ["Mus musculus", "Rattus norvegicus"],
             }
         }

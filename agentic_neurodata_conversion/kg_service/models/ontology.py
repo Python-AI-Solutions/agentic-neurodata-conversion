@@ -11,8 +11,6 @@ Ontology terms include:
 Each term has a unique ID, label, definition, and synonyms for flexible matching.
 """
 
-from typing import List, Optional
-
 from pydantic import BaseModel, Field
 
 
@@ -35,35 +33,23 @@ class OntologyTerm(BaseModel):
     term_id: str = Field(
         ...,
         description="Ontology term ID (e.g., NCBITaxon:10090)",
-        examples=["NCBITaxon:10090", "UBERON:0002421", "PATO:0000384"]
+        examples=["NCBITaxon:10090", "UBERON:0002421", "PATO:0000384"],
     )
-    label: str = Field(
-        ...,
-        description="Primary label for the term",
-        examples=["Mus musculus", "hippocampus", "male"]
-    )
-    definition: Optional[str] = Field(
-        None,
-        description="Definition of the term"
-    )
-    synonyms: List[str] = Field(
+    label: str = Field(..., description="Primary label for the term", examples=["Mus musculus", "hippocampus", "male"])
+    definition: str | None = Field(None, description="Definition of the term")
+    synonyms: list[str] = Field(
         default_factory=list,
         description="Alternative labels for the term",
-        examples=[["mouse", "house mouse", "lab mouse"]]
+        examples=[["mouse", "house mouse", "lab mouse"]],
     )
-    ontology_name: str = Field(
-        ...,
-        description="Name of the ontology",
-        examples=["NCBITaxonomy", "UBERON", "PATO"]
-    )
-    parent_terms: List[str] = Field(
-        default_factory=list,
-        description="Parent term IDs (for hierarchy)",
-        examples=[["NCBITaxon:10088"]]
+    ontology_name: str = Field(..., description="Name of the ontology", examples=["NCBITaxonomy", "UBERON", "PATO"])
+    parent_terms: list[str] = Field(
+        default_factory=list, description="Parent term IDs (for hierarchy)", examples=[["NCBITaxon:10088"]]
     )
 
     class Config:
         """Pydantic model configuration with example."""
+
         json_schema_extra = {
             "example": {
                 "term_id": "NCBITaxon:10090",
@@ -71,6 +57,6 @@ class OntologyTerm(BaseModel):
                 "definition": "House mouse - common laboratory model organism",
                 "synonyms": ["mouse", "house mouse", "laboratory mouse", "lab mouse", "mice"],
                 "ontology_name": "NCBITaxonomy",
-                "parent_terms": ["NCBITaxon:10088"]
+                "parent_terms": ["NCBITaxon:10088"],
             }
         }
