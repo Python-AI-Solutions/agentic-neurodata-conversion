@@ -7,7 +7,7 @@ Converts neuroscience electrophysiology data to NWB standard using a conversatio
 This project demonstrates spec-driven development of an AI system that:
 
 - Converts neuroscience data to NWB standard through a chat interface
-- Uses a three-agent architecture (Conversation, Conversion, Evaluation) with provenance tracking
+- Uses a three-agent architecture (Conversation, Conversion, Evaluation)
 
 ---
 
@@ -27,9 +27,6 @@ NWB conversion currently requires deep knowledge of both source formats and the 
 **Multi-Agent Architecture**
 
 - Three specialized agents (Conversation, Conversion, Evaluation) communicate via MCP protocol
-
-**Provenance Capture**
-
 - Traceability from raw data files through metadata collection to final NWB output
 - Records metadata source (user input, filename inference or defaults) for each field
 - Maintains conversation history and validation results for reproducibility
@@ -130,10 +127,10 @@ This project uses **spec-driven development** methodology using **Spec-Kit by Gi
 
 **Grounding Mechanisms**
 
-- **Semantic Layer**: Agent behavior constrained by NWB schema and DANDI validation rules
+- Agent behavior constrained by NWB schema and DANDI validation rules
 - **Testing**: Unit and integration tests created alongside implementation (60%+ coverage required)
 - **Evaluation**: NWBInspector validation on every conversion output
-- **Provenance**: Traceability of metadata sources and conversion decisions
+
 
 **Code Quality**
 
@@ -198,39 +195,22 @@ For detailed setup, development workflow, and testing instructions, see [CONTRIB
 
 ## System Overview
 
-### File Upload and Format Detection
-
-![File Upload Interface](images/chat-interface-upload.png)
-*Add file with attach button with automatic format detection*
-
+## Chat Interface
 ### Natural Language Metadata Collection
 
 ![Metadata Collection](images/chat-interface-metadata.png)
 *Conversational interface for collecting experimental metadata - system extracts structured fields from natural language*
 
-### Conversion Progress and Results
 
-![Conversion Workflow](images/chat-interface-conversion.png)
 
-*Real-time conversion updates with validation results and download options*
-
-### Validation Report - Overview
-
-![Validation Report Overview](images/report-validation-overview.png)
-
-*Comprehensive validation report showing NWBInspector results with issue classification and DANDI compliance status*
+### Validation Report
+---
 
 ### Validation Report - Detailed Analysis
 
 ![Validation Details](images/report-validation-details.png)
 
 *Detailed breakdown of validation issues with severity levels, affected fields, and actionable recommendations*
-
-### Provenance Tracking
-
-![Provenance Tracking](images/report-provenance-tracking.png)
-
-*Complete traceability of metadata sources - tracks whether each field came from user input, filename inference or defaults*
 
 ---
 
