@@ -114,6 +114,7 @@ class MetadataProvenance(str, Enum):
     USER_SPECIFIED = "user-specified"  # User explicitly provided this value
     AI_PARSED = "ai-parsed"  # LLM parsed from natural language input
     AI_INFERRED = "ai-inferred"  # AI guessed/inferred from context
+    KG_RESOLVED = "kg-resolved"  # Validated and normalized via Knowledge Graph ontology
     AUTO_EXTRACTED = "auto-extracted"  # Extracted from file metadata (.meta, .json)
     AUTO_CORRECTED = "auto-corrected"  # Applied during validation error correction
     DEFAULT = "default"  # Fallback/placeholder value

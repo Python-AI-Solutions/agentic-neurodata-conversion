@@ -77,9 +77,10 @@ class InferenceEngine:
         # 2. Group by normalized_value, count occurrences
         # 3. Check if top species has ≥2 observations
         # 4. Verify 100% agreement (only one unique species exists)
+        # Fixed: Use exact subject_id match from provenance instead of substring matching
         query = """
         MATCH (obs:Observation {field_path: 'subject.species'})
-        WHERE obs.source_file CONTAINS $subject_id
+        WHERE obs.provenance_json.subject_id = $subject_id
           AND obs.source_file <> $target_file
           AND obs.is_active = true
         WITH obs.normalized_value AS species, count(*) AS evidence_count
@@ -88,7 +89,7 @@ class InferenceEngine:
         WITH species, evidence_count
         WHERE evidence_count >= 2
         MATCH (obs2:Observation {field_path: 'subject.species'})
-        WHERE obs2.source_file CONTAINS $subject_id
+        WHERE obs2.provenance_json.subject_id = $subject_id
           AND obs2.source_file <> $target_file
           AND obs2.is_active = true
         WITH species, evidence_count, collect(DISTINCT obs2.normalized_value) AS all_species

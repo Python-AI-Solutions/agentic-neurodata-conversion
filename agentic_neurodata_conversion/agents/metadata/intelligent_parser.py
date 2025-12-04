@@ -14,6 +14,7 @@ from dateutil import parser as date_parser
 from agentic_neurodata_conversion.agents.metadata.schema import MetadataFieldSchema, NWBDANDISchema
 from agentic_neurodata_conversion.models import GlobalState, LogLevel
 from agentic_neurodata_conversion.services import LLMService
+from agentic_neurodata_conversion.services.kg_wrapper import get_kg_wrapper
 
 
 class ConfidenceLevel(str, Enum):
@@ -115,6 +116,31 @@ class IntelligentMetadataParser:
         self.llm_service = llm_service
         self.schema = NWBDANDISchema()
         self.field_schemas = {field.name: field for field in self.schema.get_all_fields()}
+        # Initialize KG wrapper for ontology-based validation
+        try:
+            self.kg_wrapper = get_kg_wrapper()
+        except Exception as e:
+            # Graceful fallback if KG service unavailable
+            self.kg_wrapper = None
+
+    def _is_ontology_governed_field(self, field_name: str) -> bool:
+        """Check if field should use KG validation.
+
+        Args:
+            field_name: Field name to check (e.g., "species", "sex")
+
+        Returns:
+            True if field is ontology-governed and should use KG service
+        """
+        ontology_fields = [
+            "species",
+            "sex",
+            # Brain region fields
+            "location",
+            "brain_region",
+            "electrode_location",
+        ]
+        return field_name.lower() in ontology_fields
 
     async def parse_natural_language_batch(
         self,
@@ -249,10 +275,111 @@ For each field found, provide:
 
             parsed_fields = []
             for field_data in response.get("fields", []):
+                field_name = field_data["field_name"]
+                raw_value = field_data["raw_value"]
+                llm_normalized_value = field_data["normalized_value"]
+
+                # Try KG validation for ontology-governed fields
+                if self.kg_wrapper and self._is_ontology_governed_field(field_name):
+                    try:
+                        # Map field name to KG field path
+                        field_path_map = {
+                            "species": "subject.species",
+                            "sex": "subject.sex",
+                            "location": "ecephys.ElectrodeGroup.location",
+                            "brain_region": "ecephys.ElectrodeGroup.location",
+                            "electrode_location": "ecephys.ElectrodeGroup.location",
+                        }
+                        field_path = field_path_map.get(field_name.lower(), f"subject.{field_name}")
+
+                        # Call KG normalization
+                        kg_result = await self.kg_wrapper.normalize(
+                            field_path=field_path,
+                            value=raw_value,
+                            context={"source": "user_input", "session_id": getattr(state, "session_id", "unknown")},
+                        )
+
+                        # Use KG result if validated with good confidence
+                        if kg_result.get("status") == "validated" and kg_result.get("confidence", 0) >= 0.8:
+                            # Translate sex values for NWB compliance
+                            if field_name.lower() == "sex":
+                                sex_translation = {
+                                    "male": "M",
+                                    "female": "F",
+                                    "unknown": "U",
+                                    "other": "O",
+                                    "hermaphrodite": "XX",
+                                    "hermaphrodite (xx)": "XX",
+                                    "hermaphrodite (xo)": "XO",
+                                }
+                                normalized_lower = kg_result["normalized_value"].lower()
+                                if normalized_lower in sex_translation:
+                                    original_value = kg_result["normalized_value"]
+                                    kg_result["normalized_value"] = sex_translation[normalized_lower]
+                                    state.add_log(
+                                        LogLevel.INFO,
+                                        f"Translated sex value: '{original_value}' → '{kg_result['normalized_value']}' for NWB compliance",
+                                    )
+
+                            state.add_log(
+                                LogLevel.INFO,
+                                f"KG validated {field_name}: '{raw_value}' → '{kg_result['normalized_value']}' "
+                                f"(confidence: {kg_result['confidence'] * 100:.0f}%, term: {kg_result.get('ontology_term_id', 'N/A')})",
+                            )
+
+                            # Create ParsedField with KG result
+                            parsed_field = ParsedField(
+                                field_name=field_name,
+                                raw_input=raw_value,
+                                parsed_value=kg_result["normalized_value"],
+                                confidence=kg_result["confidence"] * 100,  # Convert to percentage
+                                reasoning=f"Ontology validation: {kg_result.get('ontology_term_id', 'N/A')}",
+                                nwb_compliant=True,
+                                needs_review=kg_result.get("action_required", False),
+                                was_explicit=field_data.get("extraction_type", "explicit") == "explicit",
+                            )
+                            parsed_fields.append(parsed_field)
+
+                            # Store observation in Neo4j
+                            try:
+                                # Extract subject_id from source file (TODO: track subject_id explicitly in state)
+                                source_file = getattr(state, "uploaded_file_path", "unknown")
+                                subject_id = "unknown"
+                                if source_file and "_" in source_file:
+                                    # Simple extraction: assume format like "subject_001_session.nwb"
+                                    parts = source_file.split("_")
+                                    if len(parts) > 0 and "subject" in parts[0].lower():
+                                        subject_id = parts[0] + "_" + parts[1] if len(parts) > 1 else parts[0]
+
+                                await self.kg_wrapper.store_observation(
+                                    field_path=field_path,
+                                    raw_value=raw_value,
+                                    normalized_value=kg_result["normalized_value"],
+                                    ontology_term_id=kg_result.get("ontology_term_id"),
+                                    source_type="user",
+                                    source_file=source_file,
+                                    confidence=kg_result["confidence"],
+                                    provenance={
+                                        "user_id": getattr(state, "user_id", "unknown"),
+                                        "session_id": getattr(state, "session_id", "unknown"),
+                                        "subject_id": subject_id,  # Fixed: Added for accurate inference queries
+                                    },
+                                )
+                            except Exception as obs_error:
+                                state.add_log(LogLevel.WARNING, f"Failed to store observation: {obs_error}")
+
+                            # Skip to next field - already processed with KG
+                            continue
+
+                    except Exception as kg_error:
+                        state.add_log(
+                            LogLevel.WARNING, f"KG validation failed for {field_name}, using LLM result: {kg_error}"
+                        )
+                        # Fall through to LLM processing
+
+                # Process with LLM result (either KG unavailable or failed)
                 # Post-process date fields to ensure ISO format
-                normalized_value = self._post_process_date_field(
-                    field_data["field_name"], field_data["normalized_value"], state
-                )
+                normalized_value = self._post_process_date_field(field_name, llm_normalized_value, state)
 
                 # Extract the extraction_type and convert to was_explicit boolean
                 extraction_type = field_data.get("extraction_type", "explicit")
@@ -487,7 +614,7 @@ Provide:
                 all_fields = set(existing_metadata.keys()) | pending_field_names | parsed_field_names
 
                 # Import NWBDANDISchema to check all fields
-                from agents.nwb_dandi_schema import FieldRequirementLevel, NWBDANDISchema
+                from agentic_neurodata_conversion.agents.metadata.schema import FieldRequirementLevel, NWBDANDISchema
 
                 # Get all NWB fields
                 all_nwb_fields = NWBDANDISchema.get_all_fields()
@@ -500,29 +627,30 @@ Provide:
                 print(f"DEBUG: ALL fields combined: {all_fields}")
 
                 # Categorize missing fields by requirement level
-                for field in all_nwb_fields:
-                    if field.name not in all_fields:
-                        if field.requirement_level == FieldRequirementLevel.REQUIRED:
-                            missing_required.append(field)
-                            print(f"DEBUG: Missing REQUIRED field: {field.name}")
+                schema_field: MetadataFieldSchema
+                for schema_field in all_nwb_fields:
+                    if schema_field.name not in all_fields:
+                        if schema_field.requirement_level == FieldRequirementLevel.REQUIRED:
+                            missing_required.append(schema_field)
+                            print(f"DEBUG: Missing REQUIRED field: {schema_field.name}")
                         else:
-                            missing_optional.append(field)
-                            print(f"DEBUG: Missing optional field: {field.name}")
+                            missing_optional.append(schema_field)
+                            print(f"DEBUG: Missing optional field: {schema_field.name}")
 
                 # Display missing required fields first
                 if missing_required:
                     print(f"DEBUG: Found {len(missing_required)} missing REQUIRED fields")
                     lines.append("\n**⚠️ Still missing DANDI-required metadata:**")
-                    for field in missing_required:
-                        lines.append(f"- **{field.name}** (REQUIRED): {field.description}")
+                    for schema_field in missing_required:
+                        lines.append(f"- **{schema_field.name}** (REQUIRED): {schema_field.description}")
                     lines.append("")
 
                 # Display missing optional fields
                 if missing_optional:
                     print(f"DEBUG: Found {len(missing_optional)} missing optional fields")
                     lines.append("\n**📋 Optional metadata you can add:**")
-                    for field in missing_optional:
-                        lines.append(f"- **{field.name}**: {field.description}")
+                    for schema_field in missing_optional:
+                        lines.append(f"- **{schema_field.name}**: {schema_field.description}")
                     lines.append("")
 
                 if not missing_required and not missing_optional:

@@ -266,7 +266,8 @@ async def test_infer_species_query_structure(mock_neo4j_connection):
     assert "evidence_count >= 2" in query
     assert "size(all_species) = 1" in query
     assert "MATCH (term:OntologyTerm)" in query
-    assert "WHERE obs.source_file CONTAINS $subject_id" in query
+    # Fixed: Verify exact subject_id matching instead of substring CONTAINS
+    assert "obs.provenance_json.subject_id = $subject_id" in query
     assert "AND obs.source_file <> $target_file" in query
 
 
