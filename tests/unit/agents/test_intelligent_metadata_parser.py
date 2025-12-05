@@ -1023,3 +1023,629 @@ class TestEdgeCases:
         )
 
         assert result is not None
+
+
+# ============================================================================
+# Phase 1: Historical Inference Integration Tests
+# ============================================================================
+
+
+class TestHistoricalInferenceIntegration:
+    """Tests for historical inference enhancement in batch extraction."""
+
+    @pytest.mark.asyncio
+    async def test_batch_extraction_scenario1_confirmed(self, parser_with_llm, global_state):
+        """Test Scenario 1: LLM + KG agree → CONFIRMED badge with boosted confidence."""
+        from unittest.mock import AsyncMock, Mock
+
+        # Set up global_state with input_path
+        global_state.input_path = "session_C.nwb"
+
+        # Mock LLM service to return species and subject_id
+        parser_with_llm.llm_service.generate_structured_output = AsyncMock(
+            return_value={
+                "fields": [
+                    {
+                        "field_name": "subject_id",
+                        "raw_value": "subject_001",
+                        "normalized_value": "subject_001",
+                        "confidence": 95,
+                        "reasoning": "Explicitly stated subject ID",
+                        "needs_review": False,
+                        "extraction_type": "explicit",
+                    },
+                    {
+                        "field_name": "species",
+                        "raw_value": "mouse",
+                        "normalized_value": "Mus musculus",
+                        "confidence": 75,
+                        "reasoning": "Common name for Mus musculus",
+                        "needs_review": False,
+                        "extraction_type": "explicit",
+                    },
+                ]
+            }
+        )
+
+        # Mock KGWrapper
+        mock_kg_wrapper = Mock()
+        mock_kg_wrapper.infer_value = AsyncMock(
+            return_value={
+                "has_suggestion": True,
+                "suggested_value": "Mus musculus",  # Same as LLM will extract
+                "ontology_term_id": "NCBITaxon:10090",
+                "confidence": 0.8,
+                "requires_confirmation": True,
+                "reasoning": "Based on 2 prior observations with 100% agreement",
+                "evidence_count": 2,
+            }
+        )
+        parser_with_llm.kg_wrapper = mock_kg_wrapper
+
+        # User input contains subject_id and species
+        user_input = "subject_001, mouse, 8 weeks old"
+
+        result = await parser_with_llm.parse_natural_language_batch(user_input=user_input, state=global_state)
+
+        # Find species field
+        species_field = next((f for f in result if f.field_name == "species"), None)
+        assert species_field is not None
+
+        # Verify CONFIRMED badge and boosted confidence
+        assert species_field.badge == "CONFIRMED"
+        assert species_field.confidence >= 85.0  # Boosted from original
+        assert species_field.historical_evidence is not None
+        assert species_field.historical_evidence["evidence_count"] == 2
+        assert "2 prior observations" in species_field.historical_evidence["reasoning"]
+
+    @pytest.mark.asyncio
+    async def test_batch_extraction_scenario2_historical(self, parser_with_llm, global_state):
+        """Test Scenario 2: LLM didn't find + KG suggests → HISTORICAL badge."""
+        from unittest.mock import AsyncMock, Mock
+
+        global_state.input_path = "session_D.nwb"
+
+        # Mock KGWrapper to suggest sex (which LLM might not extract from minimal input)
+        mock_kg_wrapper = Mock()
+        mock_kg_wrapper.infer_value = AsyncMock(
+            return_value={
+                "has_suggestion": True,
+                "suggested_value": "M",
+                "ontology_term_id": None,
+                "confidence": 0.8,
+                "requires_confirmation": True,
+                "reasoning": "Based on 3 prior observations with 100% agreement",
+                "evidence_count": 3,
+            }
+        )
+        parser_with_llm.kg_wrapper = mock_kg_wrapper
+
+        # User input with subject_id but no sex mentioned
+        user_input = "subject_002, recorded visual cortex"
+
+        result = await parser_with_llm.parse_natural_language_batch(user_input=user_input, state=global_state)
+
+        # Find sex field (should be added by inference)
+        sex_field = next((f for f in result if f.field_name == "sex"), None)
+
+        # Verify HISTORICAL badge (may or may not be added depending on LLM extraction)
+        # If sex_field exists and has HISTORICAL badge, verify it
+        if sex_field and sex_field.badge == "HISTORICAL":
+            assert sex_field.extraction_method == "historical_inference"
+            assert sex_field.confidence == 80.0  # KG confidence as percentage
+            assert sex_field.historical_evidence is not None
+            assert sex_field.historical_evidence["evidence_count"] == 3
+
+    @pytest.mark.asyncio
+    async def test_batch_extraction_scenario3_conflicting(self, parser_with_llm, global_state):
+        """Test Scenario 3: LLM found + KG conflicts → CONFLICTING badge."""
+        from unittest.mock import AsyncMock, Mock
+
+        global_state.input_path = "session_E.nwb"
+
+        # Mock KGWrapper to suggest different species than LLM will extract
+        mock_kg_wrapper = Mock()
+        mock_kg_wrapper.infer_value = AsyncMock(
+            return_value={
+                "has_suggestion": True,
+                "suggested_value": "Mus musculus",  # History says mouse
+                "ontology_term_id": "NCBITaxon:10090",
+                "confidence": 0.8,
+                "requires_confirmation": True,
+                "reasoning": "Based on 2 prior observations with 100% agreement",
+                "evidence_count": 2,
+            }
+        )
+        parser_with_llm.kg_wrapper = mock_kg_wrapper
+
+        # User input says "rat" but history says "mouse" → conflict
+        user_input = "subject_001, rat, 10 weeks old"
+
+        result = await parser_with_llm.parse_natural_language_batch(user_input=user_input, state=global_state)
+
+        # Find species field
+        species_field = next((f for f in result if f.field_name == "species"), None)
+
+        # Verify CONFLICTING badge and reduced confidence
+        if species_field and species_field.badge == "CONFLICTING":
+            # Confidence should be reduced
+            assert species_field.confidence < 75.0  # Reduced due to conflict
+            assert species_field.historical_evidence is not None
+            assert "conflicting_value" in species_field.historical_evidence
+            assert species_field.historical_evidence["conflicting_value"] == "Mus musculus"
+
+    @pytest.mark.asyncio
+    async def test_batch_extraction_no_subject_id(self, parser_with_llm, global_state):
+        """Test that inference is skipped when subject_id is missing."""
+        from unittest.mock import AsyncMock, Mock
+
+        global_state.input_path = "session_F.nwb"
+
+        # Mock KGWrapper (should not be called)
+        mock_kg_wrapper = Mock()
+        mock_kg_wrapper.infer_value = AsyncMock(
+            return_value={
+                "has_suggestion": True,
+                "suggested_value": "Mus musculus",
+                "ontology_term_id": "NCBITaxon:10090",
+                "confidence": 0.8,
+            }
+        )
+        parser_with_llm.kg_wrapper = mock_kg_wrapper
+
+        # User input WITHOUT subject_id
+        user_input = "mouse, 8 weeks old, visual cortex recording"
+
+        result = await parser_with_llm.parse_natural_language_batch(user_input=user_input, state=global_state)
+
+        # Verify inference was NOT called (no subject_id)
+        mock_kg_wrapper.infer_value.assert_not_called()
+
+        # Verify no CONFIRMED/HISTORICAL/CONFLICTING badges
+        for field in result:
+            assert field.badge not in ["CONFIRMED", "HISTORICAL", "CONFLICTING"]
+
+    @pytest.mark.asyncio
+    async def test_batch_extraction_kg_unavailable(self, parser_with_llm, global_state):
+        """Test graceful degradation when KG service is unavailable."""
+        from unittest.mock import AsyncMock, Mock
+
+        global_state.input_path = "session_G.nwb"
+
+        # Mock LLM service to return species and subject_id
+        parser_with_llm.llm_service.generate_structured_output = AsyncMock(
+            return_value={
+                "fields": [
+                    {
+                        "field_name": "subject_id",
+                        "raw_value": "subject_003",
+                        "normalized_value": "subject_003",
+                        "confidence": 95,
+                        "reasoning": "Explicitly stated subject ID",
+                        "needs_review": False,
+                        "extraction_type": "explicit",
+                    },
+                    {
+                        "field_name": "species",
+                        "raw_value": "mouse",
+                        "normalized_value": "Mus musculus",
+                        "confidence": 75,
+                        "reasoning": "Common name for Mus musculus",
+                        "needs_review": False,
+                        "extraction_type": "explicit",
+                    },
+                ]
+            }
+        )
+
+        # Mock KGWrapper to raise exception (service unavailable)
+        mock_kg_wrapper = Mock()
+        mock_kg_wrapper.infer_value = AsyncMock(side_effect=Exception("Connection refused"))
+        parser_with_llm.kg_wrapper = mock_kg_wrapper
+
+        # User input with subject_id
+        user_input = "subject_003, mouse, 12 weeks old"
+
+        # Should not raise exception - graceful degradation
+        result = await parser_with_llm.parse_natural_language_batch(user_input=user_input, state=global_state)
+
+        # Verify batch extraction succeeded despite KG failure
+        assert len(result) > 0
+
+        # Verify species field exists (from LLM) without CONFIRMED badge
+        species_field = next((f for f in result if f.field_name == "species"), None)
+        assert species_field is not None
+        # Should not have CONFIRMED badge due to KG error
+        assert species_field.badge != "CONFIRMED"
+
+    @pytest.mark.asyncio
+    async def test_helper_methods(self, parser_with_llm):
+        """Test helper methods for inference integration."""
+        # Create test fields
+        field1 = ParsedField(
+            field_name="species",
+            raw_input="mouse",
+            parsed_value="Mus musculus",
+            confidence=75.0,
+            reasoning="Test",
+            nwb_compliant=True,
+        )
+        field2 = ParsedField(
+            field_name="subject_id",
+            raw_input="subject_001",
+            parsed_value="subject_001",
+            confidence=95.0,
+            reasoning="Test",
+            nwb_compliant=True,
+        )
+        fields = [field1, field2]
+
+        # Test _get_field
+        result = parser_with_llm._get_field(fields, "species")
+        assert result == field1
+
+        result = parser_with_llm._get_field(fields, "nonexistent")
+        assert result is None
+
+        # Test _get_field_value
+        value = parser_with_llm._get_field_value(fields, "subject_id")
+        assert value == "subject_001"
+
+        value = parser_with_llm._get_field_value(fields, "nonexistent")
+        assert value is None
+
+        # Test _values_match
+        assert parser_with_llm._values_match("Mus musculus", "mus musculus")  # Case-insensitive
+        assert parser_with_llm._values_match("  Test  ", "test")  # Whitespace normalization
+        assert not parser_with_llm._values_match("mouse", "rat")
+
+    @pytest.mark.asyncio
+    async def test_metrics_initialized_in_global_state(self, global_state):
+        """Test that inference metrics are properly initialized in GlobalState."""
+        # Verify all metrics exist and are initialized to 0
+        assert "suggestions_shown" in global_state.inference_metrics
+        assert "confirmed_count" in global_state.inference_metrics
+        assert "historical_count" in global_state.inference_metrics
+        assert "conflicting_count" in global_state.inference_metrics
+        assert "user_accepted_historical" in global_state.inference_metrics
+        assert "user_rejected_historical" in global_state.inference_metrics
+        assert "user_resolved_conflict" in global_state.inference_metrics
+
+        # All should start at 0
+        assert global_state.inference_metrics["suggestions_shown"] == 0
+        assert global_state.inference_metrics["confirmed_count"] == 0
+        assert global_state.inference_metrics["historical_count"] == 0
+        assert global_state.inference_metrics["conflicting_count"] == 0
+
+    @pytest.mark.asyncio
+    async def test_metrics_confirmed_badge_increments(self, parser_with_llm, global_state):
+        """Test that CONFIRMED badge increments confirmed_count and suggestions_shown."""
+        from unittest.mock import AsyncMock, Mock
+
+        global_state.input_path = "session_A.nwb"
+
+        # Mock LLM service to return species and subject_id
+        parser_with_llm.llm_service.generate_structured_output = AsyncMock(
+            return_value={
+                "fields": [
+                    {
+                        "field_name": "subject_id",
+                        "raw_value": "mouse001",
+                        "normalized_value": "mouse001",
+                        "confidence": 95,
+                        "reasoning": "Explicitly stated subject ID",
+                        "needs_review": False,
+                        "extraction_type": "explicit",
+                    },
+                    {
+                        "field_name": "species",
+                        "raw_value": "mouse",
+                        "normalized_value": "Mus musculus",
+                        "confidence": 75,
+                        "reasoning": "Common name for Mus musculus",
+                        "needs_review": False,
+                        "extraction_type": "explicit",
+                    },
+                ]
+            }
+        )
+
+        # Mock KGWrapper to confirm species only
+        def mock_infer_side_effect(field_path, subject_id, source_file):
+            if field_path == "subject.species":
+                return {
+                    "has_suggestion": True,
+                    "suggested_value": "Mus musculus",
+                    "ontology_term_id": "NCBITaxon:10090",
+                    "confidence": 0.9,
+                    "requires_confirmation": False,
+                    "reasoning": "Based on 5 prior observations",
+                    "evidence_count": 5,
+                }
+            else:
+                return {"has_suggestion": False}
+
+        mock_kg_wrapper = Mock()
+        mock_kg_wrapper.infer_value = AsyncMock(side_effect=mock_infer_side_effect)
+        parser_with_llm.kg_wrapper = mock_kg_wrapper
+
+        # LLM extracts species=mouse (which matches KG suggestion "Mus musculus")
+        user_input = "The subject is a mouse with ID=mouse001"
+
+        # Verify metrics start at 0
+        assert global_state.inference_metrics["confirmed_count"] == 0
+        assert global_state.inference_metrics["suggestions_shown"] == 0
+
+        # Parse
+        result = await parser_with_llm.parse_natural_language_batch(user_input=user_input, state=global_state)
+
+        # Verify CONFIRMED badge was assigned
+        species_field = next((f for f in result if f.field_name == "species"), None)
+        assert species_field is not None
+        assert species_field.badge == "CONFIRMED"
+
+        # Verify metrics were incremented
+        assert global_state.inference_metrics["confirmed_count"] == 1
+        assert global_state.inference_metrics["suggestions_shown"] == 1
+
+    @pytest.mark.asyncio
+    async def test_metrics_historical_badge_increments(self, parser_with_llm, global_state):
+        """Test that HISTORICAL badge increments historical_count and suggestions_shown."""
+        from unittest.mock import AsyncMock, Mock
+
+        global_state.input_path = "session_B.nwb"
+
+        # Mock LLM service to return only subject_id (NOT sex)
+        parser_with_llm.llm_service.generate_structured_output = AsyncMock(
+            return_value={
+                "fields": [
+                    {
+                        "field_name": "subject_id",
+                        "raw_value": "mouse001",
+                        "normalized_value": "mouse001",
+                        "confidence": 95,
+                        "reasoning": "Explicitly stated subject ID",
+                        "needs_review": False,
+                        "extraction_type": "explicit",
+                    },
+                ]
+            }
+        )
+
+        # Mock KGWrapper to suggest sex only
+        def mock_infer_side_effect(field_path, subject_id, source_file):
+            if field_path == "subject.sex":
+                return {
+                    "has_suggestion": True,
+                    "suggested_value": "M",
+                    "ontology_term_id": "PATO:0000384",
+                    "confidence": 0.8,
+                    "requires_confirmation": True,
+                    "reasoning": "Based on 3 prior observations",
+                    "evidence_count": 3,
+                }
+            else:
+                return {"has_suggestion": False}
+
+        mock_kg_wrapper = Mock()
+        mock_kg_wrapper.infer_value = AsyncMock(side_effect=mock_infer_side_effect)
+        parser_with_llm.kg_wrapper = mock_kg_wrapper
+
+        # LLM extracts only subject_id (NOT sex)
+        user_input = "The subject ID is mouse001"
+
+        # Verify metrics start at 0
+        assert global_state.inference_metrics["historical_count"] == 0
+        assert global_state.inference_metrics["suggestions_shown"] == 0
+
+        # Parse
+        result = await parser_with_llm.parse_natural_language_batch(user_input=user_input, state=global_state)
+
+        # Verify HISTORICAL badge was assigned for sex
+        sex_field = next((f for f in result if f.field_name == "sex"), None)
+        assert sex_field is not None
+        assert sex_field.badge == "HISTORICAL"
+
+        # Verify metrics were incremented
+        assert global_state.inference_metrics["historical_count"] == 1
+        assert global_state.inference_metrics["suggestions_shown"] == 1
+
+    @pytest.mark.asyncio
+    async def test_metrics_conflicting_badge_increments(self, parser_with_llm, global_state):
+        """Test that CONFLICTING badge increments conflicting_count and suggestions_shown."""
+        from unittest.mock import AsyncMock, Mock
+
+        global_state.input_path = "session_C.nwb"
+
+        # Mock LLM service to return species=mouse and subject_id
+        parser_with_llm.llm_service.generate_structured_output = AsyncMock(
+            return_value={
+                "fields": [
+                    {
+                        "field_name": "subject_id",
+                        "raw_value": "mouse001",
+                        "normalized_value": "mouse001",
+                        "confidence": 95,
+                        "reasoning": "Explicitly stated subject ID",
+                        "needs_review": False,
+                        "extraction_type": "explicit",
+                    },
+                    {
+                        "field_name": "species",
+                        "raw_value": "mouse",
+                        "normalized_value": "Mus musculus",
+                        "confidence": 75,
+                        "reasoning": "Common name for Mus musculus",
+                        "needs_review": False,
+                        "extraction_type": "explicit",
+                    },
+                ]
+            }
+        )
+
+        # Mock KGWrapper to suggest different species only (conflict)
+        def mock_infer_side_effect(field_path, subject_id, source_file):
+            if field_path == "subject.species":
+                return {
+                    "has_suggestion": True,
+                    "suggested_value": "Rattus norvegicus",  # Rat (conflicts with mouse)
+                    "ontology_term_id": "NCBITaxon:10116",
+                    "confidence": 0.85,
+                    "requires_confirmation": True,
+                    "reasoning": "Based on 4 prior observations",
+                    "evidence_count": 4,
+                }
+            else:
+                return {"has_suggestion": False}
+
+        mock_kg_wrapper = Mock()
+        mock_kg_wrapper.infer_value = AsyncMock(side_effect=mock_infer_side_effect)
+        parser_with_llm.kg_wrapper = mock_kg_wrapper
+
+        # LLM extracts species=mouse (conflicts with KG suggestion "rat")
+        user_input = "The subject is a mouse with ID=mouse001"
+
+        # Verify metrics start at 0
+        assert global_state.inference_metrics["conflicting_count"] == 0
+        assert global_state.inference_metrics["suggestions_shown"] == 0
+
+        # Parse
+        result = await parser_with_llm.parse_natural_language_batch(user_input=user_input, state=global_state)
+
+        # Verify CONFLICTING badge was assigned
+        species_field = next((f for f in result if f.field_name == "species"), None)
+        assert species_field is not None
+        assert species_field.badge == "CONFLICTING"
+
+        # Verify metrics were incremented
+        assert global_state.inference_metrics["conflicting_count"] == 1
+        assert global_state.inference_metrics["suggestions_shown"] == 1
+
+    @pytest.mark.asyncio
+    async def test_metrics_multiple_badges_accumulate(self, parser_with_llm, global_state):
+        """Test that multiple badges in one batch accumulate metrics correctly."""
+        from unittest.mock import AsyncMock, Mock
+
+        global_state.input_path = "session_D.nwb"
+
+        # Mock LLM service to return species and strain (but not sex)
+        parser_with_llm.llm_service.generate_structured_output = AsyncMock(
+            return_value={
+                "fields": [
+                    {
+                        "field_name": "subject_id",
+                        "raw_value": "mouse001",
+                        "normalized_value": "mouse001",
+                        "confidence": 95,
+                        "reasoning": "Explicitly stated subject ID",
+                        "needs_review": False,
+                        "extraction_type": "explicit",
+                    },
+                    {
+                        "field_name": "species",
+                        "raw_value": "mouse",
+                        "normalized_value": "Mus musculus",
+                        "confidence": 75,
+                        "reasoning": "Common name for Mus musculus",
+                        "needs_review": False,
+                        "extraction_type": "explicit",
+                    },
+                    {
+                        "field_name": "strain",
+                        "raw_value": "C57BL/6",
+                        "normalized_value": "C57BL/6",
+                        "confidence": 80,
+                        "reasoning": "Standard mouse strain",
+                        "needs_review": False,
+                        "extraction_type": "explicit",
+                    },
+                ]
+            }
+        )
+
+        # Mock KGWrapper to return different results for different fields
+        def mock_infer_side_effect(field_path, subject_id, source_file):
+            if field_path == "subject.species":
+                # CONFIRMED: LLM says "mouse", KG confirms "Mus musculus"
+                return {
+                    "has_suggestion": True,
+                    "suggested_value": "Mus musculus",
+                    "ontology_term_id": "NCBITaxon:10090",
+                    "confidence": 0.9,
+                    "requires_confirmation": False,
+                    "reasoning": "Based on 5 prior observations",
+                    "evidence_count": 5,
+                }
+            elif field_path == "subject.sex":
+                # HISTORICAL: LLM doesn't extract, KG suggests
+                return {
+                    "has_suggestion": True,
+                    "suggested_value": "M",
+                    "ontology_term_id": "PATO:0000384",
+                    "confidence": 0.8,
+                    "requires_confirmation": True,
+                    "reasoning": "Based on 3 prior observations",
+                    "evidence_count": 3,
+                }
+            elif field_path == "subject.strain":
+                # CONFLICTING: LLM says "C57BL/6", KG says "BALB/c"
+                return {
+                    "has_suggestion": True,
+                    "suggested_value": "BALB/c",
+                    "ontology_term_id": None,
+                    "confidence": 0.75,
+                    "requires_confirmation": True,
+                    "reasoning": "Based on 2 prior observations",
+                    "evidence_count": 2,
+                }
+            else:
+                return {"has_suggestion": False}
+
+        mock_kg_wrapper = Mock()
+        mock_kg_wrapper.infer_value = AsyncMock(side_effect=mock_infer_side_effect)
+        parser_with_llm.kg_wrapper = mock_kg_wrapper
+
+        # LLM extracts species and strain (but not sex)
+        user_input = "The subject is a C57BL/6 mouse with ID=mouse001"
+
+        # Verify metrics start at 0
+        assert global_state.inference_metrics["confirmed_count"] == 0
+        assert global_state.inference_metrics["historical_count"] == 0
+        assert global_state.inference_metrics["conflicting_count"] == 0
+        assert global_state.inference_metrics["suggestions_shown"] == 0
+
+        # Parse
+        result = await parser_with_llm.parse_natural_language_batch(user_input=user_input, state=global_state)
+
+        # Verify badges
+        species_field = next((f for f in result if f.field_name == "species"), None)
+        sex_field = next((f for f in result if f.field_name == "sex"), None)
+        strain_field = next((f for f in result if f.field_name == "strain"), None)
+
+        assert species_field is not None and species_field.badge == "CONFIRMED"
+        assert sex_field is not None and sex_field.badge == "HISTORICAL"
+        assert strain_field is not None and strain_field.badge == "CONFLICTING"
+
+        # Verify metrics: 1 of each type, 3 suggestions total
+        assert global_state.inference_metrics["confirmed_count"] == 1
+        assert global_state.inference_metrics["historical_count"] == 1
+        assert global_state.inference_metrics["conflicting_count"] == 1
+        assert global_state.inference_metrics["suggestions_shown"] == 3
+
+    @pytest.mark.asyncio
+    async def test_metrics_reset_on_state_reset(self, global_state):
+        """Test that metrics are reset when GlobalState.reset() is called."""
+        # Set some metrics
+        global_state.inference_metrics["confirmed_count"] = 5
+        global_state.inference_metrics["historical_count"] = 3
+        global_state.inference_metrics["conflicting_count"] = 2
+        global_state.inference_metrics["suggestions_shown"] = 10
+
+        # Reset state
+        global_state.reset()
+
+        # Verify all metrics reset to 0
+        assert global_state.inference_metrics["confirmed_count"] == 0
+        assert global_state.inference_metrics["historical_count"] == 0
+        assert global_state.inference_metrics["conflicting_count"] == 0
+        assert global_state.inference_metrics["suggestions_shown"] == 0

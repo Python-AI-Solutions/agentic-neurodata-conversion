@@ -901,6 +901,68 @@
             color: white;
         }
 
+        /* === Phase 2: Historical Inference Badges === */
+
+        /* CONFIRMED Badge - Green with checkmark icon */
+        .provenance-badge.confirmed {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+        }
+
+        .provenance-badge.confirmed::before {
+            content: "✓ ";
+            font-weight: bold;
+        }
+
+        .provenance-badge.confirmed:hover {
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        /* HISTORICAL Badge - Purple with book icon */
+        .provenance-badge.historical {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(139, 92, 246, 0.3);
+        }
+
+        .provenance-badge.historical::before {
+            content: "📚 ";
+        }
+
+        .provenance-badge.historical:hover {
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+        }
+
+        /* CONFLICTING Badge - Amber with warning icon */
+        .provenance-badge.conflicting {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
+            animation: pulse-conflict 2s infinite;
+        }
+
+        .provenance-badge.conflicting::before {
+            content: "⚠️ ";
+        }
+
+        .provenance-badge.conflicting:hover {
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+            animation: none;
+        }
+
+        /* Pulse animation for CONFLICTING badges */
+        @keyframes pulse-conflict {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.85;
+                transform: scale(1.02);
+            }
+        }
+
         /* Needs Review Warning */
         .provenance-badge.needs-review {
             animation: pulse-warning 2s infinite;
@@ -1023,6 +1085,145 @@
             display: flex;
             gap: 16px;
             flex-wrap: wrap;
+        }
+
+        /* Conflict Resolution Card (Phase 2 Task 2.3) */
+        .conflict-resolution-card {
+            background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 10%, #fff7ed 100%);
+            border: 2px solid #f59e0b;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 16px 0;
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+        }
+
+        .conflict-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #92400e;
+        }
+
+        .conflict-icon {
+            font-size: 24px;
+            animation: pulse-conflict 2s infinite;
+        }
+
+        .conflict-field-name {
+            text-transform: capitalize;
+            color: #78350f;
+        }
+
+        .conflict-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 16px 0;
+        }
+
+        .conflict-option {
+            background: white;
+            border: 2px solid #fbbf24;
+            border-radius: 8px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .conflict-option:hover {
+            border-color: #f59e0b;
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .conflict-option.selected {
+            border-color: #10b981;
+            background: #d1fae5;
+        }
+
+        .conflict-option-label {
+            font-weight: 600;
+            color: #92400e;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .conflict-option-value {
+            font-size: 18px;
+            color: #1f2937;
+            margin: 8px 0;
+            font-weight: 500;
+        }
+
+        .conflict-option-details {
+            font-size: 13px;
+            color: #6b7280;
+            margin-top: 6px;
+        }
+
+        .conflict-evidence {
+            font-size: 12px;
+            color: #78350f;
+            font-style: italic;
+            margin-top: 4px;
+        }
+
+        .conflict-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+            justify-content: flex-end;
+        }
+
+        .conflict-btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            font-size: 14px;
+        }
+
+        .conflict-btn-accept {
+            background: #10b981;
+            color: white;
+        }
+
+        .conflict-btn-accept:hover {
+            background: #059669;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+        }
+
+        .conflict-btn-custom {
+            background: #6b7280;
+            color: white;
+        }
+
+        .conflict-btn-custom:hover {
+            background: #4b5563;
+        }
+
+        .conflict-custom-input {
+            margin-top: 12px;
+            padding: 12px;
+            border: 2px solid #fbbf24;
+            border-radius: 6px;
+            font-size: 14px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .conflict-custom-input:focus {
+            outline: none;
+            border-color: #f59e0b;
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
         }
 
         .provenance-stat {
@@ -2876,9 +3077,127 @@
          * @returns {string} HTML string for the badge
          */
         function createProvenanceBadge(provenanceInfo) {
-            const { provenance, confidence, source, needs_review, timestamp } = provenanceInfo;
+            const { provenance, confidence, source, needs_review, timestamp, badge, historical_evidence } = provenanceInfo;
 
-            // Get display name for provenance type
+            // Handle inference badges (CONFIRMED, HISTORICAL, CONFLICTING)
+            if (badge && ['CONFIRMED', 'HISTORICAL', 'CONFLICTING'].includes(badge)) {
+                const badgeClass = badge.toLowerCase();
+                const badgeConfig = {
+                    'CONFIRMED': {
+                        displayName: 'Confirmed',
+                        tooltipHeader: 'LLM & Historical Data Agree',
+                        getTooltipContent: () => {
+                            const evidenceCount = historical_evidence?.evidence_count || 0;
+                            const contributingSessions = historical_evidence?.contributing_sessions?.slice(0, 3) || [];
+                            let sessionsHTML = '';
+                            if (contributingSessions.length > 0) {
+                                sessionsHTML = '<div class="provenance-tooltip-item"><span class="provenance-tooltip-label">Based on:</span><ul style="margin: 4px 0; padding-left: 20px; font-size: 11px;">';
+                                contributingSessions.forEach(session => {
+                                    const dateStr = session.created_at || '';
+                                    const date = dateStr ? new Date(dateStr).toLocaleDateString() : 'Unknown date';
+                                    sessionsHTML += `<li>${session.source_file} (${date})</li>`;
+                                });
+                                if (evidenceCount > 3) {
+                                    sessionsHTML += `<li>...and ${evidenceCount - 3} more</li>`;
+                                }
+                                sessionsHTML += '</ul></div>';
+                            }
+                            return `
+                                <div class="provenance-tooltip-item">
+                                    <span class="provenance-tooltip-label">Status:</span>Both AI and historical inference agree
+                                </div>
+                                <div class="provenance-tooltip-item">
+                                    <span class="provenance-tooltip-label">Evidence:</span>${evidenceCount} prior session(s)
+                                </div>
+                                <div class="provenance-tooltip-item">
+                                    <span class="provenance-tooltip-label">Confidence:</span>${Math.round(confidence)}%
+                                </div>
+                                ${sessionsHTML}
+                            `;
+                        }
+                    },
+                    'HISTORICAL': {
+                        displayName: 'Historical',
+                        tooltipHeader: 'Gap-Filled from History',
+                        getTooltipContent: () => {
+                            const evidenceCount = historical_evidence?.evidence_count || 0;
+                            const contributingSessions = historical_evidence?.contributing_sessions?.slice(0, 3) || [];
+                            let sessionsHTML = '';
+                            if (contributingSessions.length > 0) {
+                                sessionsHTML = '<div class="provenance-tooltip-item"><span class="provenance-tooltip-label">Based on:</span><ul style="margin: 4px 0; padding-left: 20px; font-size: 11px;">';
+                                contributingSessions.forEach(session => {
+                                    const dateStr = session.created_at || '';
+                                    const date = dateStr ? new Date(dateStr).toLocaleDateString() : 'Unknown date';
+                                    sessionsHTML += `<li>${session.source_file} (${date})</li>`;
+                                });
+                                if (evidenceCount > 3) {
+                                    sessionsHTML += `<li>...and ${evidenceCount - 3} more</li>`;
+                                }
+                                sessionsHTML += '</ul></div>';
+                            }
+                            return `
+                                <div class="provenance-tooltip-item">
+                                    <span class="provenance-tooltip-label">Status:</span>Field filled from ${evidenceCount} prior session(s)
+                                </div>
+                                <div class="provenance-tooltip-item">
+                                    <span class="provenance-tooltip-label">Confidence:</span>${Math.round(confidence)}%
+                                </div>
+                                ${sessionsHTML}
+                            `;
+                        }
+                    },
+                    'CONFLICTING': {
+                        displayName: 'Conflicting',
+                        tooltipHeader: 'LLM vs Historical Data Disagree',
+                        getTooltipContent: () => {
+                            const llmValue = historical_evidence?.llm_value || 'Unknown';
+                            const kgValue = historical_evidence?.kg_value || 'Unknown';
+                            const evidenceCount = historical_evidence?.evidence_count || 0;
+                            const contributingSessions = historical_evidence?.contributing_sessions?.slice(0, 3) || [];
+                            let sessionsHTML = '';
+                            if (contributingSessions.length > 0) {
+                                sessionsHTML = '<div class="provenance-tooltip-item"><span class="provenance-tooltip-label">Historical evidence from:</span><ul style="margin: 4px 0; padding-left: 20px; font-size: 11px;">';
+                                contributingSessions.forEach(session => {
+                                    const dateStr = session.created_at || '';
+                                    const date = dateStr ? new Date(dateStr).toLocaleDateString() : 'Unknown date';
+                                    sessionsHTML += `<li>${session.source_file} (${date})</li>`;
+                                });
+                                if (evidenceCount > 3) {
+                                    sessionsHTML += `<li>...and ${evidenceCount - 3} more</li>`;
+                                }
+                                sessionsHTML += '</ul></div>';
+                            }
+                            return `
+                                <div class="provenance-tooltip-item" style="background: rgba(239, 68, 68, 0.1); padding: 6px; border-radius: 4px; margin: 4px 0;">
+                                    <span class="provenance-tooltip-label">AI suggests:</span><strong>${llmValue}</strong>
+                                </div>
+                                <div class="provenance-tooltip-item" style="background: rgba(139, 92, 246, 0.1); padding: 6px; border-radius: 4px; margin: 4px 0;">
+                                    <span class="provenance-tooltip-label">History suggests:</span><strong>${kgValue}</strong>
+                                </div>
+                                <div class="provenance-tooltip-item">
+                                    <span class="provenance-tooltip-label">Evidence:</span>${evidenceCount} prior session(s)
+                                </div>
+                                ${sessionsHTML}
+                                <div class="provenance-tooltip-item" style="color: #f59e0b; margin-top: 4px;">
+                                    ⚠️ Please review and choose the correct value
+                                </div>
+                            `;
+                        }
+                    }
+                };
+
+                const config = badgeConfig[badge];
+                const tooltipHTML = `
+                    <div class="provenance-tooltip">
+                        <div class="provenance-tooltip-header">${config.tooltipHeader}</div>
+                        ${config.getTooltipContent()}
+                    </div>
+                `;
+
+                return `<span class="provenance-badge ${badgeClass}">${config.displayName}${tooltipHTML}</span>`;
+            }
+
+            // Original provenance badge logic
             const displayNames = {
                 'user-specified': 'User',
                 'ai-parsed': 'AI',
@@ -3074,9 +3393,229 @@
             return enrichedHTML;
         }
 
+        /**
+         * Create a conflict resolution card for fields with CONFLICTING badge
+         * Phase 2 Task 2.3: Conflict Resolution UI
+         *
+         * @param {Object} fieldInfo - Field information with conflict
+         * @param {string} fieldInfo.field_name - Name of the field
+         * @param {string} fieldInfo.llm_value - Value suggested by LLM
+         * @param {string} fieldInfo.kg_value - Value suggested by historical data
+         * @param {number} fieldInfo.evidence_count - Number of supporting observations
+         * @param {Function} onResolve - Callback when user resolves conflict (receives selected value)
+         * @returns {string} HTML string for conflict resolution card
+         */
+        function createConflictResolutionCard(fieldInfo, onResolve) {
+            const {
+                field_name,
+                llm_value,
+                kg_value,
+                evidence_count = 0,
+                llm_confidence = 0,
+                kg_confidence = 0,
+                reasoning = ''
+            } = fieldInfo;
+
+            const cardId = `conflict-card-${field_name}`;
+            const llmOptionId = `conflict-llm-${field_name}`;
+            const kgOptionId = `conflict-kg-${field_name}`;
+            const customOptionId = `conflict-custom-${field_name}`;
+            const customInputId = `conflict-custom-input-${field_name}`;
+
+            const html = `
+                <div class="conflict-resolution-card" id="${cardId}">
+                    <div class="conflict-header">
+                        <span class="conflict-icon">⚠️</span>
+                        <span class="conflict-field-name">${field_name}</span>
+                        <span style="color: #92400e;">- Conflict Detected</span>
+                    </div>
+
+                    <div style="color: #78350f; margin-bottom: 16px; font-size: 14px;">
+                        The AI and historical data suggest different values. Please review and choose the correct one:
+                    </div>
+
+                    <div class="conflict-options">
+                        <!-- LLM Option -->
+                        <div class="conflict-option" id="${llmOptionId}" data-value="${llm_value}">
+                            <div class="conflict-option-label">
+                                <span>🤖 AI Extracted from your input</span>
+                            </div>
+                            <div class="conflict-option-value">${llm_value}</div>
+                            <div class="conflict-option-details">
+                                Confidence: ${Math.round(llm_confidence)}%
+                            </div>
+                        </div>
+
+                        <!-- KG Option -->
+                        <div class="conflict-option" id="${kgOptionId}" data-value="${kg_value}">
+                            <div class="conflict-option-label">
+                                <span>📚 Historical data suggests</span>
+                            </div>
+                            <div class="conflict-option-value">${kg_value}</div>
+                            <div class="conflict-option-details">
+                                Based on ${evidence_count} prior session(s) with 100% agreement
+                            </div>
+                            <div class="conflict-evidence">
+                                ${reasoning || 'Consistent across all previous observations'}
+                            </div>
+                        </div>
+
+                        <!-- Custom Option -->
+                        <div class="conflict-option" id="${customOptionId}" data-value="">
+                            <div class="conflict-option-label">
+                                <span>✏️ Enter a different value</span>
+                            </div>
+                            <input
+                                type="text"
+                                id="${customInputId}"
+                                class="conflict-custom-input"
+                                placeholder="Type the correct value here..."
+                                style="display: none;"
+                            />
+                        </div>
+                    </div>
+
+                    <div class="conflict-actions">
+                        <button class="conflict-btn conflict-btn-accept" id="accept-${field_name}">
+                            ✓ Accept Selected Value
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // Set up event handlers after rendering
+            setTimeout(() => {
+                const llmOption = document.getElementById(llmOptionId);
+                const kgOption = document.getElementById(kgOptionId);
+                const customOption = document.getElementById(customOptionId);
+                const customInput = document.getElementById(customInputId);
+                const acceptBtn = document.getElementById(`accept-${field_name}`);
+
+                let selectedValue = null;
+                let selectedType = null; // 'llm', 'kg', or 'custom'
+
+                // Option selection handlers
+                const selectOption = (option, value, type) => {
+                    // Deselect all
+                    [llmOption, kgOption, customOption].forEach(opt => opt?.classList.remove('selected'));
+
+                    // Select clicked option
+                    option?.classList.add('selected');
+                    selectedValue = value;
+                    selectedType = type;
+
+                    // Show/hide custom input
+                    if (type === 'custom') {
+                        customInput.style.display = 'block';
+                        customInput.focus();
+                    } else {
+                        customInput.style.display = 'none';
+                    }
+                };
+
+                llmOption?.addEventListener('click', () => selectOption(llmOption, llm_value, 'llm'));
+                kgOption?.addEventListener('click', () => selectOption(kgOption, kg_value, 'kg'));
+                customOption?.addEventListener('click', () => selectOption(customOption, '', 'custom'));
+
+                // Update selected value when custom input changes
+                customInput?.addEventListener('input', (e) => {
+                    selectedValue = e.target.value;
+                });
+
+                // Accept button handler
+                acceptBtn?.addEventListener('click', async () => {
+                    if (!selectedValue && selectedType !== 'custom') {
+                        alert('Please select one of the options first');
+                        return;
+                    }
+
+                    if (selectedType === 'custom' && !selectedValue.trim()) {
+                        alert('Please enter a value');
+                        return;
+                    }
+
+                    // Track resolution in metrics
+                    try {
+                        await fetch(`${API_BASE}/api/track-conflict-resolution`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                field_name,
+                                selected_type: selectedType,
+                                selected_value: selectedValue,
+                                llm_value,
+                                kg_value
+                            })
+                        });
+                    } catch (error) {
+                        console.warn('Failed to track conflict resolution:', error);
+                    }
+
+                    // Remove card and call resolve callback
+                    const card = document.getElementById(cardId);
+                    if (card) {
+                        card.style.opacity = '0';
+                        card.style.transform = 'scale(0.95)';
+                        card.style.transition = 'all 0.3s';
+
+                        setTimeout(() => {
+                            card.remove();
+                            if (onResolve) {
+                                onResolve({
+                                    field_name,
+                                    resolved_value: selectedValue,
+                                    resolution_type: selectedType
+                                });
+                            }
+                        }, 300);
+                    }
+                });
+            }, 100);
+
+            return html;
+        }
+
+        /**
+         * Show conflict resolution cards for all conflicting fields
+         * @param {Array} conflictingFields - Array of field info with conflicts
+         * @param {Function} onAllResolved - Callback when all conflicts are resolved
+         */
+        async function showConflictResolution(conflictingFields, onAllResolved) {
+            if (!conflictingFields || conflictingFields.length === 0) {
+                return;
+            }
+
+            let resolvedCount = 0;
+            const totalConflicts = conflictingFields.length;
+            const resolvedValues = {};
+
+            const headerHTML = `
+                <div style="color: #92400e; font-weight: 600; margin: 16px 0; font-size: 16px;">
+                    ⚠️ ${totalConflicts} Conflict${totalConflicts > 1 ? 's' : ''} Detected - Please Review
+                </div>
+            `;
+
+            let cardsHTML = headerHTML;
+
+            conflictingFields.forEach(field => {
+                cardsHTML += createConflictResolutionCard(field, (resolution) => {
+                    resolvedValues[resolution.field_name] = resolution.resolved_value;
+                    resolvedCount++;
+
+                    if (resolvedCount === totalConflicts && onAllResolved) {
+                        onAllResolved(resolvedValues);
+                    }
+                });
+            });
+
+            addAssistantMessage(cardsHTML);
+        }
+
         // Add command to show provenance summary
         window.showProvenanceSummary = showProvenanceSummary;
         window.showProvenanceReviewChecklist = showProvenanceReviewChecklist;
+        window.createConflictResolutionCard = createConflictResolutionCard;
+        window.showConflictResolution = showConflictResolution;
 
     </script>
 </body>

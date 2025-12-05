@@ -91,6 +91,8 @@ async def get_metadata_provenance():
             "timestamp": prov_info.timestamp.isoformat(),
             "needs_review": prov_info.needs_review,
             "raw_input": prov_info.raw_input,
+            "badge": prov_info.badge,
+            "historical_evidence": prov_info.historical_evidence,
         }
 
     return {
@@ -127,3 +129,44 @@ async def get_logs(limit: int = 100, offset: int = 0):
         logs=[log.model_dump() for log in paginated_logs],
         total_count=total,
     )
+
+
+@router.post("/track-conflict-resolution")
+async def track_conflict_resolution(resolution_data: dict):
+    """Track when user resolves a metadata conflict (Phase 2 Task 2.3).
+
+    Updates inference metrics to track conflict resolution outcomes.
+    Helps measure the effectiveness of historical inference and user preferences.
+
+    Args:
+        resolution_data: Dictionary containing:
+            - field_name (str): Name of the conflicting field
+            - selected_type (str): 'llm', 'kg', or 'custom'
+            - selected_value (str): The value user chose
+            - llm_value (str): LLM-suggested value
+            - kg_value (str): Historical data suggested value
+
+    Returns:
+        Success message with updated metrics
+    """
+    mcp_server = get_or_create_mcp_server()
+    state = mcp_server.global_state
+
+    field_name = resolution_data.get("field_name")
+    selected_type = resolution_data.get("selected_type")
+    selected_value = resolution_data.get("selected_value")
+
+    # Increment conflict resolution counter
+    state.inference_metrics["user_resolved_conflict"] += 1
+
+    # Log resolution for debugging
+    logger.info(f"Conflict resolved for {field_name}: user selected {selected_type} = '{selected_value}'")
+
+    return {
+        "status": "success",
+        "message": f"Conflict resolution tracked for {field_name}",
+        "metrics": {
+            "total_resolved": state.inference_metrics["user_resolved_conflict"],
+            "total_conflicts": state.inference_metrics["conflicting_count"],
+        },
+    }

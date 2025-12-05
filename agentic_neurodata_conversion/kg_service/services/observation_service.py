@@ -37,6 +37,9 @@ class ObservationService:
             if not term_check:
                 raise ValueError(f"Ontology term '{obs.ontology_term_id}' not found in knowledge graph")
 
+        # Extract subject_id from provenance for efficient querying
+        subject_id = obs.provenance_json.get("subject_id") if obs.provenance_json else None
+
         # Handle optional ontology_term_id - only create relationship if term exists
         if obs.ontology_term_id:
             query = """
@@ -49,6 +52,7 @@ class ObservationService:
                 source_file: $source_file,
                 confidence: $confidence,
                 provenance_json: $provenance_json,
+                subject_id: $subject_id,
                 created_at: datetime(),
                 is_active: true
             })
@@ -69,6 +73,7 @@ class ObservationService:
                 source_file: $source_file,
                 confidence: $confidence,
                 provenance_json: $provenance_json,
+                subject_id: $subject_id,
                 created_at: datetime(),
                 is_active: true
             })
@@ -83,7 +88,8 @@ class ObservationService:
             "source_type": obs.source_type,
             "source_file": obs.source_file,
             "confidence": obs.confidence,
-            "provenance_json": json.dumps(obs.provenance_json),
+            "provenance_json": json.dumps(obs.provenance_json),  # Store as JSON string
+            "subject_id": subject_id,  # Extract for efficient querying
         }
 
         try:

@@ -201,18 +201,22 @@ async def test_infer_field_species(mock_neo4j_connection):
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_infer_field_unsupported_field(mock_neo4j_connection):
-    """Test infer_field with unsupported field path.
+    """Test infer_field with field that has no observations.
 
-    Should return no suggestion with appropriate reasoning.
+    Should return no suggestion with insufficient evidence reasoning.
+    Note: infer_field now supports all fields, but returns no suggestion
+    if there's insufficient historical data.
     """
+    # Mock no observations found for subject.age
+    mock_neo4j_connection.execute_read = AsyncMock(return_value=[])
+
     engine = InferenceEngine(mock_neo4j_connection)
 
     result = await engine.infer_field(field_path="subject.age", subject_id="subject_001", target_file="test.nwb")
 
     assert result["has_suggestion"] is False
     assert result["confidence"] == 0.0
-    assert "not supported" in result["reasoning"]
-    assert "subject.age" in result["reasoning"]
+    assert "Insufficient evidence" in result["reasoning"]
 
 
 @pytest.mark.unit
@@ -266,7 +270,8 @@ async def test_infer_species_query_structure(mock_neo4j_connection):
     assert "evidence_count >= 2" in query
     assert "size(all_species) = 1" in query
     assert "MATCH (term:OntologyTerm)" in query
-    assert "WHERE obs.source_file CONTAINS $subject_id" in query
+    # Verify subject_id property access (extracted from provenance_json for efficient querying)
+    assert "obs.subject_id = $subject_id" in query
     assert "AND obs.source_file <> $target_file" in query
 
 
