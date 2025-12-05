@@ -293,6 +293,13 @@ For each field found, provide:
                 system_prompt=system_prompt,
             )
 
+            # Extract subject_id from parsed fields BEFORE loop (for observation storage)
+            extracted_subject_id = "unknown"
+            for field_data in response.get("fields", []):
+                if field_data["field_name"].lower() in ["subject_id", "subjectid"]:
+                    extracted_subject_id = str(field_data["normalized_value"])
+                    break
+
             parsed_fields = []
             for field_data in response.get("fields", []):
                 field_name = field_data["field_name"]
@@ -362,14 +369,9 @@ For each field found, provide:
 
                             # Store observation in Neo4j
                             try:
-                                # Extract subject_id from source file (TODO: track subject_id explicitly in state)
+                                # Use extracted subject_id from parsed fields (user-provided metadata)
                                 source_file = state.input_path or "unknown"
-                                subject_id = "unknown"
-                                if source_file and "_" in source_file:
-                                    # Simple extraction: assume format like "subject_001_session.nwb"
-                                    parts = source_file.split("_")
-                                    if len(parts) > 0 and "subject" in parts[0].lower():
-                                        subject_id = parts[0] + "_" + parts[1] if len(parts) > 1 else parts[0]
+                                subject_id = extracted_subject_id
 
                                 obs_result = await self.kg_wrapper.store_observation(
                                     field_path=field_path,
