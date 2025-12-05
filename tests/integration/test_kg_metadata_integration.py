@@ -40,7 +40,7 @@ async def test_metadata_parser_uses_kg_for_species(global_state, mock_llm_servic
     }
 
     # Mock LLM response for batch parsing
-    mock_llm_service.call_with_structured_output = AsyncMock(
+    mock_llm_service.generate_structured_output = AsyncMock(
         return_value={
             "fields": [
                 {
@@ -48,6 +48,8 @@ async def test_metadata_parser_uses_kg_for_species(global_state, mock_llm_servic
                     "raw_value": "mouse",
                     "normalized_value": "mouse",
                     "extraction_type": "explicit",
+                    "confidence": 85.0,
+                    "reasoning": "User mentioned 'mouse'",
                 }
             ]
         }
@@ -77,7 +79,7 @@ async def test_metadata_parser_uses_kg_for_species(global_state, mock_llm_servic
 async def test_metadata_parser_falls_back_when_kg_unavailable(global_state, mock_llm_service):
     """Test parser falls back to LLM when KG service unavailable."""
     # Mock LLM response
-    mock_llm_service.call_with_structured_output = AsyncMock(
+    mock_llm_service.generate_structured_output = AsyncMock(
         return_value={
             "fields": [
                 {
@@ -85,6 +87,8 @@ async def test_metadata_parser_falls_back_when_kg_unavailable(global_state, mock
                     "raw_value": "rat",
                     "normalized_value": "Rattus norvegicus",
                     "extraction_type": "explicit",
+                    "confidence": 90.0,
+                    "reasoning": "User mentioned 'rat', normalized to scientific name",
                 }
             ]
         }
@@ -129,7 +133,7 @@ async def test_metadata_parser_stores_observation_in_neo4j(global_state, mock_ll
     mock_store_response.json.return_value = {"status": "success", "observation_id": "obs-123"}
 
     # Mock LLM
-    mock_llm_service.call_with_structured_output = AsyncMock(
+    mock_llm_service.generate_structured_output = AsyncMock(
         return_value={
             "fields": [
                 {
@@ -137,6 +141,8 @@ async def test_metadata_parser_stores_observation_in_neo4j(global_state, mock_ll
                     "raw_value": "mouse",
                     "normalized_value": "mouse",
                     "extraction_type": "explicit",
+                    "confidence": 85.0,
+                    "reasoning": "User mentioned 'mouse'",
                 }
             ]
         }
@@ -175,7 +181,7 @@ async def test_metadata_parser_stores_observation_in_neo4j(global_state, mock_ll
 async def test_metadata_parser_skips_kg_for_non_ontology_fields(global_state, mock_llm_service):
     """Test that non-ontology-governed fields skip KG and use LLM directly."""
     # Mock LLM response for age field (not ontology-governed)
-    mock_llm_service.call_with_structured_output = AsyncMock(
+    mock_llm_service.generate_structured_output = AsyncMock(
         return_value={
             "fields": [
                 {
@@ -183,6 +189,8 @@ async def test_metadata_parser_skips_kg_for_non_ontology_fields(global_state, mo
                     "raw_value": "5 months",
                     "normalized_value": "P5M",
                     "extraction_type": "explicit",
+                    "confidence": 95.0,
+                    "reasoning": "User specified '5 months', converted to ISO 8601 duration",
                 }
             ]
         }
@@ -223,7 +231,7 @@ async def test_metadata_parser_kg_with_low_confidence(global_state, mock_llm_ser
     }
 
     # Mock LLM response
-    mock_llm_service.call_with_structured_output = AsyncMock(
+    mock_llm_service.generate_structured_output = AsyncMock(
         return_value={
             "fields": [
                 {
@@ -231,6 +239,8 @@ async def test_metadata_parser_kg_with_low_confidence(global_state, mock_llm_ser
                     "raw_value": "fuzzy creature",
                     "normalized_value": "unknown species",
                     "extraction_type": "inferred",
+                    "confidence": 30.0,
+                    "reasoning": "Vague description, cannot determine specific species",
                 }
             ]
         }
@@ -298,7 +308,7 @@ async def test_metadata_parser_continues_on_observation_storage_failure(global_s
     }
 
     # Mock LLM
-    mock_llm_service.call_with_structured_output = AsyncMock(
+    mock_llm_service.generate_structured_output = AsyncMock(
         return_value={
             "fields": [
                 {
@@ -306,6 +316,8 @@ async def test_metadata_parser_continues_on_observation_storage_failure(global_s
                     "raw_value": "mouse",
                     "normalized_value": "mouse",
                     "extraction_type": "explicit",
+                    "confidence": 85.0,
+                    "reasoning": "User mentioned 'mouse'",
                 }
             ]
         }

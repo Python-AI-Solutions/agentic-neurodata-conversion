@@ -351,7 +351,7 @@ For each field found, provide:
                                     if len(parts) > 0 and "subject" in parts[0].lower():
                                         subject_id = parts[0] + "_" + parts[1] if len(parts) > 1 else parts[0]
 
-                                await self.kg_wrapper.store_observation(
+                                obs_result = await self.kg_wrapper.store_observation(
                                     field_path=field_path,
                                     raw_value=raw_value,
                                     normalized_value=kg_result["normalized_value"],
@@ -365,6 +365,12 @@ For each field found, provide:
                                         "subject_id": subject_id,  # Fixed: Added for accurate inference queries
                                     },
                                 )
+                                # Check if storage failed
+                                if obs_result.get("status") == "error":
+                                    state.add_log(
+                                        LogLevel.WARNING,
+                                        f"Failed to store observation: {obs_result.get('message', 'Unknown error')}",
+                                    )
                             except Exception as obs_error:
                                 state.add_log(LogLevel.WARNING, f"Failed to store observation: {obs_error}")
 

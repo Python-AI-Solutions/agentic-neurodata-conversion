@@ -37,6 +37,11 @@ async def kg_service_client():
     except Exception as e:
         pytest.skip(f"Neo4j not accessible: {e}")
 
+    # Clean up test observations before each test
+    await neo4j_conn.execute_write(
+        "MATCH (obs:Observation) WHERE obs.subject_id STARTS WITH 'subject_phase4_' DETACH DELETE obs"
+    )
+
     # Create HTTP client with ASGI transport
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
@@ -69,6 +74,7 @@ async def test_infer_species_sufficient_evidence(kg_service_client):
             "source_type": "user",
             "source_file": f"{subject_id}_session_A.nwb",
             "confidence": 1.0,
+            "provenance_json": {"subject_id": subject_id, "user_id": "test_user", "session_id": "test_session"},
         },
     )
     assert response1.status_code == 200
@@ -84,6 +90,7 @@ async def test_infer_species_sufficient_evidence(kg_service_client):
             "source_type": "user",
             "source_file": f"{subject_id}_session_B.nwb",
             "confidence": 1.0,
+            "provenance_json": {"subject_id": subject_id, "user_id": "test_user", "session_id": "test_session"},
         },
     )
     assert response2.status_code == 200
@@ -130,6 +137,7 @@ async def test_infer_species_insufficient_evidence_single_observation(kg_service
             "source_type": "user",
             "source_file": f"{subject_id}_session_A.nwb",
             "confidence": 1.0,
+            "provenance_json": {"subject_id": subject_id, "user_id": "test_user", "session_id": "test_session"},
         },
     )
     assert response1.status_code == 200
@@ -202,6 +210,7 @@ async def test_infer_species_three_observations(kg_service_client):
                 "source_type": "user",
                 "source_file": f"{subject_id}_session_{session}.nwb",
                 "confidence": 1.0,
+                "provenance_json": {"subject_id": subject_id, "user_id": "test_user", "session_id": "test_session"},
             },
         )
         assert response.status_code == 200
@@ -245,6 +254,7 @@ async def test_infer_species_conflicting_observations(kg_service_client):
             "source_type": "user",
             "source_file": f"{subject_id}_session_A.nwb",
             "confidence": 1.0,
+            "provenance_json": {"subject_id": subject_id, "user_id": "test_user", "session_id": "test_session"},
         },
     )
     assert response1.status_code == 200
@@ -260,6 +270,7 @@ async def test_infer_species_conflicting_observations(kg_service_client):
             "source_type": "user",
             "source_file": f"{subject_id}_session_B.nwb",
             "confidence": 1.0,
+            "provenance_json": {"subject_id": subject_id, "user_id": "test_user", "session_id": "test_session"},
         },
     )
     assert response2.status_code == 200
@@ -372,7 +383,7 @@ async def test_infer_species_from_inferred_observations(kg_service_client):
                 "source_type": "inferred",
                 "source_file": f"{subject_id}_session_{session}.nwb",
                 "confidence": 0.8,
-                "provenance_json": {"inference_rule": "species_consistency"},
+                "provenance_json": {"subject_id": subject_id, "inference_rule": "species_consistency"},
             },
         )
         assert response.status_code == 200
@@ -416,6 +427,7 @@ async def test_infer_species_multiple_subjects_isolation(kg_service_client):
                 "source_type": "user",
                 "source_file": f"{subject_a}_session_{session}.nwb",
                 "confidence": 1.0,
+                "provenance_json": {"subject_id": subject_a, "user_id": "test_user", "session_id": "test_session"},
             },
         )
         assert response.status_code == 200
@@ -432,6 +444,7 @@ async def test_infer_species_multiple_subjects_isolation(kg_service_client):
                 "source_type": "user",
                 "source_file": f"{subject_b}_session_{session}.nwb",
                 "confidence": 1.0,
+                "provenance_json": {"subject_id": subject_b, "user_id": "test_user", "session_id": "test_session"},
             },
         )
         assert response.status_code == 200
@@ -484,6 +497,7 @@ async def test_infer_with_inactive_observations(kg_service_client):
                 "source_type": "user",
                 "source_file": f"{subject_id}_session_{session}.nwb",
                 "confidence": 1.0,
+                "provenance_json": {"subject_id": subject_id, "user_id": "test_user", "session_id": "test_session"},
             },
         )
         assert response.status_code == 200
@@ -534,6 +548,7 @@ async def test_full_inference_workflow(kg_service_client):
                 "source_type": "user",
                 "source_file": f"{subject_id}_session_{session}.nwb",
                 "confidence": norm_data["confidence"],
+                "provenance_json": {"subject_id": subject_id, "user_id": "test_user", "session_id": "test_session"},
             },
         )
         assert observe_response.status_code == 200
@@ -569,6 +584,7 @@ async def test_full_inference_workflow(kg_service_client):
             "source_file": f"{subject_id}_session_C.nwb",
             "confidence": infer_data["confidence"],
             "provenance_json": {
+                "subject_id": subject_id,
                 "inference_rule": "species_consistency",
                 "reasoning": infer_data["reasoning"],
             },
