@@ -80,6 +80,89 @@ class KGWrapper:
         except Exception:
             return {"is_valid": False, "warnings": ["KG service unavailable"]}
 
+    async def infer_value(
+        self,
+        field_path: str,
+        subject_id: str,
+        source_file: str,
+    ) -> dict[str, Any]:
+        """
+        Infer field value from historical observations.
+
+        Calls the KG service inference API to get suggestions based on
+        historical observations for the given subject and field.
+
+        Args:
+            field_path: Field to infer (e.g., "subject.species", "experimenter")
+            subject_id: Subject identifier
+            source_file: Current file being processed (excluded from evidence)
+
+        Returns:
+            Dict containing:
+            - has_suggestion (bool): Whether a suggestion is available
+            - suggested_value (Any|None): Suggested value
+            - ontology_term_id (str|None): Ontology term ID if applicable
+            - confidence (float): Confidence score (0.8 if suggestion, 0.0 otherwise)
+            - requires_confirmation (bool): Whether user confirmation needed
+            - reasoning (str): Explanation of result
+            - evidence_count (int): Number of supporting observations (if has_suggestion)
+            - contributing_sessions (list[dict]|None): List of sessions that contributed evidence,
+                each containing 'source_file' and 'created_at' (only if has_suggestion=True)
+
+        Example:
+            >>> result = await kg_wrapper.infer_value("subject.species", "mouse001", "session_C.nwb")
+            >>> if result["has_suggestion"]:
+            >>>     print(f"Suggested: {result['suggested_value']}")
+            >>>     print(f"Based on: {result['contributing_sessions']}")
+        """
+        for attempt in range(self.max_retries):
+            try:
+                response = await self._client.post(
+                    f"{self.kg_base_url}/api/v1/infer",
+                    json={
+                        "field_path": field_path,
+                        "subject_id": subject_id,
+                        "source_file": source_file,  # Fixed: API expects source_file, not target_file
+                    },
+                )
+
+                if response.status_code == 200:
+                    return response.json()  # type: ignore[no-any-return]
+                else:
+                    logger.warning(
+                        f"KG inference returned status {response.status_code} for {field_path} (attempt {attempt + 1})"
+                    )
+                    if attempt < self.max_retries - 1:
+                        await asyncio.sleep(0.5 * (attempt + 1))
+                    else:
+                        logger.error(f"KG inference failed after {self.max_retries} attempts")
+                        return self._no_suggestion_response("KG service returned error status")
+
+            except (httpx.ConnectError, httpx.TimeoutException) as e:
+                logger.warning(f"KG inference connection failed for {field_path} (attempt {attempt + 1}): {e}")
+                if attempt < self.max_retries - 1:
+                    await asyncio.sleep(0.5 * (attempt + 1))
+                else:
+                    logger.error("KG inference service unavailable after retries")
+                    return self._no_suggestion_response("KG service unavailable")
+
+            except Exception as e:
+                logger.error(f"Unexpected error during KG inference for {field_path}: {e}")
+                return self._no_suggestion_response(f"Inference error: {str(e)}")
+
+        return self._no_suggestion_response("Max retries exceeded")
+
+    def _no_suggestion_response(self, reason: str) -> dict[str, Any]:
+        """Return standard 'no suggestion' response."""
+        return {
+            "has_suggestion": False,
+            "suggested_value": None,
+            "ontology_term_id": None,
+            "confidence": 0.0,
+            "requires_confirmation": False,
+            "reasoning": reason,
+        }
+
     async def store_observation(
         self,
         field_path: str,

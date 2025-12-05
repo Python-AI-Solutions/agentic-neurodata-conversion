@@ -397,3 +397,207 @@ async def test_store_observation_with_none_ontology_id():
     # Verify None was passed correctly
     call_args = wrapper._client.post.call_args
     assert call_args[1]["json"]["ontology_term_id"] is None
+
+
+# === Phase 1: Inference Integration Tests ===
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_infer_value_success():
+    """Test successful inference call returning historical suggestion."""
+    wrapper = KGWrapper(kg_base_url="http://test:8001", timeout=5.0, max_retries=2)
+
+    # Mock successful inference response
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "has_suggestion": True,
+        "suggested_value": "Mus musculus",
+        "ontology_term_id": "NCBITaxon:10090",
+        "confidence": 0.8,
+        "requires_confirmation": True,
+        "reasoning": "Based on 2 prior observations with 100% agreement",
+        "evidence_count": 2,
+    }
+
+    wrapper._client.post = AsyncMock(return_value=mock_response)
+
+    result = await wrapper.infer_value(
+        field_path="subject.species", subject_id="subject_001", source_file="session_C.nwb"
+    )
+
+    # Verify correct response structure
+    assert result["has_suggestion"] is True
+    assert result["suggested_value"] == "Mus musculus"
+    assert result["ontology_term_id"] == "NCBITaxon:10090"
+    assert result["confidence"] == 0.8
+    assert result["requires_confirmation"] is True
+    assert result["evidence_count"] == 2
+    assert "2 prior observations" in result["reasoning"]
+
+    # Verify correct API call
+    wrapper._client.post.assert_called_once()
+    call_args = wrapper._client.post.call_args
+    assert call_args[0][0] == "http://test:8001/api/v1/infer"
+    assert call_args[1]["json"]["field_path"] == "subject.species"
+    assert call_args[1]["json"]["subject_id"] == "subject_001"
+    assert call_args[1]["json"]["source_file"] == "session_C.nwb"
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_infer_value_no_suggestion():
+    """Test inference when no historical data is available."""
+    wrapper = KGWrapper()
+
+    # Mock response with no suggestion
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "has_suggestion": False,
+        "suggested_value": None,
+        "ontology_term_id": None,
+        "confidence": 0.0,
+        "requires_confirmation": False,
+        "reasoning": "Insufficient evidence (need ≥2 observations with 100% agreement)",
+    }
+
+    wrapper._client.post = AsyncMock(return_value=mock_response)
+
+    result = await wrapper.infer_value(
+        field_path="subject.species", subject_id="new_subject_999", source_file="first_session.nwb"
+    )
+
+    # Verify no suggestion response
+    assert result["has_suggestion"] is False
+    assert result["suggested_value"] is None
+    assert result["ontology_term_id"] is None
+    assert result["confidence"] == 0.0
+    assert "Insufficient evidence" in result["reasoning"]
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_infer_value_service_unavailable():
+    """Test graceful fallback when KG service is unavailable."""
+    wrapper = KGWrapper(max_retries=2)
+
+    # All attempts fail with connection error
+    wrapper._client.post = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
+
+    result = await wrapper.infer_value(field_path="subject.species", subject_id="subject_001", source_file="test.nwb")
+
+    # Verify fallback response (no suggestion)
+    assert result["has_suggestion"] is False
+    assert result["suggested_value"] is None
+    assert result["ontology_term_id"] is None
+    assert result["confidence"] == 0.0
+    assert result["requires_confirmation"] is False
+    assert "KG service unavailable" in result["reasoning"]
+
+    # Verify all retries were attempted
+    assert wrapper._client.post.call_count == 2
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_infer_value_timeout_with_retry():
+    """Test inference timeout with retry logic."""
+    wrapper = KGWrapper(max_retries=3)
+
+    # First two attempts timeout, third succeeds
+    mock_success = Mock()
+    mock_success.status_code = 200
+    mock_success.json.return_value = {
+        "has_suggestion": True,
+        "suggested_value": "F",
+        "ontology_term_id": None,
+        "confidence": 0.8,
+        "requires_confirmation": True,
+        "reasoning": "Based on 3 prior observations",
+    }
+
+    wrapper._client.post = AsyncMock(
+        side_effect=[httpx.TimeoutException("Timeout"), httpx.TimeoutException("Timeout"), mock_success]
+    )
+
+    with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+        result = await wrapper.infer_value(field_path="subject.sex", subject_id="subject_002", source_file="test.nwb")
+
+        # Should succeed on third attempt
+        assert result["has_suggestion"] is True
+        assert result["suggested_value"] == "F"
+        assert wrapper._client.post.call_count == 3
+
+        # Verify exponential backoff
+        assert mock_sleep.call_count == 2
+        sleep_calls = [call[0][0] for call in mock_sleep.call_args_list]
+        assert sleep_calls == [0.5, 1.0]
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_infer_value_http_error_status():
+    """Test inference with HTTP error status code."""
+    wrapper = KGWrapper(max_retries=2)
+
+    # Return 500 error
+    mock_response = Mock()
+    mock_response.status_code = 500
+
+    wrapper._client.post = AsyncMock(return_value=mock_response)
+
+    result = await wrapper.infer_value(field_path="subject.species", subject_id="subject_001", source_file="test.nwb")
+
+    # Should return no suggestion after retries
+    assert result["has_suggestion"] is False
+    assert "KG service returned error status" in result["reasoning"]
+    assert wrapper._client.post.call_count == 2
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_infer_value_non_ontology_field():
+    """Test inference for non-ontology fields (e.g., experimenter, strain)."""
+    wrapper = KGWrapper()
+
+    # Mock inference for experimenter field (no ontology)
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "has_suggestion": True,
+        "suggested_value": "Smith, Jane",
+        "ontology_term_id": None,  # No ontology for experimenter
+        "confidence": 0.8,
+        "requires_confirmation": True,
+        "reasoning": "Based on 5 prior observations with 100% agreement",
+        "evidence_count": 5,
+    }
+
+    wrapper._client.post = AsyncMock(return_value=mock_response)
+
+    result = await wrapper.infer_value(field_path="experimenter", subject_id="subject_001", source_file="test.nwb")
+
+    # Verify non-ontology field inference works
+    assert result["has_suggestion"] is True
+    assert result["suggested_value"] == "Smith, Jane"
+    assert result["ontology_term_id"] is None  # Non-ontology field
+    assert result["evidence_count"] == 5
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_infer_value_unexpected_exception():
+    """Test inference handling unexpected exception."""
+    wrapper = KGWrapper(max_retries=1)
+
+    # Raise unexpected exception
+    wrapper._client.post = AsyncMock(side_effect=ValueError("Unexpected error"))
+
+    result = await wrapper.infer_value(field_path="subject.species", subject_id="subject_001", source_file="test.nwb")
+
+    # Should gracefully return no suggestion
+    assert result["has_suggestion"] is False
+    assert "Inference error" in result["reasoning"]
+    assert "Unexpected error" in result["reasoning"]

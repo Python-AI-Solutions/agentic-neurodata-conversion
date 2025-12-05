@@ -201,18 +201,22 @@ async def test_infer_field_species(mock_neo4j_connection):
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_infer_field_unsupported_field(mock_neo4j_connection):
-    """Test infer_field with unsupported field path.
+    """Test infer_field with field that has no observations.
 
-    Should return no suggestion with appropriate reasoning.
+    Should return no suggestion with insufficient evidence reasoning.
+    Note: infer_field now supports all fields, but returns no suggestion
+    if there's insufficient historical data.
     """
+    # Mock no observations found for subject.age
+    mock_neo4j_connection.execute_read = AsyncMock(return_value=[])
+
     engine = InferenceEngine(mock_neo4j_connection)
 
     result = await engine.infer_field(field_path="subject.age", subject_id="subject_001", target_file="test.nwb")
 
     assert result["has_suggestion"] is False
     assert result["confidence"] == 0.0
-    assert "not supported" in result["reasoning"]
-    assert "subject.age" in result["reasoning"]
+    assert "Insufficient evidence" in result["reasoning"]
 
 
 @pytest.mark.unit

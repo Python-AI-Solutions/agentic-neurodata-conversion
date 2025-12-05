@@ -150,6 +150,11 @@ class ProvenanceInfo(BaseModel):
     raw_input: str | None = Field(
         default=None, description="Original user input or file content that led to this value"
     )
+    # Historical inference fields (Phase 2)
+    badge: str | None = Field(default=None, description="Inference badge: CONFIRMED, HISTORICAL, CONFLICTING, or None")
+    historical_evidence: dict[str, Any] | None = Field(
+        default=None, description="Evidence from historical inference including contributing sessions"
+    )
 
     # Pydantic V2 configuration
     model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
@@ -219,6 +224,18 @@ class GlobalState(BaseModel):
     metadata_warnings: dict[str, Any] = Field(
         default_factory=dict,
         description="Low-confidence metadata fields requiring user review before DANDI submission",
+    )
+    inference_metrics: dict[str, Any] = Field(
+        default_factory=lambda: {
+            "suggestions_shown": 0,
+            "confirmed_count": 0,  # LLM + KG agreed
+            "historical_count": 0,  # Only KG suggested (gap filling)
+            "conflicting_count": 0,  # LLM + KG disagreed
+            "user_accepted_historical": 0,  # User kept HISTORICAL suggestion
+            "user_rejected_historical": 0,  # User edited HISTORICAL suggestion
+            "user_resolved_conflict": 0,  # User made choice on CONFLICTING
+        },
+        description="Metrics tracking historical inference usage and outcomes",
     )
 
     # Progress tracking
@@ -463,6 +480,16 @@ class GlobalState(BaseModel):
         self.user_provided_metadata = {}
         self.metadata_provenance = {}
         self.metadata_warnings = {}
+        # Reset inference metrics
+        self.inference_metrics = {
+            "suggestions_shown": 0,
+            "confirmed_count": 0,
+            "historical_count": 0,
+            "conflicting_count": 0,
+            "user_accepted_historical": 0,
+            "user_rejected_historical": 0,
+            "user_resolved_conflict": 0,
+        }
         self.logs = []
         self.log_file_path = None
         self.correction_attempt = 0

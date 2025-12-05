@@ -337,9 +337,10 @@ async def test_infer_species_excludes_target_file(kg_service_client):
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_infer_unsupported_field(kg_service_client):
-    """Test inference for unsupported field path.
+    """Test inference for field with no historical observations.
 
-    Currently only subject.species is supported.
+    Note: infer_field now supports all fields, but returns no suggestion
+    if there's insufficient historical data.
     """
     subject_id = "subject_phase4_006"
 
@@ -357,8 +358,7 @@ async def test_infer_unsupported_field(kg_service_client):
 
     assert data["has_suggestion"] is False
     assert data["confidence"] == 0.0
-    assert "not supported" in data["reasoning"]
-    assert "subject.age" in data["reasoning"]
+    assert "Insufficient evidence" in data["reasoning"]
 
 
 @pytest.mark.integration

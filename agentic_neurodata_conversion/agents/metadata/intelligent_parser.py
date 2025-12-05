@@ -26,7 +26,10 @@ class ConfidenceLevel(str, Enum):
 
 
 class ParsedField:
-    """Represents a parsed metadata field with confidence."""
+    """Represents a parsed metadata field with confidence and provenance.
+
+    Supports both LLM extraction and historical inference from knowledge graph.
+    """
 
     def __init__(
         self,
@@ -39,6 +42,11 @@ class ParsedField:
         needs_review: bool = False,
         was_explicit: bool = True,
         alternatives: list[str] | None = None,
+        # New fields for inference integration
+        field_path: str | None = None,
+        extraction_method: str = "llm",
+        badge: str | None = None,
+        historical_evidence: dict[str, Any] | None = None,
     ):
         self.field_name = field_name
         self.raw_input = raw_input
@@ -49,6 +57,11 @@ class ParsedField:
         self.needs_review = needs_review
         self.was_explicit = was_explicit
         self.alternatives = alternatives or []
+        # Inference integration fields
+        self.field_path = field_path or f"subject.{field_name}"  # Default to subject.{field_name}
+        self.extraction_method = extraction_method  # "llm" or "historical_inference"
+        self.badge = badge  # "CONFIRMED", "HISTORICAL", "CONFLICTING", "AI", "INFERRED", or None
+        self.historical_evidence = historical_evidence  # Store KG inference evidence
 
     @property
     def confidence_level(self) -> ConfidenceLevel:
@@ -73,6 +86,11 @@ class ParsedField:
             "needs_review": self.needs_review,
             "was_explicit": self.was_explicit,
             "alternatives": self.alternatives,
+            # Inference integration fields
+            "field_path": self.field_path,
+            "extraction_method": self.extraction_method,
+            "badge": self.badge,
+            "historical_evidence": self.historical_evidence,
         }
 
     def to_provenance_info(self):
@@ -98,6 +116,8 @@ class ParsedField:
             source=f"{source_prefix}: '{self.raw_input[:100]}'",
             needs_review=self.needs_review,
             raw_input=self.raw_input,
+            badge=self.badge,
+            historical_evidence=self.historical_evidence,
         )
 
 
@@ -343,7 +363,7 @@ For each field found, provide:
                             # Store observation in Neo4j
                             try:
                                 # Extract subject_id from source file (TODO: track subject_id explicitly in state)
-                                source_file = getattr(state, "uploaded_file_path", "unknown")
+                                source_file = state.input_path or "unknown"
                                 subject_id = "unknown"
                                 if source_file and "_" in source_file:
                                     # Simple extraction: assume format like "subject_001_session.nwb"
@@ -409,6 +429,127 @@ For each field found, provide:
                     f"Parsed {parsed_field.field_name}: '{parsed_field.raw_input}' → '{parsed_field.parsed_value}' "
                     f"(confidence: {parsed_field.confidence}%)",
                 )
+
+            # === Phase 1: Historical Inference Enhancement ===
+            # After LLM extraction, enhance results with historical inference
+            # Check for subject_id to enable inference
+            subject_id = self._get_field_value(parsed_fields, "subject_id")
+            if subject_id and self.kg_wrapper:
+                state.add_log(
+                    LogLevel.INFO, f"Enhancing metadata with historical inference for subject_id={subject_id}"
+                )
+
+                # Stable fields that don't change across sessions for a subject
+                stable_fields = [
+                    "species",  # Ontology-governed
+                    "sex",  # Ontology-governed
+                    "strain",  # Stable for lab animals
+                    "genotype",  # Stable genetic info
+                    "date_of_birth",  # Never changes
+                    "experimenter",  # Usually same person
+                    "institution",  # Rarely changes
+                    "lab",  # Very stable
+                ]
+
+                for field_name in stable_fields:
+                    try:
+                        # Always call inference to get historical context
+                        field_path = (
+                            f"subject.{field_name}"
+                            if field_name not in ["experimenter", "institution", "lab"]
+                            else field_name
+                        )
+                        inference_result = await self.kg_wrapper.infer_value(
+                            field_path=field_path,
+                            subject_id=subject_id,
+                            source_file=state.input_path or "unknown.nwb",
+                        )
+
+                        if not inference_result.get("has_suggestion"):
+                            continue  # No historical data, keep LLM result as-is
+
+                        # Get LLM extraction result for this field
+                        llm_field = self._get_field(parsed_fields, field_name)
+                        kg_value = inference_result["suggested_value"]
+                        kg_confidence = inference_result["confidence"]
+
+                        # Scenario 1: LLM found + KG confirms (values match)
+                        if llm_field and self._values_match(llm_field.parsed_value, kg_value):
+                            # Boost confidence
+                            boosted_confidence = min(95.0, max(llm_field.confidence, kg_confidence * 100) + 15.0)
+                            llm_field.confidence = boosted_confidence
+                            llm_field.badge = "CONFIRMED"
+                            llm_field.historical_evidence = {
+                                "evidence_count": inference_result.get("evidence_count", 0),
+                                "reasoning": inference_result.get("reasoning", ""),
+                                "kg_confidence": kg_confidence,
+                                "contributing_sessions": inference_result.get("contributing_sessions", []),
+                            }
+                            # Track metrics
+                            state.inference_metrics["confirmed_count"] += 1
+                            state.inference_metrics["suggestions_shown"] += 1
+                            state.add_log(
+                                LogLevel.INFO,
+                                f"✓ {field_name} confirmed by history: {kg_value} "
+                                f"(confidence boosted to {boosted_confidence:.0f}%)",
+                            )
+
+                        # Scenario 2: LLM didn't find + KG suggests
+                        elif not llm_field:
+                            new_field = ParsedField(
+                                field_name=field_name,
+                                raw_input=f"<inferred from {inference_result.get('evidence_count', 0)} prior observations>",
+                                parsed_value=kg_value,
+                                confidence=kg_confidence * 100,  # Convert to percentage
+                                reasoning=inference_result.get("reasoning", "Inferred from historical observations"),
+                                nwb_compliant=True,
+                                needs_review=inference_result.get("requires_confirmation", True),
+                                was_explicit=False,
+                                field_path=field_path,
+                                extraction_method="historical_inference",
+                                badge="HISTORICAL",
+                                historical_evidence={
+                                    "evidence_count": inference_result.get("evidence_count", 0),
+                                    "reasoning": inference_result.get("reasoning", ""),
+                                    "ontology_term_id": inference_result.get("ontology_term_id"),
+                                    "contributing_sessions": inference_result.get("contributing_sessions", []),
+                                },
+                            )
+                            parsed_fields.append(new_field)
+                            # Track metrics
+                            state.inference_metrics["historical_count"] += 1
+                            state.inference_metrics["suggestions_shown"] += 1
+                            state.add_log(
+                                LogLevel.INFO,
+                                f"📚 {field_name} suggested from history: {kg_value} "
+                                f"({inference_result.get('evidence_count', 0)} prior observations)",
+                            )
+
+                        # Scenario 3: LLM found + KG conflicts (values don't match)
+                        elif llm_field and not self._values_match(llm_field.parsed_value, kg_value):
+                            # Reduce confidence due to conflict
+                            llm_field.confidence = max(50.0, llm_field.confidence - 5.0)
+                            llm_field.badge = "CONFLICTING"
+                            llm_field.historical_evidence = {
+                                "evidence_count": inference_result.get("evidence_count", 0),
+                                "conflicting_value": kg_value,
+                                "reasoning": f"LLM extracted '{llm_field.parsed_value}' but history suggests '{kg_value}'",
+                                "kg_confidence": kg_confidence,
+                                "contributing_sessions": inference_result.get("contributing_sessions", []),
+                            }
+                            # Track metrics
+                            state.inference_metrics["conflicting_count"] += 1
+                            state.inference_metrics["suggestions_shown"] += 1
+                            state.add_log(
+                                LogLevel.WARNING,
+                                f"⚠️ {field_name} conflict: LLM='{llm_field.parsed_value}' vs History='{kg_value}' "
+                                f"- please review",
+                            )
+
+                    except Exception as e:
+                        # Graceful degradation - log error but don't fail batch extraction
+                        state.add_log(LogLevel.WARNING, f"Inference failed for {field_name}: {e}")
+                        continue
 
             return parsed_fields
 
@@ -917,3 +1058,46 @@ Provide:
             reasoning="Pattern-based normalization (no LLM)",
             nwb_compliant=True,
         )
+
+    def _values_match(self, value1: Any, value2: Any) -> bool:
+        """Check if two values are semantically equivalent.
+
+        Args:
+            value1: First value to compare
+            value2: Second value to compare
+
+        Returns:
+            True if values match (case-insensitive, whitespace-normalized)
+        """
+        # Normalize for comparison (case-insensitive, strip whitespace)
+        str1 = str(value1).strip().lower()
+        str2 = str(value2).strip().lower()
+        return str1 == str2
+
+    def _get_field(self, fields: list[ParsedField], name: str) -> ParsedField | None:
+        """Get field by name from parsed fields list.
+
+        Args:
+            fields: List of ParsedField objects
+            name: Field name to search for
+
+        Returns:
+            ParsedField if found, None otherwise
+        """
+        for field in fields:
+            if field.field_name == name:
+                return field
+        return None
+
+    def _get_field_value(self, fields: list[ParsedField], name: str) -> Any:
+        """Get field value by name.
+
+        Args:
+            fields: List of ParsedField objects
+            name: Field name to search for
+
+        Returns:
+            Field value if found, None otherwise
+        """
+        field = self._get_field(fields, name)
+        return field.parsed_value if field else None

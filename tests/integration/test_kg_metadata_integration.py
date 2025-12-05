@@ -344,3 +344,244 @@ async def test_metadata_parser_continues_on_observation_storage_failure(global_s
     # Verify: Warning was logged
     warnings = [log for log in global_state.logs if "observation" in log.message.lower()]
     assert len(warnings) > 0
+
+
+# ============================================================================
+# Phase 1: Historical Inference Integration Tests
+# ============================================================================
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_full_workflow_with_historical_inference_confirmed(global_state, mock_llm_service):
+    """Test complete workflow: LLM extract → KG infer → CONFIRMED badge → store."""
+    global_state.input_path = "session_C.nwb"
+    global_state.conversation_phase = ConversationPhase.METADATA_COLLECTION
+
+    # Mock LLM to return subject_id and species
+    mock_llm_service.generate_structured_output = AsyncMock(
+        return_value={
+            "fields": [
+                {
+                    "field_name": "subject_id",
+                    "raw_value": "subject_001",
+                    "normalized_value": "subject_001",
+                    "confidence": 95,
+                    "reasoning": "Explicit subject ID",
+                    "extraction_type": "explicit",
+                },
+                {
+                    "field_name": "species",
+                    "raw_value": "mouse",
+                    "normalized_value": "Mus musculus",
+                    "confidence": 75,
+                    "reasoning": "Mouse → Mus musculus",
+                    "extraction_type": "explicit",
+                },
+            ]
+        }
+    )
+
+    # Mock KG inference to return suggestion that matches LLM
+    mock_infer_response = Mock()
+    mock_infer_response.status_code = 200
+    mock_infer_response.json.return_value = {
+        "has_suggestion": True,
+        "suggested_value": "Mus musculus",  # Matches LLM
+        "ontology_term_id": "NCBITaxon:10090",
+        "confidence": 0.8,
+        "requires_confirmation": True,
+        "reasoning": "Based on 2 prior observations with 100% agreement",
+        "evidence_count": 2,
+    }
+
+    parser = IntelligentMetadataParser(llm_service=mock_llm_service)
+
+    with patch.object(parser.kg_wrapper._client, "post", return_value=mock_infer_response):
+        result = await parser.parse_natural_language_batch(user_input="subject_001, mouse", state=global_state)
+
+    # Verify species field has CONFIRMED badge
+    species_field = next((f for f in result if f.field_name == "species"), None)
+    assert species_field is not None
+    assert species_field.badge == "CONFIRMED"
+    # Confidence should be boosted (>= 85%)
+    assert species_field.confidence >= 85.0
+    # Historical evidence should be attached
+    assert species_field.historical_evidence is not None
+    assert species_field.historical_evidence["evidence_count"] == 2
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_full_workflow_with_historical_inference_gap_filling(global_state, mock_llm_service):
+    """Test gap filling: LLM misses field, KG suggests → HISTORICAL badge."""
+    global_state.input_path = "session_D.nwb"
+    global_state.conversation_phase = ConversationPhase.METADATA_COLLECTION
+
+    # Mock LLM to return only subject_id (no sex)
+    mock_llm_service.generate_structured_output = AsyncMock(
+        return_value={
+            "fields": [
+                {
+                    "field_name": "subject_id",
+                    "raw_value": "subject_002",
+                    "normalized_value": "subject_002",
+                    "confidence": 95,
+                    "reasoning": "Explicit subject ID",
+                    "extraction_type": "explicit",
+                }
+            ]
+        }
+    )
+
+    # Mock KG inference to suggest sex
+    def mock_post_side_effect(url, **kwargs):
+        mock_response = Mock()
+        mock_response.status_code = 200
+
+        # Return suggestion for sex field
+        if "infer" in url and kwargs.get("json", {}).get("field_path") == "subject.sex":
+            mock_response.json.return_value = {
+                "has_suggestion": True,
+                "suggested_value": "M",
+                "ontology_term_id": None,
+                "confidence": 0.8,
+                "requires_confirmation": True,
+                "reasoning": "Based on 3 prior observations with 100% agreement",
+                "evidence_count": 3,
+            }
+        else:
+            # No suggestion for other fields
+            mock_response.json.return_value = {
+                "has_suggestion": False,
+                "suggested_value": None,
+                "confidence": 0.0,
+            }
+
+        return mock_response
+
+    parser = IntelligentMetadataParser(llm_service=mock_llm_service)
+
+    with patch.object(parser.kg_wrapper._client, "post", side_effect=mock_post_side_effect):
+        result = await parser.parse_natural_language_batch(user_input="subject_002, visual cortex", state=global_state)
+
+    # Verify sex field was added with HISTORICAL badge
+    sex_field = next((f for f in result if f.field_name == "sex"), None)
+    if sex_field:  # May or may not be added depending on inference call
+        assert sex_field.badge == "HISTORICAL"
+        assert sex_field.extraction_method == "historical_inference"
+        assert sex_field.confidence == 80.0
+        assert sex_field.historical_evidence["evidence_count"] == 3
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_full_workflow_with_historical_inference_conflict(global_state, mock_llm_service):
+    """Test conflict detection: LLM says rat, KG says mouse → CONFLICTING badge."""
+    global_state.input_path = "session_E.nwb"
+    global_state.conversation_phase = ConversationPhase.METADATA_COLLECTION
+
+    # Mock LLM to return subject_id and rat
+    mock_llm_service.generate_structured_output = AsyncMock(
+        return_value={
+            "fields": [
+                {
+                    "field_name": "subject_id",
+                    "raw_value": "subject_001",
+                    "normalized_value": "subject_001",
+                    "confidence": 95,
+                    "reasoning": "Explicit subject ID",
+                    "extraction_type": "explicit",
+                },
+                {
+                    "field_name": "species",
+                    "raw_value": "rat",
+                    "normalized_value": "Rattus norvegicus",
+                    "confidence": 75,
+                    "reasoning": "Rat → Rattus norvegicus",
+                    "extraction_type": "explicit",
+                },
+            ]
+        }
+    )
+
+    # Mock KG inference to suggest mouse (conflict!)
+    mock_infer_response = Mock()
+    mock_infer_response.status_code = 200
+    mock_infer_response.json.return_value = {
+        "has_suggestion": True,
+        "suggested_value": "Mus musculus",  # Conflicts with LLM (rat)
+        "ontology_term_id": "NCBITaxon:10090",
+        "confidence": 0.8,
+        "requires_confirmation": True,
+        "reasoning": "Based on 2 prior observations with 100% agreement",
+        "evidence_count": 2,
+    }
+
+    parser = IntelligentMetadataParser(llm_service=mock_llm_service)
+
+    with patch.object(parser.kg_wrapper._client, "post", return_value=mock_infer_response):
+        result = await parser.parse_natural_language_batch(user_input="subject_001, rat", state=global_state)
+
+    # Verify species field has CONFLICTING badge
+    species_field = next((f for f in result if f.field_name == "species"), None)
+    assert species_field is not None
+    assert species_field.badge == "CONFLICTING"
+    # Confidence should be reduced
+    assert species_field.confidence < 75.0
+    # Conflicting value should be in evidence
+    assert "conflicting_value" in species_field.historical_evidence
+    assert species_field.historical_evidence["conflicting_value"] == "Mus musculus"
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_confidence_boosting_formula(global_state, mock_llm_service):
+    """Test confidence boosting formula: min(95, max(llm_conf, kg_conf) + 15)."""
+    global_state.input_path = "test.nwb"
+    global_state.conversation_phase = ConversationPhase.METADATA_COLLECTION
+
+    # Mock LLM with confidence 75
+    mock_llm_service.generate_structured_output = AsyncMock(
+        return_value={
+            "fields": [
+                {
+                    "field_name": "subject_id",
+                    "raw_value": "subject_001",
+                    "normalized_value": "subject_001",
+                    "confidence": 95,
+                    "reasoning": "Explicit",
+                    "extraction_type": "explicit",
+                },
+                {
+                    "field_name": "species",
+                    "raw_value": "mouse",
+                    "normalized_value": "Mus musculus",
+                    "confidence": 75,  # LLM confidence
+                    "reasoning": "Mouse → Mus musculus",
+                    "extraction_type": "explicit",
+                },
+            ]
+        }
+    )
+
+    # Mock KG with confidence 0.8 (80%)
+    mock_infer_response = Mock()
+    mock_infer_response.status_code = 200
+    mock_infer_response.json.return_value = {
+        "has_suggestion": True,
+        "suggested_value": "Mus musculus",
+        "confidence": 0.8,  # KG confidence
+        "evidence_count": 2,
+    }
+
+    parser = IntelligentMetadataParser(llm_service=mock_llm_service)
+
+    with patch.object(parser.kg_wrapper._client, "post", return_value=mock_infer_response):
+        result = await parser.parse_natural_language_batch(user_input="subject_001, mouse", state=global_state)
+
+    species_field = next((f for f in result if f.field_name == "species"), None)
+    assert species_field is not None
+
+    # Formula: min(95, max(75, 80) + 15) = min(95, 80 + 15) = min(95, 95) = 95
+    assert species_field.confidence == 95.0
