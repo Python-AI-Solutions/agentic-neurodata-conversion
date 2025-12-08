@@ -486,6 +486,7 @@ For each field found, provide:
                                 "reasoning": inference_result.get("reasoning", ""),
                                 "kg_confidence": kg_confidence,
                                 "contributing_sessions": inference_result.get("contributing_sessions", []),
+                                "subject_id": inference_result.get("subject_id", "unknown"),
                             }
                             # Track metrics
                             state.inference_metrics["confirmed_count"] += 1
@@ -515,6 +516,7 @@ For each field found, provide:
                                     "reasoning": inference_result.get("reasoning", ""),
                                     "ontology_term_id": inference_result.get("ontology_term_id"),
                                     "contributing_sessions": inference_result.get("contributing_sessions", []),
+                                    "subject_id": inference_result.get("subject_id", "unknown"),
                                 },
                             )
                             parsed_fields.append(new_field)
@@ -538,6 +540,7 @@ For each field found, provide:
                                 "reasoning": f"LLM extracted '{llm_field.parsed_value}' but history suggests '{kg_value}'",
                                 "kg_confidence": kg_confidence,
                                 "contributing_sessions": inference_result.get("contributing_sessions", []),
+                                "subject_id": inference_result.get("subject_id", "unknown"),
                             }
                             # Track metrics
                             state.inference_metrics["conflicting_count"] += 1
@@ -707,23 +710,104 @@ Provide:
             else:
                 indicator = "❓"
 
-            # Determine provenance type based on explicit vs inferred (semantic)
-            if field.was_explicit:
-                provenance_type = "ai-parsed"
-                provenance_label = "AI"
+            # Check if this field has a special badge type from historical inference or KG validation
+            if field.badge and field.badge in ["HISTORICAL", "CONFIRMED", "CONFLICTING"]:
+                # Use special badge rendering for historical/KG-based fields
+                import os
+                from datetime import datetime
+
+                badge_class = field.badge.lower()
+                badge_config = {
+                    "HISTORICAL": {
+                        "label": "Historical",
+                        "tooltip_header": "Historical Metadata",
+                        "source": "knowledge graph based historical-inference",
+                    },
+                    "CONFIRMED": {
+                        "label": "Confirmed",
+                        "tooltip_header": "Confirmed Metadata",
+                        "source": "knowledge graph based validation - confirmed",
+                    },
+                    "CONFLICTING": {
+                        "label": "Conflicting",
+                        "tooltip_header": "Conflicting Metadata",
+                        "source": "knowledge graph based validation - conflicting",
+                    },
+                }
+                config = badge_config[field.badge]
+                evidence_count = field.historical_evidence.get("evidence_count", 0) if field.historical_evidence else 0
+                contributing_sessions = (
+                    field.historical_evidence.get("contributing_sessions", [])[:3] if field.historical_evidence else []
+                )
+                subject_id = (
+                    field.historical_evidence.get("subject_id", "unknown") if field.historical_evidence else "unknown"
+                )
+
+                # Build origin text with subject_id
+                origin_text = f"Inferred from {evidence_count} prior session(s) ({subject_id})"
+
+                # Build sessions list for tooltip (filename + timestamp)
+                sessions_html = ""
+                if contributing_sessions:
+                    sessions_html = (
+                        '<ul style="margin: 4px 0 0 0; padding-left: 20px; font-size: 11px; list-style-type: disc;">'
+                    )
+                    for session in contributing_sessions:
+                        source_file = session.get("source_file", "Unknown")
+                        # Extract just the filename from the path
+                        filename = os.path.basename(source_file)
+                        # Format timestamp
+                        created_at = session.get("created_at", "")
+                        if created_at:
+                            # Parse ISO timestamp and format as "YYYY-MM-DD HH:MM"
+                            try:
+                                dt = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+                                timestamp_str = dt.strftime("%Y-%m-%d %H:%M")
+                            except Exception:
+                                timestamp_str = created_at
+                        else:
+                            timestamp_str = "Unknown time"
+                        sessions_html += f"<li>{filename} ({timestamp_str})</li>"
+                    if evidence_count > 3:
+                        sessions_html += f"<li>...and {evidence_count - 3} more</li>"
+                    sessions_html += "</ul>"
+
+                # Generate tooltip content matching AI badge format
+                tooltip_content = f"""
+                    <div class="provenance-tooltip-item">
+                        <span class="provenance-tooltip-label">Source:</span>{config["source"]}
+                    </div>
+                    <div class="provenance-tooltip-item">
+                        <span class="provenance-tooltip-label">Confidence:</span>{int(field.confidence)}%
+                    </div>
+                    <div class="provenance-tooltip-item">
+                        <span class="provenance-tooltip-label">Origin:</span>{origin_text}
+                    </div>
+                    {sessions_html}
+                """
+
+                provenance_badge = f"""<span class="provenance-badge {badge_class}">{config["label"]}<div class="provenance-tooltip"><div class="provenance-tooltip-header">{config["tooltip_header"]}</div>{tooltip_content}</div></span>"""
             else:
-                provenance_type = "ai-inferred"
-                provenance_label = "Inferred"
+                # Original logic for regular AI parsed/inferred badges
+                # Determine provenance type based on explicit vs inferred (semantic)
+                if field.was_explicit:
+                    provenance_type = "ai-parsed"
+                    provenance_label = "AI"
+                else:
+                    provenance_type = "ai-inferred"
+                    provenance_label = "Inferred"
 
-            # Create provenance badge HTML
-            needs_review = field.confidence < 80
-            needs_review_class = "needs-review" if needs_review else ""
+                # Create provenance badge HTML
+                needs_review = field.confidence < 80
+                needs_review_class = "needs-review" if needs_review else ""
 
-            # Escape quotes in source text for HTML attribute
-            field.reasoning.replace('"', "&quot;").replace("'", "&#39;") if field.reasoning else ""
-            raw_input_escaped = field.raw_input.replace('"', "&quot;").replace("'", "&#39;") if field.raw_input else ""
+                # Escape quotes in source text for HTML attribute
+                field.reasoning.replace('"', "&quot;").replace("'", "&#39;") if field.reasoning else ""
+                raw_input_escaped = (
+                    field.raw_input.replace('"', "&quot;").replace("'", "&#39;") if field.raw_input else ""
+                )
 
-            provenance_badge = f"""<span class="provenance-badge {provenance_type} {needs_review_class}" title="Source: {provenance_type} | Confidence: {field.confidence}% | From: {raw_input_escaped}">{provenance_label}<div class="provenance-tooltip"><div class="provenance-tooltip-header">{provenance_label} Metadata</div><div class="provenance-tooltip-item"><span class="provenance-tooltip-label">Source:</span>{provenance_type}</div><div class="provenance-tooltip-item"><span class="provenance-tooltip-label">Confidence:</span>{field.confidence}%</div><div class="provenance-tooltip-item"><span class="provenance-tooltip-label">Origin:</span>AI parsed from: '{raw_input_escaped[:100]}'</div>{'<div class="provenance-tooltip-item" style="color: #fbbf24;">⚠️ Needs Review</div>' if needs_review else ""}</div></span>"""
+                provenance_badge = f"""<span class="provenance-badge {provenance_type} {needs_review_class}" title="Source: {provenance_type} | Confidence: {field.confidence}% | From: {raw_input_escaped}">{provenance_label}<div class="provenance-tooltip"><div class="provenance-tooltip-header">{provenance_label} Metadata</div><div class="provenance-tooltip-item"><span class="provenance-tooltip-label">Source:</span>{provenance_type}</div><div class="provenance-tooltip-item"><span class="provenance-tooltip-label">Confidence:</span>{field.confidence}%</div><div class="provenance-tooltip-item"><span class="provenance-tooltip-label">Origin:</span>AI parsed from: '{raw_input_escaped[:100]}'</div>{'<div class="provenance-tooltip-item" style="color: #fbbf24;">⚠️ Needs Review</div>' if needs_review else ""}</div></span>"""
 
             # Format the field with provenance badge
             lines.append(

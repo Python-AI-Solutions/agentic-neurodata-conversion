@@ -250,6 +250,7 @@ class InferenceEngine:
                     "reasoning": f"Based on {evidence_count} prior observations with 100% agreement",
                     "contributing_sessions": contributing_sessions,
                     "evidence_count": evidence_count,
+                    "subject_id": subject_id,
                 }
 
             logger.info(f"Inference failed for {field_path}: insufficient evidence or conflicting observations")

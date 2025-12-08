@@ -155,7 +155,9 @@ def setup_env_file() -> bool:
     # Check if .env already exists with valid key
     if check_env_file():
         print_info(".env file already configured with API key")
-        response = input(f"\n{Colors.YELLOW}Do you want to update the API key? (y/N): {Colors.END}").strip().lower()
+        response = (
+            input(f"\n{Colors.YELLOW}Do you want to update the Claude API key? (Y/N): {Colors.END}").strip().lower()
+        )
         if response != "y":
             print_success("Using existing .env configuration")
             return True
@@ -217,8 +219,12 @@ def setup_neo4j_password() -> str | None:
     existing_password = os.getenv("NEO4J_PASSWORD")
     if existing_password:
         print_info("NEO4J_PASSWORD already set in environment")
-        response = input(f"\n{Colors.YELLOW}Use existing password? (Y/n): {Colors.END}").strip().lower()
-        if response != "n":
+        response = (
+            input(f"\n{Colors.YELLOW}Do you want to update the Neo4j existing password? (Y/N): {Colors.END}")
+            .strip()
+            .lower()
+        )
+        if response != "y":
             print_success("Using existing NEO4J_PASSWORD")
             return existing_password
 

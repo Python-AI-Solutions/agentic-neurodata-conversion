@@ -40,6 +40,9 @@ class InferResponse(BaseModel):
         confidence: Confidence score (0.8 for suggestions, 0.0 otherwise)
         requires_confirmation: Whether user confirmation is required
         reasoning: Explanation of inference result
+        evidence_count: Number of supporting observations (only if has_suggestion=True)
+        contributing_sessions: List of sessions that contributed evidence (only if has_suggestion=True)
+        subject_id: Subject identifier used for historical lookup (only if has_suggestion=True)
     """
 
     has_suggestion: bool
@@ -48,6 +51,9 @@ class InferResponse(BaseModel):
     confidence: float
     requires_confirmation: bool
     reasoning: str
+    evidence_count: int | None = None
+    contributing_sessions: list[dict] | None = None
+    subject_id: str | None = None
 
 
 def get_inference_engine() -> InferenceEngine:
