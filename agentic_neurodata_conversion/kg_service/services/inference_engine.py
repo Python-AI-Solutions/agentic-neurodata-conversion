@@ -5,12 +5,14 @@ Simple inference engine implementing species consistency rule:
 - Requires 100% agreement across all observations
 - Returns confidence 0.8 for suggested species
 - All suggestions require user confirmation
+- Phase 4: Enhanced with semantic reasoning for ontology hierarchy context
 """
 
 import logging
 from typing import Any
 
 from agentic_neurodata_conversion.kg_service.db.neo4j_connection import AsyncNeo4jConnection
+from agentic_neurodata_conversion.kg_service.services.semantic_reasoner import get_semantic_reasoner
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +37,7 @@ class InferenceEngine:
             neo4j_conn: AsyncNeo4jConnection instance for database queries
         """
         self.neo4j_conn = neo4j_conn
+        self.semantic_reasoner = get_semantic_reasoner(neo4j_conn)
 
     async def infer_species(self, subject_id: str, target_file: str) -> dict[str, Any]:
         """Infer species for subject based on historical observations.
@@ -236,6 +239,23 @@ class InferenceEngine:
                 ontology_term_id = result.get("ontology_term_id")  # May be None for non-ontology fields
                 contributing_sessions = result.get("contributing_sessions", [])
 
+                # Build base reasoning
+                reasoning = f"Based on {evidence_count} prior observations with 100% agreement"
+
+                # Phase 4: Add semantic context from ontology hierarchy
+                if ontology_term_id:
+                    try:
+                        ancestors = await self.semantic_reasoner.find_ancestors(ontology_term_id, max_depth=10)
+                        if ancestors and len(ancestors) > 0:
+                            # Get top 5 ancestors for context
+                            ancestor_labels = [a["label"] for a in ancestors[:5]]
+                            hierarchy_path = " > ".join(ancestor_labels)
+                            reasoning = f"{reasoning}. Term hierarchy: {hierarchy_path}"
+                            logger.debug(f"Added semantic context: {hierarchy_path}")
+                    except Exception as e:
+                        # Graceful degradation: continue without semantic context
+                        logger.warning(f"Could not fetch semantic context for {ontology_term_id}: {e}")
+
                 logger.info(
                     f"Inference successful for {field_path}: {result['suggested_value']} "
                     f"(evidence_count={evidence_count}, confidence=0.8)"
@@ -247,7 +267,7 @@ class InferenceEngine:
                     "ontology_term_id": ontology_term_id,
                     "confidence": 0.8,
                     "requires_confirmation": True,
-                    "reasoning": f"Based on {evidence_count} prior observations with 100% agreement",
+                    "reasoning": reasoning,
                     "contributing_sessions": contributing_sessions,
                     "evidence_count": evidence_count,
                     "subject_id": subject_id,

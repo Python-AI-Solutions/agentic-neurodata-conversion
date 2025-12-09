@@ -29,11 +29,17 @@ async def neo4j_conn():
 
     reset_neo4j_connection()
     conn = get_neo4j_connection(neo4j_uri, neo4j_user, neo4j_password)
-    await conn.connect()
+
+    # Try to connect - skip if Neo4j is not available
+    try:
+        await conn.connect()
+    except Exception as e:
+        pytest.skip(f"Neo4j not available - skipping integration tests: {e}")
 
     # Verify Neo4j is accessible
     health = await conn.health_check()
     if not health:
+        await conn.close()
         pytest.skip("Neo4j not accessible - skipping integration tests")
 
     yield conn
