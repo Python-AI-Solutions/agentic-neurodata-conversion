@@ -2,7 +2,7 @@
   "ontology": "NCBITaxonomy",
   "version": "2024-01-expanded",
   "description": "Expanded subset with genus, family, and order hierarchies for semantic reasoning",
-  "total_terms": 63,
+  "total_terms": 72,
   "terms": [
     {
       "term_id": "NCBITaxon:10090",
@@ -142,10 +142,10 @@
       "label": "Macaca",
       "definition": "Genus of macaques",
       "synonyms": ["macaque genus"],
-      "parent_terms": ["NCBITaxon:9541"]
+      "parent_terms": ["NCBITaxon:9526"]
     },
     {
-      "term_id": "NCBITaxon:9541",
+      "term_id": "NCBITaxon:9526",
       "label": "Cercopithecidae",
       "definition": "Family of Old World monkeys",
       "synonyms": ["old world monkeys"],
