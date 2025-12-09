@@ -49,17 +49,18 @@ async def test_neo4j_health_check(neo4j_connection):
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_ontology_terms_loaded(neo4j_connection):
-    """Verify all 44 ontology terms are loaded."""
+    """Verify all 96 ontology terms are loaded (Phase 1.5: expanded NCBITaxonomy)."""
     query = "MATCH (t:OntologyTerm) RETURN count(t) AS count"
     result = await neo4j_connection.execute_read(query)
     count = result[0]["count"]
-    assert count == 44, f"Expected 44 ontology terms, got {count}"
+    # Phase 1.5: 72 NCBITaxonomy + 20 UBERON + 4 PATO = 96 total
+    assert count == 96, f"Expected 96 ontology terms, got {count}"
 
 
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_ontology_counts_by_type(neo4j_connection):
-    """Verify correct counts for each ontology type."""
+    """Verify correct counts for each ontology type (Phase 1.5: expanded NCBITaxonomy)."""
     query = """
     MATCH (t:OntologyTerm)
     RETURN t.ontology_name AS ontology, count(*) AS count
@@ -68,7 +69,8 @@ async def test_ontology_counts_by_type(neo4j_connection):
     result = await neo4j_connection.execute_read(query)
 
     counts = {r["ontology"]: r["count"] for r in result}
-    assert counts.get("NCBITaxonomy") == 20, f"Expected 20 NCBITaxonomy terms, got {counts.get('NCBITaxonomy', 0)}"
+    # Phase 1.5: Expanded NCBITaxonomy from 20 → 72 terms (added genus, family, order hierarchies)
+    assert counts.get("NCBITaxonomy") == 72, f"Expected 72 NCBITaxonomy terms, got {counts.get('NCBITaxonomy', 0)}"
     assert counts.get("UBERON") == 20, f"Expected 20 UBERON terms, got {counts.get('UBERON', 0)}"
     assert counts.get("PATO") == 4, f"Expected 4 PATO terms, got {counts.get('PATO', 0)}"
 
@@ -104,11 +106,13 @@ async def test_indexes_exist(neo4j_connection):
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_is_a_relationships_created(neo4j_connection):
-    """Verify IS_A relationships were created for ontology hierarchy."""
+    """Verify IS_A relationships were created for ontology hierarchy (Phase 1.5)."""
     query = "MATCH ()-[r:IS_A]->() RETURN count(r) AS count"
     result = await neo4j_connection.execute_read(query)
     count = result[0]["count"]
-    assert count == 16, f"Expected 16 IS_A relationships, got {count}"
+    # Phase 1.5: 70 NCBITaxonomy IS_A + 16 UBERON IS_A = 86 total
+    # (2 root terms in NCBITaxonomy have no parents: Chordata, Protostomia)
+    assert count == 86, f"Expected 86 IS_A relationships, got {count}"
 
 
 @pytest.mark.integration
@@ -155,8 +159,9 @@ async def test_loader_idempotent(neo4j_connection):
     result = await neo4j_connection.execute_read(query)
     count = result[0]["count"]
 
-    # Should always be exactly 44 terms, even if loader was run multiple times
-    assert count == 44, f"Loader may not be idempotent - expected 44 terms, got {count}"
+    # Phase 1.5: Should always be exactly 96 terms, even if loader was run multiple times
+    # (72 NCBITaxonomy + 20 UBERON + 4 PATO)
+    assert count == 96, f"Loader may not be idempotent - expected 96 terms, got {count}"
 
 
 @pytest.mark.integration
