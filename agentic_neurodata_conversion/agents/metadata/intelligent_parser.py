@@ -156,7 +156,7 @@ class IntelligentMetadataParser:
             "species",
             "sex",
             # Brain region fields
-            "location",
+            # Note: "location" is handled as an extraction pattern for "brain_region"
             "brain_region",
             "electrode_location",
         ]
@@ -310,10 +310,10 @@ For each field found, provide:
                 if self.kg_wrapper and self._is_ontology_governed_field(field_name):
                     try:
                         # Map field name to KG field path
+                        # Note: "location" is extracted as "brain_region" via extraction patterns
                         field_path_map = {
                             "species": "subject.species",
                             "sex": "subject.sex",
-                            "location": "ecephys.ElectrodeGroup.location",
                             "brain_region": "ecephys.ElectrodeGroup.location",
                             "electrode_location": "ecephys.ElectrodeGroup.location",
                         }
