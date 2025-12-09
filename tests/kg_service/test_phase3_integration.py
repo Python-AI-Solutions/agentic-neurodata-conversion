@@ -21,9 +21,11 @@ async def kg_service_client():
     from agentic_neurodata_conversion.kg_service.config import get_settings
     from agentic_neurodata_conversion.kg_service.db.neo4j_connection import get_neo4j_connection, reset_neo4j_connection
     from agentic_neurodata_conversion.kg_service.main import app
+    from agentic_neurodata_conversion.kg_service.services.semantic_reasoner import reset_semantic_reasoner
 
-    # Reset connection to avoid singleton issues
+    # Reset connection and reasoner to avoid singleton issues
     reset_neo4j_connection()
+    reset_semantic_reasoner()
 
     # Get Neo4j connection and connect
     settings = get_settings()
@@ -317,3 +319,168 @@ async def test_store_observation_different_source_types(kg_service_client):
         assert response.status_code == 200
         data = response.json()
         assert "observation_id" in data
+
+
+# ===========================
+# Phase 3: Cross-Field Semantic Validation Tests (NEW)
+# ===========================
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_api_semantic_validate_valid_mouse_brain(kg_service_client):
+    """Test valid combination: mouse + hippocampus (Phase 3 cross-field validation)."""
+    response = await kg_service_client.post(
+        "/api/v1/semantic-validate",
+        json={"species_term_id": "NCBITaxon:10090", "anatomy_term_id": "UBERON:0001954"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["is_compatible"] is True
+    assert data["confidence"] > 0.0
+    assert "reasoning" in data
+    assert "vertebrate" in data["reasoning"].lower() or "mammal" in data["reasoning"].lower()
+    assert len(data["species_ancestors"]) > 0
+    assert len(data["anatomy_ancestors"]) > 0
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_api_semantic_validate_invalid_worm_brain(kg_service_client):
+    """Test invalid combination: C. elegans (worm) + hippocampus."""
+    response = await kg_service_client.post(
+        "/api/v1/semantic-validate",
+        json={"species_term_id": "NCBITaxon:6239", "anatomy_term_id": "UBERON:0001954"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["is_compatible"] is False
+    assert data["confidence"] == 0.95  # High confidence that it's incompatible
+    assert "reasoning" in data
+    assert "invertebrate" in data["reasoning"].lower()
+    # Should have ancestor information showing incompatibility
+    assert len(data["species_ancestors"]) > 0
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_api_semantic_validate_valid_human_brain(kg_service_client):
+    """Test valid combination: human + neocortex."""
+    response = await kg_service_client.post(
+        "/api/v1/semantic-validate",
+        json={"species_term_id": "NCBITaxon:9606", "anatomy_term_id": "UBERON:0001950"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["is_compatible"] is True
+    assert data["confidence"] == 0.95
+    assert "vertebrate" in data["reasoning"].lower() or "mammal" in data["reasoning"].lower()
+    assert any("Vertebrata" in ancestor or "Mammalia" in ancestor for ancestor in data["species_ancestors"])
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_api_semantic_validate_invalid_fly_brain(kg_service_client):
+    """Test invalid combination: Drosophila (fly) + vertebrate brain."""
+    response = await kg_service_client.post(
+        "/api/v1/semantic-validate",
+        json={"species_term_id": "NCBITaxon:7227", "anatomy_term_id": "UBERON:0000955"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["is_compatible"] is False
+    assert data["confidence"] == 0.95
+    assert "invertebrate" in data["reasoning"].lower()
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_api_semantic_validate_unknown_species(kg_service_client):
+    """Test with unknown species term ID."""
+    response = await kg_service_client.post(
+        "/api/v1/semantic-validate",
+        json={"species_term_id": "NCBITaxon:99999", "anatomy_term_id": "UBERON:0001954"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["is_compatible"] is False
+    assert data["confidence"] == 0.0  # Low confidence due to unknown term
+    assert "not found" in data["reasoning"].lower()
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_api_semantic_validate_unknown_anatomy(kg_service_client):
+    """Test with unknown anatomy term ID."""
+    response = await kg_service_client.post(
+        "/api/v1/semantic-validate",
+        json={"species_term_id": "NCBITaxon:10090", "anatomy_term_id": "UBERON:99999"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["is_compatible"] is False
+    assert data["confidence"] == 0.0
+    assert "not found" in data["reasoning"].lower()
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_api_semantic_validate_response_structure(kg_service_client):
+    """Test that response has all required fields with correct types."""
+    response = await kg_service_client.post(
+        "/api/v1/semantic-validate",
+        json={"species_term_id": "NCBITaxon:10090", "anatomy_term_id": "UBERON:0001954"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    # Verify all required fields are present
+    assert "is_compatible" in data
+    assert "confidence" in data
+    assert "reasoning" in data
+    assert "species_ancestors" in data
+    assert "anatomy_ancestors" in data
+    assert "warnings" in data
+
+    # Verify types
+    assert isinstance(data["is_compatible"], bool)
+    assert isinstance(data["confidence"], (int, float))
+    assert isinstance(data["reasoning"], str)
+    assert isinstance(data["species_ancestors"], list)
+    assert isinstance(data["anatomy_ancestors"], list)
+    assert isinstance(data["warnings"], list)
+
+    # Verify confidence is in valid range
+    assert 0.0 <= data["confidence"] <= 1.0
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_api_semantic_validate_valid_rat_brain(kg_service_client):
+    """Test valid combination: rat + thalamus."""
+    response = await kg_service_client.post(
+        "/api/v1/semantic-validate",
+        json={"species_term_id": "NCBITaxon:10116", "anatomy_term_id": "UBERON:0001869"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["is_compatible"] is True
+    assert data["confidence"] == 0.95
+    assert "vertebrate" in data["reasoning"].lower() or "mammal" in data["reasoning"].lower()
+    assert len(data["species_ancestors"]) > 0
+    assert len(data["anatomy_ancestors"]) > 0

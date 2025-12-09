@@ -380,6 +380,8 @@ class SemanticReasoner:
                     "confidence": 0.0,
                     "reasoning": f"Species term not found: {species_term_id}",
                     "warnings": ["Invalid species term ID"],
+                    "species_ancestors": [],
+                    "anatomy_ancestors": [],
                 }
 
             if not anatomy_result:
@@ -388,6 +390,8 @@ class SemanticReasoner:
                     "confidence": 0.0,
                     "reasoning": f"Anatomy term not found: {anatomy_term_id}",
                     "warnings": ["Invalid anatomy term ID"],
+                    "species_ancestors": [],
+                    "anatomy_ancestors": [],
                 }
 
             species = species_result[0]
@@ -400,6 +404,8 @@ class SemanticReasoner:
                     "confidence": 0.0,
                     "reasoning": f"Expected NCBITaxonomy, got {species['ontology_name']}",
                     "warnings": ["Species term is not from NCBITaxonomy"],
+                    "species_ancestors": [],
+                    "anatomy_ancestors": [],
                 }
 
             if anatomy["ontology_name"] != "UBERON":
@@ -408,6 +414,8 @@ class SemanticReasoner:
                     "confidence": 0.0,
                     "reasoning": f"Expected UBERON, got {anatomy['ontology_name']}",
                     "warnings": ["Anatomy term is not from UBERON"],
+                    "species_ancestors": [],
+                    "anatomy_ancestors": [],
                 }
 
             # Phase 1.5: Hierarchy-based vertebrate/invertebrate classification
@@ -447,6 +455,8 @@ class SemanticReasoner:
                         f"and does not have {anatomy['label']} (vertebrate CNS structure)"
                     ),
                     "warnings": [],
+                    "species_ancestors": [a["label"] for a in species_ancestors],
+                    "anatomy_ancestors": [a["label"] for a in anatomy_ancestors],
                 }
 
             # If anatomy is vertebrate brain and species is vertebrate, valid!
@@ -460,6 +470,8 @@ class SemanticReasoner:
                         f"and can have {anatomy['label']} (vertebrate CNS structure)"
                     ),
                     "warnings": [],
+                    "species_ancestors": [a["label"] for a in species_ancestors],
+                    "anatomy_ancestors": [a["label"] for a in anatomy_ancestors],
                 }
 
             # Default: Compatible (permissive for unknown combinations)
@@ -472,6 +484,8 @@ class SemanticReasoner:
                     "Phase 1.5 uses hierarchy-based vertebrate/invertebrate classification."
                 ),
                 "warnings": ["Permissive validation - combination not explicitly validated"],
+                "species_ancestors": [a["label"] for a in species_ancestors],
+                "anatomy_ancestors": [a["label"] for a in anatomy_ancestors],
             }
 
         except Exception as e:
@@ -481,6 +495,8 @@ class SemanticReasoner:
                 "confidence": 0.0,
                 "reasoning": f"Error during validation: {str(e)}",
                 "warnings": ["Validation error - defaulting to permissive"],
+                "species_ancestors": [],
+                "anatomy_ancestors": [],
             }
 
     # ========== Helper Methods for validate_with_hierarchy() ==========
