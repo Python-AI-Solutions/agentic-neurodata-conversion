@@ -34,46 +34,25 @@ class KGServiceSettings(BaseSettings):
     """
 
     # Neo4j Database Configuration
-    neo4j_uri: str = Field(
-        default="bolt://localhost:7687",
-        description="Neo4j database connection URI"
-    )
-    neo4j_user: str = Field(
-        default="neo4j",
-        description="Neo4j authentication username"
-    )
-    neo4j_password: str = Field(
-        ...,
-        description="Neo4j authentication password (required)"
-    )
+    neo4j_uri: str = Field(default="bolt://localhost:7687", description="Neo4j database connection URI")
+    neo4j_user: str = Field(default="neo4j", description="Neo4j authentication username")
+    neo4j_password: str = Field(..., description="Neo4j authentication password (required)")
 
     # KG Service Configuration
-    kg_service_url: str = Field(
-        default="http://localhost:8001",
-        description="URL where KG service is running"
-    )
-    kg_service_enabled: bool = Field(
-        default=True,
-        description="Enable/disable KG service integration"
-    )
+    kg_service_url: str = Field(default="http://localhost:8001", description="URL where KG service is running")
+    kg_service_enabled: bool = Field(default=True, description="Enable/disable KG service integration")
     kg_service_timeout: float = Field(
-        default=5.0,
-        ge=0.1,
-        le=30.0,
-        description="Timeout for KG service requests in seconds"
+        default=5.0, ge=0.1, le=30.0, description="Timeout for KG service requests in seconds"
     )
     kg_max_retries: int = Field(
-        default=2,
-        ge=0,
-        le=5,
-        description="Maximum number of retry attempts for failed requests"
+        default=2, ge=0, le=5, description="Maximum number of retry attempts for failed requests"
     )
 
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
-        extra="ignore"  # Ignore extra fields from .env
+        extra="ignore",  # Ignore extra fields from .env
     )
 
 

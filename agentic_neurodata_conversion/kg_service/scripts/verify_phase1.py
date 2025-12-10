@@ -13,8 +13,8 @@ Usage:
 import asyncio
 import logging
 
-from kg_service.config import get_settings
-from kg_service.db.neo4j_connection import get_neo4j_connection
+from agentic_neurodata_conversion.kg_service.config import get_settings
+from agentic_neurodata_conversion.kg_service.db.neo4j_connection import get_neo4j_connection
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -33,11 +33,7 @@ async def verify_ontology_terms(conn) -> bool:
 
     result = await conn.execute_read(query)
 
-    expected = {
-        "NCBITaxonomy": 20,
-        "PATO": 4,
-        "UBERON": 20
-    }
+    expected = {"NCBITaxonomy": 20, "PATO": 4, "UBERON": 20}
 
     success = True
     for record in result:
@@ -76,7 +72,7 @@ async def verify_constraints(conn) -> bool:
     found = False
     for record in result:
         if "ontology_term_id" in str(record).lower():
-            logger.info(f"✅ Found constraint: ontology_term_id")
+            logger.info("✅ Found constraint: ontology_term_id")
             found = True
             break
 
@@ -183,11 +179,7 @@ async def main() -> None:
     settings = get_settings()
 
     # Connect to Neo4j
-    conn = get_neo4j_connection(
-        uri=settings.neo4j_uri,
-        user=settings.neo4j_user,
-        password=settings.neo4j_password
-    )
+    conn = get_neo4j_connection(uri=settings.neo4j_uri, user=settings.neo4j_user, password=settings.neo4j_password)
     await conn.connect()
 
     try:
@@ -205,7 +197,7 @@ async def main() -> None:
             ("Constraints", await verify_constraints(conn)),
             ("Indexes", await verify_indexes(conn)),
             ("Sample queries", await verify_sample_queries(conn)),
-            ("IS_A relationships", await verify_relationships(conn))
+            ("IS_A relationships", await verify_relationships(conn)),
         ]
 
         # Summary

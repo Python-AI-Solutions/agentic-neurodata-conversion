@@ -7,7 +7,7 @@ This module follows the async patterns used throughout the agentic-neurodata-con
 codebase and provides a clean interface for executing Cypher queries.
 
 Example:
-    >>> from kg_service.db.neo4j_connection import get_neo4j_connection
+    >>> from agentic_neurodata_conversion.kg_service.db.neo4j_connection import get_neo4j_connection
     >>> conn = get_neo4j_connection(uri, user, password)
     >>> await conn.connect()
     >>> result = await conn.execute_read("MATCH (n:OntologyTerm) RETURN count(n) as count")
@@ -15,11 +15,12 @@ Example:
 """
 
 import logging
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Any, AsyncIterator, Dict, List, Optional
+from typing import Any
 
-from neo4j import AsyncGraphDatabase, AsyncDriver, AsyncSession
-from neo4j.exceptions import ServiceUnavailable, Neo4jError
+from neo4j import AsyncDriver, AsyncGraphDatabase, AsyncSession
+from neo4j.exceptions import ServiceUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,7 @@ class AsyncNeo4jConnection:
         self.uri = uri
         self.user = user
         self.password = password
-        self._driver: Optional[AsyncDriver] = None
+        self._driver: AsyncDriver | None = None
 
     async def connect(self) -> None:
         """Establish connection to Neo4j.
@@ -107,11 +108,7 @@ class AsyncNeo4jConnection:
         async with self._driver.session() as session:
             yield session
 
-    async def execute_read(
-        self,
-        query: str,
-        params: Optional[Dict[str, Any]] = None
-    ) -> List[Dict[str, Any]]:
+    async def execute_read(self, query: str, params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
         """Execute read transaction.
 
         Executes a Cypher query in a read transaction. Use for SELECT/MATCH queries
@@ -132,14 +129,10 @@ class AsyncNeo4jConnection:
         """
         async with self.session() as session:
             result = await session.run(query, params or {})
-            records = await result.data()
+            records: list[dict[str, Any]] = await result.data()
             return records
 
-    async def execute_write(
-        self,
-        query: str,
-        params: Optional[Dict[str, Any]] = None
-    ) -> List[Dict[str, Any]]:
+    async def execute_write(self, query: str, params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
         """Execute write transaction.
 
         Executes a Cypher query in a write transaction. Use for CREATE/MERGE/SET/DELETE
@@ -160,7 +153,7 @@ class AsyncNeo4jConnection:
         """
         async with self.session() as session:
             result = await session.run(query, params or {})
-            records = await result.data()
+            records: list[dict[str, Any]] = await result.data()
             return records
 
     async def health_check(self) -> bool:
@@ -186,7 +179,7 @@ class AsyncNeo4jConnection:
 
 
 # Global instance (singleton pattern)
-_neo4j_connection: Optional[AsyncNeo4jConnection] = None
+_neo4j_connection: AsyncNeo4jConnection | None = None
 
 
 def get_neo4j_connection(uri: str, user: str, password: str) -> AsyncNeo4jConnection:
@@ -204,7 +197,7 @@ def get_neo4j_connection(uri: str, user: str, password: str) -> AsyncNeo4jConnec
         AsyncNeo4jConnection: Global connection instance
 
     Example:
-        >>> from kg_service.config import get_settings
+        >>> from agentic_neurodata_conversion.kg_service.config import get_settings
         >>> settings = get_settings()
         >>> conn = get_neo4j_connection(
         ...     settings.neo4j_uri,
