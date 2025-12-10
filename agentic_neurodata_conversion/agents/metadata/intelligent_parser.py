@@ -60,7 +60,7 @@ class ParsedField:
         # Inference integration fields
         self.field_path = field_path or f"subject.{field_name}"  # Default to subject.{field_name}
         self.extraction_method = extraction_method  # "llm" or "historical_inference"
-        self.badge = badge  # "CONFIRMED", "HISTORICAL", "CONFLICTING", "AI", "INFERRED", or None
+        self.badge = badge  # "CONFIRMED", "HISTORICAL", "CONFLICTING", "KG_VALIDATED", or None
         self.historical_evidence = historical_evidence  # Store KG inference evidence
 
     @property
@@ -364,6 +364,7 @@ For each field found, provide:
                                 nwb_compliant=True,
                                 needs_review=kg_result.get("action_required", False),
                                 was_explicit=field_data.get("extraction_type", "explicit") == "explicit",
+                                badge="KG_VALIDATED",  # Set green validated badge for KG-validated fields
                             )
                             parsed_fields.append(parsed_field)
 
@@ -431,6 +432,11 @@ For each field found, provide:
                     f"Parsed {parsed_field.field_name}: '{parsed_field.raw_input}' → '{parsed_field.parsed_value}' "
                     f"(confidence: {parsed_field.confidence}%)",
                 )
+
+            # === Phase 3: Cross-Field Semantic Validation ===
+            # After individual field normalization, validate cross-field compatibility
+            if self.kg_wrapper:
+                await self._validate_cross_field_compatibility(parsed_fields, state)
 
             # === Phase 1: Historical Inference Enhancement ===
             # After LLM extraction, enhance results with historical inference
@@ -711,7 +717,7 @@ Provide:
                 indicator = "❓"
 
             # Check if this field has a special badge type from historical inference or KG validation
-            if field.badge and field.badge in ["HISTORICAL", "CONFIRMED", "CONFLICTING"]:
+            if field.badge and field.badge in ["HISTORICAL", "CONFIRMED", "CONFLICTING", "KG_VALIDATED"]:
                 # Use special badge rendering for historical/KG-based fields
                 import os
                 from datetime import datetime
@@ -725,13 +731,18 @@ Provide:
                     },
                     "CONFIRMED": {
                         "label": "Confirmed",
-                        "tooltip_header": "Confirmed Metadata",
-                        "source": "knowledge graph based validation - confirmed",
+                        "tooltip_header": "LLM & Historical Data Agree",
+                        "source": "historical inference - llm extraction matches prior sessions",
                     },
                     "CONFLICTING": {
                         "label": "Conflicting",
                         "tooltip_header": "Conflicting Metadata",
                         "source": "knowledge graph based validation - conflicting",
+                    },
+                    "KG_VALIDATED": {
+                        "label": "Validated",
+                        "tooltip_header": "Ontology Validated",
+                        "source": "knowledge graph ontology validation",
                     },
                 }
                 config = badge_config[field.badge]
@@ -1088,6 +1099,93 @@ Provide:
             return value
 
         return value
+
+    async def _validate_cross_field_compatibility(self, parsed_fields: list[ParsedField], state: GlobalState) -> None:
+        """Validate cross-field compatibility for species + anatomy combinations.
+
+        Checks if species and brain_region fields are semantically compatible using
+        the KG service's semantic validation endpoint. Logs compatibility status and
+        warnings for biologically implausible combinations (e.g., fly + hippocampus).
+
+        Args:
+            parsed_fields: List of parsed metadata fields
+            state: Global state for logging
+
+        Example:
+            Valid: species=Mus musculus (mouse) + brain_region=hippocampus
+            Invalid: species=Drosophila melanogaster (fly) + brain_region=hippocampus
+        """
+        # Extract species and brain_region fields
+        species_field = None
+        brain_region_field = None
+
+        for field in parsed_fields:
+            field_name_lower = field.field_name.lower()
+            if field_name_lower == "species":
+                species_field = field
+            elif field_name_lower in ["brain_region", "electrode_location"]:
+                brain_region_field = field
+
+        # Only validate if both fields exist
+        if not (species_field and brain_region_field):
+            return
+
+        # Extract ontology term IDs from reasoning field
+        # Format: "Ontology validation: NCBITaxon:10090" or "Ontology validation: UBERON:0001954"
+        def extract_term_id(reasoning: str) -> str | None:
+            """Extract ontology term ID from reasoning string."""
+            if not reasoning:
+                return None
+            match = re.search(r"Ontology validation:\s*([A-Za-z]+:[0-9]+)", reasoning)
+            return match.group(1) if match else None
+
+        species_term_id = extract_term_id(species_field.reasoning)
+        anatomy_term_id = extract_term_id(brain_region_field.reasoning)
+
+        # Only validate if both fields have ontology term IDs
+        if not (species_term_id and anatomy_term_id):
+            return
+
+        try:
+            # Call semantic validation endpoint
+            result = await self.kg_wrapper.semantic_validate(
+                species_term_id=species_term_id,
+                anatomy_term_id=anatomy_term_id,
+            )
+
+            # Log results based on compatibility
+            if result["is_compatible"]:
+                state.add_log(
+                    LogLevel.INFO,
+                    f"Cross-field validation: species={species_field.parsed_value}, anatomy={brain_region_field.parsed_value}",
+                )
+                state.add_log(
+                    LogLevel.INFO,
+                    f"Compatible: {species_field.parsed_value} + {brain_region_field.parsed_value} "
+                    f"(confidence: {result['confidence'] * 100:.0f}%)",
+                )
+            else:
+                state.add_log(
+                    LogLevel.WARNING,
+                    f"Cross-field validation: species={species_field.parsed_value}, anatomy={brain_region_field.parsed_value}",
+                )
+                state.add_log(
+                    LogLevel.WARNING,
+                    f"Incompatible: {species_field.parsed_value} + {brain_region_field.parsed_value}. "
+                    f"Reasoning: {result['reasoning']}",
+                )
+
+            # Log any additional warnings
+            if result.get("warnings"):
+                for warning in result["warnings"]:
+                    state.add_log(LogLevel.WARNING, f"Cross-field validation warning: {warning}")
+
+        except Exception as e:
+            # Don't fail the entire parsing if cross-field validation fails
+            state.add_log(
+                LogLevel.WARNING,
+                f"Cross-field validation failed for {species_field.parsed_value} + {brain_region_field.parsed_value}: {e}",
+            )
 
     def _fallback_parse_batch(
         self,

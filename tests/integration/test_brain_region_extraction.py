@@ -183,7 +183,8 @@ async def test_brain_region_extraction_ammon(mock_llm_ammon):
 
     brain_region = brain_region_fields[0]
     assert brain_region.raw_input == "Ammon"
-    assert brain_region.parsed_value == "Ammon"
+    # KG service normalizes "Ammon" to "Ammon's horn" (UBERON:0001954)
+    assert brain_region.parsed_value == "Ammon's horn"
     assert brain_region.confidence >= 0.8
 
     # Verify other expected fields are also present
@@ -215,7 +216,8 @@ async def test_brain_region_extraction_hippocampus(mock_llm_hippocampus):
 
     brain_region = brain_region_fields[0]
     assert brain_region.raw_input == "hippocampus"
-    assert brain_region.parsed_value == "hippocampus"
+    # KG service normalizes "hippocampus" to "Ammon's horn" (UBERON:0001954) via synonym matching
+    assert brain_region.parsed_value == "Ammon's horn"
     assert brain_region.confidence >= 0.8
 
     # Verify all fields from input are extracted

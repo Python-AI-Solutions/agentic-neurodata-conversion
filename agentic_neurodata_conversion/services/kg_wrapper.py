@@ -152,6 +152,85 @@ class KGWrapper:
 
         return self._no_suggestion_response("Max retries exceeded")
 
+    async def semantic_validate(
+        self,
+        species_term_id: str,
+        anatomy_term_id: str,
+    ) -> dict[str, Any]:
+        """
+        Validate cross-field compatibility between species and anatomy terms.
+
+        Calls the KG service semantic validation API to check if the given
+        species-anatomy combination is semantically compatible (e.g., does
+        the species have the anatomical structure?).
+
+        Args:
+            species_term_id: Species ontology term ID (e.g., "NCBITaxon:10090")
+            anatomy_term_id: Anatomy ontology term ID (e.g., "UBERON:0001954")
+
+        Returns:
+            Dict containing:
+            - is_compatible (bool): Whether combination is valid
+            - confidence (float): Confidence score (0.95 for known, 0.0 for unknown)
+            - reasoning (str): Explanation of result
+            - species_ancestors (list[str]): Species taxonomy hierarchy
+            - anatomy_ancestors (list[str]): Anatomy hierarchy
+            - warnings (list[str]): Any warnings about the combination
+
+        Example:
+            >>> result = await kg_wrapper.semantic_validate("NCBITaxon:10090", "UBERON:0001954")
+            >>> if result["is_compatible"]:
+            >>>     print(f"Valid: {result['reasoning']}")
+            >>> else:
+            >>>     print(f"Invalid: {result['reasoning']}")
+        """
+        for attempt in range(self.max_retries):
+            try:
+                response = await self._client.post(
+                    f"{self.kg_base_url}/api/v1/semantic-validate",
+                    json={
+                        "species_term_id": species_term_id,
+                        "anatomy_term_id": anatomy_term_id,
+                    },
+                )
+
+                if response.status_code == 200:
+                    return response.json()  # type: ignore[no-any-return]
+                else:
+                    logger.warning(
+                        f"KG semantic validation returned status {response.status_code} (attempt {attempt + 1})"
+                    )
+                    if attempt < self.max_retries - 1:
+                        await asyncio.sleep(0.5 * (attempt + 1))
+                    else:
+                        logger.error(f"KG semantic validation failed after {self.max_retries} attempts")
+                        return self._no_validation_response("KG service returned error status")
+
+            except (httpx.ConnectError, httpx.TimeoutException) as e:
+                logger.warning(f"KG semantic validation connection failed (attempt {attempt + 1}): {e}")
+                if attempt < self.max_retries - 1:
+                    await asyncio.sleep(0.5 * (attempt + 1))
+                else:
+                    logger.error("KG semantic validation service unavailable after retries")
+                    return self._no_validation_response("KG service unavailable")
+
+            except Exception as e:
+                logger.error(f"Unexpected error during KG semantic validation: {e}")
+                return self._no_validation_response(f"Validation error: {str(e)}")
+
+        return self._no_validation_response("Max retries exceeded")
+
+    def _no_validation_response(self, reason: str) -> dict[str, Any]:
+        """Return standard 'validation unavailable' response (permissive default)."""
+        return {
+            "is_compatible": True,  # Permissive: allow when validation unavailable
+            "confidence": 0.0,
+            "reasoning": f"Cross-field validation unavailable: {reason}. Assuming compatible.",
+            "species_ancestors": [],
+            "anatomy_ancestors": [],
+            "warnings": [f"Semantic validation unavailable: {reason}"],
+        }
+
     def _no_suggestion_response(self, reason: str) -> dict[str, Any]:
         """Return standard 'no suggestion' response."""
         return {
