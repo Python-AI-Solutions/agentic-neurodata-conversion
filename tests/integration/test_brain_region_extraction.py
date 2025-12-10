@@ -2,7 +2,7 @@
 Integration test to verify brain_region field extraction after schema fix.
 
 Tests that brain_region fields are properly extracted from user input when
-included in the NWBDANDISchema. Uses mocked LLM service to avoid API calls.
+included in the NWBDANDISchema. Uses mocked LLM and KG services to avoid API calls.
 """
 
 from unittest.mock import AsyncMock, Mock
@@ -158,11 +158,85 @@ def mock_llm_hippocampus():
     return service
 
 
+@pytest.fixture
+def mock_kg_wrapper():
+    """Create a mock KG wrapper that simulates ontology normalization."""
+    kg_wrapper = Mock()
+
+    # Mock normalize() to return KG validation responses
+    async def mock_normalize(field_path, value, context=None):
+        """Mock KG normalization for brain_region fields."""
+        # Normalize "Ammon" and "hippocampus" to "Ammon's horn" (UBERON:0001954)
+        if value.lower() in ["ammon", "hippocampus"]:
+            return {
+                "status": "validated",
+                "normalized_value": "Ammon's horn",
+                "ontology_term_id": "UBERON:0001954",
+                "confidence": 0.85,
+                "action_required": False,
+                "reasoning": f"Ontology validation: UBERON:0001954. Synonym match: {value} -> Ammon's horn",
+            }
+        # For species field
+        elif value.lower() == "mouse":
+            return {
+                "status": "validated",
+                "normalized_value": "Mus musculus",
+                "ontology_term_id": "NCBITaxon:10090",
+                "confidence": 0.95,
+                "action_required": False,
+                "reasoning": "Ontology validation: NCBITaxon:10090. Synonym match: mouse -> Mus musculus",
+            }
+        # For sex field
+        elif value.lower() in ["male", "m"]:
+            return {
+                "status": "validated",
+                "normalized_value": "male",
+                "ontology_term_id": "PATO:0000384",
+                "confidence": 1.0,
+                "action_required": False,
+                "reasoning": "Ontology validation: PATO:0000384. Exact match: male",
+            }
+        else:
+            return {
+                "status": "not_found",
+                "normalized_value": value,
+                "ontology_term_id": None,
+                "confidence": 0.0,
+                "action_required": False,
+                "reasoning": "No ontology match found",
+            }
+
+    # Mock semantic_validate() for cross-field validation
+    async def mock_semantic_validate(species_term_id, anatomy_term_id):
+        """Mock cross-field validation."""
+        return {
+            "is_compatible": True,
+            "confidence": 0.95,
+            "reasoning": "Compatible species-anatomy combination",
+            "species_ancestors": [],
+            "anatomy_ancestors": [],
+            "warnings": [],
+        }
+
+    # Mock store_observation() to prevent errors
+    async def mock_store_observation(**kwargs):
+        """Mock observation storage."""
+        return {"status": "success", "observation_id": "mock-id"}
+
+    kg_wrapper.normalize = AsyncMock(side_effect=mock_normalize)
+    kg_wrapper.semantic_validate = AsyncMock(side_effect=mock_semantic_validate)
+    kg_wrapper.store_observation = AsyncMock(side_effect=mock_store_observation)
+
+    return kg_wrapper
+
+
 @pytest.mark.asyncio
 @pytest.mark.integration
-async def test_brain_region_extraction_ammon(mock_llm_ammon):
+async def test_brain_region_extraction_ammon(mock_llm_ammon, mock_kg_wrapper):
     """Test that brain_region 'Ammon' is extracted from user input."""
     parser = IntelligentMetadataParser(llm_service=mock_llm_ammon)
+    # Inject mock KG wrapper after parser creation
+    parser.kg_wrapper = mock_kg_wrapper
     state = GlobalState()
 
     user_input = """
@@ -196,9 +270,11 @@ async def test_brain_region_extraction_ammon(mock_llm_ammon):
 
 @pytest.mark.asyncio
 @pytest.mark.integration
-async def test_brain_region_extraction_hippocampus(mock_llm_hippocampus):
+async def test_brain_region_extraction_hippocampus(mock_llm_hippocampus, mock_kg_wrapper):
     """Test that brain_region 'hippocampus' is extracted from user input."""
     parser = IntelligentMetadataParser(llm_service=mock_llm_hippocampus)
+    # Inject mock KG wrapper after parser creation
+    parser.kg_wrapper = mock_kg_wrapper
     state = GlobalState()
 
     user_input = """

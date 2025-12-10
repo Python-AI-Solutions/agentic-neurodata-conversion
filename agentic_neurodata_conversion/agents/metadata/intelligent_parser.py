@@ -47,6 +47,7 @@ class ParsedField:
         extraction_method: str = "llm",
         badge: str | None = None,
         historical_evidence: dict[str, Any] | None = None,
+        cross_field_warnings: list[str] | None = None,
     ):
         self.field_name = field_name
         self.raw_input = raw_input
@@ -62,6 +63,7 @@ class ParsedField:
         self.extraction_method = extraction_method  # "llm" or "historical_inference"
         self.badge = badge  # "CONFIRMED", "HISTORICAL", "CONFLICTING", "KG_VALIDATED", or None
         self.historical_evidence = historical_evidence  # Store KG inference evidence
+        self.cross_field_warnings = cross_field_warnings or []  # Cross-field validation warnings
 
     @property
     def confidence_level(self) -> ConfidenceLevel:
@@ -91,6 +93,7 @@ class ParsedField:
             "extraction_method": self.extraction_method,
             "badge": self.badge,
             "historical_evidence": self.historical_evidence,
+            "cross_field_warnings": self.cross_field_warnings,
         }
 
     def to_provenance_info(self):
@@ -820,9 +823,19 @@ Provide:
 
                 provenance_badge = f"""<span class="provenance-badge {provenance_type} {needs_review_class}" title="Source: {provenance_type} | Confidence: {field.confidence}% | From: {raw_input_escaped}">{provenance_label}<div class="provenance-tooltip"><div class="provenance-tooltip-header">{provenance_label} Metadata</div><div class="provenance-tooltip-item"><span class="provenance-tooltip-label">Source:</span>{provenance_type}</div><div class="provenance-tooltip-item"><span class="provenance-tooltip-label">Confidence:</span>{field.confidence}%</div><div class="provenance-tooltip-item"><span class="provenance-tooltip-label">Origin:</span>AI parsed from: '{raw_input_escaped[:100]}'</div>{'<div class="provenance-tooltip-item" style="color: #fbbf24;">⚠️ Needs Review</div>' if needs_review else ""}</div></span>"""
 
-            # Format the field with provenance badge
+            # Add cross-field warning badge if warnings exist
+            warning_badge = ""
+            if field.cross_field_warnings:
+                # Create warning badge with tooltip showing all warnings
+                warnings_html = ""
+                for warning in field.cross_field_warnings:
+                    warnings_html += f'<div class="provenance-tooltip-item" style="color: #fbbf24;">⚠️ {warning}</div>'
+
+                warning_badge = f"""<span class="provenance-badge cross-field-warning">⚠️ Warning<div class="provenance-tooltip"><div class="provenance-tooltip-header">Cross-Field Validation Warning</div>{warnings_html}</div></span>"""
+
+            # Format the field with provenance badge and optional warning badge
             lines.append(
-                f"{indicator} **{field.field_name}** = {self._format_value(field.parsed_value)} {provenance_badge}"
+                f"{indicator} **{field.field_name}** = {self._format_value(field.parsed_value)} {provenance_badge}{warning_badge}"
             )
 
             # Show original if different
@@ -1165,6 +1178,13 @@ Provide:
                     f"(confidence: {result['confidence'] * 100:.0f}%)",
                 )
             else:
+                # Add cross-field warnings to both fields
+                warning_message = f"Incompatible with {species_field.parsed_value}: {result['reasoning']}"
+                brain_region_field.cross_field_warnings.append(warning_message)
+
+                species_warning = f"Incompatible with {brain_region_field.parsed_value}: {result['reasoning']}"
+                species_field.cross_field_warnings.append(species_warning)
+
                 state.add_log(
                     LogLevel.WARNING,
                     f"Cross-field validation: species={species_field.parsed_value}, anatomy={brain_region_field.parsed_value}",
