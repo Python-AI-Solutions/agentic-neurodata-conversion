@@ -14,6 +14,7 @@ from dateutil import parser as date_parser
 from agentic_neurodata_conversion.agents.metadata.schema import MetadataFieldSchema, NWBDANDISchema
 from agentic_neurodata_conversion.models import GlobalState, LogLevel
 from agentic_neurodata_conversion.services import LLMService
+from agentic_neurodata_conversion.services.kg_wrapper import get_kg_wrapper
 
 
 class ConfidenceLevel(str, Enum):
@@ -25,7 +26,10 @@ class ConfidenceLevel(str, Enum):
 
 
 class ParsedField:
-    """Represents a parsed metadata field with confidence."""
+    """Represents a parsed metadata field with confidence and provenance.
+
+    Supports both LLM extraction and historical inference from knowledge graph.
+    """
 
     def __init__(
         self,
@@ -38,6 +42,11 @@ class ParsedField:
         needs_review: bool = False,
         was_explicit: bool = True,
         alternatives: list[str] | None = None,
+        # New fields for inference integration
+        field_path: str | None = None,
+        extraction_method: str = "llm",
+        badge: str | None = None,
+        historical_evidence: dict[str, Any] | None = None,
     ):
         self.field_name = field_name
         self.raw_input = raw_input
@@ -48,6 +57,11 @@ class ParsedField:
         self.needs_review = needs_review
         self.was_explicit = was_explicit
         self.alternatives = alternatives or []
+        # Inference integration fields
+        self.field_path = field_path or f"subject.{field_name}"  # Default to subject.{field_name}
+        self.extraction_method = extraction_method  # "llm" or "historical_inference"
+        self.badge = badge  # "CONFIRMED", "HISTORICAL", "CONFLICTING", "AI", "INFERRED", or None
+        self.historical_evidence = historical_evidence  # Store KG inference evidence
 
     @property
     def confidence_level(self) -> ConfidenceLevel:
@@ -72,6 +86,11 @@ class ParsedField:
             "needs_review": self.needs_review,
             "was_explicit": self.was_explicit,
             "alternatives": self.alternatives,
+            # Inference integration fields
+            "field_path": self.field_path,
+            "extraction_method": self.extraction_method,
+            "badge": self.badge,
+            "historical_evidence": self.historical_evidence,
         }
 
     def to_provenance_info(self):
@@ -97,6 +116,8 @@ class ParsedField:
             source=f"{source_prefix}: '{self.raw_input[:100]}'",
             needs_review=self.needs_review,
             raw_input=self.raw_input,
+            badge=self.badge,
+            historical_evidence=self.historical_evidence,
         )
 
 
@@ -115,6 +136,31 @@ class IntelligentMetadataParser:
         self.llm_service = llm_service
         self.schema = NWBDANDISchema()
         self.field_schemas = {field.name: field for field in self.schema.get_all_fields()}
+        # Initialize KG wrapper for ontology-based validation
+        try:
+            self.kg_wrapper = get_kg_wrapper()
+        except Exception as e:
+            # Graceful fallback if KG service unavailable
+            self.kg_wrapper = None
+
+    def _is_ontology_governed_field(self, field_name: str) -> bool:
+        """Check if field should use KG validation.
+
+        Args:
+            field_name: Field name to check (e.g., "species", "sex")
+
+        Returns:
+            True if field is ontology-governed and should use KG service
+        """
+        ontology_fields = [
+            "species",
+            "sex",
+            # Brain region fields
+            "location",
+            "brain_region",
+            "electrode_location",
+        ]
+        return field_name.lower() in ontology_fields
 
     async def parse_natural_language_batch(
         self,
@@ -247,12 +293,121 @@ For each field found, provide:
                 system_prompt=system_prompt,
             )
 
+            # Extract subject_id from parsed fields BEFORE loop (for observation storage)
+            extracted_subject_id = "unknown"
+            for field_data in response.get("fields", []):
+                if field_data["field_name"].lower() in ["subject_id", "subjectid"]:
+                    extracted_subject_id = str(field_data["normalized_value"])
+                    break
+
             parsed_fields = []
             for field_data in response.get("fields", []):
+                field_name = field_data["field_name"]
+                raw_value = field_data["raw_value"]
+                llm_normalized_value = field_data["normalized_value"]
+
+                # Try KG validation for ontology-governed fields
+                if self.kg_wrapper and self._is_ontology_governed_field(field_name):
+                    try:
+                        # Map field name to KG field path
+                        field_path_map = {
+                            "species": "subject.species",
+                            "sex": "subject.sex",
+                            "location": "ecephys.ElectrodeGroup.location",
+                            "brain_region": "ecephys.ElectrodeGroup.location",
+                            "electrode_location": "ecephys.ElectrodeGroup.location",
+                        }
+                        field_path = field_path_map.get(field_name.lower(), f"subject.{field_name}")
+
+                        # Call KG normalization
+                        kg_result = await self.kg_wrapper.normalize(
+                            field_path=field_path,
+                            value=raw_value,
+                            context={"source": "user_input", "session_id": getattr(state, "session_id", "unknown")},
+                        )
+
+                        # Use KG result if validated with good confidence
+                        if kg_result.get("status") == "validated" and kg_result.get("confidence", 0) >= 0.8:
+                            # Translate sex values for NWB compliance
+                            if field_name.lower() == "sex":
+                                sex_translation = {
+                                    "male": "M",
+                                    "female": "F",
+                                    "unknown": "U",
+                                    "other": "O",
+                                    "hermaphrodite": "XX",
+                                    "hermaphrodite (xx)": "XX",
+                                    "hermaphrodite (xo)": "XO",
+                                }
+                                normalized_lower = kg_result["normalized_value"].lower()
+                                if normalized_lower in sex_translation:
+                                    original_value = kg_result["normalized_value"]
+                                    kg_result["normalized_value"] = sex_translation[normalized_lower]
+                                    state.add_log(
+                                        LogLevel.INFO,
+                                        f"Translated sex value: '{original_value}' → '{kg_result['normalized_value']}' for NWB compliance",
+                                    )
+
+                            state.add_log(
+                                LogLevel.INFO,
+                                f"KG validated {field_name}: '{raw_value}' → '{kg_result['normalized_value']}' "
+                                f"(confidence: {kg_result['confidence'] * 100:.0f}%, term: {kg_result.get('ontology_term_id', 'N/A')})",
+                            )
+
+                            # Create ParsedField with KG result
+                            parsed_field = ParsedField(
+                                field_name=field_name,
+                                raw_input=raw_value,
+                                parsed_value=kg_result["normalized_value"],
+                                confidence=kg_result["confidence"] * 100,  # Convert to percentage
+                                reasoning=f"Ontology validation: {kg_result.get('ontology_term_id', 'N/A')}",
+                                nwb_compliant=True,
+                                needs_review=kg_result.get("action_required", False),
+                                was_explicit=field_data.get("extraction_type", "explicit") == "explicit",
+                            )
+                            parsed_fields.append(parsed_field)
+
+                            # Store observation in Neo4j
+                            try:
+                                # Use extracted subject_id from parsed fields (user-provided metadata)
+                                source_file = state.input_path or "unknown"
+                                subject_id = extracted_subject_id
+
+                                obs_result = await self.kg_wrapper.store_observation(
+                                    field_path=field_path,
+                                    raw_value=raw_value,
+                                    normalized_value=kg_result["normalized_value"],
+                                    ontology_term_id=kg_result.get("ontology_term_id"),
+                                    source_type="user",
+                                    source_file=source_file,
+                                    confidence=kg_result["confidence"],
+                                    provenance={
+                                        "user_id": getattr(state, "user_id", "unknown"),
+                                        "session_id": getattr(state, "session_id", "unknown"),
+                                        "subject_id": subject_id,  # Fixed: Added for accurate inference queries
+                                    },
+                                )
+                                # Check if storage failed
+                                if obs_result.get("status") == "error":
+                                    state.add_log(
+                                        LogLevel.WARNING,
+                                        f"Failed to store observation: {obs_result.get('message', 'Unknown error')}",
+                                    )
+                            except Exception as obs_error:
+                                state.add_log(LogLevel.WARNING, f"Failed to store observation: {obs_error}")
+
+                            # Skip to next field - already processed with KG
+                            continue
+
+                    except Exception as kg_error:
+                        state.add_log(
+                            LogLevel.WARNING, f"KG validation failed for {field_name}, using LLM result: {kg_error}"
+                        )
+                        # Fall through to LLM processing
+
+                # Process with LLM result (either KG unavailable or failed)
                 # Post-process date fields to ensure ISO format
-                normalized_value = self._post_process_date_field(
-                    field_data["field_name"], field_data["normalized_value"], state
-                )
+                normalized_value = self._post_process_date_field(field_name, llm_normalized_value, state)
 
                 # Extract the extraction_type and convert to was_explicit boolean
                 extraction_type = field_data.get("extraction_type", "explicit")
@@ -276,6 +431,130 @@ For each field found, provide:
                     f"Parsed {parsed_field.field_name}: '{parsed_field.raw_input}' → '{parsed_field.parsed_value}' "
                     f"(confidence: {parsed_field.confidence}%)",
                 )
+
+            # === Phase 1: Historical Inference Enhancement ===
+            # After LLM extraction, enhance results with historical inference
+            # Check for subject_id to enable inference
+            subject_id = self._get_field_value(parsed_fields, "subject_id")
+            if subject_id and self.kg_wrapper:
+                state.add_log(
+                    LogLevel.INFO, f"Enhancing metadata with historical inference for subject_id={subject_id}"
+                )
+
+                # Stable fields that don't change across sessions for a subject
+                stable_fields = [
+                    "species",  # Ontology-governed
+                    "sex",  # Ontology-governed
+                    "strain",  # Stable for lab animals
+                    "genotype",  # Stable genetic info
+                    "date_of_birth",  # Never changes
+                    "experimenter",  # Usually same person
+                    "institution",  # Rarely changes
+                    "lab",  # Very stable
+                ]
+
+                for field_name in stable_fields:
+                    try:
+                        # Always call inference to get historical context
+                        field_path = (
+                            f"subject.{field_name}"
+                            if field_name not in ["experimenter", "institution", "lab"]
+                            else field_name
+                        )
+                        inference_result = await self.kg_wrapper.infer_value(
+                            field_path=field_path,
+                            subject_id=subject_id,
+                            source_file=state.input_path or "unknown.nwb",
+                        )
+
+                        if not inference_result.get("has_suggestion"):
+                            continue  # No historical data, keep LLM result as-is
+
+                        # Get LLM extraction result for this field
+                        llm_field = self._get_field(parsed_fields, field_name)
+                        kg_value = inference_result["suggested_value"]
+                        kg_confidence = inference_result["confidence"]
+
+                        # Scenario 1: LLM found + KG confirms (values match)
+                        if llm_field and self._values_match(llm_field.parsed_value, kg_value):
+                            # Boost confidence
+                            boosted_confidence = min(95.0, max(llm_field.confidence, kg_confidence * 100) + 15.0)
+                            llm_field.confidence = boosted_confidence
+                            llm_field.badge = "CONFIRMED"
+                            llm_field.historical_evidence = {
+                                "evidence_count": inference_result.get("evidence_count", 0),
+                                "reasoning": inference_result.get("reasoning", ""),
+                                "kg_confidence": kg_confidence,
+                                "contributing_sessions": inference_result.get("contributing_sessions", []),
+                                "subject_id": inference_result.get("subject_id", "unknown"),
+                            }
+                            # Track metrics
+                            state.inference_metrics["confirmed_count"] += 1
+                            state.inference_metrics["suggestions_shown"] += 1
+                            state.add_log(
+                                LogLevel.INFO,
+                                f"✓ {field_name} confirmed by history: {kg_value} "
+                                f"(confidence boosted to {boosted_confidence:.0f}%)",
+                            )
+
+                        # Scenario 2: LLM didn't find + KG suggests
+                        elif not llm_field:
+                            new_field = ParsedField(
+                                field_name=field_name,
+                                raw_input=f"<inferred from {inference_result.get('evidence_count', 0)} prior observations>",
+                                parsed_value=kg_value,
+                                confidence=kg_confidence * 100,  # Convert to percentage
+                                reasoning=inference_result.get("reasoning", "Inferred from historical observations"),
+                                nwb_compliant=True,
+                                needs_review=inference_result.get("requires_confirmation", True),
+                                was_explicit=False,
+                                field_path=field_path,
+                                extraction_method="historical_inference",
+                                badge="HISTORICAL",
+                                historical_evidence={
+                                    "evidence_count": inference_result.get("evidence_count", 0),
+                                    "reasoning": inference_result.get("reasoning", ""),
+                                    "ontology_term_id": inference_result.get("ontology_term_id"),
+                                    "contributing_sessions": inference_result.get("contributing_sessions", []),
+                                    "subject_id": inference_result.get("subject_id", "unknown"),
+                                },
+                            )
+                            parsed_fields.append(new_field)
+                            # Track metrics
+                            state.inference_metrics["historical_count"] += 1
+                            state.inference_metrics["suggestions_shown"] += 1
+                            state.add_log(
+                                LogLevel.INFO,
+                                f"📚 {field_name} suggested from history: {kg_value} "
+                                f"({inference_result.get('evidence_count', 0)} prior observations)",
+                            )
+
+                        # Scenario 3: LLM found + KG conflicts (values don't match)
+                        elif llm_field and not self._values_match(llm_field.parsed_value, kg_value):
+                            # Reduce confidence due to conflict
+                            llm_field.confidence = max(50.0, llm_field.confidence - 5.0)
+                            llm_field.badge = "CONFLICTING"
+                            llm_field.historical_evidence = {
+                                "evidence_count": inference_result.get("evidence_count", 0),
+                                "conflicting_value": kg_value,
+                                "reasoning": f"LLM extracted '{llm_field.parsed_value}' but history suggests '{kg_value}'",
+                                "kg_confidence": kg_confidence,
+                                "contributing_sessions": inference_result.get("contributing_sessions", []),
+                                "subject_id": inference_result.get("subject_id", "unknown"),
+                            }
+                            # Track metrics
+                            state.inference_metrics["conflicting_count"] += 1
+                            state.inference_metrics["suggestions_shown"] += 1
+                            state.add_log(
+                                LogLevel.WARNING,
+                                f"⚠️ {field_name} conflict: LLM='{llm_field.parsed_value}' vs History='{kg_value}' "
+                                f"- please review",
+                            )
+
+                    except Exception as e:
+                        # Graceful degradation - log error but don't fail batch extraction
+                        state.add_log(LogLevel.WARNING, f"Inference failed for {field_name}: {e}")
+                        continue
 
             return parsed_fields
 
@@ -431,23 +710,104 @@ Provide:
             else:
                 indicator = "❓"
 
-            # Determine provenance type based on explicit vs inferred (semantic)
-            if field.was_explicit:
-                provenance_type = "ai-parsed"
-                provenance_label = "AI"
+            # Check if this field has a special badge type from historical inference or KG validation
+            if field.badge and field.badge in ["HISTORICAL", "CONFIRMED", "CONFLICTING"]:
+                # Use special badge rendering for historical/KG-based fields
+                import os
+                from datetime import datetime
+
+                badge_class = field.badge.lower()
+                badge_config = {
+                    "HISTORICAL": {
+                        "label": "Historical",
+                        "tooltip_header": "Historical Metadata",
+                        "source": "knowledge graph based historical-inference",
+                    },
+                    "CONFIRMED": {
+                        "label": "Confirmed",
+                        "tooltip_header": "Confirmed Metadata",
+                        "source": "knowledge graph based validation - confirmed",
+                    },
+                    "CONFLICTING": {
+                        "label": "Conflicting",
+                        "tooltip_header": "Conflicting Metadata",
+                        "source": "knowledge graph based validation - conflicting",
+                    },
+                }
+                config = badge_config[field.badge]
+                evidence_count = field.historical_evidence.get("evidence_count", 0) if field.historical_evidence else 0
+                contributing_sessions = (
+                    field.historical_evidence.get("contributing_sessions", [])[:3] if field.historical_evidence else []
+                )
+                subject_id = (
+                    field.historical_evidence.get("subject_id", "unknown") if field.historical_evidence else "unknown"
+                )
+
+                # Build origin text with subject_id
+                origin_text = f"Inferred from {evidence_count} prior session(s) ({subject_id})"
+
+                # Build sessions list for tooltip (filename + timestamp)
+                sessions_html = ""
+                if contributing_sessions:
+                    sessions_html = (
+                        '<ul style="margin: 4px 0 0 0; padding-left: 20px; font-size: 11px; list-style-type: disc;">'
+                    )
+                    for session in contributing_sessions:
+                        source_file = session.get("source_file", "Unknown")
+                        # Extract just the filename from the path
+                        filename = os.path.basename(source_file)
+                        # Format timestamp
+                        created_at = session.get("created_at", "")
+                        if created_at:
+                            # Parse ISO timestamp and format as "YYYY-MM-DD HH:MM"
+                            try:
+                                dt = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+                                timestamp_str = dt.strftime("%Y-%m-%d %H:%M")
+                            except Exception:
+                                timestamp_str = created_at
+                        else:
+                            timestamp_str = "Unknown time"
+                        sessions_html += f"<li>{filename} ({timestamp_str})</li>"
+                    if evidence_count > 3:
+                        sessions_html += f"<li>...and {evidence_count - 3} more</li>"
+                    sessions_html += "</ul>"
+
+                # Generate tooltip content matching AI badge format
+                tooltip_content = f"""
+                    <div class="provenance-tooltip-item">
+                        <span class="provenance-tooltip-label">Source:</span>{config["source"]}
+                    </div>
+                    <div class="provenance-tooltip-item">
+                        <span class="provenance-tooltip-label">Confidence:</span>{int(field.confidence)}%
+                    </div>
+                    <div class="provenance-tooltip-item">
+                        <span class="provenance-tooltip-label">Origin:</span>{origin_text}
+                    </div>
+                    {sessions_html}
+                """
+
+                provenance_badge = f"""<span class="provenance-badge {badge_class}">{config["label"]}<div class="provenance-tooltip"><div class="provenance-tooltip-header">{config["tooltip_header"]}</div>{tooltip_content}</div></span>"""
             else:
-                provenance_type = "ai-inferred"
-                provenance_label = "Inferred"
+                # Original logic for regular AI parsed/inferred badges
+                # Determine provenance type based on explicit vs inferred (semantic)
+                if field.was_explicit:
+                    provenance_type = "ai-parsed"
+                    provenance_label = "AI"
+                else:
+                    provenance_type = "ai-inferred"
+                    provenance_label = "Inferred"
 
-            # Create provenance badge HTML
-            needs_review = field.confidence < 80
-            needs_review_class = "needs-review" if needs_review else ""
+                # Create provenance badge HTML
+                needs_review = field.confidence < 80
+                needs_review_class = "needs-review" if needs_review else ""
 
-            # Escape quotes in source text for HTML attribute
-            field.reasoning.replace('"', "&quot;").replace("'", "&#39;") if field.reasoning else ""
-            raw_input_escaped = field.raw_input.replace('"', "&quot;").replace("'", "&#39;") if field.raw_input else ""
+                # Escape quotes in source text for HTML attribute
+                field.reasoning.replace('"', "&quot;").replace("'", "&#39;") if field.reasoning else ""
+                raw_input_escaped = (
+                    field.raw_input.replace('"', "&quot;").replace("'", "&#39;") if field.raw_input else ""
+                )
 
-            provenance_badge = f"""<span class="provenance-badge {provenance_type} {needs_review_class}" title="Source: {provenance_type} | Confidence: {field.confidence}% | From: {raw_input_escaped}">{provenance_label}<div class="provenance-tooltip"><div class="provenance-tooltip-header">{provenance_label} Metadata</div><div class="provenance-tooltip-item"><span class="provenance-tooltip-label">Source:</span>{provenance_type}</div><div class="provenance-tooltip-item"><span class="provenance-tooltip-label">Confidence:</span>{field.confidence}%</div><div class="provenance-tooltip-item"><span class="provenance-tooltip-label">Origin:</span>AI parsed from: '{raw_input_escaped[:100]}'</div>{'<div class="provenance-tooltip-item" style="color: #fbbf24;">⚠️ Needs Review</div>' if needs_review else ""}</div></span>"""
+                provenance_badge = f"""<span class="provenance-badge {provenance_type} {needs_review_class}" title="Source: {provenance_type} | Confidence: {field.confidence}% | From: {raw_input_escaped}">{provenance_label}<div class="provenance-tooltip"><div class="provenance-tooltip-header">{provenance_label} Metadata</div><div class="provenance-tooltip-item"><span class="provenance-tooltip-label">Source:</span>{provenance_type}</div><div class="provenance-tooltip-item"><span class="provenance-tooltip-label">Confidence:</span>{field.confidence}%</div><div class="provenance-tooltip-item"><span class="provenance-tooltip-label">Origin:</span>AI parsed from: '{raw_input_escaped[:100]}'</div>{'<div class="provenance-tooltip-item" style="color: #fbbf24;">⚠️ Needs Review</div>' if needs_review else ""}</div></span>"""
 
             # Format the field with provenance badge
             lines.append(
@@ -487,7 +847,7 @@ Provide:
                 all_fields = set(existing_metadata.keys()) | pending_field_names | parsed_field_names
 
                 # Import NWBDANDISchema to check all fields
-                from agents.nwb_dandi_schema import FieldRequirementLevel, NWBDANDISchema
+                from agentic_neurodata_conversion.agents.metadata.schema import FieldRequirementLevel, NWBDANDISchema
 
                 # Get all NWB fields
                 all_nwb_fields = NWBDANDISchema.get_all_fields()
@@ -500,29 +860,30 @@ Provide:
                 print(f"DEBUG: ALL fields combined: {all_fields}")
 
                 # Categorize missing fields by requirement level
-                for field in all_nwb_fields:
-                    if field.name not in all_fields:
-                        if field.requirement_level == FieldRequirementLevel.REQUIRED:
-                            missing_required.append(field)
-                            print(f"DEBUG: Missing REQUIRED field: {field.name}")
+                schema_field: MetadataFieldSchema
+                for schema_field in all_nwb_fields:
+                    if schema_field.name not in all_fields:
+                        if schema_field.requirement_level == FieldRequirementLevel.REQUIRED:
+                            missing_required.append(schema_field)
+                            print(f"DEBUG: Missing REQUIRED field: {schema_field.name}")
                         else:
-                            missing_optional.append(field)
-                            print(f"DEBUG: Missing optional field: {field.name}")
+                            missing_optional.append(schema_field)
+                            print(f"DEBUG: Missing optional field: {schema_field.name}")
 
                 # Display missing required fields first
                 if missing_required:
                     print(f"DEBUG: Found {len(missing_required)} missing REQUIRED fields")
                     lines.append("\n**⚠️ Still missing DANDI-required metadata:**")
-                    for field in missing_required:
-                        lines.append(f"- **{field.name}** (REQUIRED): {field.description}")
+                    for schema_field in missing_required:
+                        lines.append(f"- **{schema_field.name}** (REQUIRED): {schema_field.description}")
                     lines.append("")
 
                 # Display missing optional fields
                 if missing_optional:
                     print(f"DEBUG: Found {len(missing_optional)} missing optional fields")
                     lines.append("\n**📋 Optional metadata you can add:**")
-                    for field in missing_optional:
-                        lines.append(f"- **{field.name}**: {field.description}")
+                    for schema_field in missing_optional:
+                        lines.append(f"- **{schema_field.name}**: {schema_field.description}")
                     lines.append("")
 
                 if not missing_required and not missing_optional:
@@ -783,3 +1144,46 @@ Provide:
             reasoning="Pattern-based normalization (no LLM)",
             nwb_compliant=True,
         )
+
+    def _values_match(self, value1: Any, value2: Any) -> bool:
+        """Check if two values are semantically equivalent.
+
+        Args:
+            value1: First value to compare
+            value2: Second value to compare
+
+        Returns:
+            True if values match (case-insensitive, whitespace-normalized)
+        """
+        # Normalize for comparison (case-insensitive, strip whitespace)
+        str1 = str(value1).strip().lower()
+        str2 = str(value2).strip().lower()
+        return str1 == str2
+
+    def _get_field(self, fields: list[ParsedField], name: str) -> ParsedField | None:
+        """Get field by name from parsed fields list.
+
+        Args:
+            fields: List of ParsedField objects
+            name: Field name to search for
+
+        Returns:
+            ParsedField if found, None otherwise
+        """
+        for field in fields:
+            if field.field_name == name:
+                return field
+        return None
+
+    def _get_field_value(self, fields: list[ParsedField], name: str) -> Any:
+        """Get field value by name.
+
+        Args:
+            fields: List of ParsedField objects
+            name: Field name to search for
+
+        Returns:
+            Field value if found, None otherwise
+        """
+        field = self._get_field(fields, name)
+        return field.parsed_value if field else None
