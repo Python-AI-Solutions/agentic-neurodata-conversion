@@ -42,6 +42,9 @@ python-dotenv = ">=1.0.0"
 neo4j = ">=5.15.0,<6"
 
 [tasks]
+# Quick start task
+start = "python3 scripts/startup/start_app.py"
+
 # Development tasks
 dev = "uvicorn agentic_neurodata_conversion.api.main:app --reload --host 0.0.0.0 --port 8000"
 

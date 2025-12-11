@@ -16,6 +16,7 @@ Usage:
 
 import os
 import signal
+import socket
 import subprocess  # nosec B404 - subprocess needed for process management in dev tool
 import sys
 import time
@@ -179,6 +180,55 @@ def setup_env_file() -> bool:
     return True
 
 
+def is_port_in_use(port: int) -> bool:
+    """Return True if the port is accepting connections."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(0.5)
+        return sock.connect_ex(("localhost", port)) == 0
+
+
+def perform_cleanup_if_needed() -> None:
+    """Offer cleanup only when there is something to clean."""
+    import tempfile
+
+    temp_dir = Path(tempfile.gettempdir())
+    upload_dir = temp_dir / "nwb_uploads"
+    conversion_dir = temp_dir / "nwb_conversions"
+
+    ports_in_use = [port for port in (8000, 3000) if is_port_in_use(port)]
+    dirs_to_clean = [path for path in (upload_dir, conversion_dir) if path.exists()]
+
+    if not ports_in_use and not dirs_to_clean:
+        print_header("Startup Cleanup")
+        print_info("No ports or temp directories need cleanup; skipping.")
+        return
+
+    print_header("Startup Cleanup")
+
+    cleanup_targets: list[str] = []
+    if ports_in_use:
+        cleanup_targets.append(f"stop processes on ports {', '.join(str(p) for p in ports_in_use)}")
+    if dirs_to_clean:
+        cleanup_targets.append(f"delete temp dirs: {', '.join(str(p) for p in dirs_to_clean)}")
+
+    print_info("About to " + " and ".join(cleanup_targets) + ".")
+    response = input(f"{Colors.YELLOW}Proceed with cleanup? (Y/n): {Colors.END}").strip().lower()
+
+    if response in ("", "y", "yes"):
+        if ports_in_use:
+            print_info(f"Checking for processes on ports {', '.join(str(p) for p in ports_in_use)}...")
+            for port in ports_in_use:
+                kill_process_on_port(port)
+            time.sleep(2)  # Give OS time to release ports
+
+        if dirs_to_clean:
+            print_header("Cleaning Temp Directories")
+            clean_temp_directories()
+            time.sleep(1)
+    else:
+        print_warning("Skipped cleanup; existing processes or temp data may interfere.")
+
+
 def wait_for_server(url: str, timeout: int = 30) -> bool:
     """Wait for server to be available."""
     import urllib.request
@@ -312,8 +362,8 @@ def main() -> None:
 
     print(f"{Colors.BOLD}This script will:{Colors.END}")
     print("  1. Configure your environment (.env file)")
-    print("  2. Clean up old processes")
-    print("  3. Clean temporary directories")
+    print("  2. Optionally stop anything on ports 8000 and 3000 (uvicorn/http.server)")
+    print("  3. Optionally delete temp dirs: /tmp/nwb_uploads and /tmp/nwb_conversions")
     print("  4. Start backend server (FastAPI + Uvicorn)")
     print("  5. Start frontend server (HTTP server)")
     print("  6. Display application URLs")
@@ -326,22 +376,8 @@ def main() -> None:
         # Step 1: Setup environment
         setup_env_file()
 
-        # Step 2: Kill old processes
-        print_header("Cleaning Up Old Processes")
-        print_info("Checking for processes on ports 8000 and 3000...")
-
-        killed_8000 = kill_process_on_port(8000)
-        killed_3000 = kill_process_on_port(3000)
-
-        if not killed_8000 and not killed_3000:
-            print_info("No old processes found")
-
-        time.sleep(2)  # Give OS time to release ports
-
-        # Step 3: Clean temp directories
-        print_header("Cleaning Temp Directories")
-        clean_temp_directories()
-        time.sleep(1)
+        # Step 2 & 3: Kill old processes and clean temp directories (optional)
+        perform_cleanup_if_needed()
 
         # Step 4: Start backend
         backend_process = start_backend()
