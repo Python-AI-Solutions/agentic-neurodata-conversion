@@ -25,7 +25,10 @@ def get_observation_service() -> ObservationService:
     """Dependency to get observation service."""
     settings = get_settings()
     neo4j_conn = get_neo4j_connection(
-        uri=settings.neo4j_uri, user=settings.neo4j_user, password=settings.neo4j_password
+        uri=settings.neo4j_uri,
+        user=settings.neo4j_user,
+        password=settings.neo4j_password,
+        database=settings.neo4j_database,
     )
     return ObservationService(neo4j_conn)
 

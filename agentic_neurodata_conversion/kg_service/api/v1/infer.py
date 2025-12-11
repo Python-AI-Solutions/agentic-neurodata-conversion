@@ -67,7 +67,10 @@ def get_inference_engine() -> InferenceEngine:
     """
     settings = get_settings()
     neo4j_conn = get_neo4j_connection(
-        uri=settings.neo4j_uri, user=settings.neo4j_user, password=settings.neo4j_password
+        uri=settings.neo4j_uri,
+        user=settings.neo4j_user,
+        password=settings.neo4j_password,
+        database=settings.neo4j_database,
     )
     return InferenceEngine(neo4j_conn)
 

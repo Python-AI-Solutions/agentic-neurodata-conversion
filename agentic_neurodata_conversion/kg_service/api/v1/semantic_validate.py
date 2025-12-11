@@ -20,7 +20,10 @@ def get_semantic_reasoner_instance() -> SemanticReasoner:
     """Dependency to get SemanticReasoner instance."""
     settings = get_settings()
     neo4j_conn = get_neo4j_connection(
-        uri=settings.neo4j_uri, user=settings.neo4j_user, password=settings.neo4j_password
+        uri=settings.neo4j_uri,
+        user=settings.neo4j_user,
+        password=settings.neo4j_password,
+        database=settings.neo4j_database,
     )
     return get_semantic_reasoner(neo4j_conn)
 

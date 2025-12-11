@@ -23,7 +23,10 @@ async def lifespan(app: FastAPI):
     # Startup
     settings = get_settings()
     neo4j_conn = get_neo4j_connection(
-        uri=settings.neo4j_uri, user=settings.neo4j_user, password=settings.neo4j_password
+        uri=settings.neo4j_uri,
+        user=settings.neo4j_user,
+        password=settings.neo4j_password,
+        database=settings.neo4j_database,
     )
 
     try:
@@ -66,7 +69,10 @@ async def health_check():
     """Health check endpoint."""
     settings = get_settings()
     neo4j_conn = get_neo4j_connection(
-        uri=settings.neo4j_uri, user=settings.neo4j_user, password=settings.neo4j_password
+        uri=settings.neo4j_uri,
+        user=settings.neo4j_user,
+        password=settings.neo4j_password,
+        database=settings.neo4j_database,
     )
 
     neo4j_healthy = await neo4j_conn.health_check()

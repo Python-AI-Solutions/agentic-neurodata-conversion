@@ -23,12 +23,12 @@ async def test_verify_ontology_terms_success():
         side_effect=[
             # First query: count by ontology
             [
-                {"ontology": "NCBITaxonomy", "term_count": 20},
+                {"ontology": "NCBITaxonomy", "term_count": 72},
                 {"ontology": "PATO", "term_count": 4},
                 {"ontology": "UBERON", "term_count": 20},
             ],
             # Second query: total count
-            [{"total": 44}],
+            [{"total": 96}],
         ]
     )
 
@@ -47,11 +47,11 @@ async def test_verify_ontology_terms_wrong_counts():
         side_effect=[
             # Wrong counts
             [
-                {"ontology": "NCBITaxonomy", "term_count": 15},  # Should be 20
+                {"ontology": "NCBITaxonomy", "term_count": 20},  # Should be 72
                 {"ontology": "PATO", "term_count": 4},
                 {"ontology": "UBERON", "term_count": 20},
             ],
-            [{"total": 39}],  # Wrong total
+            [{"total": 44}],  # Wrong total (should be 96)
         ]
     )
 

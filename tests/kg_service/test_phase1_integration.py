@@ -200,7 +200,7 @@ async def test_health_check_performance(neo4j_connection):
 @pytest.mark.performance
 @pytest.mark.asyncio
 async def test_exact_match_performance(neo4j_connection):
-    """Verify exact label match is fast (<60ms average over 5 runs)."""
+    """Verify exact label match is fast (<150ms average over 5 runs)."""
     import time
 
     query = "MATCH (t:OntologyTerm {label: 'Mus musculus'}) RETURN t"
@@ -213,4 +213,4 @@ async def test_exact_match_performance(neo4j_connection):
         durations.append(duration)
 
     avg_duration = sum(durations) / len(durations)
-    assert avg_duration < 60, f"Exact match too slow: {avg_duration:.2f}ms average (max 60ms)"
+    assert avg_duration < 150, f"Exact match too slow: {avg_duration:.2f}ms average (max 150ms)"

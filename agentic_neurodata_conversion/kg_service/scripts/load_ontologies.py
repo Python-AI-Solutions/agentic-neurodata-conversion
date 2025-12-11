@@ -10,8 +10,8 @@ Usage:
     pixi run python kg_service/scripts/load_ontologies.py
 
 Expected output:
-    ✅ Successfully loaded 44 ontology terms
-    - 20 from NCBITaxonomy (species)
+    ✅ Successfully loaded 96 ontology terms
+    - 72 from NCBITaxonomy (species)
     - 20 from UBERON (brain regions)
     - 4 from PATO (sex terms)
 """
@@ -79,7 +79,7 @@ async def load_ontology_file(conn, file_path: Path) -> int:
     Example:
         >>> count = await load_ontology_file(conn, Path("ncbi_taxonomy_subset.json"))
         >>> print(f"Loaded {count} terms")
-        Loaded 20 terms
+        Loaded 72 terms
     """
     logger.info(f"Loading {file_path.name}...")
 
