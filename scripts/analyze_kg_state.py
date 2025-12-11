@@ -25,13 +25,13 @@ Usage Examples:
 import argparse
 import asyncio
 import json
-import os
 import sys
 import time
 from collections import defaultdict
 from datetime import datetime
 from typing import Any
 
+from agentic_neurodata_conversion.kg_service.config import get_settings
 from agentic_neurodata_conversion.kg_service.db.neo4j_connection import get_neo4j_connection
 
 
@@ -54,10 +54,11 @@ class KGAnalyzer:
 
     async def connect(self):
         """Connect to Neo4j database."""
-        neo4j_password = os.getenv("NEO4J_PASSWORD")
+        settings = get_settings()
+        neo4j_password = settings.graph_db.password
         if not neo4j_password:
-            print("ERROR: NEO4J_PASSWORD environment variable not set")
-            print("Usage: NEO4J_PASSWORD=your-password python analyze_kg_state.py")
+            print("ERROR: GRAPH_DB__PASSWORD is not set")
+            print("Fix: set GRAPH_DB__PASSWORD (or legacy NEO4J_PASSWORD) in your `.env`")
             sys.exit(1)
 
         self.conn = get_neo4j_connection(uri=self.args.uri, user=self.args.user, password=neo4j_password)

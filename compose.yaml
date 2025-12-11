@@ -1,0 +1,43 @@
+name: agentic-neurodata-conversion
+
+services:
+  neo4j:
+    image: neo4j:5-community
+    ports:
+      - "${NEO4J_HTTP_PORT:-7474}:7474"
+      - "${NEO4J_BOLT_PORT:-7687}:7687"
+    environment:
+      # Must be set in `.env` (copied from `.env.example`)
+      # Neo4j Docker entrypoint expects `NEO4J_AUTH=neo4j/<password>` for initial auth.
+      # Avoid customizing the initial username here.
+      NEO4J_AUTH: "neo4j/${GRAPH_DB__PASSWORD:?GRAPH_DB__PASSWORD is required}"
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      # Use `$$` so docker compose does not try to interpolate `$...` on the host.
+      # Neo4j's docker image treats most `NEO4J_*` env vars as config keys; do not pass `NEO4J_PASSWORD`.
+      test: ["CMD-SHELL", "pass=$$(printf %s \"$$NEO4J_AUTH\" | cut -d/ -f2-); cypher-shell -a bolt://localhost:7687 -u neo4j -p \"$$pass\" \"RETURN 1;\" >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 10s
+      retries: 60
+
+  kg-seed:
+    build:
+      context: .
+      dockerfile: docker/kg-service.Dockerfile
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    env_file:
+      - .env
+      - .env.docker
+    command:
+      [
+        "bash",
+        "-lc",
+        "python agentic_neurodata_conversion/kg_service/scripts/load_ontologies.py && python agentic_neurodata_conversion/kg_service/scripts/load_schema_fields.py",
+      ]
+    restart: "on-failure"
+
+volumes:
+  neo4j_data:

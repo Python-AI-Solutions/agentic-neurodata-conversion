@@ -224,9 +224,11 @@ async def test_main_all_checks_pass(
     """Test main function when all checks pass."""
     # Mock settings
     mock_settings = Mock()
-    mock_settings.neo4j_uri = "bolt://localhost:7687"
-    mock_settings.neo4j_user = "neo4j"
-    mock_settings.neo4j_password = "password"
+    mock_settings.graph_db = Mock()
+    mock_settings.graph_db.uri = "bolt://localhost:7687"
+    mock_settings.graph_db.user = "neo4j"
+    mock_settings.graph_db.password = "password"
+    mock_settings.graph_db.database = "neo4j"
     mock_get_settings.return_value = mock_settings
 
     # Mock connection with successful health check
@@ -266,9 +268,11 @@ async def test_main_health_check_fails(mock_get_conn, mock_get_settings):
     """Test main function when health check fails."""
     # Mock settings
     mock_settings = Mock()
-    mock_settings.neo4j_uri = "bolt://localhost:7687"
-    mock_settings.neo4j_user = "neo4j"
-    mock_settings.neo4j_password = "password"
+    mock_settings.graph_db = Mock()
+    mock_settings.graph_db.uri = "bolt://localhost:7687"
+    mock_settings.graph_db.user = "neo4j"
+    mock_settings.graph_db.password = "password"
+    mock_settings.graph_db.database = "neo4j"
     mock_get_settings.return_value = mock_settings
 
     # Mock connection with failed health check
@@ -306,9 +310,11 @@ async def test_main_some_checks_fail(
     """Test main function when some checks fail."""
     # Mock settings
     mock_settings = Mock()
-    mock_settings.neo4j_uri = "bolt://localhost:7687"
-    mock_settings.neo4j_user = "neo4j"
-    mock_settings.neo4j_password = "password"
+    mock_settings.graph_db = Mock()
+    mock_settings.graph_db.uri = "bolt://localhost:7687"
+    mock_settings.graph_db.user = "neo4j"
+    mock_settings.graph_db.password = "password"
+    mock_settings.graph_db.database = "neo4j"
     mock_get_settings.return_value = mock_settings
 
     # Mock connection
@@ -344,9 +350,11 @@ async def test_main_connection_cleanup_on_error(mock_get_conn, mock_get_settings
     """Test main function cleans up connection on error."""
     # Mock settings
     mock_settings = Mock()
-    mock_settings.neo4j_uri = "bolt://localhost:7687"
-    mock_settings.neo4j_user = "neo4j"
-    mock_settings.neo4j_password = "password"
+    mock_settings.graph_db = Mock()
+    mock_settings.graph_db.uri = "bolt://localhost:7687"
+    mock_settings.graph_db.user = "neo4j"
+    mock_settings.graph_db.password = "password"
+    mock_settings.graph_db.database = "neo4j"
     mock_get_settings.return_value = mock_settings
 
     # Mock connection that raises error during health check

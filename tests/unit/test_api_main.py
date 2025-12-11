@@ -470,7 +470,7 @@ class TestStartupValidation:
 
     def test_startup_validates_api_key_missing(self):
         """Test startup validation detects missing API key."""
-        with patch.dict(os.environ, {}, clear=True), pytest.raises(ValueError, match="ANTHROPIC_API_KEY"):
+        with patch.dict(os.environ, {}, clear=True), pytest.raises(ValueError, match="CORE__ANTHROPIC_API_KEY"):
             import asyncio
 
             from agentic_neurodata_conversion.api.main import startup_event
@@ -480,7 +480,7 @@ class TestStartupValidation:
     def test_startup_validates_api_key_format(self):
         """Test startup validation checks API key format."""
         # This test just ensures the validation logic exists
-        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "invalid_key"}):
+        with patch.dict(os.environ, {"CORE__ANTHROPIC_API_KEY": "invalid_key"}):
             # Should log warning but not fail
             pass
 

@@ -179,7 +179,14 @@ async def main() -> None:
     settings = get_settings()
 
     # Connect to Neo4j
-    conn = get_neo4j_connection(uri=settings.neo4j_uri, user=settings.neo4j_user, password=settings.neo4j_password)
+    if not settings.graph_db.password:
+        raise ValueError("GRAPH_DB__PASSWORD/NEO4J_PASSWORD is required to run verification")
+    conn = get_neo4j_connection(
+        uri=settings.graph_db.uri,
+        user=settings.graph_db.user,
+        password=settings.graph_db.password,
+        database=settings.graph_db.database,
+    )
     await conn.connect()
 
     try:

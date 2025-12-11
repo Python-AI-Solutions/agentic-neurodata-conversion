@@ -3,29 +3,35 @@
 Requires Neo4j running with test data loaded.
 """
 
-import os
-
 import pytest
 
+from agentic_neurodata_conversion.config import ConfigError
 from agentic_neurodata_conversion.kg_service.db.neo4j_connection import (
     get_neo4j_connection,
     reset_neo4j_connection,
 )
+from agentic_neurodata_conversion.kg_service.config import get_settings
 from agentic_neurodata_conversion.kg_service.services.semantic_reasoner import (
     get_semantic_reasoner,
     reset_semantic_reasoner,
 )
+from tests.kg_service._neo4j_availability import neo4j_http_available
 
 
 @pytest.fixture
 async def neo4j_conn():
     """Create real Neo4j connection for integration tests."""
-    neo4j_uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
-    neo4j_user = os.getenv("NEO4J_USER", "neo4j")
-    neo4j_password = os.getenv("NEO4J_PASSWORD")
+    settings = get_settings()
+    neo4j_uri = settings.graph_db.uri
+    neo4j_user = settings.graph_db.user
+    neo4j_password = settings.graph_db.password
 
-    if not neo4j_password:
-        pytest.skip("NEO4J_PASSWORD not set - skipping integration tests")
+    if not neo4j_http_available(settings.compose.neo4j_http_port):
+        pytest.skip("Neo4j not running on localhost; skipping Neo4j integration tests")
+    try:
+        await settings.require_graph_db(probe=False)
+    except ConfigError as e:
+        pytest.fail(str(e))
 
     reset_neo4j_connection()
     conn = get_neo4j_connection(neo4j_uri, neo4j_user, neo4j_password)

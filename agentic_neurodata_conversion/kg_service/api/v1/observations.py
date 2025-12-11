@@ -24,11 +24,13 @@ router = APIRouter(prefix="/api/v1", tags=["observations"])
 def get_observation_service() -> ObservationService:
     """Dependency to get observation service."""
     settings = get_settings()
+    if not settings.graph_db.password:
+        raise HTTPException(status_code=503, detail="KG service not configured: missing GRAPH_DB__PASSWORD/NEO4J_PASSWORD")
     neo4j_conn = get_neo4j_connection(
-        uri=settings.neo4j_uri,
-        user=settings.neo4j_user,
-        password=settings.neo4j_password,
-        database=settings.neo4j_database,
+        uri=settings.graph_db.uri,
+        user=settings.graph_db.user,
+        password=settings.graph_db.password,
+        database=settings.graph_db.database,
     )
     return ObservationService(neo4j_conn)
 

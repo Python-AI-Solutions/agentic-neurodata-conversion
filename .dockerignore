@@ -1,0 +1,16 @@
+.git
+.gitignore
+.DS_Store
+.pixi
+__pycache__
+.mypy_cache
+.pytest_cache
+.ruff_cache
+.hypothesis
+outputs
+test_output
+test_data
+frontend/node_modules
+.env
+.env.docker
+.env.local

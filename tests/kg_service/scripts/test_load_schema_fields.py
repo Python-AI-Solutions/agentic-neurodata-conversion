@@ -243,19 +243,22 @@ async def test_load_schema_fields_empty_examples(tmp_path):
 @pytest.mark.asyncio
 @patch("agentic_neurodata_conversion.kg_service.scripts.load_schema_fields.get_settings")
 @patch("agentic_neurodata_conversion.kg_service.scripts.load_schema_fields.get_neo4j_connection")
-@patch("agentic_neurodata_conversion.kg_service.scripts.load_schema_fields.load_schema_fields")
+@patch("agentic_neurodata_conversion.kg_service.scripts.load_schema_fields.load_schema_fields", new_callable=AsyncMock)
 async def test_main_success(mock_load_fields, mock_get_conn, mock_get_settings):
     """Test main function success path."""
     # Mock settings
     mock_settings = Mock()
-    mock_settings.neo4j_uri = "bolt://localhost:7687"
-    mock_settings.neo4j_user = "neo4j"
-    mock_settings.neo4j_password = "password"
+    mock_settings.graph_db = Mock()
+    mock_settings.graph_db.uri = "bolt://localhost:7687"
+    mock_settings.graph_db.user = "neo4j"
+    mock_settings.graph_db.password = "password"
+    mock_settings.graph_db.database = "neo4j"
     mock_get_settings.return_value = mock_settings
 
     # Mock connection
     mock_conn = Mock()
     mock_conn.connect = AsyncMock()
+    mock_conn.health_check = AsyncMock(return_value=True)
     mock_conn.close = AsyncMock()
     mock_get_conn.return_value = mock_conn
 
@@ -281,20 +284,24 @@ async def test_main_connection_cleanup_on_error(mock_get_conn, mock_get_settings
     """Test main function cleans up connection on error."""
     # Mock settings
     mock_settings = Mock()
-    mock_settings.neo4j_uri = "bolt://localhost:7687"
-    mock_settings.neo4j_user = "neo4j"
-    mock_settings.neo4j_password = "password"
+    mock_settings.graph_db = Mock()
+    mock_settings.graph_db.uri = "bolt://localhost:7687"
+    mock_settings.graph_db.user = "neo4j"
+    mock_settings.graph_db.password = "password"
+    mock_settings.graph_db.database = "neo4j"
     mock_get_settings.return_value = mock_settings
 
     # Mock connection that raises error
     mock_conn = Mock()
     mock_conn.connect = AsyncMock()
+    mock_conn.health_check = AsyncMock(return_value=True)
     mock_conn.close = AsyncMock()
     mock_get_conn.return_value = mock_conn
 
     # Patch load_schema_fields to raise error
     with patch(
         "agentic_neurodata_conversion.kg_service.scripts.load_schema_fields.load_schema_fields",
+        new_callable=AsyncMock,
         side_effect=Exception("Load error"),
     ):
         with pytest.raises(Exception, match="Load error"):

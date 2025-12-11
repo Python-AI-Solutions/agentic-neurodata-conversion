@@ -16,6 +16,7 @@ from agentic_neurodata_conversion.agents import (
     register_conversion_agent,
     register_evaluation_agent,
 )
+from agentic_neurodata_conversion.config import get_settings
 from agentic_neurodata_conversion.services import MCPServer, create_llm_service, get_mcp_server
 
 logger = logging.getLogger(__name__)
@@ -37,7 +38,7 @@ def get_or_create_mcp_server() -> MCPServer:
 
                 # Initialize LLM service if API key is available
                 llm_service = None
-                api_key = os.getenv("ANTHROPIC_API_KEY")
+                api_key = get_settings().core.anthropic_api_key
                 if api_key:
                     llm_service = create_llm_service(
                         provider="anthropic",

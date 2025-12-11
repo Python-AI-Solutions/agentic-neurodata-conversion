@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from agentic_neurodata_conversion.kg_service.api.v1 import infer, normalize, observations, semantic_validate, validate
 from agentic_neurodata_conversion.kg_service.config import get_settings
 from agentic_neurodata_conversion.kg_service.db.neo4j_connection import get_neo4j_connection
+from agentic_neurodata_conversion.config import ConfigError
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -22,11 +23,16 @@ async def lifespan(app: FastAPI):
     """Lifespan context manager for startup/shutdown."""
     # Startup
     settings = get_settings()
+    try:
+        await settings.require_kg_service(probe_graph_db=True)
+    except ConfigError as e:
+        raise ValueError(str(e)) from e
+
     neo4j_conn = get_neo4j_connection(
-        uri=settings.neo4j_uri,
-        user=settings.neo4j_user,
-        password=settings.neo4j_password,
-        database=settings.neo4j_database,
+        uri=settings.graph_db.uri,
+        user=settings.graph_db.user,
+        password=settings.graph_db.password,
+        database=settings.graph_db.database,
     )
 
     try:
@@ -48,9 +54,13 @@ app = FastAPI(
 )
 
 # CORS middleware
+settings = get_settings()
+default_dev_origins = {"http://localhost:8000", "http://localhost:3000"}
+configured_origins = set(settings.kg_service.cors_origins)
+allow_origins = ["*"] if "*" in configured_origins else sorted(configured_origins | default_dev_origins)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8000", "http://localhost:3000"],
+    allow_origins=allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -68,11 +78,14 @@ app.include_router(infer.router)
 async def health_check():
     """Health check endpoint."""
     settings = get_settings()
+    if not settings.graph_db.password:
+        return {"status": "unhealthy", "neo4j": False, "version": "1.0.0", "error": "missing GRAPH_DB__PASSWORD"}
+
     neo4j_conn = get_neo4j_connection(
-        uri=settings.neo4j_uri,
-        user=settings.neo4j_user,
-        password=settings.neo4j_password,
-        database=settings.neo4j_database,
+        uri=settings.graph_db.uri,
+        user=settings.graph_db.user,
+        password=settings.graph_db.password,
+        database=settings.graph_db.database,
     )
 
     neo4j_healthy = await neo4j_conn.health_check()

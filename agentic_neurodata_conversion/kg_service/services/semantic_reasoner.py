@@ -645,7 +645,7 @@ def get_semantic_reasoner(neo4j_conn: AsyncNeo4jConnection) -> SemanticReasoner:
         >>> from agentic_neurodata_conversion.kg_service.db.neo4j_connection import get_neo4j_connection
         >>> from agentic_neurodata_conversion.kg_service.config import get_settings
         >>> settings = get_settings()
-        >>> conn = get_neo4j_connection(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password)
+        >>> conn = get_neo4j_connection(settings.graph_db.uri, settings.graph_db.user, settings.graph_db.password)
         >>> await conn.connect()
         >>> reasoner = get_semantic_reasoner(conn)
     """

@@ -8,17 +8,13 @@ Run with: PYTHONPATH=. pixi run pytest tests/kg_service/test_phase1_integration.
 
 import pytest
 
+from tests.kg_service._neo4j_availability import neo4j_http_available
+
 
 @pytest.fixture
 async def neo4j_connection():
     """Fixture for Neo4j connection."""
-    import os
-
-    # Skip if NEO4J_PASSWORD not set (e.g., in CI)
-    password = os.getenv("NEO4J_PASSWORD")
-    if not password:
-        pytest.skip("NEO4J_PASSWORD not set - Neo4j tests require local Neo4j instance")
-
+    from agentic_neurodata_conversion.config import ConfigError
     from agentic_neurodata_conversion.kg_service.config import get_settings
     from agentic_neurodata_conversion.kg_service.db.neo4j_connection import get_neo4j_connection, reset_neo4j_connection
 
@@ -26,7 +22,18 @@ async def neo4j_connection():
     reset_neo4j_connection()
 
     settings = get_settings()
-    conn = get_neo4j_connection(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password)
+    if not neo4j_http_available(settings.compose.neo4j_http_port):
+        pytest.skip("Neo4j not running on localhost; skipping Neo4j integration tests")
+    try:
+        await settings.require_graph_db(probe=False)
+    except ConfigError as e:
+        pytest.fail(str(e))
+    conn = get_neo4j_connection(
+        uri=settings.graph_db.uri,
+        user=settings.graph_db.user,
+        password=settings.graph_db.password or "",
+        database=settings.graph_db.database,
+    )
 
     # Try to connect, skip if Neo4j isn't running
     try:

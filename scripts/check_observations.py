@@ -2,21 +2,26 @@
 """Quick script to check observations in Neo4j for debugging."""
 
 import asyncio
-import os
 import sys
 
+from agentic_neurodata_conversion.kg_service.config import get_settings
 from agentic_neurodata_conversion.kg_service.db.neo4j_connection import get_neo4j_connection
 
 
 async def check_observations(subject_id: str):
     """Check if there are any observations for a subject."""
-    neo4j_password = os.getenv("NEO4J_PASSWORD")
-    if not neo4j_password:
-        print("ERROR: NEO4J_PASSWORD environment variable not set")
+    settings = get_settings()
+    if not settings.graph_db.password:
+        print("ERROR: GRAPH_DB__PASSWORD is not set (required to query Neo4j)")
         sys.exit(1)
 
     # Create connection
-    neo4j_conn = get_neo4j_connection(uri="bolt://localhost:7687", user="neo4j", password=neo4j_password)
+    neo4j_conn = get_neo4j_connection(
+        uri=settings.graph_db.uri,
+        user=settings.graph_db.user,
+        password=settings.graph_db.password,
+        database=settings.graph_db.database,
+    )
 
     try:
         # Query for all observations with this subject_id

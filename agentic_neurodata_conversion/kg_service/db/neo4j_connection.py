@@ -204,10 +204,10 @@ def get_neo4j_connection(uri: str, user: str, password: str, database: str = "ne
         >>> from agentic_neurodata_conversion.kg_service.config import get_settings
         >>> settings = get_settings()
         >>> conn = get_neo4j_connection(
-        ...     settings.neo4j_uri,
-        ...     settings.neo4j_user,
-        ...     settings.neo4j_password,
-        ...     settings.neo4j_database
+        ...     settings.graph_db.uri,
+        ...     settings.graph_db.user,
+        ...     settings.graph_db.password,
+        ...     settings.graph_db.database
         ... )
         >>> await conn.connect()
     """

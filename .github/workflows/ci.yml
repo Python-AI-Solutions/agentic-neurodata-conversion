@@ -33,11 +33,6 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ['3.13']
-    env:
-      # Set dummy API key for tests (tests use mocks, but FastAPI startup event requires it)
-      ANTHROPIC_API_KEY: sk-ant-test-key-for-ci-only-not-used-in-tests
-      # Set dummy Neo4j password for tests (tests use mocks, but KGServiceSettings validation requires it)
-      NEO4J_PASSWORD: test-neo4j-password-for-ci-only-not-used-in-tests
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -50,20 +45,13 @@ jobs:
       - name: Install dependencies
         run: pixi install
 
-      - name: Run smoke tests (fast fail)
-        run: pixi run test-smoke
-        continue-on-error: false  # Fast fail on critical path issues
+      - name: Prepare compose env files
+        run: |
+          cp .env.example .env
+          cp .env.docker.example .env.docker
 
-      - name: Run unit tests
-        run: pixi run test-unit
-        continue-on-error: false
-
-      - name: Run integration tests
-        run: pixi run test-integration
-        continue-on-error: false  # Integration test failures must block CI
-
-      - name: Generate coverage report with threshold check
-        run: pixi run -e default pytest tests --cov=agentic_neurodata_conversion --cov-report=xml --cov-report=term-missing --cov-fail-under=60
+      - name: Run full test suite (includes coverage)
+        run: pixi run test
         continue-on-error: false
 
       - name: Upload coverage to Codecov

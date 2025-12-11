@@ -9,6 +9,7 @@ Usage:
 import asyncio
 import json
 import logging
+import time
 from pathlib import Path
 
 from agentic_neurodata_conversion.kg_service.config import get_settings
@@ -16,6 +17,29 @@ from agentic_neurodata_conversion.kg_service.db.neo4j_connection import get_neo4
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+CONNECT_TIMEOUT_S = 120
+
+
+async def connect_with_retry(conn) -> None:
+    """Connect to Neo4j with retries to handle slow startup."""
+    start = time.time()
+    last_error: Exception | None = None
+
+    while time.time() - start < CONNECT_TIMEOUT_S:
+        try:
+            await conn.connect()
+            if await conn.health_check():
+                return
+        except Exception as e:  # noqa: BLE001 - intentional retry loop
+            last_error = e
+            try:
+                await conn.close()
+            except Exception:
+                pass
+        await asyncio.sleep(2)
+
+    raise RuntimeError(f"Neo4j did not become ready within {CONNECT_TIMEOUT_S}s") from last_error
 
 
 async def load_schema_fields(conn):
@@ -75,8 +99,15 @@ async def main():
     settings = get_settings()
 
     # Connect to Neo4j
-    conn = get_neo4j_connection(uri=settings.neo4j_uri, user=settings.neo4j_user, password=settings.neo4j_password)
-    await conn.connect()
+    if not settings.graph_db.password:
+        raise ValueError("GRAPH_DB__PASSWORD/NEO4J_PASSWORD is required to load schema fields")
+    conn = get_neo4j_connection(
+        uri=settings.graph_db.uri,
+        user=settings.graph_db.user,
+        password=settings.graph_db.password,
+        database=settings.graph_db.database,
+    )
+    await connect_with_retry(conn)
 
     try:
         count = await load_schema_fields(conn)

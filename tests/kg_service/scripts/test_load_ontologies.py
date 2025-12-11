@@ -145,23 +145,29 @@ async def test_create_is_a_relationships_no_result():
 @pytest.mark.asyncio
 @patch("agentic_neurodata_conversion.kg_service.scripts.load_ontologies.get_settings")
 @patch("agentic_neurodata_conversion.kg_service.scripts.load_ontologies.get_neo4j_connection")
-@patch("agentic_neurodata_conversion.kg_service.scripts.load_ontologies.create_constraints_and_indexes")
-@patch("agentic_neurodata_conversion.kg_service.scripts.load_ontologies.load_ontology_file")
-@patch("agentic_neurodata_conversion.kg_service.scripts.load_ontologies.create_is_a_relationships")
+@patch(
+    "agentic_neurodata_conversion.kg_service.scripts.load_ontologies.create_constraints_and_indexes",
+    new_callable=AsyncMock,
+)
+@patch("agentic_neurodata_conversion.kg_service.scripts.load_ontologies.load_ontology_file", new_callable=AsyncMock)
+@patch("agentic_neurodata_conversion.kg_service.scripts.load_ontologies.create_is_a_relationships", new_callable=AsyncMock)
 async def test_main_success(
     mock_create_rels, mock_load_file, mock_create_constraints, mock_get_conn, mock_get_settings, tmp_path
 ):
     """Test main function success path."""
     # Mock settings
     mock_settings = Mock()
-    mock_settings.neo4j_uri = "bolt://localhost:7687"
-    mock_settings.neo4j_user = "neo4j"
-    mock_settings.neo4j_password = "password"
+    mock_settings.graph_db = Mock()
+    mock_settings.graph_db.uri = "bolt://localhost:7687"
+    mock_settings.graph_db.user = "neo4j"
+    mock_settings.graph_db.password = "password"
+    mock_settings.graph_db.database = "neo4j"
     mock_get_settings.return_value = mock_settings
 
     # Mock connection
     mock_conn = Mock()
     mock_conn.connect = AsyncMock()
+    mock_conn.health_check = AsyncMock(return_value=True)
     mock_conn.close = AsyncMock()
     mock_get_conn.return_value = mock_conn
 
@@ -201,14 +207,17 @@ async def test_main_connection_cleanup_on_error(mock_get_conn, mock_get_settings
     """Test main function cleans up connection on error."""
     # Mock settings
     mock_settings = Mock()
-    mock_settings.neo4j_uri = "bolt://localhost:7687"
-    mock_settings.neo4j_user = "neo4j"
-    mock_settings.neo4j_password = "password"
+    mock_settings.graph_db = Mock()
+    mock_settings.graph_db.uri = "bolt://localhost:7687"
+    mock_settings.graph_db.user = "neo4j"
+    mock_settings.graph_db.password = "password"
+    mock_settings.graph_db.database = "neo4j"
     mock_get_settings.return_value = mock_settings
 
     # Mock connection that raises error during operations
     mock_conn = Mock()
     mock_conn.connect = AsyncMock()
+    mock_conn.health_check = AsyncMock(return_value=True)
     mock_conn.close = AsyncMock()
     mock_conn.execute_write = AsyncMock(side_effect=Exception("Database error"))
     mock_get_conn.return_value = mock_conn

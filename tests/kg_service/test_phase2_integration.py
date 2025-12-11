@@ -4,20 +4,16 @@ End-to-end tests for Phase 2 normalization and validation endpoints.
 Tests the full FastAPI application with Neo4j backend.
 """
 
-import os
-
 import httpx
 import pytest
+
+from tests.kg_service._neo4j_availability import neo4j_http_available
 
 
 @pytest.fixture
 async def kg_service_client():
     """Fixture for async HTTP client with FastAPI app."""
-    # Skip if NEO4J_PASSWORD not set (e.g., in CI)
-    password = os.getenv("NEO4J_PASSWORD")
-    if not password:
-        pytest.skip("NEO4J_PASSWORD not set - integration tests require local Neo4j instance")
-
+    from agentic_neurodata_conversion.config import ConfigError
     from agentic_neurodata_conversion.kg_service.config import get_settings, reset_settings
     from agentic_neurodata_conversion.kg_service.db.neo4j_connection import get_neo4j_connection, reset_neo4j_connection
     from agentic_neurodata_conversion.kg_service.main import app
@@ -30,8 +26,17 @@ async def kg_service_client():
 
     # Get Neo4j connection and connect
     settings = get_settings()
+    if not neo4j_http_available(settings.compose.neo4j_http_port):
+        pytest.skip("Neo4j not running on localhost; skipping Neo4j integration tests")
+    try:
+        await settings.require_graph_db(probe=False)
+    except ConfigError as e:
+        pytest.fail(str(e))
     neo4j_conn = get_neo4j_connection(
-        uri=settings.neo4j_uri, user=settings.neo4j_user, password=settings.neo4j_password
+        uri=settings.graph_db.uri,
+        user=settings.graph_db.user,
+        password=settings.graph_db.password or "",
+        database=settings.graph_db.database,
     )
 
     # Try to connect, skip if Neo4j isn't running

@@ -10,16 +10,22 @@ from typing import Any
 
 import httpx
 
+from agentic_neurodata_conversion.config import get_settings
+
 logger = logging.getLogger(__name__)
 
 
 class KGWrapper:
     """Wrapper for KG service with fallback support."""
 
-    def __init__(self, kg_base_url: str = "http://localhost:8001", timeout: float = 5.0, max_retries: int = 2):
-        self.kg_base_url = kg_base_url
-        self.timeout = timeout
-        self.max_retries = max_retries
+    def __init__(self, kg_base_url: str | None = None, timeout: float | None = None, max_retries: int | None = None):
+        settings = get_settings()
+        if not settings.kg.enabled:
+            raise RuntimeError("KG integration disabled (KG__ENABLED/KG_SERVICE_ENABLED=false)")
+
+        self.kg_base_url = kg_base_url or settings.kg.service_url
+        self.timeout = timeout if timeout is not None else settings.kg.timeout_s
+        self.max_retries = max_retries if max_retries is not None else settings.kg.max_retries
         self._client = httpx.AsyncClient(timeout=self.timeout)
 
     async def normalize(self, field_path: str, value: Any, context: dict[str, Any] | None = None) -> dict[str, Any]:

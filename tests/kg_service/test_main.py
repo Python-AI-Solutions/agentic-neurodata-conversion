@@ -1,6 +1,5 @@
 """Tests for KG Service main.py FastAPI application."""
 
-import os
 from unittest.mock import AsyncMock, Mock, patch
 
 import httpx
@@ -17,9 +16,13 @@ async def test_app_initialization():
         patch("agentic_neurodata_conversion.kg_service.main.get_settings") as mock_get_settings_main,
     ):
         mock_settings = Mock()
-        mock_settings.neo4j_uri = "bolt://localhost:7687"
-        mock_settings.neo4j_user = "neo4j"
-        mock_settings.neo4j_password = "password"
+        mock_settings.graph_db = Mock()
+        mock_settings.graph_db.uri = "bolt://localhost:7687"
+        mock_settings.graph_db.user = "neo4j"
+        mock_settings.graph_db.password = "password"
+        mock_settings.graph_db.database = "neo4j"
+        mock_settings.kg_service = Mock()
+        mock_settings.kg_service.cors_origins = ["http://localhost:8000", "http://localhost:3000"]
         mock_get_settings.return_value = mock_settings
         mock_get_settings_main.return_value = mock_settings
 
@@ -40,9 +43,13 @@ async def test_app_routes_registered():
         patch("agentic_neurodata_conversion.kg_service.main.get_settings") as mock_get_settings_main,
     ):
         mock_settings = Mock()
-        mock_settings.neo4j_uri = "bolt://localhost:7687"
-        mock_settings.neo4j_user = "neo4j"
-        mock_settings.neo4j_password = "password"
+        mock_settings.graph_db = Mock()
+        mock_settings.graph_db.uri = "bolt://localhost:7687"
+        mock_settings.graph_db.user = "neo4j"
+        mock_settings.graph_db.password = "password"
+        mock_settings.graph_db.database = "neo4j"
+        mock_settings.kg_service = Mock()
+        mock_settings.kg_service.cors_origins = ["http://localhost:8000", "http://localhost:3000"]
         mock_get_settings.return_value = mock_settings
         mock_get_settings_main.return_value = mock_settings
 
@@ -64,10 +71,17 @@ async def test_app_routes_registered():
 @pytest.mark.asyncio
 async def test_root_endpoint():
     """Test root endpoint returns service info."""
-    # Skip if NEO4J_PASSWORD not set
-    password = os.getenv("NEO4J_PASSWORD")
-    if not password:
-        pytest.skip("NEO4J_PASSWORD not set - integration tests require local Neo4j instance")
+    from agentic_neurodata_conversion.config import ConfigError
+    from agentic_neurodata_conversion.kg_service.config import get_settings
+    from tests.kg_service._neo4j_availability import neo4j_http_available
+
+    settings = get_settings()
+    if not neo4j_http_available(settings.compose.neo4j_http_port):
+        pytest.skip("Neo4j not running on localhost; skipping KG integration tests")
+    try:
+        await settings.require_graph_db(probe=False)
+    except ConfigError as e:
+        pytest.fail(str(e))
 
     from agentic_neurodata_conversion.kg_service.main import app
 
@@ -90,10 +104,17 @@ async def test_root_endpoint():
 @pytest.mark.asyncio
 async def test_health_check_endpoint():
     """Test health check endpoint."""
-    # Skip if NEO4J_PASSWORD not set
-    password = os.getenv("NEO4J_PASSWORD")
-    if not password:
-        pytest.skip("NEO4J_PASSWORD not set - integration tests require local Neo4j instance")
+    from agentic_neurodata_conversion.config import ConfigError
+    from agentic_neurodata_conversion.kg_service.config import get_settings
+    from tests.kg_service._neo4j_availability import neo4j_http_available
+
+    settings = get_settings()
+    if not neo4j_http_available(settings.compose.neo4j_http_port):
+        pytest.skip("Neo4j not running on localhost; skipping KG integration tests")
+    try:
+        await settings.require_graph_db(probe=False)
+    except ConfigError as e:
+        pytest.fail(str(e))
 
     from agentic_neurodata_conversion.kg_service.config import reset_settings
     from agentic_neurodata_conversion.kg_service.db.neo4j_connection import reset_neo4j_connection
@@ -130,9 +151,13 @@ async def test_health_check_unhealthy_neo4j():
     ):
         # Mock settings
         mock_settings = Mock()
-        mock_settings.neo4j_uri = "bolt://localhost:7687"
-        mock_settings.neo4j_user = "neo4j"
-        mock_settings.neo4j_password = "password"
+        mock_settings.graph_db = Mock()
+        mock_settings.graph_db.uri = "bolt://localhost:7687"
+        mock_settings.graph_db.user = "neo4j"
+        mock_settings.graph_db.password = "password"
+        mock_settings.graph_db.database = "neo4j"
+        mock_settings.kg_service = Mock()
+        mock_settings.kg_service.cors_origins = ["http://localhost:8000", "http://localhost:3000"]
         mock_get_settings_config.return_value = mock_settings
         mock_get_settings_main.return_value = mock_settings
 
@@ -174,9 +199,14 @@ async def test_lifespan_startup_shutdown():
     ):
         # Mock settings
         mock_settings = Mock()
-        mock_settings.neo4j_uri = "bolt://localhost:7687"
-        mock_settings.neo4j_user = "neo4j"
-        mock_settings.neo4j_password = "password"
+        mock_settings.graph_db = Mock()
+        mock_settings.graph_db.uri = "bolt://localhost:7687"
+        mock_settings.graph_db.user = "neo4j"
+        mock_settings.graph_db.password = "password"
+        mock_settings.graph_db.database = "neo4j"
+        mock_settings.kg_service = Mock()
+        mock_settings.kg_service.cors_origins = ["http://localhost:8000", "http://localhost:3000"]
+        mock_settings.require_kg_service = AsyncMock()
         mock_get_settings_config.return_value = mock_settings
         mock_get_settings_main.return_value = mock_settings
 
@@ -218,9 +248,14 @@ async def test_lifespan_handles_connection_error():
     ):
         # Mock settings
         mock_settings = Mock()
-        mock_settings.neo4j_uri = "bolt://localhost:7687"
-        mock_settings.neo4j_user = "neo4j"
-        mock_settings.neo4j_password = "password"
+        mock_settings.graph_db = Mock()
+        mock_settings.graph_db.uri = "bolt://localhost:7687"
+        mock_settings.graph_db.user = "neo4j"
+        mock_settings.graph_db.password = "password"
+        mock_settings.graph_db.database = "neo4j"
+        mock_settings.kg_service = Mock()
+        mock_settings.kg_service.cors_origins = ["http://localhost:8000", "http://localhost:3000"]
+        mock_settings.require_kg_service = AsyncMock()
         mock_get_settings_config.return_value = mock_settings
         mock_get_settings_main.return_value = mock_settings
 
@@ -245,10 +280,17 @@ async def test_lifespan_handles_connection_error():
 @pytest.mark.asyncio
 async def test_cors_headers():
     """Test CORS headers are set correctly."""
-    # Skip if NEO4J_PASSWORD not set
-    password = os.getenv("NEO4J_PASSWORD")
-    if not password:
-        pytest.skip("NEO4J_PASSWORD not set - integration tests require local Neo4j instance")
+    from agentic_neurodata_conversion.config import ConfigError
+    from agentic_neurodata_conversion.kg_service.config import get_settings
+    from tests.kg_service._neo4j_availability import neo4j_http_available
+
+    settings = get_settings()
+    if not neo4j_http_available(settings.compose.neo4j_http_port):
+        pytest.skip("Neo4j not running on localhost; skipping KG integration tests")
+    try:
+        await settings.require_graph_db(probe=False)
+    except ConfigError as e:
+        pytest.fail(str(e))
 
     from agentic_neurodata_conversion.kg_service.main import app
 
@@ -272,9 +314,13 @@ def test_app_import_does_not_fail():
         patch("agentic_neurodata_conversion.kg_service.main.get_settings") as mock_get_settings_main,
     ):
         mock_settings = Mock()
-        mock_settings.neo4j_uri = "bolt://localhost:7687"
-        mock_settings.neo4j_user = "neo4j"
-        mock_settings.neo4j_password = "password"
+        mock_settings.graph_db = Mock()
+        mock_settings.graph_db.uri = "bolt://localhost:7687"
+        mock_settings.graph_db.user = "neo4j"
+        mock_settings.graph_db.password = "password"
+        mock_settings.graph_db.database = "neo4j"
+        mock_settings.kg_service = Mock()
+        mock_settings.kg_service.cors_origins = ["http://localhost:8000", "http://localhost:3000"]
         mock_get_settings.return_value = mock_settings
         mock_get_settings_main.return_value = mock_settings
 
@@ -301,9 +347,13 @@ async def test_endpoints_accept_json():
     ):
         # Mock settings
         mock_settings = Mock()
-        mock_settings.neo4j_uri = "bolt://localhost:7687"
-        mock_settings.neo4j_user = "neo4j"
-        mock_settings.neo4j_password = "password"
+        mock_settings.graph_db = Mock()
+        mock_settings.graph_db.uri = "bolt://localhost:7687"
+        mock_settings.graph_db.user = "neo4j"
+        mock_settings.graph_db.password = "password"
+        mock_settings.graph_db.database = "neo4j"
+        mock_settings.kg_service = Mock()
+        mock_settings.kg_service.cors_origins = ["http://localhost:8000", "http://localhost:3000"]
         mock_get_settings_main.return_value = mock_settings
         mock_get_settings_config.return_value = mock_settings
 
