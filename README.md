@@ -4,23 +4,28 @@ Converts neuroscience electrophysiology data to NWB standard using a conversatio
 
 [![CI/CD Pipeline](https://github.com/Python-AI-Solutions/agentic-neurodata-conversion/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Python-AI-Solutions/agentic-neurodata-conversion/actions/workflows/ci.yml)
 
-This project demonstrates spec-driven development of an AI system that:
-
-- Converts neuroscience data to NWB standard through a chat interface
-- Uses a three-agent architecture (Conversation, Conversion, Evaluation)
-
----
+This project uses a neuro-symbolic system to convert neuroscience data to NWB standard through a chat interface. It uses a three agent architecture (Conversation, Conversion, Evaluation).
 
 
+## Quick Start
 
-### Why This Matters
+[pixi](https://pixi.sh/dev/installation/) is required.
+
+To run the app:
+
+```bash
+pixi run start
+```
+
+For detailed setup, development workflow, and testing instructions, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Why This Matters
 NWB conversion currently requires deep knowledge of both source formats and the NWB schema. This system enables researchers to convert data through conversation, reducing the barrier to DANDI archive submission and data sharing in neuroscience.
 
 - **Time Savings**: Automates a tedious process that previously consumed lot of hours of highly trained scientists' time
 - **Lower Barrier**: No need to master NWB schema—just describe your data in natural language
 - **Fewer Errors**: AI-guided validation catches issues before submission
 - **Faster Science**: Researchers can focus on discovery, not data formatting
----
 
 ## Key Capabilities
 
@@ -46,7 +51,6 @@ NWB conversion currently requires deep knowledge of both source formats and the 
 - Automated issue classification and analysis
 - Structured validation reports with actionable feedback
 
----
 
 ## Architecture
 
@@ -83,7 +87,6 @@ Agents operate independently without cross-imports, communicating exclusively vi
 │  NeuroConv • SpikeInterface • PyNWB • NWBInspector          │
 └─────────────────────────────────────────────────────────────┘
 ```
----
 
 ### Agent Responsibilities
 
@@ -108,7 +111,6 @@ Agents operate independently without cross-imports, communicating exclusively vi
 - Validation report generation with actionable feedback
 - DANDI compliance verification
 
----
 
 ## Development Approach:  Built using spec-driven development methodology
 
@@ -140,39 +142,6 @@ This project uses **spec-driven development** methodology using **Spec-Kit by Gi
 
 See [requirements.md](specs/requirements.md) for complete technical reference and development workflow.
 
----
-
-## Quick Start
-
-### Recommended: Automated Startup
-
-The easiest way to run the application is using the startup script:
-
-```bash
-# Clone and navigate to project directory
-git clone https://github.com/Python-AI-Solutions/agentic-neurodata-conversion.git
-cd agentic-neurodata-conversion
-
-# Install dependencies
-pixi install
-
-# Run the application (handles everything automatically)
-python3 scripts/startup/start_app.py
-```
-
-The script will:
-
-- Configure your .env file with API key (interactive prompt)
-- Clean up old processes and temp directories
-- Start backend server (port 8000)
-- Start frontend server (port 3000)
-- Display status and URLs
-
-Access the interface at [http://localhost:3000/chat-ui.html](http://localhost:3000/chat-ui.html)
-
-For detailed setup, development workflow, and testing instructions, see [CONTRIBUTING.md](CONTRIBUTING.md).
-
----
 
 ## Usage Example
 
@@ -191,7 +160,6 @@ For detailed setup, development workflow, and testing instructions, see [CONTRIB
    ```
 5. **Download Results**: Converted NWB file and validation report ready for DANDI upload
 
----
 
 ## System Overview
 
@@ -204,7 +172,6 @@ For detailed setup, development workflow, and testing instructions, see [CONTRIB
 
 
 ### Validation Report
----
 
 ### Validation Report - Detailed Analysis
 
@@ -212,7 +179,6 @@ For detailed setup, development workflow, and testing instructions, see [CONTRIB
 
 *Detailed breakdown of validation issues with severity levels, affected fields, and actionable recommendations*
 
----
 
 ## Project Status
 
@@ -222,24 +188,13 @@ For detailed setup, development workflow, and testing instructions, see [CONTRIB
 - ✓ Format detection and conversion
 - ✓ Validation and reporting
 - In progress: Schema field normalization via knowledge graph
+- In progress: more rigourous testing on real world datasets to ensure system resilience.
 
 **Known Limitations**:
 
 - Batch processing not yet supported
 - Format detection may require confirmation for ambiguous cases
-
----
-
-## Technical Stack
-
-- **Backend**: FastAPI, Python 3.13+, Pixi package management
-- **AI**: Anthropic Claude Sonnet 4.5 via claude-ai-client
-- **Data Conversion**: NeuroConv, PyNWB, SpikeInterface
-- **Validation**: NWBInspector, pynwb
-- **Testing**: pytest, pytest-asyncio, pytest-mock
-- **Code Quality**: Ruff, MyPy, Bandit, pre-commit hooks
-
----
+- Ontologies are currently for demonstrative perhaps rather than real world usage
 
 ## Documentation
 
@@ -247,12 +202,3 @@ For detailed setup, development workflow, and testing instructions, see [CONTRIB
 - [.specify/memory/constitution.md](.specify/memory/constitution.md) - Project principles
 - [requirements.md](specs/requirements.md) - Project requirements
 
----
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-Copyright (c) 2024 Agentic Neurodata Conversion Team
-
----
