@@ -33,11 +33,35 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ['3.13']
+
+    # Neo4j service container for integration tests
+    services:
+      neo4j:
+        image: neo4j:5.15
+        env:
+          NEO4J_AUTH: neo4j/test-neo4j-password
+          NEO4J_PLUGINS: '["apoc"]'
+          NEO4J_dbms_security_procedures_unrestricted: apoc.*
+          NEO4J_dbms_memory_pagecache_size: 512M
+          NEO4J_dbms_memory_heap_initial__size: 512M
+          NEO4J_dbms_memory_heap_max__size: 1G
+        ports:
+          - 7687:7687
+          - 7474:7474
+        options: >-
+          --health-cmd "cypher-shell -u neo4j -p test-neo4j-password 'RETURN 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
-      # Set dummy API key for tests (tests use mocks, but FastAPI startup event requires it)
+      # API key for tests
       ANTHROPIC_API_KEY: sk-ant-test-key-for-ci-only-not-used-in-tests
-      # Set dummy Neo4j password for tests (tests use mocks, but KGServiceSettings validation requires it)
-      NEO4J_PASSWORD: test-neo4j-password-for-ci-only-not-used-in-tests
+      # Neo4j connection for integration tests (points to service container)
+      NEO4J_URI: bolt://localhost:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: test-neo4j-password
+      NEO4J_DATABASE: neo4j
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -49,6 +73,16 @@ jobs:
 
       - name: Install dependencies
         run: pixi install
+
+      - name: Initialize Neo4j with test data
+        run: |
+          echo "⏳ Waiting for Neo4j to be ready..."
+          sleep 10
+          echo "📦 Loading ontologies..."
+          pixi run python -m agentic_neurodata_conversion.kg_service.scripts.load_ontologies
+          echo "📝 Loading schema fields..."
+          pixi run python -m agentic_neurodata_conversion.kg_service.scripts.load_schema_fields
+          echo "✅ Neo4j initialized with 96 ontology terms and 25 schema fields"
 
       - name: Run smoke tests (fast fail)
         run: pixi run test-smoke

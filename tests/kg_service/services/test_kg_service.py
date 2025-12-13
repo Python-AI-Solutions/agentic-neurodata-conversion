@@ -193,18 +193,24 @@ async def test_normalize_field_synonym_match():
 async def test_normalize_field_needs_review():
     """Test normalization when no match found."""
     mock_conn = Mock()
-    mock_conn.execute_read = AsyncMock(
-        side_effect=[
-            # Schema field lookup
-            [{"field_path": "subject.species", "ontology_governed": True, "ontology_name": "NCBITaxonomy"}],
-            # Exact match (fails)
-            [],
-            # Synonym match (fails)
-            [],
-        ]
-    )
 
     service = AsyncKGService(mock_conn)
+
+    # Mock semantic reasoner to return needs_review
+    service.semantic_reasoner.validate_with_hierarchy = AsyncMock(
+        return_value={
+            "field_path": "subject.species",
+            "raw_value": "unicorn",
+            "normalized_value": None,
+            "ontology_term_id": None,
+            "match_type": None,
+            "confidence": 0.0,
+            "status": "needs_review",
+            "action_required": True,
+            "warnings": ["No ontology term found for value: unicorn"],
+        }
+    )
+
     result = await service.normalize_field(field_path="subject.species", value="unicorn")
 
     assert result["status"] == "needs_review"
@@ -273,15 +279,24 @@ async def test_validate_field_valid():
 async def test_validate_field_invalid():
     """Test validation endpoint - invalid value."""
     mock_conn = Mock()
-    mock_conn.execute_read = AsyncMock(
-        side_effect=[
-            [{"field_path": "subject.species", "ontology_governed": True, "ontology_name": "NCBITaxonomy"}],
-            [],
-            [],
-        ]
-    )
 
     service = AsyncKGService(mock_conn)
+
+    # Mock semantic reasoner to return needs_review
+    service.semantic_reasoner.validate_with_hierarchy = AsyncMock(
+        return_value={
+            "field_path": "subject.species",
+            "raw_value": "unicorn",
+            "normalized_value": None,
+            "ontology_term_id": None,
+            "match_type": None,
+            "confidence": 0.0,
+            "status": "needs_review",
+            "action_required": True,
+            "warnings": ["No ontology term found for value: unicorn"],
+        }
+    )
+
     result = await service.validate_field(field_path="subject.species", value="unicorn")
 
     assert result["is_valid"] is False

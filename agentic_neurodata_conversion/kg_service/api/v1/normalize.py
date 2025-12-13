@@ -20,7 +20,10 @@ def get_kg_service_instance() -> AsyncKGService:
     """Dependency to get KG service instance."""
     settings = get_settings()
     neo4j_conn = get_neo4j_connection(
-        uri=settings.neo4j_uri, user=settings.neo4j_user, password=settings.neo4j_password
+        uri=settings.neo4j_uri,
+        user=settings.neo4j_user,
+        password=settings.neo4j_password,
+        database=settings.neo4j_database,
     )
     return get_kg_service(neo4j_conn)
 
@@ -29,14 +32,25 @@ def get_kg_service_instance() -> AsyncKGService:
 async def normalize_endpoint(request: NormalizeRequest, kg_service: AsyncKGService = Depends(get_kg_service_instance)):
     """Normalize a metadata field value.
 
-    Runs 3-stage normalization:
+    Phase 2: Enhanced with semantic reasoning (hierarchy-aware validation).
+
+    With semantic reasoning (default):
+    1. Exact match (confidence 1.0)
+    2. Synonym match (confidence 0.95)
+    3. Semantic search with hierarchy (confidence 0.85)
+    4. Needs review (confidence 0.0)
+
+    Without semantic reasoning (legacy):
     1. Exact match (confidence 1.0)
     2. Synonym match (confidence 0.95)
     3. Needs review (confidence 0.0)
     """
     try:
         result = await kg_service.normalize_field(
-            field_path=request.field_path, value=request.value, context=request.context
+            field_path=request.field_path,
+            value=request.value,
+            context=request.context,
+            use_semantic_reasoning=request.use_semantic_reasoning,
         )
         return NormalizeResponse(**result)
 

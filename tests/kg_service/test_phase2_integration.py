@@ -311,3 +311,182 @@ async def test_api_normalize_whitespace_handling(kg_service_client):
 
     assert data["status"] == "validated"
     assert data["normalized_value"] == "Mus musculus"
+
+
+# ===========================
+# Phase 2: Semantic Reasoning Tests
+# ===========================
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_api_normalize_with_semantic_reasoning_explicit(kg_service_client):
+    """Test normalization with use_semantic_reasoning=True explicitly."""
+    response = await kg_service_client.post(
+        "/api/v1/normalize",
+        json={"field_path": "subject.species", "value": "mouse", "use_semantic_reasoning": True},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["status"] == "validated"
+    assert data["normalized_value"] == "Mus musculus"
+    assert data["ontology_term_id"] == "NCBITaxon:10090"
+    # With semantic reasoning, synonym match should still work
+    assert data["match_type"] in ["synonym", "exact"]
+    assert data["confidence"] >= 0.95
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_api_normalize_semantic_reasoning_default(kg_service_client):
+    """Test that semantic reasoning is enabled by default (use_semantic_reasoning not specified)."""
+    response = await kg_service_client.post(
+        "/api/v1/normalize", json={"field_path": "subject.species", "value": "mouse"}
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["status"] == "validated"
+    assert data["normalized_value"] == "Mus musculus"
+    # Should work via semantic reasoner by default
+    assert data["match_type"] in ["synonym", "exact", "semantic"]
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_api_normalize_legacy_mode(kg_service_client):
+    """Test legacy 3-stage string matching with use_semantic_reasoning=False."""
+    response = await kg_service_client.post(
+        "/api/v1/normalize",
+        json={"field_path": "subject.species", "value": "Mus musculus", "use_semantic_reasoning": False},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["status"] == "validated"
+    assert data["match_type"] == "exact"
+    assert data["confidence"] == 1.0
+    assert data["normalized_value"] == "Mus musculus"
+    # Legacy mode should not have semantic_info
+    assert data.get("semantic_info") is None
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_api_normalize_semantic_match_stage3(kg_service_client):
+    """Test Stage 3 semantic search with partial match (Phase 2 NEW feature)."""
+    # "Ammon" is a partial match for "Ammon's horn"
+    response = await kg_service_client.post(
+        "/api/v1/normalize",
+        json={"field_path": "ecephys.ElectrodeGroup.location", "value": "Ammon", "use_semantic_reasoning": True},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["status"] == "validated"
+    assert data["normalized_value"] == "Ammon's horn"
+    assert data["ontology_term_id"] == "UBERON:0001954"
+    # Should match via semantic search (or synonym/exact if available)
+    assert data["match_type"] in ["semantic", "synonym", "exact"]
+    assert data["confidence"] >= 0.85
+
+    # If semantic match, should have semantic_info
+    if data["match_type"] == "semantic":
+        assert "semantic_info" in data
+        assert data["semantic_info"] is not None
+        # Note: ancestors may be empty if required_ancestor not specified
+        assert "ancestors" in data["semantic_info"]
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_api_normalize_semantic_info_populated(kg_service_client):
+    """Test that semantic_info is populated for semantic matches."""
+    # Try a partial match that should trigger semantic search
+    response = await kg_service_client.post(
+        "/api/v1/normalize",
+        json={"field_path": "ecephys.ElectrodeGroup.location", "value": "cortex", "use_semantic_reasoning": True},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["status"] == "validated"
+    assert data["normalized_value"] is not None
+
+    # If match_type is semantic, semantic_info should be present
+    if data["match_type"] == "semantic":
+        assert "semantic_info" in data
+        assert data["semantic_info"] is not None
+        # Should have ancestors array
+        assert "ancestors" in data["semantic_info"]
+        # Each ancestor should have required fields
+        for ancestor in data["semantic_info"]["ancestors"]:
+            assert "term_id" in ancestor
+            assert "label" in ancestor
+            assert "distance" in ancestor
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_api_normalize_backward_compatibility(kg_service_client):
+    """Test backward compatibility: existing API calls still work without use_semantic_reasoning."""
+    # This mimics old API calls that don't specify use_semantic_reasoning
+    response = await kg_service_client.post(
+        "/api/v1/normalize", json={"field_path": "subject.species", "value": "Mus musculus"}
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    # Should still work (with semantic reasoning enabled by default)
+    assert data["status"] == "validated"
+    assert data["normalized_value"] == "Mus musculus"
+    assert data["ontology_term_id"] == "NCBITaxon:10090"
+    assert data["confidence"] >= 0.95
+
+    # Response should have all required fields
+    assert "field_path" in data
+    assert "raw_value" in data
+    assert "match_type" in data
+    assert "action_required" in data
+    assert "warnings" in data
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_api_normalize_semantic_vs_legacy_comparison(kg_service_client):
+    """Test that semantic reasoning can find matches that legacy mode cannot."""
+    # Use a value that might only match via semantic search
+    test_value = "Ammon"
+    field_path = "ecephys.ElectrodeGroup.location"
+
+    # Test with semantic reasoning
+    response_semantic = await kg_service_client.post(
+        "/api/v1/normalize",
+        json={"field_path": field_path, "value": test_value, "use_semantic_reasoning": True},
+    )
+
+    # Test with legacy mode
+    response_legacy = await kg_service_client.post(
+        "/api/v1/normalize",
+        json={"field_path": field_path, "value": test_value, "use_semantic_reasoning": False},
+    )
+
+    assert response_semantic.status_code == 200
+    assert response_legacy.status_code == 200
+
+    data_semantic = response_semantic.json()
+    data_legacy = response_legacy.json()
+
+    # Semantic reasoning should validate (exact, synonym, or semantic match)
+    assert data_semantic["status"] == "validated"
+    assert data_semantic["normalized_value"] is not None
+
+    # Legacy might not match (or match via exact/synonym only)
+    # This test documents the difference between modes

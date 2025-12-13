@@ -42,7 +42,7 @@ def test_ontology_term_counts():
     uberon = json.load(open("agentic_neurodata_conversion/kg_service/ontologies/uberon_subset.json"))
     pato = json.load(open("agentic_neurodata_conversion/kg_service/ontologies/pato_sex_subset.json"))
 
-    assert len(ncbi["terms"]) == 20, f"Expected 20 NCBITaxonomy terms, got {len(ncbi['terms'])}"
+    assert len(ncbi["terms"]) == 72, f"Expected 72 NCBITaxonomy terms, got {len(ncbi['terms'])}"
     assert len(uberon["terms"]) == 20, f"Expected 20 UBERON terms, got {len(uberon['terms'])}"
     assert len(pato["terms"]) == 4, f"Expected 4 PATO terms, got {len(pato['terms'])}"
 

@@ -7,6 +7,7 @@ Environment Variables:
     NEO4J_URI: Neo4j database connection URI (default: bolt://localhost:7687)
     NEO4J_USER: Neo4j username (default: neo4j)
     NEO4J_PASSWORD: Neo4j password (required)
+    NEO4J_DATABASE: Neo4j database name (default: neo4j)
     KG_SERVICE_URL: KG service endpoint URL (default: http://localhost:8001)
     KG_SERVICE_ENABLED: Enable/disable KG service (default: true)
     KG_SERVICE_TIMEOUT: Request timeout in seconds (default: 5.0)
@@ -27,6 +28,7 @@ class KGServiceSettings(BaseSettings):
         neo4j_uri: Neo4j database connection URI
         neo4j_user: Neo4j authentication username
         neo4j_password: Neo4j authentication password
+        neo4j_database: Neo4j database name
         kg_service_url: URL where KG service is running
         kg_service_enabled: Whether KG service integration is enabled
         kg_service_timeout: Timeout for KG service requests in seconds
@@ -37,6 +39,10 @@ class KGServiceSettings(BaseSettings):
     neo4j_uri: str = Field(default="bolt://localhost:7687", description="Neo4j database connection URI")
     neo4j_user: str = Field(default="neo4j", description="Neo4j authentication username")
     neo4j_password: str = Field(..., description="Neo4j authentication password (required)")
+    neo4j_database: str = Field(
+        default="neo4j",
+        description="Neo4j database name (default: 'neo4j', use 'nwb-kg-dev' for development)",
+    )
 
     # KG Service Configuration
     kg_service_url: str = Field(default="http://localhost:8001", description="URL where KG service is running")

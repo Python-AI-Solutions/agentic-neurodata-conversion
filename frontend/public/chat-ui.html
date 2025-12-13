@@ -959,6 +959,33 @@
             }
         }
 
+        /* KG_VALIDATED Badge - Green with checkmark (ontology validation) */
+        .provenance-badge.kg_validated {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+        }
+
+        .provenance-badge.kg_validated::before {
+            content: "✓ ";
+            font-weight: bold;
+        }
+
+        .provenance-badge.kg_validated:hover {
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        /* CROSS_FIELD_WARNING Badge - Orange with warning icon */
+        .provenance-badge.cross-field-warning {
+            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(249, 115, 22, 0.3);
+        }
+
+        .provenance-badge.cross-field-warning:hover {
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
+        }
+
         /* Needs Review Warning */
         .provenance-badge.needs-review {
             animation: pulse-warning 2s infinite;
@@ -3075,8 +3102,8 @@
         function createProvenanceBadge(provenanceInfo) {
             const { provenance, confidence, source, needs_review, timestamp, badge, historical_evidence } = provenanceInfo;
 
-            // Handle inference badges (CONFIRMED, HISTORICAL, CONFLICTING)
-            if (badge && ['CONFIRMED', 'HISTORICAL', 'CONFLICTING'].includes(badge)) {
+            // Handle inference badges (CONFIRMED, HISTORICAL, CONFLICTING, KG_VALIDATED)
+            if (badge && ['CONFIRMED', 'HISTORICAL', 'CONFLICTING', 'KG_VALIDATED'].includes(badge)) {
                 const badgeClass = badge.toLowerCase();
                 const badgeConfig = {
                     'CONFIRMED': {
@@ -3176,6 +3203,35 @@
                                 ${sessionsHTML}
                                 <div class="provenance-tooltip-item" style="color: #f59e0b; margin-top: 4px;">
                                     ⚠️ Please review and choose the correct value
+                                </div>
+                            `;
+                        }
+                    },
+                    'KG_VALIDATED': {
+                        displayName: 'Validated',
+                        tooltipHeader: 'Validated Against Ontology',
+                        getTooltipContent: () => {
+                            const ontologyTerm = source?.match(/\(([A-Z]+:[0-9]+)\)/)?.[1] || 'N/A';
+                            const ontologyName = ontologyTerm.split(':')[0] || 'Unknown';
+                            const ontologyMap = {
+                                'NCBITaxon': 'NCBI Taxonomy',
+                                'UBERON': 'Uberon Anatomy',
+                                'PATO': 'Phenotype Ontology'
+                            };
+                            const fullOntologyName = ontologyMap[ontologyName] || ontologyName;
+
+                            return `
+                                <div class="provenance-tooltip-item">
+                                    <span class="provenance-tooltip-label">Status:</span>Validated and normalized via Knowledge Graph
+                                </div>
+                                <div class="provenance-tooltip-item">
+                                    <span class="provenance-tooltip-label">Ontology:</span>${fullOntologyName}
+                                </div>
+                                <div class="provenance-tooltip-item">
+                                    <span class="provenance-tooltip-label">Term ID:</span><code style="background: rgba(0,0,0,0.1); padding: 2px 4px; border-radius: 2px;">${ontologyTerm}</code>
+                                </div>
+                                <div class="provenance-tooltip-item">
+                                    <span class="provenance-tooltip-label">Confidence:</span>${Math.round(confidence)}%
                                 </div>
                             `;
                         }

@@ -126,9 +126,12 @@ async def test_normalize_endpoint_with_context():
     response = await normalize_endpoint(request, mock_service)
 
     assert response.status == "validated"
-    # Verify context was passed to service
+    # Verify context was passed to service (including use_semantic_reasoning from Phase 2)
     mock_service.normalize_field.assert_called_once_with(
-        field_path="subject.species", value="Mus musculus", context={"source_file": "test.nwb", "user_id": "test_user"}
+        field_path="subject.species",
+        value="Mus musculus",
+        context={"source_file": "test.nwb", "user_id": "test_user"},
+        use_semantic_reasoning=True,
     )
 
 

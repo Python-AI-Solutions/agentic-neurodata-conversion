@@ -323,3 +323,141 @@ async def test_infer_species_empty_subject_id(mock_neo4j_connection):
     assert result["has_suggestion"] is False
     # Verify query was still executed with empty subject_id
     mock_neo4j_connection.execute_read.assert_called_once()
+
+
+# ===========================
+# Phase 4: Semantic Reasoning Tests (NEW)
+# ===========================
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_infer_field_with_semantic_context(mock_neo4j_connection):
+    """Test that inference includes semantic hierarchy context in reasoning.
+
+    Phase 4: When ontology_term_id is present, reasoning should include
+    ancestor hierarchy from ontology.
+    """
+    mock_neo4j_connection.execute_read = AsyncMock(
+        return_value=[
+            {
+                "suggested_value": "Mus musculus",
+                "ontology_term_id": "NCBITaxon:10090",
+                "evidence_count": 2,
+                "contributing_sessions": [
+                    {"source_file": "session_A.nwb", "created_at": "2024-08-15T10:30:00"},
+                    {"source_file": "session_B.nwb", "created_at": "2024-08-20T14:22:00"},
+                ],
+            }
+        ]
+    )
+
+    engine = InferenceEngine(mock_neo4j_connection)
+
+    # Mock semantic_reasoner.find_ancestors to return hierarchy
+    engine.semantic_reasoner.find_ancestors = AsyncMock(
+        return_value=[
+            {"term_id": "NCBITaxon:10088", "label": "Mus", "distance": 1},
+            {"term_id": "NCBITaxon:10066", "label": "Muridae", "distance": 2},
+            {"term_id": "NCBITaxon:9989", "label": "Rodentia", "distance": 3},
+            {"term_id": "NCBITaxon:40674", "label": "Mammalia", "distance": 4},
+            {"term_id": "NCBITaxon:7742", "label": "Vertebrata", "distance": 5},
+        ]
+    )
+
+    result = await engine.infer_field(field_path="subject.species", subject_id="subject_001", target_file="test.nwb")
+
+    # Verify suggestion is present
+    assert result["has_suggestion"] is True
+    assert result["suggested_value"] == "Mus musculus"
+
+    # Verify semantic context is included in reasoning
+    assert "Term hierarchy:" in result["reasoning"]
+    assert "Mus" in result["reasoning"]
+    assert "Muridae" in result["reasoning"]
+    assert "Rodentia" in result["reasoning"]
+    assert "Mammalia" in result["reasoning"]
+    assert "Vertebrata" in result["reasoning"]
+
+    # Verify hierarchy is formatted with " > " separator
+    assert "Mus > Muridae > Rodentia > Mammalia > Vertebrata" in result["reasoning"]
+
+    # Verify find_ancestors was called with correct term_id
+    engine.semantic_reasoner.find_ancestors.assert_called_once_with("NCBITaxon:10090", max_depth=10)
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_infer_field_semantic_context_error_graceful_degradation(mock_neo4j_connection):
+    """Test graceful degradation when semantic context fetch fails.
+
+    Phase 4: If hierarchy traversal fails, inference should continue
+    without semantic context (log warning but don't fail).
+    """
+    mock_neo4j_connection.execute_read = AsyncMock(
+        return_value=[
+            {
+                "suggested_value": "Rattus norvegicus",
+                "ontology_term_id": "NCBITaxon:10116",
+                "evidence_count": 3,
+                "contributing_sessions": [{"source_file": "session.nwb", "created_at": "2024-08-15T10:30:00"}],
+            }
+        ]
+    )
+
+    engine = InferenceEngine(mock_neo4j_connection)
+
+    # Mock semantic_reasoner.find_ancestors to raise an exception
+    engine.semantic_reasoner.find_ancestors = AsyncMock(side_effect=Exception("Neo4j connection error"))
+
+    result = await engine.infer_field(field_path="subject.species", subject_id="subject_002", target_file="test.nwb")
+
+    # Verify inference still succeeds despite semantic context failure
+    assert result["has_suggestion"] is True
+    assert result["suggested_value"] == "Rattus norvegicus"
+    assert result["confidence"] == 0.8
+
+    # Verify reasoning is present but WITHOUT semantic context
+    assert "Based on 3 prior observations with 100% agreement" in result["reasoning"]
+    assert "Term hierarchy:" not in result["reasoning"]  # Semantic context should be absent
+
+    # Verify find_ancestors was attempted
+    engine.semantic_reasoner.find_ancestors.assert_called_once()
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_infer_field_no_semantic_context_for_non_ontology_field(mock_neo4j_connection):
+    """Test that non-ontology fields don't attempt to fetch semantic context.
+
+    Phase 4: Fields without ontology_term_id (e.g., experimenter, institution)
+    should not try to fetch hierarchy.
+    """
+    mock_neo4j_connection.execute_read = AsyncMock(
+        return_value=[
+            {
+                "suggested_value": "John Doe",
+                "ontology_term_id": None,  # No ontology term for experimenter field
+                "evidence_count": 4,
+                "contributing_sessions": [{"source_file": "session.nwb", "created_at": "2024-08-15T10:30:00"}],
+            }
+        ]
+    )
+
+    engine = InferenceEngine(mock_neo4j_connection)
+
+    # Mock semantic_reasoner.find_ancestors (should NOT be called)
+    engine.semantic_reasoner.find_ancestors = AsyncMock()
+
+    result = await engine.infer_field(field_path="experimenter", subject_id="subject_001", target_file="test.nwb")
+
+    # Verify inference succeeds
+    assert result["has_suggestion"] is True
+    assert result["suggested_value"] == "John Doe"
+
+    # Verify reasoning is present but WITHOUT semantic context
+    assert "Based on 4 prior observations with 100% agreement" in result["reasoning"]
+    assert "Term hierarchy:" not in result["reasoning"]
+
+    # Verify find_ancestors was NOT called (no ontology term)
+    engine.semantic_reasoner.find_ancestors.assert_not_called()

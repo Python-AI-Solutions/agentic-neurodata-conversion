@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from agentic_neurodata_conversion.kg_service.api.v1 import infer, normalize, observations, validate
+from agentic_neurodata_conversion.kg_service.api.v1 import infer, normalize, observations, semantic_validate, validate
 from agentic_neurodata_conversion.kg_service.config import get_settings
 from agentic_neurodata_conversion.kg_service.db.neo4j_connection import get_neo4j_connection
 
@@ -23,7 +23,10 @@ async def lifespan(app: FastAPI):
     # Startup
     settings = get_settings()
     neo4j_conn = get_neo4j_connection(
-        uri=settings.neo4j_uri, user=settings.neo4j_user, password=settings.neo4j_password
+        uri=settings.neo4j_uri,
+        user=settings.neo4j_user,
+        password=settings.neo4j_password,
+        database=settings.neo4j_database,
     )
 
     try:
@@ -56,6 +59,7 @@ app.add_middleware(
 # Include routers
 app.include_router(normalize.router)
 app.include_router(validate.router)
+app.include_router(semantic_validate.router)
 app.include_router(observations.router)
 app.include_router(infer.router)
 
@@ -65,7 +69,10 @@ async def health_check():
     """Health check endpoint."""
     settings = get_settings()
     neo4j_conn = get_neo4j_connection(
-        uri=settings.neo4j_uri, user=settings.neo4j_user, password=settings.neo4j_password
+        uri=settings.neo4j_uri,
+        user=settings.neo4j_user,
+        password=settings.neo4j_password,
+        database=settings.neo4j_database,
     )
 
     neo4j_healthy = await neo4j_conn.health_check()
@@ -79,5 +86,12 @@ async def root():
     return {
         "service": "NWB Knowledge Graph",
         "version": "1.0.0",
-        "endpoints": ["/api/v1/normalize", "/api/v1/validate", "/api/v1/observations", "/api/v1/infer", "/health"],
+        "endpoints": [
+            "/api/v1/normalize",
+            "/api/v1/validate",
+            "/api/v1/semantic-validate",
+            "/api/v1/observations",
+            "/api/v1/infer",
+            "/health",
+        ],
     }

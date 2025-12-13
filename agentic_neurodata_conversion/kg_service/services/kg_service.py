@@ -1,9 +1,18 @@
 """KG Normalization Service.
 
-3-stage normalization pipeline:
-1. Exact match (confidence 1.0)
-2. Synonym match (confidence 0.95)
-3. Needs review (confidence 0.0)
+Phase 2: Integrated with Semantic Reasoner (v1.0)
+
+Normalization pipeline:
+- With semantic reasoning (default): 4-stage validation with hierarchy traversal
+  1. Exact match (confidence 1.0)
+  2. Synonym match (confidence 0.95)
+  3. Semantic search with hierarchy (confidence 0.85)
+  4. Needs review (confidence 0.0)
+
+- Without semantic reasoning (legacy): 3-stage string matching
+  1. Exact match (confidence 1.0)
+  2. Synonym match (confidence 0.95)
+  3. Needs review (confidence 0.0)
 """
 
 import logging
@@ -11,12 +20,16 @@ import unicodedata
 from typing import Any
 
 from agentic_neurodata_conversion.kg_service.db.neo4j_connection import AsyncNeo4jConnection
+from agentic_neurodata_conversion.kg_service.services.semantic_reasoner import SemanticReasoner
 
 logger = logging.getLogger(__name__)
 
 
 class AsyncKGService:
-    """Async service for ontology-based metadata normalization."""
+    """Async service for ontology-based metadata normalization.
+
+    Phase 2: Now integrates with SemanticReasoner for hierarchy-aware validation.
+    """
 
     def __init__(self, neo4j_conn: AsyncNeo4jConnection):
         """Initialize KG service with Neo4j connection.
@@ -25,6 +38,7 @@ class AsyncKGService:
             neo4j_conn: AsyncNeo4jConnection instance
         """
         self.neo4j_conn = neo4j_conn
+        self.semantic_reasoner = SemanticReasoner(neo4j_conn)
 
     def _preprocess(self, value: str) -> str:
         """Preprocess input value for matching.
@@ -138,18 +152,36 @@ class AsyncKGService:
         return None
 
     async def normalize_field(
-        self, field_path: str, value: Any, context: dict[str, Any] | None = None
+        self, field_path: str, value: Any, context: dict[str, Any] | None = None, use_semantic_reasoning: bool = True
     ) -> dict[str, Any]:
-        """Normalize a metadata field value through 3-stage pipeline.
+        """Normalize a metadata field value using semantic reasoning (Phase 2).
 
         Args:
             field_path: NWB field path (e.g., "subject.species")
             value: Raw input value
             context: Optional context (source_file, etc.)
+            use_semantic_reasoning: Use 4-stage semantic validation (default: True)
+                                   If False, uses legacy 3-stage string matching
 
         Returns:
             Normalization result with status, confidence, and matched term
+
+        Phase 2 Enhancement:
+            When use_semantic_reasoning=True (default), delegates to SemanticReasoner
+            which provides 4-stage validation with hierarchy traversal and semantic search.
         """
+        if use_semantic_reasoning:
+            # Phase 2: Use semantic reasoner with hierarchy support
+            logger.info(f"Normalizing {field_path}={value} with semantic reasoning")
+            result = await self.semantic_reasoner.validate_with_hierarchy(
+                field_path=field_path, value=str(value), required_ancestor=None
+            )
+            # SemanticReasoner returns a compatible response format
+            return result
+
+        # Legacy path: 3-stage string matching (kept for backward compatibility)
+        logger.info(f"Normalizing {field_path}={value} with legacy string matching")
+
         # Check if field is ontology-governed
         schema_field = await self._get_schema_field(field_path)
         if not schema_field or not schema_field.get("ontology_governed"):

@@ -35,19 +35,22 @@ class AsyncNeo4jConnection:
         uri: Neo4j connection URI (e.g., bolt://localhost:7687)
         user: Neo4j username
         password: Neo4j password
+        database: Neo4j database name
     """
 
-    def __init__(self, uri: str, user: str, password: str) -> None:
+    def __init__(self, uri: str, user: str, password: str, database: str = "neo4j") -> None:
         """Initialize Neo4j connection parameters.
 
         Args:
             uri: Neo4j connection URI
             user: Neo4j username
             password: Neo4j password
+            database: Neo4j database name (default: 'neo4j')
         """
         self.uri = uri
         self.user = user
         self.password = password
+        self.database = database
         self._driver: AsyncDriver | None = None
 
     async def connect(self) -> None:
@@ -105,7 +108,7 @@ class AsyncNeo4jConnection:
         if not self._driver:
             raise RuntimeError("Driver not connected. Call connect() first.")
 
-        async with self._driver.session() as session:
+        async with self._driver.session(database=self.database) as session:
             yield session
 
     async def execute_read(self, query: str, params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
@@ -182,7 +185,7 @@ class AsyncNeo4jConnection:
 _neo4j_connection: AsyncNeo4jConnection | None = None
 
 
-def get_neo4j_connection(uri: str, user: str, password: str) -> AsyncNeo4jConnection:
+def get_neo4j_connection(uri: str, user: str, password: str, database: str = "neo4j") -> AsyncNeo4jConnection:
     """Get global Neo4j connection instance.
 
     Implements singleton pattern to reuse connection across the application.
@@ -192,6 +195,7 @@ def get_neo4j_connection(uri: str, user: str, password: str) -> AsyncNeo4jConnec
         uri: Neo4j connection URI
         user: Neo4j username
         password: Neo4j password
+        database: Neo4j database name (default: 'neo4j')
 
     Returns:
         AsyncNeo4jConnection: Global connection instance
@@ -202,13 +206,14 @@ def get_neo4j_connection(uri: str, user: str, password: str) -> AsyncNeo4jConnec
         >>> conn = get_neo4j_connection(
         ...     settings.neo4j_uri,
         ...     settings.neo4j_user,
-        ...     settings.neo4j_password
+        ...     settings.neo4j_password,
+        ...     settings.neo4j_database
         ... )
         >>> await conn.connect()
     """
     global _neo4j_connection
     if _neo4j_connection is None:
-        _neo4j_connection = AsyncNeo4jConnection(uri, user, password)
+        _neo4j_connection = AsyncNeo4jConnection(uri, user, password, database)
     return _neo4j_connection
 
 

@@ -1,7 +1,8 @@
 {
   "ontology": "NCBITaxonomy",
-  "version": "2024-01",
-  "total_terms": 20,
+  "version": "2024-01-expanded",
+  "description": "Expanded subset with genus, family, and order hierarchies for semantic reasoning",
+  "total_terms": 72,
   "terms": [
     {
       "term_id": "NCBITaxon:10090",
@@ -11,6 +12,27 @@
       "parent_terms": ["NCBITaxon:10088"]
     },
     {
+      "term_id": "NCBITaxon:10088",
+      "label": "Mus",
+      "definition": "Genus of mice",
+      "synonyms": ["mouse genus"],
+      "parent_terms": ["NCBITaxon:10066"]
+    },
+    {
+      "term_id": "NCBITaxon:10066",
+      "label": "Muridae",
+      "definition": "Family of rodents including mice, rats, gerbils",
+      "synonyms": ["murid rodents", "murids"],
+      "parent_terms": ["NCBITaxon:9989"]
+    },
+    {
+      "term_id": "NCBITaxon:9989",
+      "label": "Rodentia",
+      "definition": "Order of gnawing mammals (rodents)",
+      "synonyms": ["rodents", "rodent"],
+      "parent_terms": ["NCBITaxon:40674"]
+    },
+    {
       "term_id": "NCBITaxon:10116",
       "label": "Rattus norvegicus",
       "definition": "Norway rat - widely used laboratory animal",
@@ -18,60 +40,11 @@
       "parent_terms": ["NCBITaxon:10114"]
     },
     {
-      "term_id": "NCBITaxon:9606",
-      "label": "Homo sapiens",
-      "definition": "Human",
-      "synonyms": ["human", "humans", "man", "person"],
-      "parent_terms": ["NCBITaxon:9605"]
-    },
-    {
-      "term_id": "NCBITaxon:7955",
-      "label": "Danio rerio",
-      "definition": "Zebrafish - vertebrate model organism",
-      "synonyms": ["zebrafish", "zebra fish", "zebra danio"],
-      "parent_terms": ["NCBITaxon:7954"]
-    },
-    {
-      "term_id": "NCBITaxon:9544",
-      "label": "Macaca mulatta",
-      "definition": "Rhesus macaque - primate model organism",
-      "synonyms": ["rhesus macaque", "rhesus monkey", "macaque"],
-      "parent_terms": ["NCBITaxon:9542"]
-    },
-    {
-      "term_id": "NCBITaxon:9615",
-      "label": "Canis lupus familiaris",
-      "definition": "Domestic dog",
-      "synonyms": ["dog", "domestic dog", "canine"],
-      "parent_terms": ["NCBITaxon:9612"]
-    },
-    {
-      "term_id": "NCBITaxon:9685",
-      "label": "Felis catus",
-      "definition": "Domestic cat",
-      "synonyms": ["cat", "domestic cat", "feline"],
-      "parent_terms": ["NCBITaxon:9682"]
-    },
-    {
-      "term_id": "NCBITaxon:9031",
-      "label": "Gallus gallus",
-      "definition": "Chicken - avian model organism",
-      "synonyms": ["chicken", "chickens", "chick", "red junglefowl"],
-      "parent_terms": ["NCBITaxon:9030"]
-    },
-    {
-      "term_id": "NCBITaxon:6239",
-      "label": "Caenorhabditis elegans",
-      "definition": "Nematode worm - simple model organism",
-      "synonyms": ["c elegans", "c. elegans", "worm", "nematode"],
-      "parent_terms": ["NCBITaxon:6238"]
-    },
-    {
-      "term_id": "NCBITaxon:7227",
-      "label": "Drosophila melanogaster",
-      "definition": "Fruit fly - genetic model organism",
-      "synonyms": ["drosophila", "fruit fly", "fruitfly", "d melanogaster"],
-      "parent_terms": ["NCBITaxon:7220"]
+      "term_id": "NCBITaxon:10114",
+      "label": "Rattus",
+      "definition": "Genus of rats",
+      "synonyms": ["rat genus"],
+      "parent_terms": ["NCBITaxon:10066"]
     },
     {
       "term_id": "NCBITaxon:10029",
@@ -81,46 +54,60 @@
       "parent_terms": ["NCBITaxon:10028"]
     },
     {
-      "term_id": "NCBITaxon:13616",
-      "label": "Monodelphis domestica",
-      "definition": "Gray short-tailed opossum - marsupial model",
-      "synonyms": ["opossum", "gray opossum", "short-tailed opossum"],
-      "parent_terms": ["NCBITaxon:13615"]
+      "term_id": "NCBITaxon:10028",
+      "label": "Cricetulus",
+      "definition": "Genus of hamsters",
+      "synonyms": ["hamster genus"],
+      "parent_terms": ["NCBITaxon:10066"]
     },
     {
-      "term_id": "NCBITaxon:9823",
-      "label": "Sus scrofa",
-      "definition": "Pig - large animal model",
-      "synonyms": ["pig", "swine", "porcine"],
-      "parent_terms": ["NCBITaxon:9821"]
+      "term_id": "NCBITaxon:10141",
+      "label": "Cavia porcellus",
+      "definition": "Guinea pig - complement research model",
+      "synonyms": ["guinea pig", "cavy"],
+      "parent_terms": ["NCBITaxon:10140"]
     },
     {
-      "term_id": "NCBITaxon:9913",
-      "label": "Bos taurus",
-      "definition": "Cattle - large mammal model",
-      "synonyms": ["cow", "cattle", "bovine"],
-      "parent_terms": ["NCBITaxon:9903"]
+      "term_id": "NCBITaxon:10140",
+      "label": "Cavia",
+      "definition": "Genus of guinea pigs",
+      "synonyms": ["guinea pig genus"],
+      "parent_terms": ["NCBITaxon:10139"]
     },
     {
-      "term_id": "NCBITaxon:9796",
-      "label": "Equus caballus",
-      "definition": "Horse - large mammal model",
-      "synonyms": ["horse", "equine"],
-      "parent_terms": ["NCBITaxon:9793"]
+      "term_id": "NCBITaxon:10139",
+      "label": "Caviidae",
+      "definition": "Family of guinea pigs and relatives",
+      "synonyms": ["cavy family"],
+      "parent_terms": ["NCBITaxon:9989"]
     },
     {
-      "term_id": "NCBITaxon:9986",
-      "label": "Oryctolagus cuniculus",
-      "definition": "European rabbit - antibody production model",
-      "synonyms": ["rabbit", "european rabbit"],
-      "parent_terms": ["NCBITaxon:9985"]
+      "term_id": "NCBITaxon:9606",
+      "label": "Homo sapiens",
+      "definition": "Human",
+      "synonyms": ["human", "humans", "man", "person"],
+      "parent_terms": ["NCBITaxon:9605"]
     },
     {
-      "term_id": "NCBITaxon:8364",
-      "label": "Xenopus tropicalis",
-      "definition": "Western clawed frog - developmental model",
-      "synonyms": ["xenopus", "western clawed frog", "tropical clawed frog", "frog"],
-      "parent_terms": ["NCBITaxon:8353"]
+      "term_id": "NCBITaxon:9605",
+      "label": "Homo",
+      "definition": "Genus of humans",
+      "synonyms": ["human genus"],
+      "parent_terms": ["NCBITaxon:9604"]
+    },
+    {
+      "term_id": "NCBITaxon:9604",
+      "label": "Hominidae",
+      "definition": "Family of great apes",
+      "synonyms": ["great apes", "hominids"],
+      "parent_terms": ["NCBITaxon:9443"]
+    },
+    {
+      "term_id": "NCBITaxon:9443",
+      "label": "Primates",
+      "definition": "Order of primates",
+      "synonyms": ["primate", "primates"],
+      "parent_terms": ["NCBITaxon:40674"]
     },
     {
       "term_id": "NCBITaxon:9598",
@@ -130,6 +117,20 @@
       "parent_terms": ["NCBITaxon:9596"]
     },
     {
+      "term_id": "NCBITaxon:9596",
+      "label": "Pan",
+      "definition": "Genus of chimpanzees",
+      "synonyms": ["chimpanzee genus"],
+      "parent_terms": ["NCBITaxon:9604"]
+    },
+    {
+      "term_id": "NCBITaxon:9544",
+      "label": "Macaca mulatta",
+      "definition": "Rhesus macaque - primate model organism",
+      "synonyms": ["rhesus macaque", "rhesus monkey", "macaque"],
+      "parent_terms": ["NCBITaxon:9542"]
+    },
+    {
       "term_id": "NCBITaxon:9541",
       "label": "Macaca fascicularis",
       "definition": "Crab-eating macaque - primate model",
@@ -137,11 +138,375 @@
       "parent_terms": ["NCBITaxon:9542"]
     },
     {
-      "term_id": "NCBITaxon:10141",
-      "label": "Cavia porcellus",
-      "definition": "Guinea pig - complement research model",
-      "synonyms": ["guinea pig", "cavy"],
-      "parent_terms": ["NCBITaxon:10140"]
+      "term_id": "NCBITaxon:9542",
+      "label": "Macaca",
+      "definition": "Genus of macaques",
+      "synonyms": ["macaque genus"],
+      "parent_terms": ["NCBITaxon:9526"]
+    },
+    {
+      "term_id": "NCBITaxon:9526",
+      "label": "Cercopithecidae",
+      "definition": "Family of Old World monkeys",
+      "synonyms": ["old world monkeys"],
+      "parent_terms": ["NCBITaxon:9443"]
+    },
+    {
+      "term_id": "NCBITaxon:9615",
+      "label": "Canis lupus familiaris",
+      "definition": "Domestic dog",
+      "synonyms": ["dog", "domestic dog", "canine"],
+      "parent_terms": ["NCBITaxon:9612"]
+    },
+    {
+      "term_id": "NCBITaxon:9612",
+      "label": "Canis",
+      "definition": "Genus of dogs and wolves",
+      "synonyms": ["dog genus", "canine genus"],
+      "parent_terms": ["NCBITaxon:9608"]
+    },
+    {
+      "term_id": "NCBITaxon:9608",
+      "label": "Canidae",
+      "definition": "Family of dogs, wolves, foxes",
+      "synonyms": ["canids", "dog family"],
+      "parent_terms": ["NCBITaxon:33554"]
+    },
+    {
+      "term_id": "NCBITaxon:9685",
+      "label": "Felis catus",
+      "definition": "Domestic cat",
+      "synonyms": ["cat", "domestic cat", "feline"],
+      "parent_terms": ["NCBITaxon:9682"]
+    },
+    {
+      "term_id": "NCBITaxon:9682",
+      "label": "Felis",
+      "definition": "Genus of small cats",
+      "synonyms": ["cat genus", "feline genus"],
+      "parent_terms": ["NCBITaxon:9681"]
+    },
+    {
+      "term_id": "NCBITaxon:9681",
+      "label": "Felidae",
+      "definition": "Family of cats",
+      "synonyms": ["felids", "cat family"],
+      "parent_terms": ["NCBITaxon:33554"]
+    },
+    {
+      "term_id": "NCBITaxon:33554",
+      "label": "Carnivora",
+      "definition": "Order of carnivorous mammals",
+      "synonyms": ["carnivores", "carnivore"],
+      "parent_terms": ["NCBITaxon:40674"]
+    },
+    {
+      "term_id": "NCBITaxon:9823",
+      "label": "Sus scrofa",
+      "definition": "Pig - large animal model",
+      "synonyms": ["pig", "swine", "porcine"],
+      "parent_terms": ["NCBITaxon:9821"]
+    },
+    {
+      "term_id": "NCBITaxon:9821",
+      "label": "Sus",
+      "definition": "Genus of pigs",
+      "synonyms": ["pig genus"],
+      "parent_terms": ["NCBITaxon:9820"]
+    },
+    {
+      "term_id": "NCBITaxon:9820",
+      "label": "Suidae",
+      "definition": "Family of pigs",
+      "synonyms": ["pig family", "swine family"],
+      "parent_terms": ["NCBITaxon:91561"]
+    },
+    {
+      "term_id": "NCBITaxon:91561",
+      "label": "Artiodactyla",
+      "definition": "Order of even-toed ungulates",
+      "synonyms": ["even-toed ungulates", "artiodactyls"],
+      "parent_terms": ["NCBITaxon:40674"]
+    },
+    {
+      "term_id": "NCBITaxon:9913",
+      "label": "Bos taurus",
+      "definition": "Cattle - large mammal model",
+      "synonyms": ["cow", "cattle", "bovine"],
+      "parent_terms": ["NCBITaxon:9903"]
+    },
+    {
+      "term_id": "NCBITaxon:9903",
+      "label": "Bos",
+      "definition": "Genus of cattle",
+      "synonyms": ["cattle genus", "bovine genus"],
+      "parent_terms": ["NCBITaxon:9895"]
+    },
+    {
+      "term_id": "NCBITaxon:9895",
+      "label": "Bovidae",
+      "definition": "Family of cattle, sheep, goats",
+      "synonyms": ["bovids"],
+      "parent_terms": ["NCBITaxon:91561"]
+    },
+    {
+      "term_id": "NCBITaxon:9796",
+      "label": "Equus caballus",
+      "definition": "Horse - large mammal model",
+      "synonyms": ["horse", "equine"],
+      "parent_terms": ["NCBITaxon:9793"]
+    },
+    {
+      "term_id": "NCBITaxon:9793",
+      "label": "Equus",
+      "definition": "Genus of horses",
+      "synonyms": ["horse genus", "equine genus"],
+      "parent_terms": ["NCBITaxon:9788"]
+    },
+    {
+      "term_id": "NCBITaxon:9788",
+      "label": "Equidae",
+      "definition": "Family of horses",
+      "synonyms": ["equids", "horse family"],
+      "parent_terms": ["NCBITaxon:9778"]
+    },
+    {
+      "term_id": "NCBITaxon:9778",
+      "label": "Perissodactyla",
+      "definition": "Order of odd-toed ungulates",
+      "synonyms": ["odd-toed ungulates", "perissodactyls"],
+      "parent_terms": ["NCBITaxon:40674"]
+    },
+    {
+      "term_id": "NCBITaxon:9986",
+      "label": "Oryctolagus cuniculus",
+      "definition": "European rabbit - antibody production model",
+      "synonyms": ["rabbit", "european rabbit"],
+      "parent_terms": ["NCBITaxon:9985"]
+    },
+    {
+      "term_id": "NCBITaxon:9985",
+      "label": "Oryctolagus",
+      "definition": "Genus of rabbits",
+      "synonyms": ["rabbit genus"],
+      "parent_terms": ["NCBITaxon:9975"]
+    },
+    {
+      "term_id": "NCBITaxon:9975",
+      "label": "Leporidae",
+      "definition": "Family of rabbits and hares",
+      "synonyms": ["leporids"],
+      "parent_terms": ["NCBITaxon:9977"]
+    },
+    {
+      "term_id": "NCBITaxon:9977",
+      "label": "Lagomorpha",
+      "definition": "Order of rabbits, hares, pikas",
+      "synonyms": ["lagomorphs"],
+      "parent_terms": ["NCBITaxon:40674"]
+    },
+    {
+      "term_id": "NCBITaxon:13616",
+      "label": "Monodelphis domestica",
+      "definition": "Gray short-tailed opossum - marsupial model",
+      "synonyms": ["opossum", "gray opossum", "short-tailed opossum"],
+      "parent_terms": ["NCBITaxon:13615"]
+    },
+    {
+      "term_id": "NCBITaxon:13615",
+      "label": "Monodelphis",
+      "definition": "Genus of short-tailed opossums",
+      "synonyms": ["opossum genus"],
+      "parent_terms": ["NCBITaxon:9263"]
+    },
+    {
+      "term_id": "NCBITaxon:9263",
+      "label": "Marsupialia",
+      "definition": "Infraclass of marsupials",
+      "synonyms": ["marsupials", "marsupial"],
+      "parent_terms": ["NCBITaxon:40674"]
+    },
+    {
+      "term_id": "NCBITaxon:40674",
+      "label": "Mammalia",
+      "definition": "Class of mammals",
+      "synonyms": ["mammals", "mammal"],
+      "parent_terms": ["NCBITaxon:7742"]
+    },
+    {
+      "term_id": "NCBITaxon:7955",
+      "label": "Danio rerio",
+      "definition": "Zebrafish - vertebrate model organism",
+      "synonyms": ["zebrafish", "zebra fish", "zebra danio"],
+      "parent_terms": ["NCBITaxon:7954"]
+    },
+    {
+      "term_id": "NCBITaxon:7954",
+      "label": "Danio",
+      "definition": "Genus of danios",
+      "synonyms": ["danio genus"],
+      "parent_terms": ["NCBITaxon:7952"]
+    },
+    {
+      "term_id": "NCBITaxon:7952",
+      "label": "Cyprinidae",
+      "definition": "Family of minnows and carps",
+      "synonyms": ["cyprinids", "minnow family"],
+      "parent_terms": ["NCBITaxon:186623"]
+    },
+    {
+      "term_id": "NCBITaxon:186623",
+      "label": "Cypriniformes",
+      "definition": "Order of carps and minnows",
+      "synonyms": ["cypriniform fishes"],
+      "parent_terms": ["NCBITaxon:32443"]
+    },
+    {
+      "term_id": "NCBITaxon:32443",
+      "label": "Teleostei",
+      "definition": "Infraclass of ray-finned fishes",
+      "synonyms": ["teleosts", "teleost fish"],
+      "parent_terms": ["NCBITaxon:7742"]
+    },
+    {
+      "term_id": "NCBITaxon:8364",
+      "label": "Xenopus tropicalis",
+      "definition": "Western clawed frog - developmental model",
+      "synonyms": ["xenopus", "western clawed frog", "tropical clawed frog", "frog"],
+      "parent_terms": ["NCBITaxon:8353"]
+    },
+    {
+      "term_id": "NCBITaxon:8353",
+      "label": "Xenopus",
+      "definition": "Genus of African clawed frogs",
+      "synonyms": ["xenopus genus", "clawed frog genus"],
+      "parent_terms": ["NCBITaxon:8342"]
+    },
+    {
+      "term_id": "NCBITaxon:8342",
+      "label": "Anura",
+      "definition": "Order of frogs and toads",
+      "synonyms": ["anurans", "frogs", "toads"],
+      "parent_terms": ["NCBITaxon:8292"]
+    },
+    {
+      "term_id": "NCBITaxon:8292",
+      "label": "Amphibia",
+      "definition": "Class of amphibians",
+      "synonyms": ["amphibians", "amphibian"],
+      "parent_terms": ["NCBITaxon:7742"]
+    },
+    {
+      "term_id": "NCBITaxon:9031",
+      "label": "Gallus gallus",
+      "definition": "Chicken - avian model organism",
+      "synonyms": ["chicken", "chickens", "chick", "red junglefowl"],
+      "parent_terms": ["NCBITaxon:9030"]
+    },
+    {
+      "term_id": "NCBITaxon:9030",
+      "label": "Gallus",
+      "definition": "Genus of junglefowl",
+      "synonyms": ["junglefowl genus"],
+      "parent_terms": ["NCBITaxon:9005"]
+    },
+    {
+      "term_id": "NCBITaxon:9005",
+      "label": "Phasianidae",
+      "definition": "Family of pheasants and relatives",
+      "synonyms": ["pheasant family", "phasianids"],
+      "parent_terms": ["NCBITaxon:8825"]
+    },
+    {
+      "term_id": "NCBITaxon:8825",
+      "label": "Aves",
+      "definition": "Class of birds",
+      "synonyms": ["birds", "bird", "avian"],
+      "parent_terms": ["NCBITaxon:7742"]
+    },
+    {
+      "term_id": "NCBITaxon:7742",
+      "label": "Vertebrata",
+      "definition": "Subphylum of vertebrates",
+      "synonyms": ["vertebrates", "vertebrate"],
+      "parent_terms": ["NCBITaxon:7711"]
+    },
+    {
+      "term_id": "NCBITaxon:7711",
+      "label": "Chordata",
+      "definition": "Phylum of chordates",
+      "synonyms": ["chordates", "chordate"],
+      "parent_terms": []
+    },
+    {
+      "term_id": "NCBITaxon:6239",
+      "label": "Caenorhabditis elegans",
+      "definition": "Nematode worm - simple model organism",
+      "synonyms": ["c elegans", "c. elegans", "worm", "nematode"],
+      "parent_terms": ["NCBITaxon:6238"]
+    },
+    {
+      "term_id": "NCBITaxon:6238",
+      "label": "Caenorhabditis",
+      "definition": "Genus of nematode worms",
+      "synonyms": ["caenorhabditis genus"],
+      "parent_terms": ["NCBITaxon:6231"]
+    },
+    {
+      "term_id": "NCBITaxon:6231",
+      "label": "Nematoda",
+      "definition": "Phylum of roundworms",
+      "synonyms": ["nematodes", "roundworms", "nematode"],
+      "parent_terms": ["NCBITaxon:33317"]
+    },
+    {
+      "term_id": "NCBITaxon:7227",
+      "label": "Drosophila melanogaster",
+      "definition": "Fruit fly - genetic model organism",
+      "synonyms": ["drosophila", "fruit fly", "fruitfly", "d melanogaster"],
+      "parent_terms": ["NCBITaxon:7220"]
+    },
+    {
+      "term_id": "NCBITaxon:7220",
+      "label": "Drosophila",
+      "definition": "Genus of fruit flies",
+      "synonyms": ["drosophila genus", "fruit fly genus"],
+      "parent_terms": ["NCBITaxon:7214"]
+    },
+    {
+      "term_id": "NCBITaxon:7214",
+      "label": "Drosophilidae",
+      "definition": "Family of fruit flies",
+      "synonyms": ["drosophilids", "fruit fly family"],
+      "parent_terms": ["NCBITaxon:7147"]
+    },
+    {
+      "term_id": "NCBITaxon:7147",
+      "label": "Diptera",
+      "definition": "Order of true flies",
+      "synonyms": ["dipterans", "flies", "true flies"],
+      "parent_terms": ["NCBITaxon:50557"]
+    },
+    {
+      "term_id": "NCBITaxon:50557",
+      "label": "Insecta",
+      "definition": "Class of insects",
+      "synonyms": ["insects", "insect"],
+      "parent_terms": ["NCBITaxon:6656"]
+    },
+    {
+      "term_id": "NCBITaxon:6656",
+      "label": "Arthropoda",
+      "definition": "Phylum of arthropods",
+      "synonyms": ["arthropods", "arthropod"],
+      "parent_terms": ["NCBITaxon:33317"]
+    },
+    {
+      "term_id": "NCBITaxon:33317",
+      "label": "Protostomia",
+      "definition": "Clade of protostome invertebrates",
+      "synonyms": ["protostomes", "protostome", "invertebrates"],
+      "parent_terms": []
     }
   ]
 }
