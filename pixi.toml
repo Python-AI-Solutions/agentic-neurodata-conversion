@@ -42,10 +42,13 @@ python-dotenv = ">=1.0.0"
 neo4j = ">=5.15.0,<6"
 
 [tasks]
+
 # Quick start task
 start = "python scripts/startup/start_app.py"
 
 # (Docker/local/hotreload choices are handled by `pixi run start -- --help`.)
+
+
 
 # Test tasks - Primary
 test = "python scripts/compose/run_with_compose.py -- python -m pytest tests -v --cov=agentic_neurodata_conversion --cov-report=xml --cov-report=term-missing --cov-fail-under=60"
