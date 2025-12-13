@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  neo4j:
+    image: neo4j:5.15
+    container_name: anc-neo4j
+    ports:
+      - "7474:7474"  # HTTP (Neo4j Browser)
+      - "7687:7687"  # Bolt protocol
+    environment:
+      # Authentication (change password in .env for security)
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-dev-password}
+
+      # APOC plugin configuration
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*
+
+      # Memory configuration (suitable for local development)
+      NEO4J_dbms_memory_pagecache_size: 512M
+      NEO4J_dbms_memory_heap_initial__size: 512M
+      NEO4J_dbms_memory_heap_max__size: 1G
+
+      # Database name
+      NEO4J_dbms_default__database: ${NEO4J_DATABASE:-neo4j}
+    volumes:
+      # Persist data between container restarts
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_import:/var/lib/neo4j/import
+      - neo4j_plugins:/plugins
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p ${NEO4J_PASSWORD:-dev-password} 'RETURN 1'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - anc-network
+
+networks:
+  anc-network:
+    driver: bridge
+
+volumes:
+  neo4j_data:
+    name: anc_neo4j_data
+  neo4j_logs:
+    name: anc_neo4j_logs
+  neo4j_import:
+    name: anc_neo4j_import
+  neo4j_plugins:
+    name: anc_neo4j_plugins

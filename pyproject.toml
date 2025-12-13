@@ -319,6 +319,8 @@ exclude_dirs = [
 skips = [
     "B101",  # assert_used (we use asserts in tests)
     "B601",  # paramiko_calls
+    "B607",  # start_process_with_partial_path (safe in dev scripts with hardcoded commands)
+    "B603",  # subprocess_without_shell_equals_true (safe in dev scripts with hardcoded commands)
 ]
 
 # ============================================================================

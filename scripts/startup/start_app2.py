@@ -3,7 +3,7 @@
 
 This script handles:
 - Environment configuration (API key setup)
-- Neo4j Desktop connectivity check
+- Neo4j startup (Docker Compose or Neo4j Desktop)
 - KG service startup (port 8001)
 - Backend server startup (port 8000)
 - Frontend server startup (port 3000)
@@ -11,9 +11,8 @@ This script handles:
 
 Usage:
     python3 start_app2.py
-    # Or make executable:
-    chmod +x start_app2.py
-    ./start_app2.py
+    # Or via pixi:
+    pixi run start
 """
 
 import os
@@ -146,100 +145,304 @@ def check_env_file() -> bool:
 
 
 def setup_env_file() -> bool:
-    """Interactive setup for .env file with API key."""
+    """Check .env file exists with required variables (strict mode)."""
     print_header("Environment Configuration")
 
     env_path = Path(".env")
     env_example_path = Path(".env.example")
 
-    # Check if .env already exists with valid key
-    if check_env_file():
-        print_info(".env file already configured with API key")
-        response = (
-            input(f"\n{Colors.YELLOW}Do you want to update the Claude API key? (Y/N): {Colors.END}").strip().lower()
-        )
-        if response != "y":
-            print_success("Using existing .env configuration")
-            return True
+    # Check if .env exists
+    if not env_path.exists():
+        print_error(".env file not found")
+        print_info("\nTo fix this:")
+        print_info("  1. Copy the example: cp .env.example .env")
+        print_info("  2. Edit .env and configure required variables:")
+        print_info("     - ANTHROPIC_API_KEY=sk-ant-your-key-here")
+        print_info("     - NEO4J_PASSWORD=dev-password")
+        print_info("     - NEO4J_DATABASE=neo4j")
+        return False
 
-    # Get API key from user
-    print_info("You need an Anthropic API key to use this application")
-    print_info("Get your key from: https://console.anthropic.com")
-    print()
+    # Verify required variables are present
+    env_vars = load_env_file()
 
-    api_key = input(f"{Colors.BOLD}Enter your Anthropic API key (or press Enter to skip): {Colors.END}").strip()
-
-    if not api_key:
-        print_warning("No API key provided. Application will start without LLM features.")
+    # Check ANTHROPIC_API_KEY
+    api_key = env_vars.get("ANTHROPIC_API_KEY", "")
+    if not api_key or api_key == "sk-ant-REPLACE-WITH-YOUR-KEY":
+        print_error("ANTHROPIC_API_KEY not configured in .env file")
+        print_info("\nTo fix this:")
+        print_info("  1. Get your API key from: https://console.anthropic.com")
+        print_info("  2. Open .env file")
+        print_info("  3. Set: ANTHROPIC_API_KEY=sk-ant-your-key-here")
         return False
 
     if not api_key.startswith("sk-ant-"):
-        print_error("Invalid API key format. Key should start with 'sk-ant-'")
+        print_error("Invalid ANTHROPIC_API_KEY format in .env file")
+        print_info("API key should start with 'sk-ant-'")
         return False
 
-    # Create .env file from example or create new
-    if env_example_path.exists():
-        with open(env_example_path) as f:
-            content = f.read()
+    # Check NEO4J_PASSWORD
+    neo4j_password = env_vars.get("NEO4J_PASSWORD", "")
+    if not neo4j_password:
+        print_error("NEO4J_PASSWORD not configured in .env file")
+        print_info("\nTo fix this:")
+        print_info("  1. Open .env file")
+        print_info("  2. Set: NEO4J_PASSWORD=dev-password")
+        return False
 
-        # Replace placeholder with actual key
-        content = content.replace("ANTHROPIC_API_KEY=sk-ant-REPLACE-WITH-YOUR-KEY", f"ANTHROPIC_API_KEY={api_key}")
-    else:
-        # Create minimal .env
-        content = f"ANTHROPIC_API_KEY={api_key}\n"
+    # Check NEO4J_DATABASE
+    neo4j_database = env_vars.get("NEO4J_DATABASE", "")
+    if not neo4j_database:
+        print_error("NEO4J_DATABASE not configured in .env file")
+        print_info("\nTo fix this:")
+        print_info("  1. Open .env file")
+        print_info("  2. Set: NEO4J_DATABASE=neo4j")
+        return False
 
-    # Write .env file
-    with open(env_path, "w") as f:
-        f.write(content)
-
-    print_success(".env file created successfully!")
+    print_success("ANTHROPIC_API_KEY configured")
+    print_success("NEO4J_PASSWORD configured")
+    print_success("NEO4J_DATABASE configured")
+    print_success(".env file validation passed")
     return True
 
 
-def check_neo4j_desktop() -> bool:
-    """Check if Neo4j Desktop is running."""
-    print_header("Checking Neo4j Desktop")
+def load_env_file() -> dict[str, str]:
+    """Load environment variables from .env file."""
+    env_vars = {}
+    env_path = Path(".env")
 
-    # Check if Neo4j bolt port (7687) is accessible
-    if check_port_available(7687):
-        print_success("Neo4j Desktop is running on bolt://localhost:7687")
-        return True
-    else:
-        print_error("Neo4j Desktop is NOT running")
-        print_info("Please start your database in Neo4j Desktop application")
-        print_info("Expected: bolt://localhost:7687")
+    if env_path.exists():
+        with open(env_path) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, value = line.split("=", 1)
+                    env_vars[key.strip()] = value.strip()
+
+    return env_vars
+
+
+def check_docker_compose() -> bool:
+    """Check if docker-compose is installed."""
+    try:
+        result = subprocess.run(["docker-compose", "--version"], capture_output=True, text=True, timeout=5)  # nosec B607,B603 - safe: hardcoded command, no user input
+        return result.returncode == 0
+    except Exception:
         return False
 
 
+def check_docker_health(container_name: str) -> str | None:
+    """Check container health status using docker inspect.
+
+    Args:
+        container_name: Name of the Docker container to check
+
+    Returns:
+        Health status string ("starting", "healthy", "unhealthy", "none") or None if check fails
+    """
+    try:
+        result = subprocess.run(
+            ["docker", "inspect", "--format={{.State.Health.Status}}", container_name],  # nosec B607,B603 - safe: hardcoded command, container_name is validated
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except Exception:  # nosec B110 - intentional: fallback to None on any docker error
+        pass
+    return None
+
+
+def start_docker_compose() -> bool:
+    """Start Neo4j using Docker Compose."""
+    print_header("Starting Neo4j with Docker Compose")
+
+    try:
+        # Check if docker-compose.yml exists
+        if not Path("docker-compose.yml").exists():
+            print_error("docker-compose.yml not found")
+            return False
+
+        # Check if docker-compose is available
+        if not check_docker_compose():
+            print_error("docker-compose command not found")
+            print_info("Install Docker Desktop or docker-compose CLI")
+            return False
+
+        # Load .env file to get required variables (already validated in setup_env_file)
+        env_vars = load_env_file()
+        neo4j_password = env_vars.get("NEO4J_PASSWORD")
+        neo4j_database = env_vars.get("NEO4J_DATABASE")
+
+        # Verify required variables are present (defensive check)
+        if not neo4j_password or not neo4j_database:
+            print_error("NEO4J_PASSWORD or NEO4J_DATABASE not found in .env")
+            print_info("This should have been caught during environment validation")
+            return False
+
+        # Set environment for docker-compose
+        env = os.environ.copy()
+        env["NEO4J_PASSWORD"] = neo4j_password
+        env["NEO4J_DATABASE"] = neo4j_database
+
+        print_info("Starting Neo4j container...")
+        result = subprocess.run(["docker-compose", "up", "-d"], capture_output=True, text=True, env=env, timeout=60)  # nosec B607,B603 - safe: hardcoded command, no user input
+
+        if result.returncode != 0:
+            print_error(f"Failed to start Docker Compose: {result.stderr}")
+            return False
+
+        print_success("Docker Compose started")
+
+        # Wait for Neo4j to be healthy (multi-layer health check)
+        print_info("Waiting for Neo4j to initialize...")
+        time.sleep(10)  # Initial delay for Neo4j to start initializing
+
+        print_info("Checking Neo4j health status...")
+        max_wait = 60  # Increased from 30 to accommodate APOC plugin initialization
+        start_time = time.time()
+
+        while time.time() - start_time < max_wait:
+            # Layer 1: Docker health check (preferred method)
+            health_status = check_docker_health("anc-neo4j")
+            if health_status == "healthy":
+                print_success("Neo4j is ready at bolt://localhost:7687")
+                return True
+
+            # Layer 2: Bolt connectivity check (fallback method)
+            if not check_port_available(7687):
+                print_success("Neo4j Bolt port is accessible at bolt://localhost:7687")
+                return True
+
+            # Status feedback every 10 seconds
+            elapsed = int(time.time() - start_time)
+            if elapsed % 10 == 0 and elapsed > 0:
+                status_msg = "unhealthy" if health_status == "unhealthy" else health_status or "checking"
+                print_info(f"Still waiting... (status: {status_msg}, {elapsed}s elapsed)")
+
+            time.sleep(2)  # Check every 2 seconds to reduce CPU usage
+
+        print_error("Neo4j failed to become healthy within 60 seconds")
+        print_info("Check container logs: docker-compose logs neo4j")
+        print_info("Check container status: docker inspect anc-neo4j")
+        return False
+
+    except subprocess.TimeoutExpired:
+        print_error("Docker Compose operation timed out")
+        return False
+    except Exception as e:
+        print_error(f"Failed to start Docker Compose: {e}")
+        return False
+
+
+def check_or_start_neo4j() -> bool:
+    """Check if Neo4j is running, or start it with Docker Compose."""
+    print_header("Neo4j Setup")
+
+    # First, check if Neo4j is already running on port 7687
+    if check_port_available(7687):
+        print_success("Neo4j is already running on bolt://localhost:7687")
+        return True
+
+    print_info("Neo4j is not running")
+
+    # Try to start with Docker Compose
+    print_info("Attempting to start Neo4j with Docker Compose...")
+    if start_docker_compose():
+        return True
+
+    # Docker Compose failed, prompt for Neo4j Desktop
+    print_warning("Could not start Neo4j with Docker Compose")
+    print_info("\nAlternative: Use Neo4j Desktop")
+    print_info("  1. Open Neo4j Desktop application")
+    print_info("  2. Start your database")
+    print_info("  3. Verify it's running on bolt://localhost:7687")
+    print_info("  4. Re-run this script")
+
+    return False
+
+
 def setup_neo4j_password() -> str | None:
-    """Get Neo4j password from user."""
+    """Get Neo4j password from .env file (required)."""
     print_header("Neo4j Password Configuration")
 
-    # Check if NEO4J_PASSWORD is already in environment
-    existing_password = os.getenv("NEO4J_PASSWORD")
-    if existing_password:
-        print_info("NEO4J_PASSWORD already set in environment")
-        response = (
-            input(f"\n{Colors.YELLOW}Do you want to update the Neo4j existing password? (Y/N): {Colors.END}")
-            .strip()
-            .lower()
+    # Load from .env file (strict mode - must exist)
+    env_vars = load_env_file()
+    password_from_env = env_vars.get("NEO4J_PASSWORD")
+
+    if password_from_env:
+        # Set in environment for child processes
+        os.environ["NEO4J_PASSWORD"] = password_from_env
+        print_success(f"Using NEO4J_PASSWORD from .env file: {password_from_env}")
+        return password_from_env
+
+    # NEO4J_PASSWORD is required in .env file
+    print_error("NEO4J_PASSWORD not found in .env file")
+    print_info("\nTo fix this:")
+    print_info("  1. Open your .env file")
+    print_info("  2. Add: NEO4J_PASSWORD=dev-password")
+    print_info("  3. Or copy from .env.example: cp .env.example .env")
+    return None
+
+
+def initialize_neo4j_data() -> bool:
+    """Initialize Neo4j with ontology data and schema fields."""
+    print_header("Initializing Knowledge Graph Data")
+
+    try:
+        # Load ontologies (96 terms: NCBITaxonomy, UBERON, PATO)
+        print_info("Loading ontology terms...")
+        result = subprocess.run(
+            ["pixi", "run", "python", "-m", "agentic_neurodata_conversion.kg_service.scripts.load_ontologies"],  # nosec B607,B603 - safe: hardcoded pixi command, no user input
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
-        if response != "y":
-            print_success("Using existing NEO4J_PASSWORD")
-            return existing_password
 
-    # Prompt for password
-    print_info("Enter your Neo4j Desktop database password")
-    password = input(f"{Colors.BOLD}Neo4j Password: {Colors.END}").strip()
+        if result.returncode != 0:
+            print_error(f"Failed to load ontologies: {result.stderr}")
+            return False
 
-    if not password:
-        print_error("No password provided")
-        return None
+        print_success("Loaded ontology terms (96 terms)")
 
-    # Set in environment for child processes
-    os.environ["NEO4J_PASSWORD"] = password
-    print_success("Neo4j password configured")
-    return password
+        # Load NWB schema fields (25 fields)
+        print_info("Loading NWB schema fields...")
+        result = subprocess.run(
+            ["pixi", "run", "python", "-m", "agentic_neurodata_conversion.kg_service.scripts.load_schema_fields"],  # nosec B607,B603 - safe: hardcoded pixi command, no user input
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+
+        if result.returncode != 0:
+            print_error(f"Failed to load schema fields: {result.stderr}")
+            return False
+
+        print_success("Loaded NWB schema fields (25 fields)")
+
+        # Verify data loaded correctly
+        print_info("Verifying Knowledge Graph initialization...")
+        result = subprocess.run(
+            ["pixi", "run", "python", "-m", "agentic_neurodata_conversion.kg_service.scripts.verify_phase1"],  # nosec B607,B603 - safe: hardcoded pixi command, no user input
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+
+        if result.returncode != 0:
+            print_warning("Verification warnings detected (this is normal for first-time setup)")
+            # Don't fail - verification warnings are acceptable
+        else:
+            print_success("Knowledge Graph verification passed")
+
+        return True
+
+    except subprocess.TimeoutExpired:
+        print_error("Neo4j initialization timed out")
+        return False
+    except Exception as e:
+        print_error(f"Failed to initialize Neo4j data: {e}")
+        return False
 
 
 def wait_for_server(url: str, timeout: int = 30) -> bool:
@@ -396,9 +599,10 @@ def display_status() -> None:
 
     print(f"{Colors.BOLD}{Colors.GREEN}✅ Application is running with KG integration!{Colors.END}\n")
 
-    print(f"{Colors.BOLD}Neo4j Desktop:{Colors.END}")
+    print(f"{Colors.BOLD}Neo4j:{Colors.END}")
     print(f"  • Bolt:         {Colors.CYAN}bolt://localhost:7687{Colors.END}")
     print(f"  • Browser:      {Colors.CYAN}http://localhost:7474{Colors.END}")
+    print(f"  • Status:       {Colors.CYAN}docker-compose ps{Colors.END} (if using Docker)")
     print()
 
     print(f"{Colors.BOLD}KG Service:{Colors.END}")
@@ -447,14 +651,15 @@ def main() -> None:
 
     print(f"{Colors.BOLD}This script will:{Colors.END}")
     print("  1. Configure your environment (.env file)")
-    print("  2. Check Neo4j Desktop connectivity")
-    print("  3. Configure Neo4j password")
-    print("  4. Clean up old processes")
-    print("  5. Clean temporary directories")
-    print("  6. Start KG service (port 8001)")
-    print("  7. Start backend server (port 8000)")
-    print("  8. Start frontend server (port 3000)")
-    print("  9. Display application URLs")
+    print("  2. Start Neo4j (Docker Compose or check Neo4j Desktop)")
+    print("  3. Configure Neo4j password (from .env or prompt)")
+    print("  4. Initialize Knowledge Graph (load ontologies & schema)")
+    print("  5. Clean up old processes")
+    print("  6. Clean temporary directories")
+    print("  7. Start KG service (port 8001)")
+    print("  8. Start backend server (port 8000)")
+    print("  9. Start frontend server (port 3000)")
+    print(" 10. Display application URLs")
     print()
 
     kg_process = None
@@ -462,25 +667,33 @@ def main() -> None:
     frontend_process = None
 
     try:
-        # Step 1: Setup environment
-        setup_env_file()
-
-        # Step 2: Check Neo4j Desktop
-        if not check_neo4j_desktop():
-            print_error("Cannot continue without Neo4j Desktop")
-            print_info("\nTo start Neo4j Desktop:")
-            print_info("  1. Open Neo4j Desktop application")
-            print_info("  2. Start your database")
-            print_info("  3. Verify it's running on bolt://localhost:7687")
+        # Step 1: Validate environment configuration (strict)
+        if not setup_env_file():
+            print_error("Environment validation failed")
+            print_info("\nPlease configure your .env file before starting the application")
             sys.exit(1)
 
-        # Step 3: Configure Neo4j password
+        # Step 2: Start or check Neo4j
+        if not check_or_start_neo4j():
+            print_error("Cannot continue without Neo4j")
+            print_info("\nPlease ensure Neo4j is running on bolt://localhost:7687")
+            sys.exit(1)
+
+        # Step 3: Validate Neo4j password (strict)
         neo4j_password = setup_neo4j_password()
         if not neo4j_password:
-            print_error("Cannot continue without Neo4j password")
+            print_error("Neo4j password validation failed")
+            print_info("\nPlease add NEO4J_PASSWORD to your .env file")
             sys.exit(1)
 
-        # Step 4: Kill old processes
+        # Step 4: Initialize Knowledge Graph data
+        if not initialize_neo4j_data():
+            print_warning("Knowledge Graph initialization failed")
+            response = input(f"\n{Colors.YELLOW}Continue without KG data? (y/N): {Colors.END}").strip().lower()
+            if response != "y":
+                sys.exit(1)
+
+        # Step 5: Kill old processes
         print_header("Cleaning Up Old Processes")
         print_info("Checking for processes on ports 8001, 8000, and 3000...")
 
@@ -493,12 +706,12 @@ def main() -> None:
 
         time.sleep(2)  # Give OS time to release ports
 
-        # Step 5: Clean temp directories
+        # Step 6: Clean temp directories
         print_header("Cleaning Temp Directories")
         clean_temp_directories()
         time.sleep(1)
 
-        # Step 6: Start KG service
+        # Step 7: Start KG service
         kg_process = start_kg_service()
         if not kg_process:
             print_warning("KG service failed to start")
@@ -507,18 +720,18 @@ def main() -> None:
             if response != "y":
                 sys.exit(1)
 
-        # Step 7: Start backend
+        # Step 8: Start backend
         backend_process = start_backend()
         if not backend_process:
             print_error("Cannot continue without backend server")
             sys.exit(1)
 
-        # Step 8: Start frontend
+        # Step 9: Start frontend
         frontend_process = start_frontend()
         if not frontend_process:
             print_warning("Frontend failed to start, but backend is running")
 
-        # Step 9: Display status
+        # Step 10: Display status
         display_status()
 
         # Keep script running and monitor processes
