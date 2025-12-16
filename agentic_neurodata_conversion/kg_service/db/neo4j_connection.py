@@ -67,7 +67,7 @@ class AsyncNeo4jConnection:
                 self.uri,
                 auth=(self.user, self.password),
                 max_connection_pool_size=50,
-                connection_timeout=5.0,
+                connection_timeout=15.0,  # Increased from 5.0s to handle Docker startup delays
                 max_connection_lifetime=3600,
             )
             # Verify connectivity

@@ -570,7 +570,9 @@ class TestRunNeuroConvConversion:
             raise ImportError(name)
 
         # Force the resolver to see modules that do not contain the requested class.
-        monkeypatch.setattr(runner_mod, "_importlib", type("X", (), {"import_module": staticmethod(fake_import_module)}))
+        monkeypatch.setattr(
+            runner_mod, "_importlib", type("X", (), {"import_module": staticmethod(fake_import_module)})
+        )
 
         with pytest.raises(ValueError, match="Failed to import interface"):
             runner._run_neuroconv_conversion(

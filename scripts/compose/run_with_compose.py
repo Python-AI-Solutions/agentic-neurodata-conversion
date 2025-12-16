@@ -29,7 +29,9 @@ from agentic_neurodata_conversion.config import get_settings
 
 
 def _compose_base_cmd() -> list[str]:
-    files = [f.strip() for f in os.getenv("COMPOSE_FILES", "compose.yaml,compose.override.yaml").split(",") if f.strip()]
+    files = [
+        f.strip() for f in os.getenv("COMPOSE_FILES", "compose.yaml,compose.override.yaml").split(",") if f.strip()
+    ]
     cmd = ["docker", "compose"]
 
     # Ensure `docker compose` reads the repo's `.env` even when invoked from other CWDs.
@@ -51,7 +53,7 @@ def _compose_base_cmd() -> list[str]:
 def _http_ready(url: str) -> bool:
     try:
         with urllib.request.urlopen(url, timeout=2) as resp:  # nosec B310 - controlled localhost URLs
-            return resp.status == 200
+            return bool(resp.status == 200)
     except Exception:
         return False
 
@@ -69,6 +71,7 @@ def _wait_for_url(url: str, timeout_s: int) -> None:
         time.sleep(1)
     raise TimeoutError(f"Timed out waiting for {url}")
 
+
 def _seed_completed_successfully(compose: list[str], timeout_s: int) -> None:
     """Wait for kg-seed to exit 0, if present in the compose project."""
     start = time.time()
@@ -85,6 +88,7 @@ def _seed_completed_successfully(compose: list[str], timeout_s: int) -> None:
             raise RuntimeError(f"kg-seed exited non-zero:\n{out.strip()}")
         time.sleep(2)
     raise TimeoutError("Timed out waiting for kg-seed to complete")
+
 
 def _service_exited(compose: list[str], service: str) -> str | None:
     """Return a short status string if `service` is exited/restarting; otherwise None."""

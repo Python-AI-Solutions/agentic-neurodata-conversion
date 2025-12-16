@@ -35,7 +35,7 @@ async def test_create_constraints_and_indexes():
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_load_ontology_file(tmp_path):
-    """Test loading a single ontology file."""
+    """Test loading a single ontology file with batched queries."""
     # Create test JSON file
     test_data = {
         "ontology": "TestOntology",
@@ -63,24 +63,35 @@ async def test_load_ontology_file(tmp_path):
 
     # Mock connection
     mock_conn = Mock()
-    mock_conn.execute_write = AsyncMock()
+    mock_conn.execute_write = AsyncMock(return_value=[{"terms_created": 2}])
 
     # Load file
     count = await load_ontology_file(mock_conn, test_file)
 
     # Verify results
     assert count == 2
-    assert mock_conn.execute_write.call_count == 2
+    # CRITICAL: Should only call execute_write ONCE (batched, not N times)
+    assert mock_conn.execute_write.call_count == 1
 
-    # Verify parameters passed to execute_write
-    first_call_args = mock_conn.execute_write.call_args_list[0]
-    assert "term_id" in str(first_call_args)
+    # Verify batched query structure
+    call_args = mock_conn.execute_write.call_args_list[0]
+    query = call_args[0][0]
+    params = call_args[0][1]
+
+    # Verify UNWIND syntax for batch processing
+    assert "UNWIND $terms_batch" in query
+    assert "terms_batch" in params
+    assert len(params["terms_batch"]) == 2
+
+    # Verify batch structure
+    assert params["terms_batch"][0]["term_id"] == "TEST:001"
+    assert params["terms_batch"][1]["term_id"] == "TEST:002"
 
 
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_load_ontology_file_missing_optional_fields(tmp_path):
-    """Test loading ontology file with missing optional fields."""
+    """Test loading ontology file with missing optional fields (batched)."""
     test_data = {
         "ontology": "TestOntology",
         "terms": [
@@ -97,16 +108,20 @@ async def test_load_ontology_file_missing_optional_fields(tmp_path):
         json.dump(test_data, f)
 
     mock_conn = Mock()
-    mock_conn.execute_write = AsyncMock()
+    mock_conn.execute_write = AsyncMock(return_value=[{"terms_created": 1}])
 
     count = await load_ontology_file(mock_conn, test_file)
 
     assert count == 1
-    # Should handle missing fields gracefully
+    # Should handle missing fields gracefully in batch
     call_args = mock_conn.execute_write.call_args_list[0]
     params = call_args[0][1]  # Second argument is params dict
-    assert params["synonyms"] == []
-    assert params["parent_terms"] == []
+
+    # Verify batch structure with defaults for missing fields
+    assert "terms_batch" in params
+    first_term = params["terms_batch"][0]
+    assert first_term["synonyms"] == []
+    assert first_term["parent_terms"] == []
 
 
 @pytest.mark.unit
@@ -150,7 +165,9 @@ async def test_create_is_a_relationships_no_result():
     new_callable=AsyncMock,
 )
 @patch("agentic_neurodata_conversion.kg_service.scripts.load_ontologies.load_ontology_file", new_callable=AsyncMock)
-@patch("agentic_neurodata_conversion.kg_service.scripts.load_ontologies.create_is_a_relationships", new_callable=AsyncMock)
+@patch(
+    "agentic_neurodata_conversion.kg_service.scripts.load_ontologies.create_is_a_relationships", new_callable=AsyncMock
+)
 async def test_main_success(
     mock_create_rels, mock_load_file, mock_create_constraints, mock_get_conn, mock_get_settings, tmp_path
 ):

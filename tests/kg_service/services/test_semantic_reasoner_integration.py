@@ -6,11 +6,11 @@ Requires Neo4j running with test data loaded.
 import pytest
 
 from agentic_neurodata_conversion.config import ConfigError
+from agentic_neurodata_conversion.kg_service.config import get_settings
 from agentic_neurodata_conversion.kg_service.db.neo4j_connection import (
     get_neo4j_connection,
     reset_neo4j_connection,
 )
-from agentic_neurodata_conversion.kg_service.config import get_settings
 from agentic_neurodata_conversion.kg_service.services.semantic_reasoner import (
     get_semantic_reasoner,
     reset_semantic_reasoner,

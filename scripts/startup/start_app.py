@@ -748,7 +748,9 @@ def main() -> None:
         kill_process_on_port(3000)
 
         if started_compose:
-            print_info("Docker services remain running; stop with `docker compose --env-file .env -f compose.yaml -f compose.override.yaml down`.")
+            print_info(
+                "Docker services remain running; stop with `docker compose --env-file .env -f compose.yaml -f compose.override.yaml down`."
+            )
 
         print_success("Shutdown complete")
         print()

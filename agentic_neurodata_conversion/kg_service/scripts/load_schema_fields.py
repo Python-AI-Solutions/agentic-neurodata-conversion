@@ -35,7 +35,7 @@ async def connect_with_retry(conn) -> None:
             last_error = e
             try:
                 await conn.close()
-            except Exception:
+            except Exception:  # nosec B110 - intentional cleanup, errors can be safely ignored
                 pass
         await asyncio.sleep(2)
 
@@ -60,37 +60,43 @@ async def load_schema_fields(conn):
 
     fields = data["fields"]
 
-    # Create SchemaField nodes
-    for field in fields:
-        # Convert examples to JSON string if they contain nested arrays
-        examples = field.get("examples", [])
-        # Neo4j can't store nested arrays, so convert to JSON string
-        examples_str = json.dumps(examples) if examples else None
+    # Create SchemaField nodes in a single batched query using UNWIND
+    logger.info(f"  Batching {len(fields)} schema fields...")
 
-        query = """
-        MERGE (f:SchemaField {field_path: $field_path})
-        SET f.description = $description,
-            f.required = $required,
-            f.ontology_governed = $ontology_governed,
-            f.ontology_name = $ontology_name,
-            f.value_type = $value_type,
-            f.examples_json = $examples_json
-        RETURN f.field_path AS field_path
-        """
+    query = """
+    UNWIND $fields_batch AS field
+    MERGE (f:SchemaField {field_path: field.field_path})
+    SET f.description = field.description,
+        f.required = field.required,
+        f.ontology_governed = field.ontology_governed,
+        f.ontology_name = field.ontology_name,
+        f.value_type = field.value_type,
+        f.examples_json = field.examples_json
+    RETURN count(f) AS fields_created
+    """
 
-        params = {
-            "field_path": field["field_path"],
-            "description": field["description"],
-            "required": field["required"],
-            "ontology_governed": field["ontology_governed"],
-            "ontology_name": field.get("ontology"),
-            "value_type": field["value_type"],
-            "examples_json": examples_str,
-        }
+    # Prepare all fields as a batch
+    # Convert examples to JSON string if they contain nested arrays (Neo4j can't store nested arrays)
+    batch_params = {
+        "fields_batch": [
+            {
+                "field_path": field["field_path"],
+                "description": field["description"],
+                "required": field["required"],
+                "ontology_governed": field["ontology_governed"],
+                "ontology_name": field.get("ontology"),
+                "value_type": field["value_type"],
+                "examples_json": json.dumps(field.get("examples", [])) if field.get("examples") else None,
+            }
+            for field in fields
+        ]
+    }
 
-        await conn.execute_write(query, params)
+    # Single database roundtrip instead of N separate queries
+    result = await conn.execute_write(query, batch_params)
+    fields_created = result[0]["fields_created"] if result else 0
 
-    logger.info(f"✅ Loaded {len(fields)} schema fields")
+    logger.info(f"  ✅ Batch loaded {fields_created} schema fields")
     return len(fields)
 
 

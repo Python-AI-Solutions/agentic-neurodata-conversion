@@ -45,7 +45,7 @@ async def connect_with_retry(conn) -> None:
             last_error = e
             try:
                 await conn.close()
-            except Exception:
+            except Exception:  # nosec B110 - intentional cleanup, errors can be safely ignored
                 pass
         await asyncio.sleep(2)
 
@@ -113,30 +113,40 @@ async def load_ontology_file(conn, file_path: Path) -> int:
     ontology_name = data["ontology"]
     terms = data["terms"]
 
-    # Load terms
-    for term in terms:
-        query = """
-        MERGE (t:OntologyTerm {term_id: $term_id})
-        SET t.label = $label,
-            t.definition = $definition,
-            t.synonyms = $synonyms,
-            t.ontology_name = $ontology_name,
-            t.parent_terms = $parent_terms
-        RETURN t.term_id AS term_id
-        """
+    # Load terms in a single batched query using UNWIND
+    logger.info(f"  Batching {len(terms)} terms from {file_path.name}...")
 
-        params = {
-            "term_id": term["term_id"],
-            "label": term["label"],
-            "definition": term.get("definition"),
-            "synonyms": term.get("synonyms", []),
-            "ontology_name": ontology_name,
-            "parent_terms": term.get("parent_terms", []),
-        }
+    query = """
+    UNWIND $terms_batch AS term
+    MERGE (t:OntologyTerm {term_id: term.term_id})
+    SET t.label = term.label,
+        t.definition = term.definition,
+        t.synonyms = term.synonyms,
+        t.ontology_name = term.ontology_name,
+        t.parent_terms = term.parent_terms
+    RETURN count(t) AS terms_created
+    """
 
-        await conn.execute_write(query, params)
+    # Prepare all terms as a batch
+    batch_params = {
+        "terms_batch": [
+            {
+                "term_id": term["term_id"],
+                "label": term["label"],
+                "definition": term.get("definition"),
+                "synonyms": term.get("synonyms", []),
+                "ontology_name": ontology_name,
+                "parent_terms": term.get("parent_terms", []),
+            }
+            for term in terms
+        ]
+    }
 
-    logger.info(f"Loaded {len(terms)} terms from {file_path.name}")
+    # Single database roundtrip instead of N separate queries
+    result = await conn.execute_write(query, batch_params)
+    terms_created = result[0]["terms_created"] if result else 0
+
+    logger.info(f"  ✅ Batch loaded {terms_created} terms from {file_path.name}")
     return len(terms)
 
 

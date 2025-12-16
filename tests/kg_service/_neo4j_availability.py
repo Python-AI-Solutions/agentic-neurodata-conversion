@@ -19,4 +19,3 @@ def neo4j_http_available(port: int, *, timeout_s: float = 2.0) -> bool:
             return 200 <= resp.status < 500
     except Exception:
         return False
-

@@ -9,10 +9,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from agentic_neurodata_conversion.config import ConfigError
 from agentic_neurodata_conversion.kg_service.api.v1 import infer, normalize, observations, semantic_validate, validate
 from agentic_neurodata_conversion.kg_service.config import get_settings
 from agentic_neurodata_conversion.kg_service.db.neo4j_connection import get_neo4j_connection
-from agentic_neurodata_conversion.config import ConfigError
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

@@ -51,7 +51,7 @@ class PathsConfig(BaseModel):
 class APIConfig(BaseModel):
     """Main API (agentic-neurodata-conversion) server settings."""
 
-    host: str = "0.0.0.0"
+    host: str = "0.0.0.0"  # nosec B104 - required for Docker network access in development
     port: int = Field(default=8000, ge=1, le=65535)
     cors_origins: list[str] = Field(default_factory=lambda: ["*"])
 
@@ -68,7 +68,7 @@ class APIConfig(BaseModel):
                 decoded = json.loads(raw)
                 if isinstance(decoded, list):
                     return [str(item).strip() for item in decoded if str(item).strip()] or ["*"]
-            except Exception:
+            except Exception:  # nosec B110 - intentional fallback to basic parsing if JSON parsing fails
                 pass
         # Accept comma-separated string (including "*")
         origins = [part.strip() for part in raw.split(",")]
@@ -105,7 +105,7 @@ class GraphDBConfig(BaseModel):
 class KGServiceConfig(BaseModel):
     """KG service server configuration (when running as its own process)."""
 
-    host: str = "0.0.0.0"
+    host: str = "0.0.0.0"  # nosec B104 - required for Docker network access, configurable via CLI
     port: int = Field(
         default=8001,
         ge=1,
@@ -131,7 +131,7 @@ class KGServiceConfig(BaseModel):
                 if isinstance(decoded, list):
                     cleaned = [str(item).strip() for item in decoded if str(item).strip()]
                     return cleaned or default_origins
-            except Exception:
+            except Exception:  # nosec B110 - intentional fallback to basic context if JSON parsing fails
                 pass
         origins = [part.strip() for part in raw.split(",")]
         cleaned = [origin for origin in origins if origin]
@@ -220,7 +220,7 @@ class Settings(BaseSettings):
 def get_settings(env_file: str | None = None) -> Settings:
     """Get settings, optionally loading from a specific env file."""
     resolved_env_file = _resolve_env_file(env_file)
-    settings = Settings(_env_file=resolved_env_file)  # type: ignore[call-arg]
+    settings = Settings(_env_file=resolved_env_file)
 
     # Minimal legacy env-var compatibility (env + dotenv file).
     dotenv = _read_simple_dotenv(resolved_env_file) if resolved_env_file else {}
@@ -242,7 +242,7 @@ def get_settings(env_file: str | None = None) -> Settings:
             pass
 
     if "API__CORS_ORIGINS" not in env and (cors := env.get("CORS_ORIGINS")):
-        settings.api.cors_origins = APIConfig._parse_cors_origins(cors)  # type: ignore[attr-defined]
+        settings.api.cors_origins = APIConfig._parse_cors_origins(cors)
 
     if "PATHS__UPLOAD_DIR" not in env and (upload_dir := env.get("UPLOAD_DIR")):
         settings.paths.upload_dir = upload_dir
@@ -286,7 +286,7 @@ def get_settings(env_file: str | None = None) -> Settings:
         except ValueError:
             pass
     if "KG_SERVICE__CORS_ORIGINS" not in env and (kg_cors := env.get("KG_SERVICE_CORS_ORIGINS")):
-        settings.kg_service.cors_origins = KGServiceConfig._parse_cors_origins(kg_cors)  # type: ignore[attr-defined]
+        settings.kg_service.cors_origins = KGServiceConfig._parse_cors_origins(kg_cors)
 
     if "COMPOSE__NEO4J_HTTP_PORT" not in env and (neo4j_http_port := env.get("NEO4J_HTTP_PORT")):
         try:

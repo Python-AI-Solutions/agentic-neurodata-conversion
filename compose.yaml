@@ -17,9 +17,10 @@ services:
       # Use `$$` so docker compose does not try to interpolate `$...` on the host.
       # Neo4j's docker image treats most `NEO4J_*` env vars as config keys; do not pass `NEO4J_PASSWORD`.
       test: ["CMD-SHELL", "pass=$$(printf %s \"$$NEO4J_AUTH\" | cut -d/ -f2-); cypher-shell -a bolt://localhost:7687 -u neo4j -p \"$$pass\" \"RETURN 1;\" >/dev/null 2>&1 || exit 1"]
-      interval: 5s
+      interval: 3s       # Check more frequently (reduced from 5s)
       timeout: 10s
-      retries: 60
+      retries: 20        # Reduced from 60 (60s total, Neo4j typically ready in 20-40s)
+      start_period: 10s  # Grace period before health checks count as failures
 
   kg-seed:
     build:
@@ -35,7 +36,7 @@ services:
       [
         "bash",
         "-lc",
-        "python agentic_neurodata_conversion/kg_service/scripts/load_ontologies.py && python agentic_neurodata_conversion/kg_service/scripts/load_schema_fields.py",
+        "pixi run python agentic_neurodata_conversion/kg_service/scripts/load_ontologies.py && pixi run python agentic_neurodata_conversion/kg_service/scripts/load_schema_fields.py",
       ]
     restart: "on-failure"
 

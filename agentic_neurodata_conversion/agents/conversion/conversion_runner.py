@@ -7,20 +7,19 @@ Handles:
 - Thread-safe file size tracking
 """
 
+import importlib as _importlib
 import logging
 import threading
 import time
-import importlib as _importlib
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from agentic_neurodata_conversion.services.llm_service import LLMService
 
+from agentic_neurodata_conversion.agents.conversion.neuroconv_formats import FORMAT_TO_NEUROCONV_CLASS
 from agentic_neurodata_conversion.models import ConversionStatus, GlobalState, LogLevel, MCPMessage, MCPResponse
 from agentic_neurodata_conversion.utils.file_versioning import compute_sha256
-
-from agentic_neurodata_conversion.agents.conversion.neuroconv_formats import FORMAT_TO_NEUROCONV_CLASS
 
 logger = logging.getLogger(__name__)
 
@@ -34,23 +33,23 @@ def resolve_neuroconv_class(class_name: str) -> type:
     dt_mod = sys.modules.get("neuroconv.datainterfaces")
     # Allow tests to inject a lightweight stand-in (e.g., a Mock) via sys.modules.
     if dt_mod is not None and hasattr(dt_mod, class_name):
-        return getattr(dt_mod, class_name)
+        return cast(type, getattr(dt_mod, class_name))
     if dt_mod is not None and not hasattr(dt_mod, "__path__"):
         sys.modules.pop("neuroconv.datainterfaces", None)
 
     datainterfaces = _importlib.import_module("neuroconv.datainterfaces")
     if hasattr(datainterfaces, class_name):
-        return getattr(datainterfaces, class_name)
+        return cast(type, getattr(datainterfaces, class_name))
 
     conv_mod = sys.modules.get("neuroconv.converters")
     if conv_mod is not None and hasattr(conv_mod, class_name):
-        return getattr(conv_mod, class_name)
+        return cast(type, getattr(conv_mod, class_name))
     if conv_mod is not None and not hasattr(conv_mod, "__path__"):
         sys.modules.pop("neuroconv.converters", None)
 
     converters = _importlib.import_module("neuroconv.converters")
     if hasattr(converters, class_name):
-        return getattr(converters, class_name)
+        return cast(type, getattr(converters, class_name))
 
     raise AttributeError(class_name)
 

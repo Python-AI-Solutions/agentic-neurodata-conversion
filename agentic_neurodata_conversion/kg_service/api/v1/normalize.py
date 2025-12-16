@@ -20,7 +20,9 @@ def get_kg_service_instance() -> AsyncKGService:
     """Dependency to get KG service instance."""
     settings = get_settings()
     if not settings.graph_db.password:
-        raise HTTPException(status_code=503, detail="KG service not configured: missing GRAPH_DB__PASSWORD/NEO4J_PASSWORD")
+        raise HTTPException(
+            status_code=503, detail="KG service not configured: missing GRAPH_DB__PASSWORD/NEO4J_PASSWORD"
+        )
     neo4j_conn = get_neo4j_connection(
         uri=settings.graph_db.uri,
         user=settings.graph_db.user,

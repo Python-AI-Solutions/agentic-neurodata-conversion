@@ -31,9 +31,9 @@ def test_neuroconv_exports_cover_supported_formats_without_importing():
 
 @pytest.mark.unit
 def test_conversion_runner_resolves_converter_classes(monkeypatch):
-    from agentic_neurodata_conversion.agents.conversion.conversion_runner import resolve_neuroconv_class
-
     import types
+
+    from agentic_neurodata_conversion.agents.conversion.conversion_runner import resolve_neuroconv_class
 
     fake_datainterfaces = types.ModuleType("neuroconv.datainterfaces")
     fake_converters = types.ModuleType("neuroconv.converters")
@@ -44,8 +44,8 @@ def test_conversion_runner_resolves_converter_classes(monkeypatch):
     class FakeConverter:  # noqa: D101 - test helper
         pass
 
-    setattr(fake_datainterfaces, "SomeInterface", FakeInterface)
-    setattr(fake_converters, "SpikeGLXConverterPipe", FakeConverter)
+    fake_datainterfaces.SomeInterface = FakeInterface
+    fake_converters.SpikeGLXConverterPipe = FakeConverter
 
     def fake_import_module(name: str):
         if name == "neuroconv.datainterfaces":

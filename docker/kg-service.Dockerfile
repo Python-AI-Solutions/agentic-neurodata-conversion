@@ -1,5 +1,12 @@
 FROM ghcr.io/prefix-dev/pixi:latest
 
+# Install build dependencies for compiling Python packages with C extensions
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    make \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Copy only what's needed for dependency resolution first (better layer caching)
