@@ -10,9 +10,49 @@ from agentic_neurodata_conversion.kg_service.scripts.load_ontologies import (
 )
 from agentic_neurodata_conversion.kg_service.scripts.load_ontologies import main as load_ontologies_main
 from agentic_neurodata_conversion.kg_service.scripts.load_schema_fields import main as load_schema_fields_main
+from tests.kg_service._neo4j_availability import neo4j_http_available
 
 # Skip integration tests if Neo4j is not available
 pytestmark = pytest.mark.integration
+
+
+@pytest.fixture
+async def neo4j_connection():
+    """Fixture for Neo4j connection."""
+    from agentic_neurodata_conversion.kg_service.config import get_settings
+    from agentic_neurodata_conversion.kg_service.db.neo4j_connection import get_neo4j_connection, reset_neo4j_connection
+
+    # Reset connection to avoid singleton issues
+    reset_neo4j_connection()
+
+    settings = get_settings()
+
+    # Check if Neo4j HTTP endpoint is available
+    if not neo4j_http_available(settings.compose.neo4j_http_port):
+        pytest.skip("Neo4j not running on localhost; skipping Neo4j integration tests")
+
+    # Check if graph DB settings are configured
+    if not settings.graph_db.password:
+        pytest.skip("Graph DB password not configured; skipping integration tests")
+
+    conn = get_neo4j_connection(
+        uri=settings.graph_db.uri,
+        user=settings.graph_db.user,
+        password=settings.graph_db.password,
+        database=settings.graph_db.database,
+    )
+
+    # Try to connect, skip if Neo4j isn't running or not accessible
+    try:
+        await conn.connect()
+        # Verify connection with health check
+        if not await conn.health_check():
+            pytest.skip("Neo4j health check failed")
+    except Exception as e:
+        pytest.skip(f"Neo4j not accessible: {e}")
+
+    yield conn
+    await conn.close()
 
 
 @pytest.mark.asyncio
@@ -49,8 +89,7 @@ async def test_seed_job_completes_under_30_seconds(neo4j_connection):
 
     # Verify performance target
     assert elapsed < 30.0, (
-        f"Seed job took {elapsed:.2f}s, expected <30s. "
-        f"Performance optimization may not be working correctly."
+        f"Seed job took {elapsed:.2f}s, expected <30s. Performance optimization may not be working correctly."
     )
 
     # Verify data integrity - all data loaded correctly
@@ -84,10 +123,13 @@ async def test_batch_query_performance_improvement(neo4j_connection):
     is effective.
     """
     from pathlib import Path
+
     from agentic_neurodata_conversion.kg_service.scripts.load_ontologies import load_ontology_file
 
     # Find the largest ontology file (ncbi_taxonomy_subset.json with 72 terms)
-    ontology_dir = Path(__file__).parent.parent.parent.parent / "agentic_neurodata_conversion" / "kg_service" / "ontologies"
+    ontology_dir = (
+        Path(__file__).parent.parent.parent.parent / "agentic_neurodata_conversion" / "kg_service" / "ontologies"
+    )
     ncbi_file = ontology_dir / "ncbi_taxonomy_subset.json"
 
     if not ncbi_file.exists():
@@ -100,8 +142,7 @@ async def test_batch_query_performance_improvement(neo4j_connection):
     # With batched queries, loading 72 terms should take <2 seconds
     # (Previously would take 3.6-7.2s with N+1 pattern)
     assert elapsed < 2.0, (
-        f"Loading {count} terms took {elapsed:.2f}s, expected <2s. "
-        f"Batch optimization may not be working."
+        f"Loading {count} terms took {elapsed:.2f}s, expected <2s. Batch optimization may not be working."
     )
 
     # Verify all terms were loaded
