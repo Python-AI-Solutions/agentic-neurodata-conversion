@@ -1,7 +1,7 @@
 """Phase 1 Verification Script.
 
 Verifies that Phase 1: Graph Foundation completed successfully by checking:
-- OntologyTerm nodes are loaded (44 total)
+- OntologyTerm nodes are loaded (96 total)
 - Constraints are created
 - Indexes are created
 - Sample queries return expected results
@@ -33,7 +33,7 @@ async def verify_ontology_terms(conn) -> bool:
 
     result = await conn.execute_read(query)
 
-    expected = {"NCBITaxonomy": 20, "PATO": 4, "UBERON": 20}
+    expected = {"NCBITaxonomy": 72, "PATO": 4, "UBERON": 20}
 
     success = True
     for record in result:
@@ -52,10 +52,10 @@ async def verify_ontology_terms(conn) -> bool:
     total_result = await conn.execute_read(total_query)
     total = total_result[0]["total"]
 
-    if total == 44:
-        logger.info(f"✅ Total: {total} terms (expected 44)")
+    if total == 96:
+        logger.info(f"✅ Total: {total} terms (expected 96)")
     else:
-        logger.error(f"❌ Total: {total} terms (expected 44)")
+        logger.error(f"❌ Total: {total} terms (expected 96)")
         success = False
 
     return success
@@ -179,7 +179,14 @@ async def main() -> None:
     settings = get_settings()
 
     # Connect to Neo4j
-    conn = get_neo4j_connection(uri=settings.neo4j_uri, user=settings.neo4j_user, password=settings.neo4j_password)
+    if not settings.graph_db.password:
+        raise ValueError("GRAPH_DB__PASSWORD/NEO4J_PASSWORD is required to run verification")
+    conn = get_neo4j_connection(
+        uri=settings.graph_db.uri,
+        user=settings.graph_db.user,
+        password=settings.graph_db.password,
+        database=settings.graph_db.database,
+    )
     await conn.connect()
 
     try:

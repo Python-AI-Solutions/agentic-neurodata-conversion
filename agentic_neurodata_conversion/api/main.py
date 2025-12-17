@@ -13,17 +13,8 @@ All endpoints have been modularized into routers:
 """
 
 import logging
-import os
 import tempfile
 from pathlib import Path
-
-# Load environment variables from .env file
-from dotenv import load_dotenv
-
-load_dotenv()
-
-# Initialize logger
-logger = logging.getLogger(__name__)
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -43,6 +34,9 @@ from agentic_neurodata_conversion.api.routers import (
 
 # Import conversion router to set upload directory
 from agentic_neurodata_conversion.api.routers.conversion import set_upload_dir
+from agentic_neurodata_conversion.config import ConfigError, get_settings
+
+logger = logging.getLogger(__name__)
 
 
 async def startup_event():
@@ -51,11 +45,12 @@ async def startup_event():
     Raises:
         ValueError: If required environment variables are missing
     """
-    api_key = os.getenv("ANTHROPIC_API_KEY")
-    if not api_key:
-        raise ValueError(
-            "ANTHROPIC_API_KEY environment variable is required. Please set it in your .env file or environment."
-        )
+    settings = get_settings()
+    try:
+        settings.require_api()
+        settings.require_kg_client()
+    except ConfigError as e:
+        raise ValueError(str(e)) from e
 
     # Log successful validation
     logger.info("✓ API key validation passed")
@@ -74,9 +69,9 @@ app.add_event_handler("startup", startup_event)
 # Configuration constants
 CORS_CACHE_MAX_AGE_SECONDS = 3600  # 1 hour
 
-# CORS middleware - configurable for different environments
-# In production, set CORS_ORIGINS environment variable to restrict access
-CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
+# CORS middleware - configurable for different environments.
+settings = get_settings()
+CORS_ORIGINS = settings.api.cors_origins
 
 # Convert "*" string to list for CORSMiddleware
 if CORS_ORIGINS == ["*"]:
@@ -144,7 +139,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled exception in {request.method} {request.url.path}: {exc}", exc_info=True)
 
     # Don't expose internal error details in production
-    error_detail = str(exc) if os.getenv("DEBUG", "false").lower() == "true" else "An internal server error occurred"
+    error_detail = str(exc) if get_settings().core.debug else "An internal server error occurred"
 
     return JSONResponse(
         status_code=500,
@@ -165,9 +160,10 @@ app.include_router(websocket_router)  # /ws
 if __name__ == "__main__":
     import uvicorn
 
+    settings = get_settings()
     uvicorn.run(
         "main:app",
         host="0.0.0.0",  # nosec B104 - required for Docker/network access in development
-        port=8000,
+        port=settings.api.port,
         reload=True,
     )

@@ -19,6 +19,8 @@ from agentic_neurodata_conversion.models import ConversionStatus, GlobalState, L
 
 logger = logging.getLogger(__name__)
 
+from agentic_neurodata_conversion.agents.conversion.neuroconv_formats import SUPPORTED_FORMATS
+
 
 class FormatDetector:
     """Format detection for neuroscience data files."""
@@ -33,124 +35,12 @@ class FormatDetector:
         self._supported_formats = self._get_supported_formats()
 
     def _get_supported_formats(self) -> list[str]:
-        """Get list of supported data formats from NeuroConv.
+        """Get list of supported format names for this project.
 
         Returns:
-            List of supported format names (84+ formats)
+            List of supported format names (disambiguated, e.g. `BlackrockRecording`).
         """
-        try:
-            # Get available data interfaces from NeuroConv
-            from neuroconv import get_format_summaries
-
-            summaries = get_format_summaries()
-
-            # Handle different return types from get_format_summaries
-            if isinstance(summaries, dict):
-                # If it's a dict, extract format names from keys or values
-                return list(summaries.keys()) if summaries else []
-            elif isinstance(summaries, list):
-                # If it's a list of dicts
-                return [fmt.get("format", fmt) if isinstance(fmt, dict) else str(fmt) for fmt in summaries]
-            else:
-                # Unknown format, use fallback
-                raise ValueError(f"Unexpected format summaries type: {type(summaries)}")
-        except Exception as e:
-            # Fallback to all supported formats (84 total)
-            logger.warning(f"Failed to get format summaries dynamically, using fallback list: {e}")
-            return [
-                # Electrophysiology Recording
-                "AlphaOmegaRecording",
-                "Axon",
-                "AxonRecording",
-                "AxonaRecording",
-                "AxonaUnitRecording",
-                "BiocamRecording",
-                "BlackrockRecording",
-                "CellExplorerRecording",
-                "EDFRecording",
-                "IntanRecording",
-                "MCSRawRecording",
-                "MEArecRecording",
-                "MaxOneRecording",
-                "NeuralynxRecording",
-                "Neuropixels",
-                "NeuroScopeRecording",
-                "OpenEphys",
-                "OpenEphysBinary",
-                "OpenEphysLegacyRecording",
-                "Plexon2Recording",
-                "PlexonRecording",
-                "Spike2Recording",
-                "SpikeGLX",
-                "SpikeGadgetsRecording",
-                "TdtRecording",
-                "WhiteMatterRecording",
-                # Spike Sorting
-                "BlackrockSorting",
-                "CellExplorerSorting",
-                "KiloSortSorting",
-                "NeuralynxSorting",
-                "NeuroScopeSorting",
-                "OpenEphysSorting",
-                "PhySorting",
-                "PlexonSorting",
-                # Imaging
-                "BrukerTiffMultiPlaneImaging",
-                "BrukerTiffSinglePlaneImaging",
-                "FemtonicsImaging",
-                "Hdf5Imaging",
-                "InscopixImaging",
-                "MicroManagerTiffImaging",
-                "MiniscopeImaging",
-                "SbxImaging",
-                "ScanImageImaging",
-                "ScanImageLegacyImaging",
-                "ScanImageMultiFileImaging",
-                "ThorImaging",
-                "TiffImaging",
-                # Segmentation
-                "CaimanSegmentation",
-                "CnmfeSegmentation",
-                "ExtractSegmentation",
-                "InscopixSegmentation",
-                "MinianSegmentation",
-                "SimaSegmentation",
-                "Suite2pSegmentation",
-                # Behavior/Video
-                "AxonaPositionData",
-                "DeepLabCut",
-                "ExternalVideo",
-                "FicTracData",
-                "InternalVideo",
-                "LightningPoseData",
-                "MiniscopeBehavior",
-                "NeuralynxNvt",
-                "SLEAP",
-                "Video",
-                # LFP/Analog/Other
-                "Audio",
-                "AxonaLFPData",
-                "CellExplorerLFP",
-                "CsvTimeIntervals",
-                "EDFAnalog",
-                "ExcelTimeIntervals",
-                "Image",
-                "IntanAnalog",
-                "MedPC",
-                "NeuroScopeLFP",
-                "OpenEphysBinaryAnalog",
-                "PlexonLFP",
-                "SpikeGLXNIDQ",
-                "TDTFiberPhotometry",
-                # Converters
-                "BrukerTiffMultiPlane",
-                "BrukerTiffSinglePlane",
-                "LightningPose",
-                "Miniscope",
-                "SortedRecording",
-                "SortedSpikeGLX",
-                "SpikeGLXConverter",
-            ]
+        return list(SUPPORTED_FORMATS)
 
     async def handle_detect_format(
         self,
@@ -265,12 +155,12 @@ class FormatDetector:
                 detected_format = llm_result.get("format")
                 confidence = llm_result.get("confidence")
 
-                # Validate that LLM returned a valid NeuroConv format name
-                # This prevents hallucinated format names
+                # Validate that the LLM returned a valid *project* format name.
+                # This prevents hallucinated format names.
                 if detected_format not in self._supported_formats:
                     state.add_log(
                         LogLevel.WARNING,
-                        f"LLM returned invalid format '{detected_format}' (not in NeuroConv). "
+                        f"LLM returned invalid format '{detected_format}' (not a supported format). "
                         f"This may be a hallucination. Falling back to pattern matching.",
                         {"invalid_format": detected_format, "alternatives": llm_result.get("alternatives", [])},
                     )
@@ -494,7 +384,7 @@ class FormatDetector:
 
 Your job is to analyze file structure and naming patterns to identify the recording format.
 
-IMPORTANT: You MUST use the exact format names recognized by NeuroConv. Do not invent or modify format names.
+IMPORTANT: You MUST use the exact format names recognized by this application. Do not invent or modify format names.
 
 Common electrophysiology formats:
 - **SpikeGLX** or **Neuropixels**: Files like "*.ap.bin", "*.ap.meta", "*.lf.bin", "*.lf.meta", or ".nidq." files

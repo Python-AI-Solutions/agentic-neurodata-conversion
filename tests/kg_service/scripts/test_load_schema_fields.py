@@ -47,7 +47,7 @@ async def test_load_schema_fields(tmp_path):
 
     # Mock connection
     mock_conn = Mock()
-    mock_conn.execute_write = AsyncMock()
+    mock_conn.execute_write = AsyncMock(return_value=[{"fields_created": 2}])
 
     # Patch Path to point to tmp_path
     with patch("agentic_neurodata_conversion.kg_service.scripts.load_schema_fields.Path") as mock_path_cls:
@@ -61,15 +61,24 @@ async def test_load_schema_fields(tmp_path):
 
     # Verify results
     assert count == 2
-    assert mock_conn.execute_write.call_count == 2
+    # CRITICAL: Should only call execute_write ONCE (batched, not N times)
+    assert mock_conn.execute_write.call_count == 1
 
-    # Verify first call parameters
-    first_call = mock_conn.execute_write.call_args_list[0]
-    params = first_call[0][1]
+    # Verify batched query structure
+    call_args = mock_conn.execute_write.call_args_list[0]
+    query = call_args[0][0]
+    params = call_args[0][1]
 
-    assert params["field_path"] == "subject.species"
-    assert params["ontology_governed"] is True
-    assert params["ontology_name"] == "NCBITaxonomy"
+    # Verify UNWIND syntax for batch processing
+    assert "UNWIND $fields_batch" in query
+    assert "fields_batch" in params
+    assert len(params["fields_batch"]) == 2
+
+    # Verify batch structure for first field
+    first_field = params["fields_batch"][0]
+    assert first_field["field_path"] == "subject.species"
+    assert first_field["ontology_governed"] is True
+    assert first_field["ontology_name"] == "NCBITaxonomy"
 
 
 @pytest.mark.unit
@@ -97,7 +106,7 @@ async def test_load_schema_fields_no_examples(tmp_path):
         json.dump(test_data, f)
 
     mock_conn = Mock()
-    mock_conn.execute_write = AsyncMock()
+    mock_conn.execute_write = AsyncMock(return_value=[{"fields_created": 1}])
 
     with patch("agentic_neurodata_conversion.kg_service.scripts.load_schema_fields.Path") as mock_path_cls:
         mock_instance = Mock()
@@ -108,9 +117,10 @@ async def test_load_schema_fields_no_examples(tmp_path):
 
     assert count == 1
 
-    # Verify examples_json is None when no examples
+    # Verify examples_json is None when no examples (in batch)
     call_params = mock_conn.execute_write.call_args_list[0][0][1]
-    assert call_params["examples_json"] is None
+    first_field = call_params["fields_batch"][0]
+    assert first_field["examples_json"] is None
 
 
 @pytest.mark.unit
@@ -138,7 +148,7 @@ async def test_load_schema_fields_with_nested_examples(tmp_path):
         json.dump(test_data, f)
 
     mock_conn = Mock()
-    mock_conn.execute_write = AsyncMock()
+    mock_conn.execute_write = AsyncMock(return_value=[{"fields_created": 1}])
 
     with patch("agentic_neurodata_conversion.kg_service.scripts.load_schema_fields.Path") as mock_path_cls:
         mock_instance = Mock()
@@ -149,11 +159,12 @@ async def test_load_schema_fields_with_nested_examples(tmp_path):
 
     assert count == 1
 
-    # Verify examples are converted to JSON string
+    # Verify examples are converted to JSON string (in batch)
     call_params = mock_conn.execute_write.call_args_list[0][0][1]
-    assert call_params["examples_json"] is not None
+    first_field = call_params["fields_batch"][0]
+    assert first_field["examples_json"] is not None
     # Should be able to parse back to original
-    parsed = json.loads(call_params["examples_json"])
+    parsed = json.loads(first_field["examples_json"])
     assert parsed == [["value1", "value2"], ["value3"]]
 
 
@@ -182,7 +193,7 @@ async def test_load_schema_fields_no_ontology(tmp_path):
         json.dump(test_data, f)
 
     mock_conn = Mock()
-    mock_conn.execute_write = AsyncMock()
+    mock_conn.execute_write = AsyncMock(return_value=[{"fields_created": 1}])
 
     with patch("agentic_neurodata_conversion.kg_service.scripts.load_schema_fields.Path") as mock_path_cls:
         mock_instance = Mock()
@@ -193,9 +204,10 @@ async def test_load_schema_fields_no_ontology(tmp_path):
 
     assert count == 1
 
-    # Verify ontology_name is None for non-ontology-governed fields
+    # Verify ontology_name is None for non-ontology-governed fields (in batch)
     call_params = mock_conn.execute_write.call_args_list[0][0][1]
-    assert call_params["ontology_name"] is None
+    first_field = call_params["fields_batch"][0]
+    assert first_field["ontology_name"] is None
 
 
 @pytest.mark.unit
@@ -223,7 +235,7 @@ async def test_load_schema_fields_empty_examples(tmp_path):
         json.dump(test_data, f)
 
     mock_conn = Mock()
-    mock_conn.execute_write = AsyncMock()
+    mock_conn.execute_write = AsyncMock(return_value=[{"fields_created": 1}])
 
     with patch("agentic_neurodata_conversion.kg_service.scripts.load_schema_fields.Path") as mock_path_cls:
         mock_instance = Mock()
@@ -234,28 +246,32 @@ async def test_load_schema_fields_empty_examples(tmp_path):
 
     assert count == 1
 
-    # Empty examples should result in None
+    # Empty examples should result in None (in batch)
     call_params = mock_conn.execute_write.call_args_list[0][0][1]
-    assert call_params["examples_json"] is None
+    first_field = call_params["fields_batch"][0]
+    assert first_field["examples_json"] is None
 
 
 @pytest.mark.unit
 @pytest.mark.asyncio
 @patch("agentic_neurodata_conversion.kg_service.scripts.load_schema_fields.get_settings")
 @patch("agentic_neurodata_conversion.kg_service.scripts.load_schema_fields.get_neo4j_connection")
-@patch("agentic_neurodata_conversion.kg_service.scripts.load_schema_fields.load_schema_fields")
+@patch("agentic_neurodata_conversion.kg_service.scripts.load_schema_fields.load_schema_fields", new_callable=AsyncMock)
 async def test_main_success(mock_load_fields, mock_get_conn, mock_get_settings):
     """Test main function success path."""
     # Mock settings
     mock_settings = Mock()
-    mock_settings.neo4j_uri = "bolt://localhost:7687"
-    mock_settings.neo4j_user = "neo4j"
-    mock_settings.neo4j_password = "password"
+    mock_settings.graph_db = Mock()
+    mock_settings.graph_db.uri = "bolt://localhost:7687"
+    mock_settings.graph_db.user = "neo4j"
+    mock_settings.graph_db.password = "password"
+    mock_settings.graph_db.database = "neo4j"
     mock_get_settings.return_value = mock_settings
 
     # Mock connection
     mock_conn = Mock()
     mock_conn.connect = AsyncMock()
+    mock_conn.health_check = AsyncMock(return_value=True)
     mock_conn.close = AsyncMock()
     mock_get_conn.return_value = mock_conn
 
@@ -281,20 +297,24 @@ async def test_main_connection_cleanup_on_error(mock_get_conn, mock_get_settings
     """Test main function cleans up connection on error."""
     # Mock settings
     mock_settings = Mock()
-    mock_settings.neo4j_uri = "bolt://localhost:7687"
-    mock_settings.neo4j_user = "neo4j"
-    mock_settings.neo4j_password = "password"
+    mock_settings.graph_db = Mock()
+    mock_settings.graph_db.uri = "bolt://localhost:7687"
+    mock_settings.graph_db.user = "neo4j"
+    mock_settings.graph_db.password = "password"
+    mock_settings.graph_db.database = "neo4j"
     mock_get_settings.return_value = mock_settings
 
     # Mock connection that raises error
     mock_conn = Mock()
     mock_conn.connect = AsyncMock()
+    mock_conn.health_check = AsyncMock(return_value=True)
     mock_conn.close = AsyncMock()
     mock_get_conn.return_value = mock_conn
 
     # Patch load_schema_fields to raise error
     with patch(
         "agentic_neurodata_conversion.kg_service.scripts.load_schema_fields.load_schema_fields",
+        new_callable=AsyncMock,
         side_effect=Exception("Load error"),
     ):
         with pytest.raises(Exception, match="Load error"):

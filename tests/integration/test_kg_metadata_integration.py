@@ -268,7 +268,6 @@ def test_is_ontology_governed_field_helper():
     # Ontology-governed fields
     assert parser._is_ontology_governed_field("species") is True
     assert parser._is_ontology_governed_field("sex") is True
-    assert parser._is_ontology_governed_field("location") is True
     assert parser._is_ontology_governed_field("brain_region") is True
     assert parser._is_ontology_governed_field("electrode_location") is True
 
@@ -277,6 +276,10 @@ def test_is_ontology_governed_field_helper():
     assert parser._is_ontology_governed_field("weight") is False
     assert parser._is_ontology_governed_field("session_description") is False
     assert parser._is_ontology_governed_field("experimenter") is False
+
+    # Note: "location" is not ontology-governed as a separate field
+    # It's handled as an extraction pattern for "brain_region" in schema.py
+    assert parser._is_ontology_governed_field("location") is False
 
 
 @pytest.mark.integration

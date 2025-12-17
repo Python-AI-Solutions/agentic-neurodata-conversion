@@ -10,8 +10,8 @@ Usage:
     pixi run python kg_service/scripts/load_ontologies.py
 
 Expected output:
-    ✅ Successfully loaded 44 ontology terms
-    - 20 from NCBITaxonomy (species)
+    ✅ Successfully loaded 96 ontology terms
+    - 72 from NCBITaxonomy (species)
     - 20 from UBERON (brain regions)
     - 4 from PATO (sex terms)
 """
@@ -19,6 +19,7 @@ Expected output:
 import asyncio
 import json
 import logging
+import time
 from pathlib import Path
 
 from agentic_neurodata_conversion.kg_service.config import get_settings
@@ -26,6 +27,29 @@ from agentic_neurodata_conversion.kg_service.db.neo4j_connection import get_neo4
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+CONNECT_TIMEOUT_S = 120
+
+
+async def connect_with_retry(conn) -> None:
+    """Connect to Neo4j with retries to handle slow startup."""
+    start = time.time()
+    last_error: Exception | None = None
+
+    while time.time() - start < CONNECT_TIMEOUT_S:
+        try:
+            await conn.connect()
+            if await conn.health_check():
+                return
+        except Exception as e:  # noqa: BLE001 - intentional retry loop
+            last_error = e
+            try:
+                await conn.close()
+            except Exception:  # nosec B110 - intentional cleanup, errors can be safely ignored
+                pass
+        await asyncio.sleep(2)
+
+    raise RuntimeError(f"Neo4j did not become ready within {CONNECT_TIMEOUT_S}s") from last_error
 
 
 async def create_constraints_and_indexes(conn) -> None:
@@ -79,7 +103,7 @@ async def load_ontology_file(conn, file_path: Path) -> int:
     Example:
         >>> count = await load_ontology_file(conn, Path("ncbi_taxonomy_subset.json"))
         >>> print(f"Loaded {count} terms")
-        Loaded 20 terms
+        Loaded 72 terms
     """
     logger.info(f"Loading {file_path.name}...")
 
@@ -89,30 +113,40 @@ async def load_ontology_file(conn, file_path: Path) -> int:
     ontology_name = data["ontology"]
     terms = data["terms"]
 
-    # Load terms
-    for term in terms:
-        query = """
-        MERGE (t:OntologyTerm {term_id: $term_id})
-        SET t.label = $label,
-            t.definition = $definition,
-            t.synonyms = $synonyms,
-            t.ontology_name = $ontology_name,
-            t.parent_terms = $parent_terms
-        RETURN t.term_id AS term_id
-        """
+    # Load terms in a single batched query using UNWIND
+    logger.info(f"  Batching {len(terms)} terms from {file_path.name}...")
 
-        params = {
-            "term_id": term["term_id"],
-            "label": term["label"],
-            "definition": term.get("definition"),
-            "synonyms": term.get("synonyms", []),
-            "ontology_name": ontology_name,
-            "parent_terms": term.get("parent_terms", []),
-        }
+    query = """
+    UNWIND $terms_batch AS term
+    MERGE (t:OntologyTerm {term_id: term.term_id})
+    SET t.label = term.label,
+        t.definition = term.definition,
+        t.synonyms = term.synonyms,
+        t.ontology_name = term.ontology_name,
+        t.parent_terms = term.parent_terms
+    RETURN count(t) AS terms_created
+    """
 
-        await conn.execute_write(query, params)
+    # Prepare all terms as a batch
+    batch_params = {
+        "terms_batch": [
+            {
+                "term_id": term["term_id"],
+                "label": term["label"],
+                "definition": term.get("definition"),
+                "synonyms": term.get("synonyms", []),
+                "ontology_name": ontology_name,
+                "parent_terms": term.get("parent_terms", []),
+            }
+            for term in terms
+        ]
+    }
 
-    logger.info(f"Loaded {len(terms)} terms from {file_path.name}")
+    # Single database roundtrip instead of N separate queries
+    result = await conn.execute_write(query, batch_params)
+    terms_created = result[0]["terms_created"] if result else 0
+
+    logger.info(f"  ✅ Batch loaded {terms_created} terms from {file_path.name}")
     return len(terms)
 
 
@@ -159,8 +193,15 @@ async def main() -> None:
     settings = get_settings()
 
     # Connect to Neo4j
-    conn = get_neo4j_connection(uri=settings.neo4j_uri, user=settings.neo4j_user, password=settings.neo4j_password)
-    await conn.connect()
+    if not settings.graph_db.password:
+        raise ValueError("GRAPH_DB__PASSWORD/NEO4J_PASSWORD is required to load ontologies")
+    conn = get_neo4j_connection(
+        uri=settings.graph_db.uri,
+        user=settings.graph_db.user,
+        password=settings.graph_db.password,
+        database=settings.graph_db.database,
+    )
+    await connect_with_retry(conn)
 
     try:
         # Create schema

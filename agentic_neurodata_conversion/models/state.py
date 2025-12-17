@@ -151,7 +151,10 @@ class ProvenanceInfo(BaseModel):
         default=None, description="Original user input or file content that led to this value"
     )
     # Historical inference fields (Phase 2)
-    badge: str | None = Field(default=None, description="Inference badge: CONFIRMED, HISTORICAL, CONFLICTING, or None")
+    badge: str | None = Field(
+        default=None,
+        description="Inference/validation badge: CONFIRMED, HISTORICAL, CONFLICTING, KG_VALIDATED, or None",
+    )
     historical_evidence: dict[str, Any] | None = Field(
         default=None, description="Evidence from historical inference including contributing sessions"
     )

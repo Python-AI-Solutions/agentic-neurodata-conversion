@@ -272,7 +272,7 @@ class TestGetOrCreateMCPServer:
         assert len(servers) == 10
         assert all(server is servers[0] for server in servers)
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key-123"})
+    @patch.dict(os.environ, {"CORE__ANTHROPIC_API_KEY": "test-key-123"})
     def test_get_or_create_mcp_server_with_api_key(self):
         """Test server initialization with API key present."""
         from agentic_neurodata_conversion.api import dependencies

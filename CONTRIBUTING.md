@@ -21,7 +21,8 @@ Thank you for your interest in contributing! This document provides guidelines a
 
 - **Pixi Package Manager** (required) - [Install Pixi](https://pixi.sh/)
 - **Python 3.13+** (managed by Pixi automatically)
-- **Anthropic API Key** (for AI features)
+- **Docker Desktop / Docker Engine** (recommended; required for `pixi run test`)
+- **Anthropic API Key** (required to run the full app; tests can use the dummy key in `.env.example`)
 
 
 ### Installation
@@ -50,49 +51,48 @@ pixi install
 
 ### Running the Application
 
-#### Option 1: Automated Startup (Recommended)
+#### Startup (Recommended)
 
 ```bash
-python3 scripts/startup/start_app.py
+# First time:
+cp .env.example .env
+cp .env.docker.example .env.docker
+
+# Then:
+pixi run start
 ```
 
-This script automatically:
+`pixi run start` is the single entrypoint for local development. It:
 
-- Configures `.env` file (interactive prompt for API key)
-- Kills old processes on ports 8000 and 3000
-- Cleans temporary directories
-- Starts backend server (FastAPI on port 8000)
-- Starts frontend server (HTTP server on port 3000)
-- Runs health checks and displays status
+- Validates configuration via `agentic_neurodata_conversion/config.py`
+- Optionally starts the docker-compose core stack (Neo4j + seed job)
+- Starts the API + KG service + frontend either locally or in Docker (your choice)
+- Prints URLs and log locations
 
-**Must run from project root directory** (script checks for `pyproject.toml`)
-
-#### Option 2: Manual Startup
+To see all options:
 
 ```bash
-# Terminal 1: Start backend
-pixi run dev
-
-# Terminal 2: Start frontend
-cd frontend/public
-python3 -m http.server 3000
+pixi run start -- --help
 ```
 
-**URLs:**
+Common modes:
 
-- Frontend: http://localhost:3000/chat-ui.html
-- Backend API: http://localhost:8000
-- API Docs: http://localhost:8000/docs
-- Health Check: http://localhost:8000/api/health
+```bash
+# Default: Neo4j via docker, API/KG/frontend locally (hot reload on by default)
+pixi run start
+
+# Full docker (runs API + KG + frontend in compose)
+pixi run start -- --kg docker --frontend docker
+
+# No docker (requires you to provide Neo4j + KG service endpoints from `.env`)
+pixi run start -- --core none
+```
 
 #### Stopping Services
 
 ```bash
-# Kill backend
-lsof -ti:8000 | xargs kill
-
-# Kill frontend
-lsof -ti:3000 | xargs kill
+# Local mode: Ctrl+C in the `pixi run start` terminal
+# Docker mode: docker compose down --remove-orphans
 ```
 
 ---
@@ -135,8 +135,11 @@ Pre-commit runs:
 ### Running Tests
 
 ```bash
-# All tests with coverage (≥60% required)
-pixi run test-cov
+# Default (CI-style): brings up compose services and runs the full suite + coverage gate
+pixi run test
+
+# No docker: runs tests against whatever services you provide (Neo4j/KG may be skipped if unavailable)
+pixi run test-local
 
 # Unit tests only
 pixi run test-unit
@@ -145,7 +148,7 @@ pixi run test-unit
 pixi run test-integration
 
 # Specific test file
-pixi run pytest tests/test_specific.py -v
+pixi run python -m pytest tests/test_specific.py -v
 
 ```
 

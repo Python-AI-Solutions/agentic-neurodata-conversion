@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "AI-assisted neurodata conversion to NWB format using multi-agent architecture"
 authors = ["Aditya Patane <aditya@example.com>"]
 channels = ["conda-forge"]
-platforms = ["osx-arm64", "linux-64"]
+platforms = ["osx-arm64", "linux-64", "linux-aarch64"]
 
 # ============================================================================
 # Runtime Dependencies - What users/production needs
@@ -29,7 +29,7 @@ h5py = ">=3.12.1"
 
 [pypi-dependencies]
 # Neuroscience stack
-neuroconv = ">=0.7.3"
+neuroconv = "==0.8.3"
 pynwb = ">=3.0.0"
 nwbinspector = ">=0.6.0"
 spikeinterface = ">=0.101.0"
@@ -38,16 +38,26 @@ anthropic = ">=0.39.0"
 websockets = ">=13.1"
 # Configuration
 python-dotenv = ">=1.0.0"
-# Knowledge Graph (future implementation)
+# Knowledge Graph
 neo4j = ">=5.15.0,<6"
 
 [tasks]
-# Development tasks
-dev = "uvicorn agentic_neurodata_conversion.api.main:app --reload --host 0.0.0.0 --port 8000"
+
+# Quick start task
+start = "python scripts/startup/start_app.py"
+
+# (Docker/local/hotreload choices are handled by `pixi run start -- --help`.)
+
+
 
 # Test tasks - Primary
-test = "pytest tests -v"
-test-cov = "pytest tests -v --cov=agentic_neurodata_conversion --cov-report=term-missing --cov-report=html"
+test = "python scripts/compose/run_with_compose.py -- python -m pytest tests -v --cov=agentic_neurodata_conversion --cov-report=xml --cov-report=term-missing --cov-fail-under=60"
+test-cov = "python scripts/compose/run_with_compose.py -- python -m pytest tests -v --cov=agentic_neurodata_conversion --cov-report=term-missing --cov-report=html"
+
+# Test tasks - No docker (advanced)
+# Runs the suite against whatever services you have running (e.g., Neo4j on localhost),
+# and will naturally skip integration tests when those services are unavailable.
+test-local = "ENV_FILE=.env python -m pytest tests -v"
 
 # Test by scope (Tier 1)
 test-unit = "pytest tests -v -m unit"

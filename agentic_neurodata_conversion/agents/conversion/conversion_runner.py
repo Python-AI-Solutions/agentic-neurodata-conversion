@@ -7,19 +7,51 @@ Handles:
 - Thread-safe file size tracking
 """
 
+import importlib as _importlib
 import logging
 import threading
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from agentic_neurodata_conversion.services.llm_service import LLMService
 
+from agentic_neurodata_conversion.agents.conversion.neuroconv_formats import FORMAT_TO_NEUROCONV_CLASS
 from agentic_neurodata_conversion.models import ConversionStatus, GlobalState, LogLevel, MCPMessage, MCPResponse
 from agentic_neurodata_conversion.utils.file_versioning import compute_sha256
 
 logger = logging.getLogger(__name__)
+
+
+def resolve_neuroconv_class(class_name: str) -> type:
+    """Resolve a NeuroConv interface/converter class by name."""
+    import sys
+
+    # Be defensive: some tests (or partial imports) can leave a non-package object
+    # at `sys.modules["neuroconv.datainterfaces"]`, which breaks relative imports.
+    dt_mod = sys.modules.get("neuroconv.datainterfaces")
+    # Allow tests to inject a lightweight stand-in (e.g., a Mock) via sys.modules.
+    if dt_mod is not None and hasattr(dt_mod, class_name):
+        return cast(type, getattr(dt_mod, class_name))
+    if dt_mod is not None and not hasattr(dt_mod, "__path__"):
+        sys.modules.pop("neuroconv.datainterfaces", None)
+
+    datainterfaces = _importlib.import_module("neuroconv.datainterfaces")
+    if hasattr(datainterfaces, class_name):
+        return cast(type, getattr(datainterfaces, class_name))
+
+    conv_mod = sys.modules.get("neuroconv.converters")
+    if conv_mod is not None and hasattr(conv_mod, class_name):
+        return cast(type, getattr(conv_mod, class_name))
+    if conv_mod is not None and not hasattr(conv_mod, "__path__"):
+        sys.modules.pop("neuroconv.converters", None)
+
+    converters = _importlib.import_module("neuroconv.converters")
+    if hasattr(converters, class_name):
+        return cast(type, getattr(converters, class_name))
+
+    raise AttributeError(class_name)
 
 
 class ConversionRunner:
@@ -368,100 +400,7 @@ class ConversionRunner:
         """
         # Comprehensive format-to-interface mapping for all 84 NeuroConv interfaces
         # Using dynamic imports to avoid loading all interfaces at startup
-        format_to_interface_map = {
-            # Electrophysiology Recording (24 formats)
-            "AlphaOmegaRecording": "AlphaOmegaRecordingInterface",
-            "Axon": "AbfInterface",  # .abf files - Axon Instruments pCLAMP
-            "AxonRecording": "AxonRecordingInterface",
-            "AxonaRecording": "AxonaRecordingInterface",
-            "AxonaUnitRecording": "AxonaUnitRecordingInterface",
-            "BiocamRecording": "BiocamRecordingInterface",
-            "BlackrockRecording": "BlackrockRecordingInterface",
-            "CellExplorerRecording": "CellExplorerRecordingInterface",
-            "EDFRecording": "EDFRecordingInterface",
-            "IntanRecording": "IntanRecordingInterface",
-            "MCSRawRecording": "MCSRawRecordingInterface",
-            "MEArecRecording": "MEArecRecordingInterface",
-            "MaxOneRecording": "MaxOneRecordingInterface",
-            "NeuralynxRecording": "NeuralynxRecordingInterface",
-            "Neuropixels": "SpikeGLXRecordingInterface",  # Alias for SpikeGLX
-            "NeuroScopeRecording": "NeuroScopeRecordingInterface",
-            "OpenEphys": "OpenEphysRecordingInterface",
-            "OpenEphysBinary": "OpenEphysBinaryRecordingInterface",
-            "OpenEphysLegacyRecording": "OpenEphysLegacyRecordingInterface",
-            "Plexon2Recording": "Plexon2RecordingInterface",
-            "PlexonRecording": "PlexonRecordingInterface",
-            "Spike2Recording": "Spike2RecordingInterface",
-            "SpikeGLX": "SpikeGLXRecordingInterface",
-            "SpikeGadgetsRecording": "SpikeGadgetsRecordingInterface",
-            "TdtRecording": "TdtRecordingInterface",
-            "WhiteMatterRecording": "WhiteMatterRecordingInterface",
-            # Spike Sorting (8 formats)
-            "BlackrockSorting": "BlackrockSortingInterface",
-            "CellExplorerSorting": "CellExplorerSortingInterface",
-            "KiloSortSorting": "KiloSortSortingInterface",
-            "NeuralynxSorting": "NeuralynxSortingInterface",
-            "NeuroScopeSorting": "NeuroScopeSortingInterface",
-            "OpenEphysSorting": "OpenEphysSortingInterface",
-            "PhySorting": "PhySortingInterface",
-            "PlexonSorting": "PlexonSortingInterface",
-            # Imaging (13 formats)
-            "BrukerTiffMultiPlaneImaging": "BrukerTiffMultiPlaneImagingInterface",
-            "BrukerTiffSinglePlaneImaging": "BrukerTiffSinglePlaneImagingInterface",
-            "FemtonicsImaging": "FemtonicsImagingInterface",
-            "Hdf5Imaging": "Hdf5ImagingInterface",
-            "InscopixImaging": "InscopixImagingInterface",
-            "MicroManagerTiffImaging": "MicroManagerTiffImagingInterface",
-            "MiniscopeImaging": "MiniscopeImagingInterface",
-            "SbxImaging": "SbxImagingInterface",
-            "ScanImageImaging": "ScanImageImagingInterface",
-            "ScanImageLegacyImaging": "ScanImageLegacyImagingInterface",
-            "ScanImageMultiFileImaging": "ScanImageMultiFileImagingInterface",
-            "ThorImaging": "ThorImagingInterface",
-            "TiffImaging": "TiffImagingInterface",
-            # Segmentation (7 formats)
-            "CaimanSegmentation": "CaimanSegmentationInterface",
-            "CnmfeSegmentation": "CnmfeSegmentationInterface",
-            "ExtractSegmentation": "ExtractSegmentationInterface",
-            "InscopixSegmentation": "InscopixSegmentationInterface",
-            "MinianSegmentation": "MinianSegmentationInterface",
-            "SimaSegmentation": "SimaSegmentationInterface",
-            "Suite2pSegmentation": "Suite2pSegmentationInterface",
-            # Behavior/Video (11 formats)
-            "AxonaPositionData": "AxonaPositionDataInterface",
-            "DeepLabCut": "DeepLabCutInterface",
-            "ExternalVideo": "ExternalVideoInterface",
-            "FicTracData": "FicTracDataInterface",
-            "InternalVideo": "InternalVideoInterface",
-            "LightningPoseData": "LightningPoseDataInterface",
-            "MiniscopeBehavior": "MiniscopeBehaviorInterface",
-            "NeuralynxNvt": "NeuralynxNvtInterface",
-            "SLEAP": "SLEAPInterface",
-            "Video": "VideoInterface",
-            # LFP/Analog/Other (15 formats)
-            "Audio": "AudioInterface",
-            "AxonaLFPData": "AxonaLFPDataInterface",
-            "CellExplorerLFP": "CellExplorerLFPInterface",
-            "CsvTimeIntervals": "CsvTimeIntervalsInterface",
-            "EDFAnalog": "EDFAnalogInterface",
-            "ExcelTimeIntervals": "ExcelTimeIntervalsInterface",
-            "Image": "ImageInterface",
-            "IntanAnalog": "IntanAnalogInterface",
-            "MedPC": "MedPCInterface",
-            "NeuroScopeLFP": "NeuroScopeLFPInterface",
-            "OpenEphysBinaryAnalog": "OpenEphysBinaryAnalogInterface",
-            "PlexonLFP": "PlexonLFPInterface",
-            "SpikeGLXNIDQ": "SpikeGLXNIDQInterface",
-            "TDTFiberPhotometry": "TDTFiberPhotometryInterface",
-            # Converters (6 formats)
-            "BrukerTiffMultiPlane": "BrukerTiffMultiPlaneConverter",
-            "BrukerTiffSinglePlane": "BrukerTiffSinglePlaneConverter",
-            "LightningPose": "LightningPoseConverter",
-            "Miniscope": "MiniscopeConverter",
-            "SortedRecording": "SortedRecordingConverter",
-            "SortedSpikeGLX": "SortedSpikeGLXConverter",
-            "SpikeGLXConverter": "SpikeGLXConverterPipe",
-        }
+        format_to_interface_map = FORMAT_TO_NEUROCONV_CLASS
 
         if format_name not in format_to_interface_map:
             raise ValueError(
@@ -472,9 +411,7 @@ class ConversionRunner:
         # Dynamically import the required interface
         interface_class_name = format_to_interface_map[format_name]
         try:
-            from neuroconv import datainterfaces
-
-            interface_class = getattr(datainterfaces, interface_class_name)
+            interface_class = resolve_neuroconv_class(interface_class_name)
         except (ImportError, AttributeError) as e:
             raise ValueError(
                 f"Failed to import interface '{interface_class_name}' for format '{format_name}'. Error: {str(e)}"

@@ -46,20 +46,6 @@ class TestConversionAgentInitialization:
         assert agent._format_detector._supported_formats is not None
         assert agent._format_detector is not None
 
-    def test_get_supported_formats_fallback(self):
-        """Test _get_supported_formats fallback when NeuroConv fails."""
-        # Mock get_format_summaries to fail (need to patch where it's imported from)
-        with patch("neuroconv.get_format_summaries", side_effect=Exception("Mock error")):
-            # Create new agent which will trigger fallback
-            agent = ConversionAgent(llm_service=None)
-
-            # Should still have formats from fallback list (_supported_formats now in _format_detector)
-            assert len(agent._format_detector._supported_formats) > 0
-            # Should include common formats like SpikeGLX from fallback
-            assert "SpikeGLX" in agent._format_detector._supported_formats
-            # Should have the full fallback list (84 formats)
-            assert len(agent._format_detector._supported_formats) >= 80
-
 
 @pytest.mark.unit
 @pytest.mark.agent_conversion
@@ -1014,10 +1000,10 @@ class TestRealWorkflows:
         """Test that real supported formats list is loaded."""
         # Agent should have real supported formats from NeuroConv (now in _format_detector)
         assert len(conversion_agent_real._format_detector._supported_formats) > 0
-        # Check for common format interfaces (real names from NeuroConv)
-        common_formats = ["SpikeGLXRecordingInterface", "OpenEphysRecordingInterface"]
-        for fmt in common_formats:
-            assert fmt in conversion_agent_real._format_detector._supported_formats
+        # Check for common formats (canonical names used throughout the project).
+        supported = set(conversion_agent_real._format_detector._supported_formats)
+        assert "SpikeGLX" in supported
+        assert "OpenEphys" in supported
 
     def test_real_is_spikeglx_helper_with_various_patterns(self, conversion_agent_real, tmp_path):
         """Test real _is_spikeglx helper with various file patterns."""

@@ -29,6 +29,8 @@ env/
 # Environment variables
 .env
 .env.local
+.env.docker
+.env.docker.local
 
 # IDE
 .vscode/
@@ -100,6 +102,7 @@ htmlcov/
 .pytest_cache/
 .ruff_cache/
 .hypothesis/
+.rattler-cache
 
 # Outputs directory
 outputs/

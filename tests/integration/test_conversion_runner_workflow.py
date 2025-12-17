@@ -552,26 +552,36 @@ class TestRunNeuroConvConversion:
             assert not output_file.exists()
 
     @pytest.mark.asyncio
-    async def test_interface_import_error_handling(self, global_state, tmp_path, mock_neuroconv):
+    async def test_interface_import_error_handling(self, global_state, tmp_path, monkeypatch):
         """Test error handling when interface import fails."""
         runner = ConversionRunner()
 
         test_file = tmp_path / "test.bin"
         test_file.write_bytes(b"test data")
 
-        with mock_neuroconv({}) as mock_datainterfaces:
-            # Simulate missing interface
-            if hasattr(mock_datainterfaces, "SpikeGLXRecordingInterface"):
-                delattr(mock_datainterfaces, "SpikeGLXRecordingInterface")
+        import agentic_neurodata_conversion.agents.conversion.conversion_runner as runner_mod
 
-            with pytest.raises(ValueError, match="Failed to import interface"):
-                runner._run_neuroconv_conversion(
-                    input_path=str(test_file),
-                    output_path=str(tmp_path / "output.nwb"),
-                    format_name="SpikeGLX",
-                    metadata={},
-                    state=global_state,
-                )
+        class _EmptyModule:
+            __path__ = []  # mark as "package-like"
+
+        def fake_import_module(name: str):
+            if name in ("neuroconv.datainterfaces", "neuroconv.converters"):
+                return _EmptyModule()
+            raise ImportError(name)
+
+        # Force the resolver to see modules that do not contain the requested class.
+        monkeypatch.setattr(
+            runner_mod, "_importlib", type("X", (), {"import_module": staticmethod(fake_import_module)})
+        )
+
+        with pytest.raises(ValueError, match="Failed to import interface"):
+            runner._run_neuroconv_conversion(
+                input_path=str(test_file),
+                output_path=str(tmp_path / "output.nwb"),
+                format_name="IntanRecording",
+                metadata={},
+                state=global_state,
+            )
 
     @pytest.mark.asyncio
     async def test_generic_format_error_with_detailed_logging(self, global_state, tmp_path, mock_neuroconv):

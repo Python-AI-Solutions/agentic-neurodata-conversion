@@ -1,0 +1,74 @@
+services:
+  kg-service:
+    profiles: ["kg"]
+    build:
+      context: .
+      dockerfile: docker/kg-service.Dockerfile
+    depends_on:
+      neo4j:
+        condition: service_healthy
+      kg-seed:
+        condition: service_completed_successfully
+    env_file:
+      - .env
+      - .env.docker
+    ports:
+      - "${KG_SERVICE_PORT:-8001}:8001"
+    healthcheck:
+      # Use Python (in the built env) to avoid relying on distro tools like `wget`/`curl`.
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=2).read()\" >/dev/null 2>&1 || exit 1",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    volumes:
+      # Mount only source code for hot reload; do not mount the whole repo (especially `.pixi`)
+      # because host `.pixi` is platform-specific and will break Linux containers.
+      - ./agentic_neurodata_conversion:/app/agentic_neurodata_conversion:delegated
+    command:
+      [
+        "uvicorn",
+        "agentic_neurodata_conversion.kg_service.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8001",
+      ]
+
+  frontend:
+    profiles: ["frontend"]
+    image: nginx:alpine
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    volumes:
+      - ./frontend/public:/usr/share/nginx/html:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/ >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  app:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: docker/kg-service.Dockerfile
+    env_file:
+      - .env
+      - .env.docker
+    ports:
+      - "${API__PORT:-8000}:8000"
+    volumes:
+      - ./agentic_neurodata_conversion:/app/agentic_neurodata_conversion:delegated
+    command:
+      [
+        "uvicorn",
+        "agentic_neurodata_conversion.api.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+      ]

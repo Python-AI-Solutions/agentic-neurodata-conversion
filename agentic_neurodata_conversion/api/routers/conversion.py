@@ -9,7 +9,6 @@ Handles:
 import hashlib
 import json
 import logging
-import os
 from pathlib import Path
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
@@ -358,7 +357,9 @@ async def upload_file(
 
     # Get LLM service
     llm_service = None
-    api_key = os.getenv("ANTHROPIC_API_KEY")
+    from agentic_neurodata_conversion.config import get_settings
+
+    api_key = get_settings().core.anthropic_api_key
     if api_key:
         llm_service = create_llm_service(provider="anthropic", api_key=api_key)
 

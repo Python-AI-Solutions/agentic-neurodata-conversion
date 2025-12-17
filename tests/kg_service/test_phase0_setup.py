@@ -12,10 +12,11 @@ Tests:
 """
 
 import json
-import os
 from pathlib import Path
 
 import pytest
+
+from tests.kg_service._neo4j_availability import neo4j_http_available
 
 
 def test_ontology_files_exist():
@@ -42,7 +43,7 @@ def test_ontology_term_counts():
     uberon = json.load(open("agentic_neurodata_conversion/kg_service/ontologies/uberon_subset.json"))
     pato = json.load(open("agentic_neurodata_conversion/kg_service/ontologies/pato_sex_subset.json"))
 
-    assert len(ncbi["terms"]) == 20, f"Expected 20 NCBITaxonomy terms, got {len(ncbi['terms'])}"
+    assert len(ncbi["terms"]) == 72, f"Expected 72 NCBITaxonomy terms, got {len(ncbi['terms'])}"
     assert len(uberon["terms"]) == 20, f"Expected 20 UBERON terms, got {len(uberon['terms'])}"
     assert len(pato["terms"]) == 4, f"Expected 4 PATO terms, got {len(pato['terms'])}"
 
@@ -88,11 +89,18 @@ async def test_neo4j_driver_connection():
     """Verify Neo4j driver can connect."""
     from neo4j import AsyncGraphDatabase
 
-    password = os.getenv("NEO4J_PASSWORD")
-    if not password:
-        pytest.skip("NEO4J_PASSWORD not set in environment")
+    from agentic_neurodata_conversion.config import ConfigError
+    from agentic_neurodata_conversion.kg_service.config import get_settings
 
-    driver = AsyncGraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", password))
+    settings = get_settings()
+    if not neo4j_http_available(settings.compose.neo4j_http_port):
+        pytest.skip("Neo4j not running on localhost; skipping driver connectivity test")
+    try:
+        await settings.require_graph_db(probe=False)
+    except ConfigError as e:
+        pytest.fail(str(e))
+
+    driver = AsyncGraphDatabase.driver(settings.graph_db.uri, auth=(settings.graph_db.user, settings.graph_db.password))
 
     try:
         await driver.verify_connectivity()
